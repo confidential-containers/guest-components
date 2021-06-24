@@ -1,0 +1,12 @@
+[package]
+name = "ocicrypt-rs"
+version = "0.1.0"
+description = "the OCI image spec implementation of container image encryption"
+repository = "https://github.com/containers/ocicrypt-rs"
+readme = "README.md"
+license = "Apache-2.0"
+authors = ["The ocicrypt Authors"]
+edition = "2018"
+
+[dependencies]
+anyhow = ">=1.0"
