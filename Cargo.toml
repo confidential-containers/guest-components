@@ -10,3 +10,4 @@ edition = "2018"
 
 [dependencies]
 anyhow = ">=1.0"
+josekit = ">=0.7"

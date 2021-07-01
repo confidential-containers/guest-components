@@ -6,6 +6,8 @@ use crate::config::EncryptConfig;
 use anyhow::Result;
 use std::collections::HashMap;
 
+pub mod jwe;
+
 /// KeyWrapper is the interface used for wrapping keys using
 /// a specific encryption technology (pgp, jwe, pkcs7, pkcs11, keyprovider)
 #[allow(unused_variables)]
