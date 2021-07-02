@@ -6,6 +6,7 @@ use crate::config::EncryptConfig;
 use anyhow::Result;
 use std::collections::HashMap;
 
+#[cfg(feature = "keywrap-jwe")]
 pub mod jwe;
 
 /// KeyWrapper is the interface used for wrapping keys using
