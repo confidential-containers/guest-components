@@ -3,8 +3,23 @@
 ### Create PEM private key
 openssl genrsa -out private_key.pem
 
+### Create DER private key from PEM private key
+openssl rsa -inform pem -outform der -in private_key.pem -out private_key.der
+
+### Create PKCS8 PEM private key from PEM private key
+openssl pkcs8 -topk8 -nocrypt -inform pem -outform pem -in private_key.pem -out private_key8.pem
+
+### Create PKCS8 DER private key from PEM private key
+openssl pkcs8 -topk8 -nocrypt -inform pem -outform der -in private_key.pem -out private_key8.der
+
 ### Create PEM public key from PEM private key
 openssl rsa -inform pem -outform pem -pubout -in private_key.pem -out public_key.pem
+
+### Create DER EC private key
+openssl ecparam -genkey -out private_key_ec.der -outform der -name secp521r1
+
+### Create DER EC public key
+openssl ec -in private_key_ec.der -inform der -pubout -outform der -out public_key_ec.der
 
 ### Create self-signed root certificate
 openssl req -x509 -newkey rsa:2048 -keyout certificate_key.pem -out certificate.pem -days 365 -nodes -subj '/CN=localhost'
