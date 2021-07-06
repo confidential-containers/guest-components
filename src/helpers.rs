@@ -21,7 +21,7 @@ fn process_recipient_keys(recipients: Vec<String>) -> Result<[Vec<Vec<u8>>; 6]> 
     let mut key_providers = vec![];
 
     for recipient in recipients {
-        if let Some(index) = recipient.find(":") {
+        if let Some(index) = recipient.find(':') {
             let protocol: String = recipient.chars().take(index).collect();
             let value: String = recipient.chars().skip(index + 1).collect();
 
@@ -40,6 +40,9 @@ fn process_recipient_keys(recipients: Vec<String>) -> Result<[Vec<Vec<u8>>; 6]> 
                 "pkcs11" => {
                     let contents = fs::read(&value)?;
                     // TODO: Check valid pkcs11 public key or normal public key
+                    pkcs11_yamls.push(contents.clone());
+                    pkcs11_pubkeys.push(contents);
+                    /*
                     if true {
                         pkcs11_yamls.push(contents);
                     } else if true {
@@ -47,6 +50,7 @@ fn process_recipient_keys(recipients: Vec<String>) -> Result<[Vec<Vec<u8>>; 6]> 
                     } else {
                         return Err(anyhow!("Provided file is not a public key"));
                     }
+                    */
                 }
                 "provider" => key_providers.push(value.as_bytes().to_vec()),
                 _ => return Err(anyhow!("Provided protocol not recognized")),
@@ -71,7 +75,7 @@ fn process_x509_certs(keys: Vec<String>) -> Result<Vec<Vec<u8>>> {
     let mut x509s = vec![];
 
     for key in keys {
-        let name = key.split(":").next().unwrap();
+        let name = key.split(':').next().unwrap();
         let contents = fs::read(name)?;
         // TODO: Check valid certificate
 
@@ -87,16 +91,16 @@ fn process_x509_certs(keys: Vec<String>) -> Result<Vec<Vec<u8>>> {
 // - fd=<filedescriptor>
 // - <password>
 fn process_pwd_string(pwd_string: String) -> Result<Vec<u8>> {
-    if pwd_string.starts_with("file=") {
-        let contents = fs::read(&pwd_string[5..])?;
+    if let Some(pwd) = pwd_string.strip_prefix("file=") {
+        let contents = fs::read(&pwd)?;
         return Ok(contents);
-    } else if pwd_string.starts_with("pass=") {
-        return Ok(pwd_string[5..].as_bytes().to_vec());
-    } else if pwd_string.starts_with("fd=") {
-        let fd = pwd_string[3..].parse::<i32>().unwrap();
+    } else if let Some(pwd) = pwd_string.strip_prefix("pass=") {
+        return Ok(pwd.as_bytes().to_vec());
+    } else if let Some(pwd) = pwd_string.strip_prefix("fd=") {
+        let fd = pwd.parse::<i32>().unwrap();
         let mut fd_file = unsafe { File::from_raw_fd(fd) };
         let mut contents = vec![];
-        fd_file.read(&mut contents)?;
+        fd_file.read_exact(&mut contents)?;
 
         return Ok(contents);
     }
@@ -124,12 +128,12 @@ fn process_private_keyfiles(keyfiles_and_pwds: Vec<String>) -> Result<[Vec<Vec<u
 
     for keyfile_and_pwd in keyfiles_and_pwds {
         // treat "provider" protocol separately
-        if keyfile_and_pwd.starts_with("provider:") {
-            key_providers.push(keyfile_and_pwd["provider:".len()..].as_bytes().to_vec());
+        if let Some(provider) = keyfile_and_pwd.strip_prefix("provider:") {
+            key_providers.push(provider.as_bytes().to_vec());
             continue;
         }
 
-        if let Some(index) = keyfile_and_pwd.find(":") {
+        if let Some(index) = keyfile_and_pwd.find(':') {
             let mut password: Vec<u8> = Vec::new();
 
             if index > 0 {
@@ -139,6 +143,12 @@ fn process_private_keyfiles(keyfiles_and_pwds: Vec<String>) -> Result<[Vec<Vec<u
             let contents = fs::read(&keyfile_and_pwd[..index])?;
 
             // TODO: Check valid pkcs11 public key or normal public key
+            pkcs11_yamls.push(contents.clone());
+            priv_keys.push(contents.clone());
+            priv_keys_passwords.push(password.clone());
+            gpg_secret_key_ring_files.push(contents);
+            gpg_secret_key_passwords.push(password);
+            /*
             if true {
                 pkcs11_yamls.push(contents);
             } else if false {
@@ -152,6 +162,7 @@ fn process_private_keyfiles(keyfiles_and_pwds: Vec<String>) -> Result<[Vec<Vec<u
                 // metadata/cert files exists
                 continue;
             }
+            */
         }
     }
 
@@ -186,33 +197,32 @@ pub fn create_decrypt_config(
 
     let [_, _, mut x509s, _, _, _] = process_recipient_keys(dec_recipients)?;
 
-    if x509s.len() > 0 {
-        let x509_from_keys = process_x509_certs(keys.clone())?;
-        x509s.extend(x509_from_keys);
-    }
+    // x509 certs can also be passed in via keys
+    let x509_from_keys = process_x509_certs(keys.clone())?;
+    x509s.extend(x509_from_keys);
 
     let [gpg_secret_key_ring_files, gpg_secret_key_passwords, priv_keys, priv_keys_passwords, pkcs11_yamls, key_providers] =
         process_private_keyfiles(keys)?;
 
-    if gpg_secret_key_ring_files.len() > 0 {
+    if !gpg_secret_key_ring_files.is_empty() {
         dc.decrypt_with_gpg(gpg_secret_key_ring_files, gpg_secret_key_passwords)?;
     }
 
-    if x509s.len() > 0 {
+    if !x509s.is_empty() {
         dc.decrypt_with_x509s(x509s)?;
     }
 
-    if priv_keys.len() > 0 {
+    if !priv_keys.is_empty() {
         dc.decrypt_with_priv_keys(priv_keys, priv_keys_passwords)?;
     }
 
-    if pkcs11_yamls.len() > 0 {
+    if !pkcs11_yamls.is_empty() {
         // TODO: Get pkcs11_config from the config file
         let pkcs11_config: Vec<Vec<u8>> = vec![vec![]];
         dc.decrypt_with_pkcs11(pkcs11_config, pkcs11_yamls)?;
     }
 
-    if key_providers.len() > 0 {
+    if !key_providers.is_empty() {
         dc.decrypt_with_key_provider(key_providers)?;
     }
 
@@ -235,38 +245,38 @@ pub fn create_encrypt_config(recipients: Vec<String>, keys: Vec<String>) -> Resu
     let mut ec = EncryptConfig::default();
     let mut cc = CryptoConfig::default();
 
-    if keys.len() > 0 {
+    if !keys.is_empty() {
         let dc = create_decrypt_config(keys, vec![])?;
         ec.decrypt_config = dc.decrypt_config;
     }
 
-    if recipients.len() > 0 {
+    if !recipients.is_empty() {
         let [gpg_recipients, pubkeys, x509s, pkcs11_pubkeys, pkcs11_yamls, key_providers] =
             process_recipient_keys(recipients)?;
 
         // Create GPG client with guessed GPG version and default homedir
-        if gpg_recipients.len() > 0 {
+        if !gpg_recipients.is_empty() {
             // TODO: Check GPG installed and read GPG pub ring file
             ec.encrypt_with_gpg(gpg_recipients, vec![])?;
         }
 
         // Create Encryption Crypto Config
-        if x509s.len() > 0 {
+        if !x509s.is_empty() {
             ec.encrypt_with_pkcs7(x509s)?;
         }
 
-        if pubkeys.len() > 0 {
+        if !pubkeys.is_empty() {
             ec.encrypt_with_jwe(pubkeys)?;
         }
 
-        if pkcs11_pubkeys.len() > 0 || pkcs11_yamls.len() > 0 {
+        if !pkcs11_pubkeys.is_empty() || !pkcs11_yamls.is_empty() {
             // TODO: Get pkcs11_config from the config file
             let pkcs11_config: Vec<Vec<u8>> = vec![vec![]];
 
             ec.encrypt_with_pkcs11(pkcs11_config, pkcs11_pubkeys, pkcs11_yamls)?;
         }
 
-        if key_providers.len() > 0 {
+        if !key_providers.is_empty() {
             ec.encrypt_with_key_provider(key_providers)?;
         }
     }
@@ -369,6 +379,6 @@ mod tests {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.push("data");
 
-        return path.to_str().unwrap().to_string();
+        path.to_str().unwrap().to_string()
     }
 }

@@ -14,7 +14,7 @@ pub struct DecryptConfig {
 impl DecryptConfig {
     /// Update DecryptConfig param with key and value
     fn update_param(&mut self, key: String, value: Vec<Vec<u8>>) -> Result<()> {
-        if value.len() == 0 {
+        if value.is_empty() {
             return Err(anyhow!("decrypt config: value of {} is None", key));
         }
 
@@ -78,7 +78,7 @@ impl DecryptConfig {
     /// Add DecryptConfig with configured key_providers for decryption
     pub fn decrypt_with_key_provider(&mut self, key_providers: Vec<Vec<u8>>) -> Result<()> {
         for val in key_providers.iter().map(|v| String::from_utf8_lossy(v)) {
-            if let Some(index) = val.find(":") {
+            if let Some(index) = val.find(':') {
                 let key: String = val.chars().take(index).collect();
                 let value: String = val.chars().skip(index + 1).collect();
 
@@ -107,7 +107,7 @@ pub struct EncryptConfig {
 impl EncryptConfig {
     /// Update EncryptConfig param with key and value
     fn update_param(&mut self, key: String, value: Vec<Vec<u8>>) -> Result<()> {
-        if value.len() == 0 {
+        if value.is_empty() {
             return Err(anyhow!("encrypt config: value of {} is None", key));
         }
 
@@ -152,11 +152,11 @@ impl EncryptConfig {
         pkcs11_pubkeys: Vec<Vec<u8>>,
         pkcs11_yaml: Vec<Vec<u8>>,
     ) -> Result<()> {
-        if pkcs11_pubkeys.len() > 0 {
+        if !pkcs11_pubkeys.is_empty() {
             self.update_param("pkcs11-pubkeys".to_string(), pkcs11_pubkeys)?;
         }
 
-        if pkcs11_yaml.len() > 0 {
+        if !pkcs11_yaml.is_empty() {
             self.update_param("pkcs11-config".to_string(), pkcs11_config)?;
             self.update_param("pkcs11-yamls".to_string(), pkcs11_yaml)?;
         }
@@ -167,7 +167,7 @@ impl EncryptConfig {
     /// Add EncryptConfig with configured keyprovider parameters for encryption
     pub fn encrypt_with_key_provider(&mut self, key_providers: Vec<Vec<u8>>) -> Result<()> {
         for val in key_providers.iter().map(|v| String::from_utf8_lossy(v)) {
-            if let Some(index) = val.find(":") {
+            if let Some(index) = val.find(':') {
                 let key: String = val.chars().take(index).collect();
                 let value: String = val.chars().skip(index + 1).collect();
 
