@@ -8,6 +8,7 @@ use std::io::Read;
 use std::os::unix::io::FromRawFd;
 
 use crate::config::{CryptoConfig, DecryptConfig, EncryptConfig};
+use std::path::Path;
 
 // process_recipient_keys sorts the array of recipients by type.
 // Recipients may be either: x509 certificates, public keys,
@@ -76,6 +77,9 @@ fn process_x509_certs(keys: Vec<String>) -> Result<Vec<Vec<u8>>> {
 
     for key in keys {
         let name = key.split(':').next().unwrap();
+        if !Path::new(name).exists(){
+            continue;
+        }
         let contents = fs::read(name)?;
         // TODO: Check valid certificate
 

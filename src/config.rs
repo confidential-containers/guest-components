@@ -3,13 +3,40 @@
 
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufReader;
+
+pub const OCICRYPT_ENVVARNAME: &str = "OCICRYPT_KEYPROVIDER_CONFIG";
 
 /// DecryptConfig wraps the Parameters map that holds the decryption key
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct DecryptConfig {
     /// map holding 'privkeys', 'x509s', 'gpg-privatekeys'
     pub param: HashMap<String, Vec<Vec<u8>>>,
 }
+
+/// Command describes the structure of command, it consist of path and args, where path defines the location of
+/// binary executable and args are passed on to the binary executable
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Command {
+    pub path: String,
+    pub args: Option<Vec<String>>,
+}
+
+/// KeyProviderAttrs describes the structure of key provider, it defines the different ways of invocation to key provider
+#[derive(Deserialize, Debug, Clone)]
+pub struct KeyProviderAttrs {
+    pub cmd: core::option::Option<Command>,
+    pub grpc: core::option::Option<String>,
+}
+
+/// OcicryptConfig represents the format of an ocicrypt_provider.conf config file
+#[derive(Deserialize)]
+pub struct OcicryptConfig {
+    #[serde(alias = "key-providers")]
+    pub key_providers: HashMap<String, KeyProviderAttrs>
+}
+
 
 impl DecryptConfig {
     /// Update DecryptConfig param with key and value
@@ -95,7 +122,7 @@ impl DecryptConfig {
 /// EncryptConfig is the container image PGP encryption configuration holding
 /// the identifiers of those that will be able to decrypt the container and
 /// the PGP public keyring file data that contains their public keys.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct EncryptConfig {
     /// map holding 'gpg-recipients', 'gpg-pubkeyringfile', 'pubkeys', 'x509s'
     pub param: HashMap<String, Vec<Vec<u8>>>,
@@ -187,6 +214,37 @@ impl EncryptConfig {
 pub struct CryptoConfig {
     pub encrypt_config: Option<EncryptConfig>,
     pub decrypt_config: Option<DecryptConfig>,
+}
+
+/// parseConfigFile parses a configuration file; it is not an error if the configuration file does
+/// not exist, so no error is returned.
+fn parse_config_file(filename: String) -> Result<OcicryptConfig> {
+    let file = File::open(filename)?;
+    let reader = BufReader::new(file);
+
+
+    let oci_config: OcicryptConfig;
+    oci_config = match serde_json::from_reader(reader) {
+        Ok(v) => v,
+        Err(e) => return Err(anyhow!("Error reading file {:?}", e)),
+    };
+
+    Ok(oci_config)
+}
+
+/// get_configuration tries to read the configuration file at the following locations
+/// ${OCICRYPT_KEYPROVIDER_CONFIG} == "/etc/ocicrypt_keyprovider.json"
+/// If no configuration file could be found or read a null pointer is returned
+pub fn get_keyprovider_config() -> Result<OcicryptConfig> {
+    let mut ic: OcicryptConfig = OcicryptConfig { key_providers: Default::default() };
+    let filename = std::env::var(OCICRYPT_ENVVARNAME).unwrap();
+    if filename.len() > 0 {
+        ic = match parse_config_file(filename) {
+            Ok(v) => v,
+            Err(e) => return Err(anyhow!("Error while parsing keyprovider config file Error:{:?}", e)),
+        }
+    }
+    Ok(ic)
 }
 
 #[cfg(test)]

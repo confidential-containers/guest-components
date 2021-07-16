@@ -1,3 +1,6 @@
+// Copyright The ocicrypt Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 
@@ -113,14 +116,14 @@ impl KeyWrapper for JweKeyWrapper {
             }
 
             let (keys, _) = payload.unwrap();
-            return Ok(keys);
+                return Ok(keys);
         }
 
         Err(anyhow!("JWE: No suitable private key found for decryption"))
     }
 
-    fn annotation_id(&self) -> &str {
-        "org.opencontainers.image.enc.keys.jwe"
+    fn annotation_id(&self) -> String {
+        "org.opencontainers.image.enc.keys.jwe".to_string()
     }
 
     fn no_possible_keys(&self, dc_param: &HashMap<String, Vec<Vec<u8>>>) -> bool {
@@ -194,7 +197,7 @@ mod tests {
 
         assert_eq!(
             jwe_key_wrapper.annotation_id(),
-            "org.opencontainers.image.enc.keys.jwe"
+            "org.opencontainers.image.enc.keys.jwe".to_string()
         );
 
         assert!(jwe_key_wrapper

@@ -8,6 +8,8 @@ use std::collections::HashMap;
 
 #[cfg(feature = "keywrap-jwe")]
 pub mod jwe;
+#[cfg(feature = "keywrap-keyprovider")]
+pub mod keyprovider;
 
 /// KeyWrapper is the interface used for wrapping keys using
 /// a specific encryption technology (pgp, jwe, pkcs7, pkcs11, keyprovider)
@@ -20,7 +22,7 @@ pub trait KeyWrapper: Send + Sync {
     fn unwrap_keys(&self, dc: &DecryptConfig, annotation: &[u8]) -> Result<Vec<u8>>;
 
     /// return the keywraper annotation id.
-    fn annotation_id(&self) -> &str;
+    fn annotation_id(&self) -> String;
 
     /// no_possible_keys returns true if there is no possibility of performing
     /// decryption for parameters provided.
