@@ -29,7 +29,7 @@ impl CommandExecuter for Runner {
 
         let output = match child.wait_with_output() {
             Ok(o) => o,
-            Err(e) => return Err(e)
+            Err(e) => return Err(e),
         };
 
         Ok(output.stdout)

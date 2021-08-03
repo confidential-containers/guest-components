@@ -1,0 +1,13 @@
+{
+  "key-providers": {
+    "keyprovider1": {
+      "cmd": {
+        "path": "/usr/lib/keyprovider-wrapkey",
+        "args": []
+      }
+    },
+    "keyprovider2": {
+      "grpc": "localhost:32223"
+    }
+  }
+}
