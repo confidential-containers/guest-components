@@ -153,7 +153,7 @@ mod tests {
 
         let jwe_key_wrapper = JweKeyWrapper {};
 
-        assert_eq!(jwe_key_wrapper.no_possible_keys(&dc.param), true);
+        assert!(jwe_key_wrapper.no_possible_keys(&dc.param));
         assert!(jwe_key_wrapper.private_keys(&dc.param).is_none());
 
         let mut pubkeys = vec![];
@@ -188,7 +188,7 @@ mod tests {
             .decrypt_with_priv_keys(privkeys, privkey_passwords)
             .is_ok());
 
-        assert_eq!(jwe_key_wrapper.no_possible_keys(&dc.param), false);
+        assert!(!jwe_key_wrapper.no_possible_keys(&dc.param));
         assert!(jwe_key_wrapper.private_keys(&dc.param).is_some());
         assert_eq!(jwe_key_wrapper.unwrap_keys(&dc, &json).unwrap(), payload);
 

@@ -340,11 +340,11 @@ mod tests {
     fn test_process_private_keyfiles() {
         let path = load_data_path();
 
-        let private_keys = format!("{}/{}", path.clone(), "private_key.pem");
-        let pwd_file = format!("file={}/{}", path.clone(), "passwordfile");
+        let private_keys = format!("{}/{}", path, "private_key.pem");
+        let pwd_file = format!("file={}/{}", path, "passwordfile");
         let keyfiles_and_pwds = format!("{}:{}", private_keys, pwd_file);
 
-        assert!(process_private_keyfiles(vec![private_keys.clone()]).is_ok());
+        assert!(process_private_keyfiles(vec![private_keys]).is_ok());
         assert!(process_private_keyfiles(vec![keyfiles_and_pwds]).is_ok());
         assert!(process_private_keyfiles(vec!["provider:cmd/grpc".to_string()]).is_ok());
     }

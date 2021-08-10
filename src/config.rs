@@ -213,13 +213,11 @@ mod tests {
             .decrypt_with_priv_keys(priv_keys1.clone(), priv_keys2.clone())
             .is_ok());
         assert!(dc
-            .decrypt_with_priv_keys(priv_keys1.clone(), priv_keys3.clone())
+            .decrypt_with_priv_keys(priv_keys1.clone(), priv_keys3)
             .is_err());
         assert!(dc.decrypt_with_x509s(priv_keys1.clone()).is_ok());
         assert!(dc.decrypt_with_gpg(priv_keys1, priv_keys2).is_ok());
-        assert!(dc
-            .decrypt_with_pkcs11(pkcs11_config.clone(), pkcs11_yaml.clone())
-            .is_ok());
+        assert!(dc.decrypt_with_pkcs11(pkcs11_config, pkcs11_yaml).is_ok());
         assert!(dc.decrypt_with_key_provider(key_providers).is_ok());
         println!("final decrypt config is: {:?}", dc);
     }
@@ -243,12 +241,12 @@ mod tests {
 
         assert!(ec.encrypt_with_jwe(vec![]).is_err());
         assert!(ec.encrypt_with_jwe(pubkeys1.clone()).is_ok());
-        assert_eq!(pubkeys1.clone(), ec.param["pubkeys"]);
+        assert_eq!(pubkeys1, ec.param["pubkeys"]);
 
         assert!(ec.encrypt_with_jwe(pubkeys2.clone()).is_ok());
         assert_eq!(2, ec.param["pubkeys"].len());
 
-        assert!(ec.encrypt_with_pkcs7(pubkeys2.clone()).is_ok());
+        assert!(ec.encrypt_with_pkcs7(pubkeys2).is_ok());
         assert!(ec
             .encrypt_with_gpg(gpg_recipients.clone(), gpg_pub_ring_file.clone())
             .is_ok());
@@ -256,9 +254,9 @@ mod tests {
         assert_eq!(vec![gpg_pub_ring_file], ec.param["gpg-pubkeyringfile"]);
 
         assert!(ec
-            .encrypt_with_pkcs11(pkcs11_config.clone(), pkcs11_pubkeys, pkcs11_yaml.clone())
+            .encrypt_with_pkcs11(pkcs11_config, pkcs11_pubkeys, pkcs11_yaml)
             .is_ok());
-        assert!(ec.encrypt_with_key_provider(key_providers.clone()).is_ok());
+        assert!(ec.encrypt_with_key_provider(key_providers).is_ok());
         assert_eq!(vec![b"Enabled".to_vec()], ec.param["key_p1"]);
         assert_eq!(vec![b"abc".to_vec()], ec.param["key_p2"]);
         assert_eq!(vec![b"abc:abc".to_vec()], ec.param["key_p3"]);
