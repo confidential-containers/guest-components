@@ -15,3 +15,5 @@ keywrap-jwe = []
 [dependencies]
 anyhow = ">=1.0"
 josekit = ">=0.7"
+serde_json = ">=1.0"
+serde = { version = ">=1.0", features = ["derive"] }
