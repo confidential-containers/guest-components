@@ -25,5 +25,5 @@ tonic-build = "0.5"
 shadow-rs = "0.5.25"
 
 [features]
-default = []
-
+default = ["sample_kbc"]
+sample_kbc = []

@@ -5,7 +5,8 @@
 
 // Add your specific kbc declaration here.
 // For example: "pub mod sample_kbc;"
-
+#[cfg(feature = "sample_kbc")]
+pub mod sample_kbc;
 
 use anyhow::*;
 use std::collections::HashMap;
@@ -37,6 +38,14 @@ pub struct KbcModuleList {
 impl KbcModuleList {
     fn new() -> KbcModuleList {
         let mut mod_list = HashMap::new();
+
+        #[cfg(feature = "sample_kbc")]
+        {
+            let instantiate_func: KbcInstantiateFunc = Box::new(|kbs_uri: String| -> KbcInstance {
+                Box::new(sample_kbc::SampleKbc::new(kbs_uri))
+            });
+            mod_list.insert("sample_kbc".to_string(), instantiate_func);
+        }
 
         KbcModuleList { mod_list: mod_list }
     }

@@ -15,8 +15,8 @@ use std::collections::HashMap;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AnnotationPacket {
     // The access information of KBS is passed to KBC module through annotation.
-    // key_uri is used as an example here.
-    pub key_uri: String,
+    // key_url is used as an example here.
+    pub key_url: String,
     pub wrapped_key: Vec<u8>,
     pub wrap_type: String,
 }
@@ -38,8 +38,6 @@ impl KbcInterface for SampleKbc {
     fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
         // Parse the annotation, and obtain the access information of KBS and the field content to be decrypted.
         let annotation_packet: AnnotationPacket = serde_json::from_str(annotation)?;
-        self.kbs_info
-            .insert("kbs_uri".to_string(), annotation_packet.key_uri);
         self.encrypted_payload = annotation_packet.wrapped_key;
 
         let cipher_text: &Vec<u8> = &self.encrypted_payload;
@@ -64,3 +62,4 @@ impl SampleKbc {
             kbs_info: kbs_info,
         }
     }
+}
