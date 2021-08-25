@@ -22,6 +22,8 @@ rand = ">=0.8"
 sha2 = ">=0.9"
 hmac = ">=0.11"
 aes = { version = ">=0.7", features = ["ctr"] }
+base64-serde = "0.6"
+base64 = "0.13"
 
 [dev-dependencies]
 openssl = ">=0.10"

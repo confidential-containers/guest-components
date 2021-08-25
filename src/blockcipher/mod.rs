@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, Result};
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::io::Read;
+extern crate base64;
+extern crate base64_serde;
+use base64_serde::base64_serde_type;
 
 pub mod aes_ctr;
 use aes_ctr::AESCTRBlockCipher;
@@ -15,13 +18,42 @@ pub type LayerCipherType = String;
 /// TODO: Should be obtained from OCI spec once included
 pub const AES256CTR: &str = "AES_256_CTR_HMAC_SHA256";
 
+base64_serde_type!(Base64Vec, base64::STANDARD);
+
+fn base64_hashmap_s<S>(value: &HashMap<String, Vec<u8>>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let b64_encoded: HashMap<_, _> = value
+        .iter()
+        .map(|(k, v)| (k.clone(), base64::encode_config(v, base64::STANDARD)))
+        .collect();
+    b64_encoded.serialize(serializer)
+}
+
+fn base64_hashmap_d<'de, D>(deserializer: D) -> Result<HashMap<String, Vec<u8>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let b64_encoded: HashMap<String, String> = serde::Deserialize::deserialize(deserializer)?;
+    b64_encoded
+        .iter()
+        .map(|(k, v)| -> Result<(String, Vec<u8>), D::Error> {
+            Ok((
+                k.clone(),
+                base64::decode_config(v, base64::STANDARD).map_err(de::Error::custom)?,
+            ))
+        })
+        .collect()
+}
+
 /// PrivateLayerBlockCipherOptions includes the information required to encrypt/decrypt
 /// an image layer which are sensitive and should not be in plaintext
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct PrivateLayerBlockCipherOptions {
     /// symmetric_key represents the symmetric key used for encryption/decryption
     /// This field should be populated by encrypt/decrypt calls
-    #[serde(rename = "symkey")]
+    #[serde(rename = "symkey", with = "Base64Vec")]
     pub symmetric_key: Vec<u8>,
 
     /// digest is the digest of the original data for verification.
@@ -30,7 +62,11 @@ pub struct PrivateLayerBlockCipherOptions {
 
     /// cipher_options contains the cipher metadata used for encryption/decryption
     /// This field should be populated by encrypt/decrypt calls
-    #[serde(rename = "cipheroptions")]
+    #[serde(
+        rename = "cipheroptions",
+        serialize_with = "base64_hashmap_s",
+        deserialize_with = "base64_hashmap_d"
+    )]
     pub cipher_options: HashMap<String, Vec<u8>>,
 }
 
@@ -44,11 +80,16 @@ pub struct PublicLayerBlockCipherOptions {
     pub cipher_type: LayerCipherType,
 
     /// hmac contains the hmac string to help verify encryption
+    #[serde(with = "Base64Vec")]
     pub hmac: Vec<u8>,
 
     /// cipher_options contains the cipher metadata used for encryption/decryption
     /// This field should be populated by encrypt/decrypt calls
-    #[serde(rename = "cipheroptions")]
+    #[serde(
+        rename = "cipheroptions",
+        serialize_with = "base64_hashmap_s",
+        deserialize_with = "base64_hashmap_d"
+    )]
     pub cipher_options: HashMap<String, Vec<u8>>,
 }
 
