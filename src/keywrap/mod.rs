@@ -12,7 +12,7 @@ pub mod jwe;
 /// KeyWrapper is the interface used for wrapping keys using
 /// a specific encryption technology (pgp, jwe, pkcs7, pkcs11, keyprovider)
 #[allow(unused_variables)]
-pub trait KeyWrapper {
+pub trait KeyWrapper: Send + Sync {
     /// wrap keys data with encrypt config.
     fn wrap_keys(&self, ec: &EncryptConfig, opts_data: &[u8]) -> Result<Vec<u8>>;
 
@@ -45,5 +45,42 @@ pub trait KeyWrapper {
     /// If not implemented, return `None`.
     fn recipients(&self, recipients: String) -> Option<Vec<String>> {
         None
+    }
+}
+
+impl<W: KeyWrapper + ?Sized> KeyWrapper for Box<W> {
+    #[inline]
+    fn wrap_keys(&self, ec: &EncryptConfig, opts_data: &[u8]) -> Result<Vec<u8>> {
+        (**self).wrap_keys(ec, opts_data)
+    }
+
+    #[inline]
+    fn unwrap_keys(&self, dc: &DecryptConfig, annotation: &[u8]) -> Result<Vec<u8>> {
+        (**self).unwrap_keys(dc, annotation)
+    }
+
+    #[inline]
+    fn annotation_id(&self) -> &str {
+        (**self).annotation_id()
+    }
+
+    #[inline]
+    fn no_possible_keys(&self, dc_param: &HashMap<String, Vec<Vec<u8>>>) -> bool {
+        (**self).no_possible_keys(dc_param)
+    }
+
+    #[inline]
+    fn private_keys(&self, dc_param: &HashMap<String, Vec<Vec<u8>>>) -> Option<Vec<Vec<u8>>> {
+        (**self).private_keys(dc_param)
+    }
+
+    #[inline]
+    fn keyids_from_packet(&self, packet: String) -> Option<Vec<u64>> {
+        (**self).keyids_from_packet(packet)
+    }
+
+    #[inline]
+    fn recipients(&self, recipients: String) -> Option<Vec<String>> {
+        (**self).recipients(recipients)
     }
 }
