@@ -15,6 +15,7 @@ use tokio::runtime::Runtime;
 use core::option::Option;
 use core::fmt::Debug;
 use tonic::codegen::http::Uri;
+use core::fmt;
 
 impl Debug for dyn CommandExecuter {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -30,8 +31,19 @@ pub struct KeyProviderKeyWrapper {
     pub runner: Option<Box<dyn CommandExecuter>>,
 }
 
-pub const OP_KEY_WRAP: &str = "keywrap";
-pub const OP_KEY_UNWRAP: &str = "keyunwrap";
+enum OpKey {
+    Wrap,
+    Unwrap,
+}
+
+impl fmt::Display for OpKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            OpKey::Wrap => write!(f, "keywrap"),
+            OpKey::Unwrap => write!(f, "keyunwrap"),
+        }
+    }
+}
 
 /// KeyProviderKeyWrapProtocolInput defines the input to the key provider binary or grpc method.
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -98,6 +110,48 @@ pub fn new_key_wrapper(provider: String, attrs: KeyProviderAttrs, runner: Option
     kp
 }
 
+impl KeyProviderKeyWrapProtocolOutput {
+    async fn from_grpc(input: Vec<u8>, conn: &str, operation: OpKey) -> Result<Self> {
+        let mut protocol_output = KeyProviderKeyWrapProtocolOutput::default();
+        let uri = conn.parse::<Uri>().unwrap();
+        // create a channel ie connection to server
+        let channel = tonic::transport::Channel::builder(uri)
+            .connect()
+            .await.map_err(|e| anyhow!("Error while creating channel: {:?}",e))?;
+
+        let mut client = keyproviderpb::key_provider_service_client::KeyProviderServiceClient::new(channel);
+        let request = tonic::Request::new(keyproviderpb::KeyProviderKeyWrapProtocolInput { key_provider_key_wrap_protocol_input: input });
+        match operation {
+            OpKey::Wrap => {
+                let grpc_output = client.wrap_key(request).await.map_err(|_| anyhow!("Error from grpc request method on {:?} operation", OpKey::Wrap.to_string()))?;
+                protocol_output = serde_json::from_slice(&grpc_output.into_inner().key_provider_key_wrap_protocol_output).map_err(|_| anyhow!("Error while deserializing grpc output on {:?} operation", OpKey::Wrap.to_string()))?;
+            }
+            OpKey::Unwrap => {
+                let grpc_output = client.un_wrap_key(request).await.map_err(|_| anyhow!("Error from grpc request method on {:?} operation", OpKey::Unwrap.to_string()))?;
+                protocol_output = serde_json::from_slice(&grpc_output.into_inner().key_provider_key_wrap_protocol_output).map_err(|_| anyhow!("Error while deserializing grpc output on {:?} operation", OpKey::Unwrap.to_string()))?;
+            }
+        }
+
+        Ok(protocol_output)
+    }
+
+    fn from_command(input: Vec<u8>, cmd: &Option<Command>, runner: &Box<dyn utils::CommandExecuter>) -> Result<Self> {
+        let resp_bytes: Vec<u8>;
+        if cmd.as_ref().is_some() {
+            let cmd_name = cmd.as_ref().unwrap().path.to_string();
+            let mut args = &vec![];
+            if cmd.as_ref().unwrap().args.as_ref().is_some() {
+                args = cmd.as_ref().unwrap().args.as_ref().unwrap();
+            }
+            resp_bytes = runner.exec(cmd_name, args, input).map_err(|_| anyhow!("Error from command executer"))?;
+            let protocol_output: KeyProviderKeyWrapProtocolOutput = serde_json::from_slice(&resp_bytes).map_err(|_| anyhow!("Error while deserializing command executer output"))?;
+
+            return Ok(protocol_output);
+        }
+        Err(anyhow!("No command or args specified in key provider"))
+    }
+}
+
 impl KeyWrapper for KeyProviderKeyWrapper {
     /// WrapKeys calls appropriate binary-executable or grpc/ttrpc server for wrapping the session key for recipients and gets encrypted optsData, which
     /// describe the symmetric key used for encrypting the layer
@@ -105,30 +159,21 @@ impl KeyWrapper for KeyProviderKeyWrapper {
         let mut protocol_output = KeyProviderKeyWrapProtocolOutput::default();
         let key_wrap_params = KeyWrapParams { ec: enc_config.clone(), opts_data: Vec::from(opts_data) };
         let input = KeyProviderKeyWrapProtocolInput {
-            op: OP_KEY_WRAP.to_string(),
+            op: OpKey::Wrap.to_string(),
             key_wrap_params,
             key_unwrap_params: KeyUnwrapParams::default(),
         };
-        let serialized_input = match serde_json::to_vec(&input) {
-            Ok(x) => x,
-            Err(_) => return Err(anyhow!("Error while serializing key provider input parameters on {:?} operation", OP_KEY_WRAP.to_string()))
-        };
+        let serialized_input = serde_json::to_vec(&input).map_err(|_| anyhow!("Error while serializing key provider input parameters on {:?} operation", OpKey::Wrap.to_string()))?;
 
         if enc_config.param.contains_key(&self.provider.to_string()) {
             if self.attrs.cmd.as_ref().is_some() {
-                protocol_output = match get_provider_command_output(serialized_input, &self.attrs.cmd, self.runner.as_ref().unwrap()) {
-                    Ok(v) => v,
-                    Err(e) => return Err(anyhow!("Error while key provider {:?} operation, from binary executable provider, error: {:?}",OP_KEY_WRAP.to_string(), e))
-                };
+                protocol_output = KeyProviderKeyWrapProtocolOutput::from_command(serialized_input, &self.attrs.cmd, self.runner.as_ref().unwrap()).map_err(|e| anyhow!("Error while key provider {:?} operation, from binary executable provider, error: {:?}", OpKey::Wrap.to_string(), e))?;
             } else if self.attrs.grpc.as_ref().is_some() {
-                let rt = Runtime::new().unwrap().block_on(get_provider_grpc_output(serialized_input, self.attrs.grpc.as_ref().unwrap(), OP_KEY_WRAP.to_string()));
-                protocol_output = match rt {
-                    Ok(v) => v,
-                    Err(e) => return Err(anyhow!("Error while key provider {:?} operation, from grpc provider, error: {:?}",OP_KEY_WRAP.to_string(),e))
-                };
+                let rt = Runtime::new().unwrap().block_on(KeyProviderKeyWrapProtocolOutput::from_grpc(serialized_input, self.attrs.grpc.as_ref().unwrap(), OpKey::Wrap));
+                protocol_output = rt.map_err(|e| anyhow!("Error while key provider {:?} operation, from grpc provider, error: {:?}", OpKey::Wrap.to_string(),e))?;
             }
         } else {
-            return Err(anyhow!("Error while key provider {:?} operation, unsupported protocol",OP_KEY_WRAP.to_string()))
+            return Err(anyhow!("Error while key provider {:?} operation, unsupported protocol", OpKey::Wrap.to_string()));
         }
 
         Ok(protocol_output.key_wrap_results.annotation)
@@ -140,33 +185,23 @@ impl KeyWrapper for KeyProviderKeyWrapper {
         let mut protocol_output = KeyProviderKeyWrapProtocolOutput::default();
         let key_unwrap_params = KeyUnwrapParams { dc: dc_config.clone(), annotation: Vec::from(json_string) };
         let input = KeyProviderKeyWrapProtocolInput {
-            op: OP_KEY_UNWRAP.to_string(),
+            op: OpKey::Unwrap.to_string(),
             key_wrap_params: KeyWrapParams::default(),
             key_unwrap_params,
         };
-        let serialized_input = match serde_json::to_vec(&input) {
-            Ok(x) => x,
-            Err(_) => return Err(anyhow!("Error while serializing key provider input parameters on {:?} operation", OP_KEY_UNWRAP.to_string()))
-        };
+        let serialized_input = serde_json::to_vec(&input).map_err(|_| anyhow!("Error while serializing key provider input parameters on {:?} operation", OpKey::Unwrap.to_string()))?;
 
         if self.attrs.cmd.as_ref().is_some() {
-            protocol_output = match get_provider_command_output(serialized_input, &self.attrs.cmd, self.runner.as_ref().unwrap()) {
-                Ok(v) => v,
-                Err(e) => return Err(anyhow!("Error while key provider {:?} operation, from binary executable provider, error: {:?}", OP_KEY_UNWRAP.to_string(), e))
-            };
+            protocol_output = KeyProviderKeyWrapProtocolOutput::from_command(serialized_input, &self.attrs.cmd, self.runner.as_ref().unwrap()).map_err(|e| anyhow!("Error while key provider {:?} operation, from binary executable provider, error: {:?}", OpKey::Unwrap.to_string(), e))?;
         } else if self.attrs.grpc.as_ref().is_some() {
-            let rt = Runtime::new().unwrap().block_on(get_provider_grpc_output(serialized_input, self.attrs.grpc.as_ref().unwrap(), OP_KEY_UNWRAP.to_string()));
-            protocol_output = match rt {
-                Ok(v) => v,
-                Err(e) => return Err(anyhow!("Error while key provider {:?} operation, from grpc provider error, error: {:?}", OP_KEY_UNWRAP.to_string(), e))
-            };
+            let rt = Runtime::new().unwrap().block_on(KeyProviderKeyWrapProtocolOutput::from_grpc(serialized_input, self.attrs.grpc.as_ref().unwrap(), OpKey::Unwrap));
+            protocol_output = rt.map_err(|e| anyhow!("Error while key provider {:?} operation, from grpc provider error, error: {:?}", OpKey::Unwrap.to_string(), e))?;
         } else {
-            return Err(anyhow!("Error while key provider {:?} operation, unsupported protocol",OP_KEY_UNWRAP.to_string()))
+            return Err(anyhow!("Error while key provider {:?} operation, unsupported protocol",OpKey::Unwrap.to_string()));
         }
 
         Ok(protocol_output.key_unwrap_results.opts_data)
     }
-
 
     fn annotation_id(&self) -> String {
         format!("{}{}", "org.opencontainers.image.enc.keys.provider.", self.provider)
@@ -175,62 +210,6 @@ impl KeyWrapper for KeyProviderKeyWrapper {
     fn no_possible_keys(&self, _dc_param: &HashMap<String, Vec<Vec<u8>>, RandomState>) -> bool {
         unimplemented!()
     }
-}
-
-async fn get_provider_grpc_output(input: Vec<u8>, conn: &str, operation: String) -> Result<KeyProviderKeyWrapProtocolOutput> {
-    let mut protocol_output = KeyProviderKeyWrapProtocolOutput::default();
-    let uri = conn.parse::<Uri>().unwrap();
-    // create a channel ie connection to server
-    let channel = match tonic::transport::Channel::builder(uri)
-        .connect()
-        .await {
-        Ok(x) => x,
-        Err(e) => return Err(anyhow!("Error while creating channel: {:?}",e))
-    };
-    let mut client = keyproviderpb::key_provider_service_client::KeyProviderServiceClient::new(channel);
-    let request = tonic::Request::new(keyproviderpb::KeyProviderKeyWrapProtocolInput { key_provider_key_wrap_protocol_input: input });
-    if operation == OP_KEY_WRAP {
-        let grpc_output = match client.wrap_key(request).await {
-            Ok(resp) => resp,
-            Err(_) => return Err(anyhow!("Error from grpc request method on {:?} operation", OP_KEY_WRAP.to_string()))
-        };
-        protocol_output = match serde_json::from_slice(&grpc_output.into_inner().key_provider_key_wrap_protocol_output) {
-            Ok(x) => x,
-            Err(_) => return Err(anyhow!("Error while deserializing grpc output on {:?} operation", OP_KEY_WRAP.to_string()))
-        }
-    } else if operation == OP_KEY_UNWRAP {
-        let grpc_output = match client.un_wrap_key(request).await {
-            Ok(resp) => resp,
-            Err(_) => return Err(anyhow!("Error from grpc request method on {:?} operation", OP_KEY_UNWRAP.to_string()))
-        };
-        protocol_output = match serde_json::from_slice(&grpc_output.into_inner().key_provider_key_wrap_protocol_output) {
-            Ok(x) => x,
-            Err(_) => return Err(anyhow!("Error while deserializing grpc output on {:?} operation", OP_KEY_UNWRAP.to_string()))
-        };
-    }
-    Ok(protocol_output)
-}
-
-fn get_provider_command_output(input: Vec<u8>, cmd: &Option<Command>, runner: &Box<dyn utils::CommandExecuter>) -> Result<KeyProviderKeyWrapProtocolOutput> {
-    let resp_bytes: Vec<u8>;
-    if cmd.as_ref().is_some() {
-        let cmd_name = cmd.as_ref().unwrap().path.to_string();
-        let mut args = &vec![];
-        if cmd.as_ref().unwrap().args.as_ref().is_some() {
-            args = cmd.as_ref().unwrap().args.as_ref().unwrap();
-        }
-        resp_bytes = match runner.exec(cmd_name, args, input) {
-            Ok(resp) => resp,
-            Err(_) => return Err(anyhow!("Error from command executer"))
-        };
-        let protocol_output: KeyProviderKeyWrapProtocolOutput = match serde_json::from_slice(&resp_bytes) {
-            Ok(x) => x,
-            Err(_) => return Err(anyhow!("Error while deserializing command executer output"))
-        };
-
-        return Ok(protocol_output);
-    }
-    Err(anyhow!("No command or args specified in key provider"))
 }
 
 #[cfg(test)]
@@ -268,7 +247,6 @@ mod tests {
         pub wrapped_key: Vec<u8>,
         pub wrap_type: String,
     }
-
 
     ///grpc server with mock api implementation for serving the clients with mock WrapKey and Unwrapkey grpc method implementations
     #[derive(Default)]
@@ -320,7 +298,6 @@ mod tests {
         }
     }
 
-
     impl CommandExecuter for TestRunner {
         /// Mock CommandExecuter for executing a linux command line command and return the output of the command with an error if it exists.
         fn exec(&self, cmd: String, _args: &Vec<String>, input: Vec<u8>) -> std::io::Result<Vec<u8>> {
@@ -331,10 +308,7 @@ mod tests {
                 let cipher = Aes256Gcm::new(Key::from_slice(unsafe { ENC_KEY }));
                 let nonce = Nonce::from_slice(b"unique nonce");
                 let image_layer_sym_key: &[u8] = &key_wrap_input.key_wrap_params.opts_data;
-                let wrapped_key = match cipher.encrypt(nonce, image_layer_sym_key) {
-                    Ok(x) => x,
-                    Err(_) => return Err(std::io::Error::new(std::io::ErrorKind::Other, "encryption failure"))
-                };
+                let wrapped_key = cipher.encrypt(nonce, image_layer_sym_key).map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "encryption failure"))?;
 
                 let ap = AnnotationPacket {
                     key_url: "https://key-provider/key-uuid".to_string(),
@@ -352,11 +326,8 @@ mod tests {
                 let cipher_text = ap.wrapped_key;
                 let cipher = Aes256Gcm::new(Key::from_slice(unsafe { DEC_KEY }));
                 let nonce = Nonce::from_slice(b"unique nonce");
-                let image_layer_sym_key = match cipher
-                    .decrypt(nonce, cipher_text.as_ref()) {
-                    Ok(x) => x,
-                    Err(_) => return Err(std::io::Error::new(std::io::ErrorKind::Other, "decryption failure"))
-                };
+                let image_layer_sym_key = cipher
+                    .decrypt(nonce, cipher_text.as_ref()).map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "decryption failure"))?;
 
                 key_wrap_output = KeyProviderKeyWrapProtocolOutput { key_wrap_results: KeyWrapResults::default(), key_unwrap_results: KeyUnwrapResults { opts_data: image_layer_sym_key } };
             }
@@ -458,8 +429,8 @@ mod tests {
     }
 
     // Run a mock grpc server
-    fn start_grpc_server(sock_address :String) {
-        tokio::spawn(async move{
+    fn start_grpc_server(sock_address: String) {
+        tokio::spawn(async move {
             let (tx, mut rx) = mpsc::unbounded_channel();
             let addr: SocketAddr = sock_address.parse().unwrap();
             let server = TestServer::default();

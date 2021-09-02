@@ -30,9 +30,9 @@ pub struct Command {
 #[derive(Deserialize, Debug, Clone)]
 pub struct KeyProviderAttrs {
     #[serde(rename = "cmd")]
-    pub cmd: core::option::Option<Command>,
+    pub cmd: Option<Command>,
     #[serde(rename = "grpc")]
-    pub grpc: core::option::Option<String>,
+    pub grpc: Option<String>,
 }
 
 /// OcicryptConfig represents the format of an ocicrypt_provider.conf config file
@@ -41,7 +41,6 @@ pub struct OcicryptConfig {
     #[serde(rename = "key-providers")]
     pub key_providers: HashMap<String, KeyProviderAttrs>
 }
-
 
 impl DecryptConfig {
     /// Update DecryptConfig param with key and value
@@ -223,35 +222,22 @@ pub struct CryptoConfig {
     pub decrypt_config: Option<DecryptConfig>,
 }
 
-/// parseConfigFile parses a configuration file; it is not an error if the configuration file does
-/// not exist, so no error is returned.
-fn parse_config_file(filename: String) -> Result<OcicryptConfig> {
-    let file = File::open(filename)?;
-    let reader = BufReader::new(file);
+impl OcicryptConfig {
+    fn from_file(filename: &str) -> Result<OcicryptConfig> {
+        let file = File::open(filename)?;
+        let reader = BufReader::new(file);
 
-
-    let oci_config: OcicryptConfig;
-    oci_config = match serde_json::from_reader(reader) {
-        Ok(v) => v,
-        Err(e) => return Err(anyhow!("Error reading file {:?}", e)),
-    };
-
-    Ok(oci_config)
-}
-
-/// get_configuration tries to read the configuration file at the following locations
-/// ${OCICRYPT_KEYPROVIDER_CONFIG} == "/etc/ocicrypt_keyprovider.json"
-/// If no configuration file could be found or read a null pointer is returned
-pub fn get_keyprovider_config() -> Result<OcicryptConfig> {
-    let mut ic: OcicryptConfig = OcicryptConfig { key_providers: Default::default() };
-    let filename = std::env::var(OCICRYPT_ENVVARNAME).unwrap();
-    if filename.len() > 0 {
-        ic = match parse_config_file(filename) {
-            Ok(v) => v,
-            Err(e) => return Err(anyhow!("Error while parsing keyprovider config file Error:{:?}", e)),
-        }
+        serde_json::from_reader(reader).map_err(|e| anyhow!("Error reading file {:?}", e.to_string()))
     }
-    Ok(ic)
+
+    /// from_env tries to read the configuration file at the following locations
+    /// ${OCICRYPT_KEYPROVIDER_CONFIG} == "/etc/ocicrypt_keyprovider.json"
+    /// If no configuration file could be found or read a null pointer is returned
+    fn from_env(env: &str) -> Result<OcicryptConfig> {
+        // find file name from environment variable, ignore error if environment variable is not set.
+        let filename = std::env::var(env).map(|v| v.to_string())?;
+        OcicryptConfig::from_file(filename.as_str()).map_err(|e| e.into())
+    }
 }
 
 #[cfg(test)]
@@ -357,8 +343,8 @@ mod tests {
         let attrs = KeyProviderAttrs { cmd: Some(Command { path: "/usr/lib/keyprovider-wrapkey".to_string(), args: Some(args) }), grpc: None };
         provider.insert(String::from("keyprovider1"), attrs);
 
-        assert!(get_keyprovider_config().is_ok());
-        let provider_unmarshalled = get_keyprovider_config().unwrap();
+        assert!(OcicryptConfig::from_env(OCICRYPT_ENVVARNAME).is_ok());
+        let provider_unmarshalled = OcicryptConfig::from_env(OCICRYPT_ENVVARNAME).expect("Unable to read ocicrypt config file");
         assert_eq!(provider_unmarshalled.key_providers.get("keyprovider1").unwrap().cmd.as_ref().unwrap().path, provider.get("keyprovider1").unwrap().cmd.as_ref().unwrap().path)
     }
 }
