@@ -5,6 +5,7 @@ use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
+use serde::{Serializer, Deserializer, Serialize, de};
 
 pub const OCICRYPT_ENVVARNAME: &str = "OCICRYPT_KEYPROVIDER_CONFIG";
 
@@ -12,8 +13,55 @@ pub const OCICRYPT_ENVVARNAME: &str = "OCICRYPT_KEYPROVIDER_CONFIG";
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct DecryptConfig {
     /// map holding 'privkeys', 'x509s', 'gpg-privatekeys'
-    #[serde(rename = "Parameters")]
+    #[serde(rename = "Parameters",
+    serialize_with = "base64_hashmap_s",
+    deserialize_with = "base64_hashmap_d")]
     pub param: HashMap<String, Vec<Vec<u8>>>,
+}
+
+fn base64_enc(val: &Vec<Vec<u8>>) -> Vec<String> {
+    let mut res_vec = vec![];
+    for x in val {
+        res_vec.push(base64::encode_config(x, base64::STANDARD));
+    }
+
+    return res_vec;
+}
+
+fn base64_hashmap_s<S>(value: &HashMap<String, Vec<Vec<u8>>>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+{
+    let mut b64_encoded: HashMap<String, Vec<String>> = HashMap::default();
+    for (key, value) in value {
+        b64_encoded.insert(key.clone().to_string(), base64_enc(value));
+    }
+    b64_encoded.serialize(serializer)
+}
+
+fn base64_dec(val: &Vec<String>) -> Result<Vec<Vec<u8>>, base64::DecodeError> {
+    let mut res_vec = vec![];
+    for x in val {
+        res_vec.push(base64::decode_config(x, base64::STANDARD).map_err(|e| e.into())?);
+    }
+
+    Ok(res_vec)
+}
+
+fn base64_hashmap_d<'de, D>(deserializer: D) -> Result<HashMap<String, Vec<Vec<u8>>>, D::Error>
+    where
+        D: Deserializer<'de>,
+{
+    let b64_encoded: HashMap<String, Vec<String>> = serde::Deserialize::deserialize(deserializer)?;
+    b64_encoded
+        .iter()
+        .map(|(k, v)| -> Result<(String, Vec<Vec<u8>>), D::Error> {
+            Ok((
+                k.clone(),
+                base64_dec(v).map_err(de::Error::custom)?
+            ))
+        })
+        .collect()
 }
 
 /// Command describes the structure of command, it consist of path and args, where path defines the location of
@@ -129,7 +177,9 @@ impl DecryptConfig {
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct EncryptConfig {
     /// map holding 'gpg-recipients', 'gpg-pubkeyringfile', 'pubkeys', 'x509s'
-    #[serde(rename = "Parameters")]
+    #[serde(rename = "Parameters",
+    serialize_with = "base64_hashmap_s",
+    deserialize_with = "base64_hashmap_d")]
     pub param: HashMap<String, Vec<Vec<u8>>>,
 
     /// Allow for adding wrapped keys to an encrypted layer
@@ -236,6 +286,7 @@ impl OcicryptConfig {
     fn from_env(env: &str) -> Result<OcicryptConfig> {
         // find file name from environment variable, ignore error if environment variable is not set.
         let filename = std::env::var(env).map(|v| v.to_string())?;
+
         OcicryptConfig::from_file(filename.as_str()).map_err(|e| e.into())
     }
 }
