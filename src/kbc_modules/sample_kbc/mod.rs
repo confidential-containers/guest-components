@@ -43,11 +43,7 @@ impl KbcInterface for SampleKbc {
         let annotation_packet: AnnotationPacket = serde_json::from_str(annotation)?;
         let encrypted_payload: Vec<u8> = annotation_packet.wrapped_data;
 
-        let plain_text = decrypt(
-            &encrypted_payload,
-            HARDCODED_KEY,
-            &annotation_packet.iv,
-        )?;
+        let plain_text = decrypt(&encrypted_payload, HARDCODED_KEY, &annotation_packet.iv)?;
 
         Ok(plain_text)
     }
@@ -57,9 +53,7 @@ impl SampleKbc {
     pub fn new(kbs_uri: String) -> SampleKbc {
         let mut kbs_info: HashMap<String, String> = HashMap::new();
         kbs_info.insert("kbs_uri".to_string(), kbs_uri);
-        SampleKbc {
-            kbs_info: kbs_info,
-        }
+        SampleKbc { kbs_info: kbs_info }
     }
 }
 

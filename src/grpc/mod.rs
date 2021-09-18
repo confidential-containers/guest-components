@@ -80,7 +80,10 @@ impl KeyProviderService for KeyProvider {
             .as_bytes()
             .to_vec();
 
-        debug!("UnWrapKey API output: {}", serde_json::to_string(&output_struct).unwrap());
+        debug!(
+            "UnWrapKey API output: {}",
+            serde_json::to_string(&output_struct).unwrap()
+        );
 
         let reply = KeyProviderKeyWrapProtocolOutput {
             key_provider_key_wrap_protocol_output: output,

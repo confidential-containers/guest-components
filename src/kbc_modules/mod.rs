@@ -5,6 +5,8 @@
 
 // Add your specific kbc declaration here.
 // For example: "pub mod sample_kbc;"
+#[cfg(feature = "eaa_kbc")]
+pub mod eaa_kbc;
 #[cfg(feature = "offline_fs_kbc")]
 pub mod offline_fs_kbc;
 #[cfg(feature = "sample_kbc")]
@@ -51,9 +53,18 @@ impl KbcModuleList {
 
         #[cfg(feature = "offline_fs_kbc")]
         {
-            let instantiate_func: KbcInstantiateFunc =
-                Box::new(|_: String| -> KbcInstance { Box::new(offline_fs_kbc::OfflineFsKbc::new()) });
+            let instantiate_func: KbcInstantiateFunc = Box::new(|_: String| -> KbcInstance {
+                Box::new(offline_fs_kbc::OfflineFsKbc::new())
+            });
             mod_list.insert("offline_fs_kbc".to_string(), instantiate_func);
+        }
+
+        #[cfg(feature = "eaa_kbc")]
+        {
+            let instantiate_func: KbcInstantiateFunc = Box::new(|kbs_uri: String| -> KbcInstance {
+                Box::new(eaa_kbc::EAAKbc::new(kbs_uri))
+            });
+            mod_list.insert("eaa_kbc".to_string(), instantiate_func);
         }
 
         KbcModuleList { mod_list: mod_list }

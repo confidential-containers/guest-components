@@ -20,9 +20,9 @@ endif
 
 ifdef MUSL
     MUSL_ADD := $(shell rustup target add x86_64-unknown-linux-musl)
-ifneq ($(DEBIANOS),)
-    MUSL_INSTALL := $(shell sudo apt-get install -y musl-tools) 
-endif
+    ifneq ($(DEBIANOS),)
+        MUSL_INSTALL := $(shell sudo apt-get install -y musl-tools) 
+    endif
     MUSL_FLAG := --target x86_64-unknown-linux-musl
     TARGET_DIR := $(TARGET_DIR)/x86_64-unknown-linux-musl
 endif
@@ -35,7 +35,16 @@ else
     TARGET_DIR := $(TARGET_DIR)/release
 endif
 
-all:
+ifeq ($(KBC), eaa_kbc)
+    RATS_TLS := $(shell ls /usr/local/lib/rats-tls/ 2> /dev/null)
+    ifeq ($(RATS_TLS),)
+        RATS_TLS_DOWNLOAD := $(shell cd .. && rm -rf inclavare-containers && git clone https://github.com/alibaba/inclavare-containers)
+        RATS_TLS_INSTALL := $(shell cd ../inclavare-containers/rats-tls && cmake -DBUILD_SAMPLES=on -H. -Bbuild && make -C build install >&2)
+    endif
+    RUST_FLAGS := RUSTFLAGS="-C link-args=-Wl,-rpath,/usr/local/lib/rats-tls"
+endif
+
+build:
 	$(RUST_FLAGS) cargo build $(release) $(feature) $(KBC) $(MUSL_FLAG)
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)
@@ -45,7 +54,7 @@ install:
 
 uninstall:
 	rm -f $(BINDIR)/$(BIN_NAME)
- 
+
 clean:
 	cargo clean && rm -f Cargo.lock
 
