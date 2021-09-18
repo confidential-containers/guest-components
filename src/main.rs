@@ -16,6 +16,7 @@ pub mod kbc_runtime;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    env_logger::init();
     let app_matches = App::new("attestation-agent")
         .version("1.0.0")
         .arg(

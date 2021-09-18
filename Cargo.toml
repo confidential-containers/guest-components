@@ -17,6 +17,7 @@ base64 = "0.13.0"
 clap = "2"
 anyhow = "1.0"
 log = "0.4.14"
+env_logger = "0.9.0"
 lazy_static = "1.4.0"
 string-error = "0.1.0"
 

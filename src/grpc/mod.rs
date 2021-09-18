@@ -80,8 +80,7 @@ impl KeyProviderService for KeyProvider {
             .as_bytes()
             .to_vec();
 
-        debug!("UnWrapKey API output:");
-        debug!("{}", serde_json::to_string_pretty(&output_struct).unwrap());
+        debug!("UnWrapKey API output: {}", serde_json::to_string(&output_struct).unwrap());
 
         let reply = KeyProviderKeyWrapProtocolOutput {
             key_provider_key_wrap_protocol_output: output,
@@ -111,9 +110,8 @@ struct InputPayload {
 
 fn parse_input(input_byte: Vec<u8>) -> Result<InputPayload> {
     let input_string = String::from_utf8(input_byte)?;
+    debug!("UnWrapKey API Request Input: {}", input_string);
     let input: KeyProviderInput = serde_json::from_str::<KeyProviderInput>(&input_string)?;
-    debug!("UnWrapKey API Request Input");
-    debug!("{}", serde_json::to_string_pretty(&input).unwrap());
     let base64_annotation = input
         .keyunwrapparams
         .annotation
