@@ -77,7 +77,7 @@ fn process_x509_certs(keys: Vec<String>) -> Result<Vec<Vec<u8>>> {
 
     for key in keys {
         let name = key.split(':').next().unwrap();
-        if !Path::new(name).exists(){
+        if !Path::new(name).exists() {
             continue;
         }
         let contents = fs::read(name)?;

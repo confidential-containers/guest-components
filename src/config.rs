@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, Result};
+use serde::{de, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
-use serde::{Serializer, Deserializer, Serialize, de};
 
 pub const OCICRYPT_ENVVARNAME: &str = "OCICRYPT_KEYPROVIDER_CONFIG";
 
@@ -13,9 +13,11 @@ pub const OCICRYPT_ENVVARNAME: &str = "OCICRYPT_KEYPROVIDER_CONFIG";
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct DecryptConfig {
     /// map holding 'privkeys', 'x509s', 'gpg-privatekeys'
-    #[serde(rename = "Parameters",
-    serialize_with = "base64_hashmap_s",
-    deserialize_with = "base64_hashmap_d")]
+    #[serde(
+        rename = "Parameters",
+        serialize_with = "base64_hashmap_s",
+        deserialize_with = "base64_hashmap_d"
+    )]
     pub param: HashMap<String, Vec<Vec<u8>>>,
 }
 
@@ -28,9 +30,12 @@ fn base64_enc(val: &Vec<Vec<u8>>) -> Vec<String> {
     return res_vec;
 }
 
-fn base64_hashmap_s<S>(value: &HashMap<String, Vec<Vec<u8>>>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+fn base64_hashmap_s<S>(
+    value: &HashMap<String, Vec<Vec<u8>>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
 {
     let mut b64_encoded: HashMap<String, Vec<String>> = HashMap::default();
     for (key, value) in value {
@@ -49,17 +54,14 @@ fn base64_dec(val: &Vec<String>) -> Result<Vec<Vec<u8>>, base64::DecodeError> {
 }
 
 fn base64_hashmap_d<'de, D>(deserializer: D) -> Result<HashMap<String, Vec<Vec<u8>>>, D::Error>
-    where
-        D: Deserializer<'de>,
+where
+    D: Deserializer<'de>,
 {
     let b64_encoded: HashMap<String, Vec<String>> = serde::Deserialize::deserialize(deserializer)?;
     b64_encoded
         .iter()
         .map(|(k, v)| -> Result<(String, Vec<Vec<u8>>), D::Error> {
-            Ok((
-                k.clone(),
-                base64_dec(v).map_err(de::Error::custom)?
-            ))
+            Ok((k.clone(), base64_dec(v).map_err(de::Error::custom)?))
         })
         .collect()
 }
@@ -87,7 +89,7 @@ pub struct KeyProviderAttrs {
 #[derive(Deserialize)]
 pub struct OcicryptConfig {
     #[serde(rename = "key-providers")]
-    pub key_providers: HashMap<String, KeyProviderAttrs>
+    pub key_providers: HashMap<String, KeyProviderAttrs>,
 }
 
 impl DecryptConfig {
@@ -177,9 +179,11 @@ impl DecryptConfig {
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct EncryptConfig {
     /// map holding 'gpg-recipients', 'gpg-pubkeyringfile', 'pubkeys', 'x509s'
-    #[serde(rename = "Parameters",
-    serialize_with = "base64_hashmap_s",
-    deserialize_with = "base64_hashmap_d")]
+    #[serde(
+        rename = "Parameters",
+        serialize_with = "base64_hashmap_s",
+        deserialize_with = "base64_hashmap_d"
+    )]
     pub param: HashMap<String, Vec<Vec<u8>>>,
 
     /// Allow for adding wrapped keys to an encrypted layer
@@ -277,7 +281,8 @@ impl OcicryptConfig {
         let file = File::open(filename)?;
         let reader = BufReader::new(file);
 
-        serde_json::from_reader(reader).map_err(|e| anyhow!("Error reading file {:?}", e.to_string()))
+        serde_json::from_reader(reader)
+            .map_err(|e| anyhow!("Error reading file {:?}", e.to_string()))
     }
 
     /// from_env tries to read the configuration file at the following locations
@@ -294,7 +299,7 @@ impl OcicryptConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{env};
+    use std::env;
     use std::path::PathBuf;
 
     #[test]
@@ -386,16 +391,43 @@ mod tests {
     fn test_ocicrypt_config() {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.push("data");
-        let test_conf_path = format!("{}/{}", path.to_str().unwrap().to_string(), "ocicrypt_config.json");
+        let test_conf_path = format!(
+            "{}/{}",
+            path.to_str().unwrap().to_string(),
+            "ocicrypt_config.json"
+        );
         env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", &test_conf_path);
 
         let mut provider = HashMap::new();
         let args: Vec<String> = Vec::default();
-        let attrs = KeyProviderAttrs { cmd: Some(Command { path: "/usr/lib/keyprovider-wrapkey".to_string(), args: Some(args) }), grpc: None };
+        let attrs = KeyProviderAttrs {
+            cmd: Some(Command {
+                path: "/usr/lib/keyprovider-wrapkey".to_string(),
+                args: Some(args),
+            }),
+            grpc: None,
+        };
         provider.insert(String::from("keyprovider1"), attrs);
 
         assert!(OcicryptConfig::from_env(OCICRYPT_ENVVARNAME).is_ok());
-        let provider_unmarshalled = OcicryptConfig::from_env(OCICRYPT_ENVVARNAME).expect("Unable to read ocicrypt config file");
-        assert_eq!(provider_unmarshalled.key_providers.get("keyprovider1").unwrap().cmd.as_ref().unwrap().path, provider.get("keyprovider1").unwrap().cmd.as_ref().unwrap().path)
+        let provider_unmarshalled = OcicryptConfig::from_env(OCICRYPT_ENVVARNAME)
+            .expect("Unable to read ocicrypt config file");
+        assert_eq!(
+            provider_unmarshalled
+                .key_providers
+                .get("keyprovider1")
+                .unwrap()
+                .cmd
+                .as_ref()
+                .unwrap()
+                .path,
+            provider
+                .get("keyprovider1")
+                .unwrap()
+                .cmd
+                .as_ref()
+                .unwrap()
+                .path
+        )
     }
 }

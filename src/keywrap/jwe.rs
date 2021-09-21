@@ -116,7 +116,7 @@ impl KeyWrapper for JweKeyWrapper {
             }
 
             let (keys, _) = payload.unwrap();
-                return Ok(keys);
+            return Ok(keys);
         }
 
         Err(anyhow!("JWE: No suitable private key found for decryption"))
