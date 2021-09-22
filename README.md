@@ -63,4 +63,4 @@ List of supported KBC modules:
 | ------------------ | ------------------------------------------------------------------- | ------------ | ------------------------- |
 | sample_kbc         | Null                                                                | Null         | Attestation Agent Authors |
 | offline_fs_kbc     | [Offline file system KBC](src/kbc_modules/offline_fs_kbc/README.md) | Null         | IBM                       |
-
+| eaa_kbc            | [EAA KBC](src/kbc_modules/eaa_kbc/README.md)                        | EAA protocol | Alibaba Cloud             |
