@@ -62,7 +62,7 @@ impl<W: KeyWrapper + ?Sized> KeyWrapper for Box<W> {
     }
 
     #[inline]
-    fn annotation_id(&self) -> &str {
+    fn annotation_id(&self) -> String {
         (**self).annotation_id()
     }
 

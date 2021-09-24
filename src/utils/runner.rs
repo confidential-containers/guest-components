@@ -10,7 +10,12 @@ pub struct Runner {}
 
 impl CommandExecuter for Runner {
     /// ExecuteCommand is used to execute a linux command line command and return the output of the command with an error if it exists.
-    fn exec(&self, cmd: String, args: &Vec<String>, input: Vec<u8>) -> std::io::Result<Vec<u8>> {
+    fn exec(
+        &self,
+        cmd: String,
+        args: &[std::string::String],
+        input: Vec<u8>,
+    ) -> std::io::Result<Vec<u8>> {
         let mut child = Command::new(cmd)
             .args(args)
             .stdin(Stdio::piped())

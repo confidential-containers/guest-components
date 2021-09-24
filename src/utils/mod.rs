@@ -10,6 +10,18 @@ pub mod keyprovider;
 /// CommandExecuter trait which requires implementation for command exec, first argument is the command name, like /usr/bin/<command-name>,
 /// the second is the list of args to pass to it
 #[allow(unused_variables)]
-pub trait CommandExecuter {
-    fn exec(&self, cmd: String, args: &Vec<String>, input: Vec<u8>) -> std::io::Result<Vec<u8>>;
+pub trait CommandExecuter: Send + Sync {
+    fn exec(&self, cmd: String, args: &[String], input: Vec<u8>) -> std::io::Result<Vec<u8>>;
+}
+
+impl<W: CommandExecuter + ?Sized> CommandExecuter for Box<W> {
+    #[inline]
+    fn exec(
+        &self,
+        cmd: String,
+        args: &[std::string::String],
+        input: Vec<u8>,
+    ) -> std::io::Result<Vec<u8>> {
+        (**self).exec(cmd, args, input)
+    }
 }

@@ -114,7 +114,6 @@ pub fn new_key_wrapper(
 
 impl KeyProviderKeyWrapProtocolOutput {
     async fn from_grpc(input: Vec<u8>, conn: &str, operation: OpKey) -> Result<Self> {
-        let mut protocol_output = KeyProviderKeyWrapProtocolOutput::default();
         let uri = conn.parse::<Uri>().unwrap();
         // create a channel ie connection to server
         let channel = tonic::transport::Channel::builder(uri)
@@ -135,7 +134,7 @@ impl KeyProviderKeyWrapProtocolOutput {
                         OpKey::Wrap.to_string()
                     )
                 })?;
-                protocol_output = serde_json::from_slice(
+                let protocol_output = serde_json::from_slice(
                     &grpc_output
                         .into_inner()
                         .key_provider_key_wrap_protocol_output,
@@ -147,6 +146,7 @@ impl KeyProviderKeyWrapProtocolOutput {
                         e.to_string()
                     )
                 })?;
+                Ok(protocol_output)
             }
             OpKey::Unwrap => {
                 let grpc_output = client.un_wrap_key(request).await.map_err(|_| {
@@ -155,7 +155,7 @@ impl KeyProviderKeyWrapProtocolOutput {
                         OpKey::Unwrap.to_string()
                     )
                 })?;
-                protocol_output = serde_json::from_slice(
+                let protocol_output = serde_json::from_slice(
                     &grpc_output
                         .into_inner()
                         .key_provider_key_wrap_protocol_output,
@@ -166,15 +166,15 @@ impl KeyProviderKeyWrapProtocolOutput {
                         OpKey::Unwrap.to_string()
                     )
                 })?;
+                Ok(protocol_output)
             }
         }
-        Ok(protocol_output)
     }
 
     fn from_command(
         input: Vec<u8>,
         cmd: &Option<Command>,
-        runner: &Box<dyn utils::CommandExecuter>,
+        runner: &dyn utils::CommandExecuter,
     ) -> Result<Self> {
         let resp_bytes: Vec<u8>;
         if cmd.as_ref().is_some() {
@@ -200,7 +200,6 @@ impl KeyWrapper for KeyProviderKeyWrapper {
     /// WrapKeys calls appropriate binary-executable or grpc/ttrpc server for wrapping the session key for recipients and gets encrypted optsData, which
     /// describe the symmetric key used for encrypting the layer
     fn wrap_keys(&self, enc_config: &EncryptConfig, opts_data: &[u8]) -> Result<Vec<u8>> {
-        let mut protocol_output = KeyProviderKeyWrapProtocolOutput::default();
         let opts_data_str = String::from_utf8(opts_data.to_vec())
             .map_err(|_| anyhow!("Error while converting bytes to string"))?;
         let key_wrap_params = KeyWrapParams {
@@ -220,8 +219,8 @@ impl KeyWrapper for KeyProviderKeyWrapper {
         })?;
 
         if enc_config.param.contains_key(&self.provider.to_string()) {
-            if self.attrs.cmd.as_ref().is_some() {
-                protocol_output = KeyProviderKeyWrapProtocolOutput::from_command(serialized_input, &self.attrs.cmd, self.runner.as_ref().unwrap()).map_err(|e| anyhow!("Error while key provider {:?} operation, from binary executable provider, error: {:?}", OpKey::Wrap.to_string(), e))?;
+            let protocol_output = if self.attrs.cmd.as_ref().is_some() {
+                KeyProviderKeyWrapProtocolOutput::from_command(serialized_input, &self.attrs.cmd, self.runner.as_ref().unwrap()).map_err(|e| anyhow!("Error while key provider {:?} operation, from binary executable provider, error: {:?}", OpKey::Wrap.to_string(), e))?
             } else if self.attrs.grpc.as_ref().is_some() {
                 let rt =
                     Runtime::new()
@@ -231,28 +230,28 @@ impl KeyWrapper for KeyProviderKeyWrapper {
                             self.attrs.grpc.as_ref().unwrap(),
                             OpKey::Wrap,
                         ));
-                protocol_output = rt.map_err(|e| {
+                rt.map_err(|e| {
                     anyhow!(
                         "Error while key provider {:?} operation, from grpc provider, error: {:?}",
                         OpKey::Wrap.to_string(),
                         e
                     )
-                })?;
-            }
+                })?
+            } else {
+                KeyProviderKeyWrapProtocolOutput::default()
+            };
+            Ok(protocol_output.key_wrap_results.unwrap().annotation)
         } else {
             return Err(anyhow!(
                 "Error while key provider {:?} operation, unsupported protocol",
                 OpKey::Wrap.to_string()
             ));
         }
-
-        Ok(protocol_output.key_wrap_results.unwrap().annotation)
     }
 
     /// UnwrapKey calls appropriate binary-executable or grpc/ttrpc server for unwrapping the session key based on the protocol given in annotation for recipients and gets decrypted optsData,
     /// which describe the symmetric key used for decrypting the layer
     fn unwrap_keys(&self, dc_config: &DecryptConfig, json_string: &[u8]) -> Result<Vec<u8>> {
-        let mut protocol_output = KeyProviderKeyWrapProtocolOutput::default();
         let annotation_str = String::from_utf8(json_string.to_vec())
             .map_err(|_| anyhow!("Error while converting bytes to string"))?;
         let key_unwrap_params = KeyUnwrapParams {
@@ -271,8 +270,8 @@ impl KeyWrapper for KeyProviderKeyWrapper {
             )
         })?;
 
-        if self.attrs.cmd.as_ref().is_some() {
-            protocol_output = KeyProviderKeyWrapProtocolOutput::from_command(serialized_input, &self.attrs.cmd, self.runner.as_ref().unwrap()).map_err(|e| anyhow!("Error while key provider {:?} operation, from binary executable provider, error: {:?}", OpKey::Unwrap.to_string(), e))?;
+        let protocol_output = if self.attrs.cmd.as_ref().is_some() {
+            KeyProviderKeyWrapProtocolOutput::from_command(serialized_input, &self.attrs.cmd, self.runner.as_ref().unwrap()).map_err(|e| anyhow!("Error while key provider {:?} operation, from binary executable provider, error: {:?}", OpKey::Unwrap.to_string(), e))?
         } else if self.attrs.grpc.as_ref().is_some() {
             let rt = Runtime::new()
                 .unwrap()
@@ -281,13 +280,10 @@ impl KeyWrapper for KeyProviderKeyWrapper {
                     self.attrs.grpc.as_ref().unwrap(),
                     OpKey::Unwrap,
                 ));
-            protocol_output = rt.map_err(|e| anyhow!("Error while key provider {:?} operation, from grpc provider error, error: {:?}", OpKey::Unwrap.to_string(), e))?;
+            rt.map_err(|e| anyhow!("Error while key provider {:?} operation, from grpc provider error, error: {:?}", OpKey::Unwrap.to_string(), e))?
         } else {
-            return Err(anyhow!(
-                "Error while key provider {:?} operation, unsupported protocol",
-                OpKey::Unwrap.to_string()
-            ));
-        }
+            KeyProviderKeyWrapProtocolOutput::default()
+        };
 
         Ok(protocol_output.key_unwrap_results.unwrap().opts_data)
     }
@@ -352,7 +348,7 @@ mod tests {
     #[derive(Default)]
     struct TestServer {}
 
-    pub fn encrypt_key(plain_text: &Vec<u8>, encrypting_key: &[u8; 32]) -> Result<Vec<u8>> {
+    pub fn encrypt_key(plain_text: &[u8], encrypting_key: &[u8; 32]) -> Result<Vec<u8>> {
         let encrypting_key = Key::from_slice(encrypting_key);
         let cipher = Aes256Gcm::new(encrypting_key);
         let nonce = Nonce::from_slice(b"unique nonce");
@@ -362,7 +358,7 @@ mod tests {
             .map_err(|_| anyhow!("encryption failure"))
     }
 
-    pub fn decrypt_key(cipher_text: &Vec<u8>, decrypting_key: &[u8; 32]) -> Result<Vec<u8>> {
+    pub fn decrypt_key(cipher_text: &[u8], decrypting_key: &[u8; 32]) -> Result<Vec<u8>> {
         let decrypting_key = Key::from_slice(decrypting_key);
         let cipher = Aes256Gcm::new(decrypting_key);
         let nonce = Nonce::from_slice(b"unique nonce");
@@ -382,12 +378,12 @@ mod tests {
                 serde_json::from_slice(&request.into_inner().key_provider_key_wrap_protocol_input)
                     .unwrap();
             let plain_optsdata = key_wrap_input.key_wrap_params.opts_data.unwrap();
-            let wrapped_key_result =
-                encrypt_key(&base64::decode(plain_optsdata).unwrap(), unsafe { ENC_KEY });
-            if wrapped_key_result.is_ok() {
+            if let Ok(wrapped_key_result) =
+                encrypt_key(&base64::decode(plain_optsdata).unwrap(), unsafe { ENC_KEY })
+            {
                 let ap = AnnotationPacket {
                     key_url: "https://key-provider/key-uuid".to_string(),
-                    wrapped_key: wrapped_key_result.unwrap(),
+                    wrapped_key: wrapped_key_result,
                     wrap_type: "AES".to_string(),
                 };
                 let serialized_ap = serde_json::to_vec(&ap).unwrap();
@@ -403,9 +399,7 @@ mod tests {
                     key_provider_key_wrap_protocol_output: serialized_key_wrap_output,
                 }))
             } else {
-                Err(tonic::Status::unknown(
-                    wrapped_key_result.unwrap_err().to_string(),
-                ))
+                Err(tonic::Status::unknown("Error while encrypting key"))
             }
         }
 
@@ -421,12 +415,11 @@ mod tests {
             let str_annotation: &str = std::str::from_utf8(&vec_annotation).unwrap();
             let annotation_packet: AnnotationPacket = serde_json::from_str(str_annotation).unwrap();
             let wrapped_key = annotation_packet.wrapped_key;
-            let unwrapped_key_result = decrypt_key(&wrapped_key, unsafe { DEC_KEY });
-            if unwrapped_key_result.is_ok() {
+            if let Ok(unwrapped_key_result) = decrypt_key(&wrapped_key, unsafe { DEC_KEY }) {
                 let key_wrap_output = KeyProviderKeyWrapProtocolOutput {
                     key_wrap_results: None,
                     key_unwrap_results: Some(KeyUnwrapResults {
-                        opts_data: unwrapped_key_result.unwrap(),
+                        opts_data: unwrapped_key_result,
                     }),
                 };
                 let serialized_key_wrap_output = serde_json::to_vec(&key_wrap_output).unwrap();
@@ -434,9 +427,7 @@ mod tests {
                     key_provider_key_wrap_protocol_output: serialized_key_wrap_output,
                 }))
             } else {
-                Err(tonic::Status::unknown(
-                    unwrapped_key_result.unwrap_err().to_string(),
-                ))
+                Err(tonic::Status::unknown("Error while decrypting key"))
             }
         }
     }
@@ -446,7 +437,7 @@ mod tests {
         fn exec(
             &self,
             cmd: String,
-            _args: &Vec<String>,
+            _args: &[std::string::String],
             input: Vec<u8>,
         ) -> std::io::Result<Vec<u8>> {
             let mut key_wrap_output = KeyProviderKeyWrapProtocolOutput::default();
@@ -497,6 +488,7 @@ mod tests {
     fn test_key_provider_command_success() {
         let test_runner = TestRunner {};
         let mut provider = HashMap::new();
+        let mut dc_params = vec![];
         let mut attrs = config::KeyProviderAttrs {
             cmd: Some(config::Command {
                 path: "/usr/lib/keyprovider-wrapkey".to_string(),
@@ -518,7 +510,7 @@ mod tests {
 
         // Prepare for mock encryption config
         let opts_data = b"symmetric_key";
-        let b64_opts_data = base64::encode(opts_data).clone().into_bytes();
+        let b64_opts_data = base64::encode(opts_data).into_bytes();
         let mut ec = EncryptConfig::default();
         let mut dc = DecryptConfig::default();
         let mut ec_params = vec![];
@@ -543,16 +535,13 @@ mod tests {
         provider.insert(String::from("provider"), attrs.clone());
         keyprovider_key_wrapper = new_key_wrapper(
             "keyprovider".to_string(),
-            attrs.clone(),
+            attrs,
             Some(Box::new(test_runner)),
         );
         // Prepare for mock encryption config
-        let mut dc_params = vec![];
         dc_params.push(param);
         assert!(dc.decrypt_with_key_provider(dc_params).is_ok());
-        let json_string = base64::encode(key_wrap_output_result.unwrap())
-            .clone()
-            .into_bytes();
+        let json_string = base64::encode(key_wrap_output_result.unwrap()).into_bytes();
         // Perform key-provider wrap-key operation
         let key_wrap_output_result = keyprovider_key_wrapper.unwrap_keys(&dc, &json_string);
         let unwrapped_key = key_wrap_output_result.unwrap();
@@ -562,6 +551,7 @@ mod tests {
     #[test]
     fn test_command_executer_wrap_key_fail() {
         let test_runner = TestRunner {};
+        let mut ec_params = vec![];
         let mut provider = HashMap::new();
         let attrs = config::KeyProviderAttrs {
             cmd: Some(config::Command {
@@ -573,16 +563,13 @@ mod tests {
         provider.insert(String::from("provider"), attrs.clone());
         let keyprovider_key_wrapper = new_key_wrapper(
             "keyprovider".to_string(),
-            attrs.clone(),
+            attrs,
             Some(Box::new(test_runner)),
         );
 
-        let opts_data = b"symmetric_key";
-        let b64_opts_data = base64::encode(opts_data).clone().into_bytes();
+        let b64_opts_data = base64::encode(b"symmetric_key").into_bytes();
         let mut ec = EncryptConfig::default();
-        let mut ec_params = vec![];
-        let param = "keyprovider1".to_string().into_bytes();
-        ec_params.push(param.clone());
+        ec_params.push("keyprovider1".to_string().into_bytes());
         assert!(ec.encrypt_with_key_provider(ec_params).is_ok());
         assert!(keyprovider_key_wrapper
             .wrap_keys(&ec, &b64_opts_data)
@@ -592,6 +579,8 @@ mod tests {
     #[test]
     fn test_command_executer_unwrap_key_fail() {
         let test_runner = TestRunner {};
+        let mut dc_params = vec![];
+
         let mut provider = HashMap::new();
         let attrs = config::KeyProviderAttrs {
             cmd: Some(config::Command {
@@ -603,7 +592,7 @@ mod tests {
         provider.insert(String::from("provider"), attrs.clone());
         let keyprovider_key_wrapper = new_key_wrapper(
             "keyprovider".to_string(),
-            attrs.clone(),
+            attrs,
             Some(Box::new(test_runner)),
         );
 
@@ -616,15 +605,13 @@ mod tests {
             wrap_type: "AES".to_string(),
         };
         let serialized_ap = serde_json::to_vec(&ap).unwrap();
-        let json_string = base64::encode(serialized_ap).clone().into_bytes();
+        let json_string = base64::encode(serialized_ap).into_bytes();
 
         // Change the decryption key so that decryption should fail
         unsafe { DEC_KEY = b"wrong_passwhichneedstobe32bytes!" };
 
         // Prepare for mock decryption config
-        let param = "keyprovider1".to_string().into_bytes();
-        let mut dc_params = vec![];
-        dc_params.push(param);
+        dc_params.push("keyprovider1".to_string().as_bytes().to_vec());
         let mut dc = DecryptConfig::default();
         assert!(dc.decrypt_with_key_provider(dc_params).is_ok());
         assert!(keyprovider_key_wrapper
@@ -667,17 +654,17 @@ mod tests {
         }
 
         let mut provider = HashMap::new();
+        let mut dc_params = vec![];
         let attrs = config::KeyProviderAttrs {
             cmd: None,
             grpc: Some("tcp://127.0.0.1:8990".to_string()),
         };
         provider.insert(String::from("provider"), attrs.clone());
-        let keyprovider_key_wrapper =
-            new_key_wrapper("keyprovider".to_string(), attrs.clone(), None);
+        let keyprovider_key_wrapper = new_key_wrapper("keyprovider".to_string(), attrs, None);
 
         // Prepare encryption config params
         let opts_data = b"symmetric_key";
-        let b64_opts_data = base64::encode(opts_data).clone().into_bytes();
+        let b64_opts_data = base64::encode(opts_data).into_bytes();
         let mut ec = EncryptConfig::default();
         let mut dc = DecryptConfig::default();
         let mut ec_params = vec![];
@@ -687,12 +674,9 @@ mod tests {
         let key_wrap_output_result = keyprovider_key_wrapper.wrap_keys(&ec, &b64_opts_data);
 
         // Perform decryption-config params
-        let mut dc_params = vec![];
         dc_params.push(param);
         assert!(dc.decrypt_with_key_provider(dc_params).is_ok());
-        let json_string = base64::encode(key_wrap_output_result.unwrap())
-            .clone()
-            .into_bytes();
+        let json_string = base64::encode(key_wrap_output_result.unwrap()).into_bytes();
 
         // Perform unwrapkey operation
         let key_wrap_output_result = keyprovider_key_wrapper.unwrap_keys(&dc, &json_string);
@@ -715,17 +699,17 @@ mod tests {
         }
 
         let mut provider = HashMap::new();
+        let mut dc_params = vec![];
         let attrs = config::KeyProviderAttrs {
             cmd: None,
             grpc: Some("http://127.0.0.1:8991".to_string()),
         };
         provider.insert(String::from("provider"), attrs.clone());
-        let keyprovider_key_wrapper =
-            new_key_wrapper("keyprovider".to_string(), attrs.clone(), None);
+        let keyprovider_key_wrapper = new_key_wrapper("keyprovider".to_string(), attrs, None);
 
         // Prepare encryption config params
         let opts_data = b"symmetric_key";
-        let b64_opts_data = base64::encode(opts_data).clone().into_bytes();
+        let b64_opts_data = base64::encode(opts_data).into_bytes();
         let mut ec = EncryptConfig::default();
         let mut dc = DecryptConfig::default();
         let mut ec_params = vec![];
@@ -735,12 +719,9 @@ mod tests {
         let key_wrap_output_result = keyprovider_key_wrapper.wrap_keys(&ec, &b64_opts_data);
 
         // Perform decryption-config params
-        let mut dc_params = vec![];
         dc_params.push(param);
         assert!(dc.decrypt_with_key_provider(dc_params).is_ok());
-        let json_string = base64::encode(key_wrap_output_result.unwrap())
-            .clone()
-            .into_bytes();
+        let json_string = base64::encode(key_wrap_output_result.unwrap()).into_bytes();
 
         // Perform unwrapkey operation
         let key_wrap_output_result = keyprovider_key_wrapper.unwrap_keys(&dc, &json_string);

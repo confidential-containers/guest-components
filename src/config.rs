@@ -21,13 +21,13 @@ pub struct DecryptConfig {
     pub param: HashMap<String, Vec<Vec<u8>>>,
 }
 
-fn base64_enc(val: &Vec<Vec<u8>>) -> Vec<String> {
+fn base64_enc(val: &[Vec<u8>]) -> Vec<String> {
     let mut res_vec = vec![];
     for x in val {
         res_vec.push(base64::encode_config(x, base64::STANDARD));
     }
 
-    return res_vec;
+    res_vec
 }
 
 fn base64_hashmap_s<S>(
@@ -44,10 +44,10 @@ where
     b64_encoded.serialize(serializer)
 }
 
-fn base64_dec(val: &Vec<String>) -> Result<Vec<Vec<u8>>, base64::DecodeError> {
+fn base64_dec(val: &[String]) -> Result<Vec<Vec<u8>>, base64::DecodeError> {
     let mut res_vec = vec![];
     for x in val {
-        res_vec.push(base64::decode_config(x, base64::STANDARD).map_err(|e| e.into())?);
+        res_vec.push(base64::decode_config(x, base64::STANDARD).map_err(|e| e)?);
     }
 
     Ok(res_vec)
@@ -288,11 +288,11 @@ impl OcicryptConfig {
     /// from_env tries to read the configuration file at the following locations
     /// ${OCICRYPT_KEYPROVIDER_CONFIG} == "/etc/ocicrypt_keyprovider.json"
     /// If no configuration file could be found or read a null pointer is returned
-    fn from_env(env: &str) -> Result<OcicryptConfig> {
+    pub fn from_env(env: &str) -> Result<OcicryptConfig> {
         // find file name from environment variable, ignore error if environment variable is not set.
-        let filename = std::env::var(env).map(|v| v.to_string())?;
+        let filename = std::env::var(env).map_err(|v| v)?;
 
-        OcicryptConfig::from_file(filename.as_str()).map_err(|e| e.into())
+        OcicryptConfig::from_file(filename.as_str()).map_err(|e| e)
     }
 }
 

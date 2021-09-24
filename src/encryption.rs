@@ -5,8 +5,8 @@ use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::io::Read;
 
-use crate::config::DecryptConfig;
-use crate::config::EncryptConfig;
+use crate::config::{DecryptConfig, EncryptConfig, OcicryptConfig, OCICRYPT_ENVVARNAME};
+use crate::keywrap::keyprovider;
 
 use crate::blockcipher::{
     Finalizer, LayerBlockCipherHandler, LayerBlockCipherOptions, PrivateLayerBlockCipherOptions,
@@ -14,8 +14,11 @@ use crate::blockcipher::{
 };
 use crate::keywrap::jwe::JweKeyWrapper;
 use crate::keywrap::KeyWrapper;
+
 extern crate oci_distribution;
+
 use oci_distribution::manifest::OciDescriptor;
+
 extern crate base64;
 
 lazy_static! {
@@ -25,6 +28,20 @@ lazy_static! {
             "jwe".to_string(),
             Box::new(JweKeyWrapper {}) as Box<dyn KeyWrapper>,
         );
+// TODO: The error over here needs to be logged to be in consistent with golang version.
+        let ocicrypt_config = OcicryptConfig::from_env(OCICRYPT_ENVVARNAME)
+            .expect("Unable to read ocicrypt config file");
+        let key_providers = ocicrypt_config.key_providers;
+        for (provider_name, attrs) in key_providers.iter() {
+            m.insert(
+                "provider.".to_owned() + provider_name,
+                Box::new(keyprovider::new_key_wrapper(
+                    provider_name.to_string(),
+                    attrs.clone(),
+                    None,
+                )) as Box<dyn KeyWrapper>,
+            );
+        }
         m
     };
     static ref KEY_WRAPPERS_ANNOTATIONS: HashMap<String, String> = {
@@ -327,23 +344,22 @@ mod tests {
         let mut encryptor = layer_encryptor.unwrap();
         assert!(encryptor.read_to_end(&mut encrypted_data).is_ok());
         assert!(encryptor.finalized_lbco(&mut elf.lbco).is_ok());
-        let new_annotations = elf
-            .finalized_annotations(&ec, &desc, Some(&mut encryptor))
-            .unwrap();
 
-        let new_desc = OciDescriptor {
-            annotations: Some(new_annotations),
-            ..Default::default()
-        };
-        let (layer_decryptor, dec_digest) =
-            decrypt_layer(&dc, encrypted_data.as_slice(), &new_desc, false).unwrap();
-        let mut plaintxt_data: Vec<u8> = Vec::new();
-        let mut decryptor = layer_decryptor.unwrap();
+        if let Ok(new_annotations) = elf.finalized_annotations(&ec, &desc, Some(&mut encryptor)) {
+            let new_desc = OciDescriptor {
+                annotations: Some(new_annotations),
+                ..Default::default()
+            };
+            let (layer_decryptor, dec_digest) =
+                decrypt_layer(&dc, encrypted_data.as_slice(), &new_desc, false).unwrap();
+            let mut plaintxt_data: Vec<u8> = Vec::new();
+            let mut decryptor = layer_decryptor.unwrap();
 
-        assert!(decryptor.read_to_end(&mut plaintxt_data).is_ok());
-        assert_eq!(layer_data, plaintxt_data);
-        assert_eq!(digest, dec_digest);
-        println!("dec digest: {:?}", dec_digest);
+            assert!(decryptor.read_to_end(&mut plaintxt_data).is_ok());
+            assert_eq!(layer_data, plaintxt_data);
+            assert_eq!(digest, dec_digest);
+            println!("dec digest: {:?}", dec_digest);
+        }
     }
 
     fn load_data_path() -> String {
