@@ -32,6 +32,7 @@ pub struct KeyProviderKeyWrapper {
     pub runner: Option<Box<dyn CommandExecuter>>,
 }
 
+#[derive(Debug)]
 enum OpKey {
     Wrap,
     Unwrap,
@@ -50,7 +51,6 @@ impl fmt::Display for OpKey {
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct KeyProviderKeyWrapProtocolInput {
     /// op is either "keywrap" or "keyunwrap"
-    #[serde(rename = "op")]
     op: String,
     /// keywrapparams encodes the arguments to key wrap if operation is set to wrap
     #[serde(rename = "keywrapparams")]
@@ -73,7 +73,6 @@ pub struct KeyProviderKeyWrapProtocolOutput {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct KeyWrapParams {
-    #[serde(rename = "ec")]
     pub ec: Option<EncryptConfig>,
     #[serde(rename = "optsdata")]
     opts_data: Option<String>,
@@ -81,9 +80,7 @@ pub struct KeyWrapParams {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct KeyUnwrapParams {
-    #[serde(rename = "dc")]
     pub dc: Option<DecryptConfig>,
-    #[serde(rename = "annotation")]
     annotation: Option<String>,
 }
 
@@ -95,7 +92,6 @@ pub struct KeyUnwrapResults {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct KeyWrapResults {
-    #[serde(rename = "annotation")]
     annotation: Vec<u8>,
 }
 
@@ -126,49 +122,34 @@ impl KeyProviderKeyWrapProtocolOutput {
         let request = tonic::Request::new(keyproviderpb::KeyProviderKeyWrapProtocolInput {
             key_provider_key_wrap_protocol_input: input,
         });
-        match operation {
-            OpKey::Wrap => {
-                let grpc_output = client.wrap_key(request).await.map_err(|_| {
-                    anyhow!(
-                        "Error from grpc request method on {:?} operation",
-                        OpKey::Wrap.to_string()
-                    )
-                })?;
-                let protocol_output = serde_json::from_slice(
-                    &grpc_output
-                        .into_inner()
-                        .key_provider_key_wrap_protocol_output,
+        let grpc_output = match operation {
+            OpKey::Wrap => client.wrap_key(request).await.map_err(|_| {
+                anyhow!(
+                    "Error from grpc request method on {:?} operation",
+                    OpKey::Wrap.to_string()
                 )
-                .map_err(|e| {
-                    anyhow!(
-                        "Error while deserializing grpc output on {:?} operation {:?}",
-                        OpKey::Wrap.to_string(),
-                        e.to_string()
-                    )
-                })?;
-                Ok(protocol_output)
-            }
-            OpKey::Unwrap => {
-                let grpc_output = client.un_wrap_key(request).await.map_err(|_| {
-                    anyhow!(
-                        "Error from grpc request method on {:?} operation",
-                        OpKey::Unwrap.to_string()
-                    )
-                })?;
-                let protocol_output = serde_json::from_slice(
-                    &grpc_output
-                        .into_inner()
-                        .key_provider_key_wrap_protocol_output,
+            })?,
+
+            OpKey::Unwrap => client.un_wrap_key(request).await.map_err(|_| {
+                anyhow!(
+                    "Error from grpc request method on {:?} operation",
+                    OpKey::Unwrap.to_string()
                 )
-                .map_err(|_| {
-                    anyhow!(
-                        "Error while deserializing grpc output on {:?} operation",
-                        OpKey::Unwrap.to_string()
-                    )
-                })?;
-                Ok(protocol_output)
-            }
-        }
+            })?,
+        };
+
+        let protocol_output = serde_json::from_slice(
+            &grpc_output
+                .into_inner()
+                .key_provider_key_wrap_protocol_output,
+        )
+        .map_err(|_| {
+            anyhow!(
+                "Error while deserializing grpc output on {:?} operation",
+                OpKey::Unwrap.to_string()
+            )
+        })?;
+        Ok(protocol_output)
     }
 
     fn from_command(
@@ -177,22 +158,19 @@ impl KeyProviderKeyWrapProtocolOutput {
         runner: &dyn utils::CommandExecuter,
     ) -> Result<Self> {
         let resp_bytes: Vec<u8>;
-        if cmd.as_ref().is_some() {
-            let cmd_name = cmd.as_ref().unwrap().path.to_string();
-            let mut args = &vec![];
-            if cmd.as_ref().unwrap().args.as_ref().is_some() {
-                args = cmd.as_ref().unwrap().args.as_ref().unwrap();
-            }
-            resp_bytes = runner
-                .exec(cmd_name, args, input)
-                .map_err(|_| anyhow!("Error from command executer"))?;
-            let protocol_output: KeyProviderKeyWrapProtocolOutput =
-                serde_json::from_slice(&resp_bytes)
-                    .map_err(|_| anyhow!("Error while deserializing command executer output"))?;
-
-            return Ok(protocol_output);
+        let command = cmd.as_ref().unwrap();
+        let cmd_name = command.path.to_string();
+        let mut args = &vec![];
+        if command.args.as_ref().is_some() {
+            args = command.args.as_ref().unwrap();
         }
-        Err(anyhow!("No command or args specified in key provider"))
+        resp_bytes = runner
+            .exec(cmd_name, args, input)
+            .map_err(|_| anyhow!("Error from command executer"))?;
+        let protocol_output: KeyProviderKeyWrapProtocolOutput = serde_json::from_slice(&resp_bytes)
+            .map_err(|_| anyhow!("Error while deserializing command executer output"))?;
+
+        Ok(protocol_output)
     }
 }
 
@@ -285,7 +263,10 @@ impl KeyWrapper for KeyProviderKeyWrapper {
             KeyProviderKeyWrapProtocolOutput::default()
         };
 
-        Ok(protocol_output.key_unwrap_results.unwrap().opts_data)
+        Ok(protocol_output
+            .key_unwrap_results
+            .unwrap_or_default()
+            .opts_data)
     }
 
     fn annotation_id(&self) -> String {
@@ -439,7 +420,7 @@ mod tests {
             cmd: String,
             _args: &[std::string::String],
             input: Vec<u8>,
-        ) -> std::io::Result<Vec<u8>> {
+        ) -> Result<Vec<u8>> {
             let mut key_wrap_output = KeyProviderKeyWrapProtocolOutput::default();
             if cmd == "/usr/lib/keyprovider-wrapkey" {
                 let key_wrap_input: KeyProviderKeyWrapProtocolInput =

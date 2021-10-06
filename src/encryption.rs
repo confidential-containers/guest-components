@@ -1,24 +1,19 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
-use std::collections::HashMap;
-use std::io::Read;
-
-use crate::config::{DecryptConfig, EncryptConfig, OcicryptConfig, OCICRYPT_ENVVARNAME};
-use crate::keywrap::keyprovider;
-
 use crate::blockcipher::{
     Finalizer, LayerBlockCipherHandler, LayerBlockCipherOptions, PrivateLayerBlockCipherOptions,
     PublicLayerBlockCipherOptions, AES256CTR,
 };
+use crate::config::{DecryptConfig, EncryptConfig, OcicryptConfig, OCICRYPT_ENVVARNAME};
 use crate::keywrap::jwe::JweKeyWrapper;
+use crate::keywrap::keyprovider;
 use crate::keywrap::KeyWrapper;
-
+use anyhow::{anyhow, Result};
+use std::collections::HashMap;
+use std::io::Read;
 extern crate oci_distribution;
-
 use oci_distribution::manifest::OciDescriptor;
-
 extern crate base64;
 
 lazy_static! {
@@ -358,7 +353,6 @@ mod tests {
             assert!(decryptor.read_to_end(&mut plaintxt_data).is_ok());
             assert_eq!(layer_data, plaintxt_data);
             assert_eq!(digest, dec_digest);
-            println!("dec digest: {:?}", dec_digest);
         }
     }
 

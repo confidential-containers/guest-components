@@ -70,18 +70,14 @@ where
 /// binary executable and args are passed on to the binary executable
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Command {
-    #[serde(rename = "path")]
     pub path: String,
-    #[serde(rename = "args")]
     pub args: Option<Vec<String>>,
 }
 
 /// KeyProviderAttrs describes the structure of key provider, it defines the different ways of invocation to key provider
 #[derive(Deserialize, Debug, Clone)]
 pub struct KeyProviderAttrs {
-    #[serde(rename = "cmd")]
     pub cmd: Option<Command>,
-    #[serde(rename = "grpc")]
     pub grpc: Option<String>,
 }
 
