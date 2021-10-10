@@ -15,7 +15,7 @@ cd my_kbc
 touch mod.rs
 ```
 
-Then, you need to import the definition of oKBC module standard interface in mod.rs, that is, add the following codes in mod.rs:
+Then, you need to import the definition of KBC module standard interface in mod.rs, that is, add the following codes in mod.rs:
 
 ```rust
 use crate::kbc_modules::{KbcCheckInfo, KbcInterface};
@@ -110,6 +110,6 @@ my_kbc = []
 After development and integration, you can compile the attestation-agent that supports your KBC module. You only need to specify feature parameter during compilation:
 
 ```
-cargo build --release --no-default-features --feature my_kbc
+cargo build --release --no-default-features --features my_kbc
 ```
 
