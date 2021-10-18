@@ -48,7 +48,8 @@ AA provides a flexible KBC module mechanism to support different KBS protocols r
 
 List of supported KBC modules: 
 
-| KBC module name | README | KBS protocol | Maintainer                |
-| --------------- | ------ | ------------ | ------------------------- |
-| sample_kbc      | Null   | Null         | Attestation Agent Authors |
+| KBC module name    | README                                                              | KBS protocol | Maintainer                |
+| ------------------ | ------------------------------------------------------------------- | ------------ | ------------------------- |
+| sample_kbc         | Null                                                                | Null         | Attestation Agent Authors |
+| offline_fs_kbc     | [Offline file system KBC](src/kbc_modules/offline_fs_kbc/README.md) | Null         | IBM                       |
 
