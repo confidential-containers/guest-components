@@ -4,30 +4,14 @@
 //
 
 use crate::kbc_modules::{KbcCheckInfo, KbcInterface};
+pub mod common;
+use common::*;
 
 use anyhow::{anyhow, Result};
-use base64::decode;
-use openssl::symm::{decrypt, Cipher};
-use serde::Deserialize;
+use openssl::symm::decrypt;
 use std::collections::HashMap;
-use std::fs;
 
 const KEYS_PATH: &str = "/etc/aa-offline_fs_kbc-keys.json";
-
-type Keys = HashMap<String, Vec<u8>>;
-type Ciphers = HashMap<String, Cipher>;
-
-#[derive(Deserialize)]
-pub struct AnnotationPacket {
-    // Key ID to manage multiple keys
-    pub kid: String,
-    // Encrypted key to unwrap
-    pub wrapped_data: Vec<u8>,
-    // Initialisation vector
-    pub iv: Vec<u8>,
-    // Wrap type to specify encryption algorithm and mode
-    pub wrap_type: String,
-}
 
 pub struct OfflineFsKbc {
     // KBS info for compatibility; unused
@@ -36,17 +20,6 @@ pub struct OfflineFsKbc {
     keys: Result<Keys>,
     // Known ciphers, corresponding to wrap_type
     ciphers: Ciphers,
-}
-
-fn ciphers() -> Ciphers {
-    // The sample KBC uses aes-gcm (Rust implementation). The offline file system KBC uses OpenSSL
-    // instead to get access to hardware acceleration on more platforms (e.g. s390x). As opposed
-    // to aes-gcm, OpenSSL will only allow GCM when using AEAD. Because authentication is not
-    // handled here, AEAD cannot be used, therefore, CTR is used instead.
-    [(String::from("aes_256_ctr"), Cipher::aes_256_ctr())]
-        .iter()
-        .cloned()
-        .collect()
 }
 
 impl KbcInterface for OfflineFsKbc {
@@ -88,31 +61,12 @@ impl OfflineFsKbc {
     }
 }
 
-fn load_keys(keyfile_name: &str) -> Result<Keys> {
-    let keys_json = fs::read_to_string(keyfile_name)?;
-    // Redact parsing errors to avoid side-channels
-    let encoded_keys: HashMap<String, String> =
-        serde_json::from_str(&keys_json).map_err(|_| anyhow!("Failed to parse keys JSON file"))?;
-    encoded_keys
-        .iter()
-        .map(|(k, v)| match decode(v) {
-            Ok(key) => Ok((k.clone(), key)),
-            Err(_) => Err(anyhow!("Failed to decode key")),
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use common::tests::{KEY, KID};
 
-    use base64::encode;
     use openssl::symm::encrypt;
-    use std::env;
-    use std::path::Path;
-
-    const KID: &str = "foo";
-    const KEY: [u8; 32] = *b"passphrasewhichneedstobe32bytes!";
 
     #[test]
     fn test_decrypt_payload() {
@@ -174,33 +128,5 @@ mod tests {
             ciphers: ciphers(),
         };
         assert!(invalid_key_kbc.decrypt_payload(&annotation).is_err());
-    }
-
-    #[test]
-    fn test_load_keys() {
-        let temp_dir = env::temp_dir();
-        let keyfile_path = Path::new(&temp_dir).join("aa-offline_fs_kbc-test_load_keys");
-        let keyfile_name = keyfile_path.to_str().unwrap();
-
-        fs::write(
-            keyfile_path.clone(),
-            format!(
-                "{{
-    \"{}\": \"{}\"
-}}",
-                KID,
-                encode(KEY),
-            ),
-        )
-        .unwrap();
-        assert_eq!(
-            load_keys(keyfile_name).unwrap(),
-            [(KID.to_string(), KEY.to_vec())].iter().cloned().collect()
-        );
-
-        fs::write(keyfile_path.clone(), "foo").unwrap();
-        assert!(load_keys(keyfile_name.clone()).is_err());
-
-        fs::remove_file(keyfile_name).unwrap()
     }
 }
