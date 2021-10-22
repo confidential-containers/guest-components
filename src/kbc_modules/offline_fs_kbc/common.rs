@@ -6,21 +6,21 @@
 use anyhow::{anyhow, Result};
 use base64::decode;
 use openssl::symm::Cipher;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 
 pub type Keys = HashMap<String, Vec<u8>>;
 pub type Ciphers = HashMap<String, Cipher>;
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct AnnotationPacket {
     // Key ID to manage multiple keys
     pub kid: String,
-    // Encrypted key to unwrap
-    pub wrapped_data: Vec<u8>,
-    // Initialisation vector
-    pub iv: Vec<u8>,
+    // Encrypted key to unwrap (base64-encoded)
+    pub wrapped_data: String,
+    // Initialisation vector (base64-encoded)
+    pub iv: String,
     // Wrap type to specify encryption algorithm and mode
     pub wrap_type: String,
 }

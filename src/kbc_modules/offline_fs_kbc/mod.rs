@@ -8,6 +8,7 @@ pub mod common;
 use common::*;
 
 use anyhow::{anyhow, Result};
+use base64::decode;
 use openssl::symm::decrypt;
 use std::collections::HashMap;
 
@@ -37,8 +38,10 @@ impl KbcInterface for OfflineFsKbc {
         let key = keys
             .get(&kid)
             .ok_or_else(|| anyhow!("Received unknown key ID: {}", kid))?;
-        let iv = annotation_packet.iv;
-        let wrapped_data = annotation_packet.wrapped_data;
+        let iv = decode(annotation_packet.iv)
+            .map_err(|e| anyhow!("Failed to decode initialization vector: {}", e))?;
+        let wrapped_data = decode(annotation_packet.wrapped_data)
+            .map_err(|e| anyhow!("Failed to decode wrapped key: {}", e))?;
         let wrap_type = annotation_packet.wrap_type;
 
         let cipher = self
@@ -66,6 +69,7 @@ mod tests {
     use super::*;
     use common::tests::{KEY, KID};
 
+    use base64::encode;
     use openssl::symm::encrypt;
 
     #[test]
@@ -75,16 +79,17 @@ mod tests {
 
         let cipher_key = "aes_256_ctr";
         let cipher = ciphers().get(cipher_key).unwrap().to_owned();
-        let wrapped_data = encrypt(cipher, &KEY, Some(iv), data).unwrap();
+        let wrapped_data = encode(encrypt(cipher, &KEY, Some(iv), data).unwrap());
+        let encoded_iv = encode(iv);
 
         let annotation = format!(
             "{{
     \"kid\": \"{}\",
-    \"wrapped_data\": {:?},
-    \"iv\": {:?},
+    \"wrapped_data\": \"{}\",
+    \"iv\": \"{}\",
     \"wrap_type\": \"{}\"
 }}",
-            KID, wrapped_data, iv, cipher_key
+            KID, wrapped_data, encoded_iv, cipher_key
         );
 
         let mut kbc = OfflineFsKbc {
