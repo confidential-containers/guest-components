@@ -9,6 +9,10 @@
 pub mod eaa_kbc;
 #[cfg(feature = "offline_fs_kbc")]
 pub mod offline_fs_kbc;
+
+#[cfg(feature = "offline_sev_kbc")]
+pub mod offline_sev_kbc;
+
 #[cfg(feature = "sample_kbc")]
 pub mod sample_kbc;
 
@@ -65,6 +69,13 @@ impl KbcModuleList {
                 Box::new(eaa_kbc::EAAKbc::new(kbs_uri))
             });
             mod_list.insert("eaa_kbc".to_string(), instantiate_func);
+        }
+
+        #[cfg(feature = "offline_sev_kbc")]
+        {
+            let instantiate_func: KbcInstantiateFunc =
+                Box::new(|_: String| -> KbcInstance { Box::new(offline_sev_kbc::OfflineSevKbc::new()) });
+            mod_list.insert("offline_sev_kbc".to_string(), instantiate_func);
         }
 
         KbcModuleList { mod_list: mod_list }

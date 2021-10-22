@@ -32,3 +32,5 @@ default = ["sample_kbc", "offline_fs_kbc"]
 sample_kbc = []
 eaa_kbc = []
 offline_fs_kbc = ["openssl"]
+offline_sev_kbc = ["openssl"]
+
