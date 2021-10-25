@@ -40,7 +40,13 @@ impl KeyProviderService for KeyProvider {
             .parameters
             .get("attestation-agent")
             .unwrap()
-            .to_vec();
+            .iter()
+            // According to
+            // https://github.com/containers/ocicrypt/blob/e4a936881fb7cf4b2b8fe49e81b8232fd4c48e97/config/constructors.go#L112,
+            // this Vec will only have one element anyways, but let's decode all elements of it
+            // just to be sure.
+            .map(|p| String::from_utf8(base64::decode(p).unwrap()).unwrap())
+            .collect();
 
         let annotation: String =
             enc_mods::enc_optsdata_gen_anno(&base64::decode(optsdata).unwrap(), params).unwrap();
