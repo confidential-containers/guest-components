@@ -307,12 +307,16 @@ pub fn decrypt_layer<R: Read>(
 mod tests {
     use super::*;
     use sha2::{Digest, Sha256};
+    use std::env;
     use std::fs;
     use std::path::PathBuf;
 
     #[test]
     fn test_encrypt_decrypt_layer() {
         let path = load_data_path();
+        let test_conf_path = format!("{}/{}", path, "ocicrypt_config.json");
+        env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", &test_conf_path);
+
         let pub_key_file = format!("{}/{}", path, "public_key.pem");
         let pub_key = fs::read(&pub_key_file).unwrap();
 

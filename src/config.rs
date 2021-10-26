@@ -387,11 +387,7 @@ mod tests {
     fn test_ocicrypt_config() {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.push("data");
-        let test_conf_path = format!(
-            "{}/{}",
-            path.to_str().unwrap().to_string(),
-            "ocicrypt_config.json"
-        );
+        let test_conf_path = format!("{}/{}", path.to_str().unwrap(), "ocicrypt_config.json");
         env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", &test_conf_path);
 
         let mut provider = HashMap::new();
