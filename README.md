@@ -27,6 +27,25 @@ or explicitly specify the KBS modules it contains. Taking `sample_kbc` as exampl
 cargo build --release --no-default-features --features sample_kbc
 ```
 
+#### Musl 
+
+To build with musl, first add the rust musl target:
+
+```shell
+rustup target add x86_64-unknown-linux-musl
+```
+Make sure the directory containing `rustup` is at the front of your `$PATH` or this will not work.
+
+Install musl tools:
+```shell
+sudo apt install musl-tools  
+```
+
+Build with musl target:
+```shell
+cargo build --release --target x86_64-unknown-linux-musl --no-default-features --xxx_kbc
+```
+
 ### Run
 
 For help information, just run:
