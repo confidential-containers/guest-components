@@ -4,7 +4,7 @@ declare -A keys
 
 create_keys() {
 	for i in $(seq 1 "$1"); do
-		keys[key_id$i]=$(dd if=/dev/random bs=32 count=1 2> /dev/null | base64)
+		keys[key_id$i]=$(head -c32 < /dev/random | base64)
 	done
 }
 
