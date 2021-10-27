@@ -18,7 +18,9 @@ Keys must be provided in the guest file system at `/etc/aa-offline_fs_kbc-keys.j
 
 with the 32-byte keys base64-encoded.
 
-The KBC can be run with e.g.:
+AA with this KBC can be build and run with e.g.:
 ```
-cargo run --release --no-default-features --features offline_fs_kbc -- --grpc_sock 127.0.0.1:50000
+cd attestation-agent
+make KBC=offline_fs_kbc && make install
+attestation-agent --grpc_sock 127.0.0.1:50000
 ```

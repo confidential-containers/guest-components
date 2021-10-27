@@ -43,7 +43,8 @@ Build and run AA:
 
 ```
 cd attestation-agent
-RUST_LOG=attestation_agent cargo run --release --no-default-features --features sample_kbc -- --grpc_sock 127.0.0.1:48888
+make KBC=sample_kbc && make install
+RUST_LOG=attestation_agent attestation-agent --grpc_sock 127.0.0.1:48888
 ```
 
 Modify ocicrypt.conf: 

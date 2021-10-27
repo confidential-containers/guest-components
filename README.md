@@ -13,37 +13,25 @@ Here are the steps of building and running AA:
 
 ### Build
 
-Build AA with all KBC modules:
+Build and install AA with all KBC modules:
 
 ```shell
 git glone https://github.com/containers/attestation-agent
 cd attestation-agent
-cargo build --release
+make && make install
 ```
 
 or explicitly specify the KBS modules it contains. Taking `sample_kbc` as example:
 
 ```shell
-cargo build --release --no-default-features --features sample_kbc
+make KBC=sample_kbc
 ```
 
 #### Musl 
 
-To build with musl, first add the rust musl target:
-
+To build and install with musl, just run:
 ```shell
-rustup target add x86_64-unknown-linux-musl
-```
-Make sure the directory containing `rustup` is at the front of your `$PATH` or this will not work.
-
-Install musl tools:
-```shell
-sudo apt install musl-tools  
-```
-
-Build with musl target:
-```shell
-cargo build --release --target x86_64-unknown-linux-musl --no-default-features --xxx_kbc
+make MUSL=1 && make install
 ```
 
 ### Run
@@ -51,14 +39,18 @@ cargo build --release --target x86_64-unknown-linux-musl --no-default-features -
 For help information, just run:
 
 ```shell
-cd target/release
-./attestation-agent --help
+attestation-agent --help
 ```
 
 Start AA and use grpc_sock parameter to specify the endpoint of AA's keyprovider service, e.g, listen on local 47777 port:
 
 ```shell
-./attestation-agent --grpc_sock 127.0.0.1:47777
+attestation-agent --grpc_sock 127.0.0.1:47777
+```
+
+If you want to see the runtime log:
+```
+RUST_LOG=attestation_agent attestation-agent --grpc_sock 127.0.0.1:4777
 ```
 
 ## Supported KBC modules
