@@ -21,7 +21,7 @@ endif
 ifdef MUSL
     MUSL_ADD := $(shell rustup target add x86_64-unknown-linux-musl)
 ifneq ($(DEBIANOS),)
-    MUSL_INSTALL := $(shell sudo apt install musl-tools) 
+    MUSL_INSTALL := $(shell sudo apt-get install -y musl-tools) 
 endif
     MUSL_FLAG := --target x86_64-unknown-linux-musl
     TARGET_DIR := $(TARGET_DIR)/x86_64-unknown-linux-musl
@@ -36,7 +36,6 @@ else
 endif
 
 all:
-	@echo $(MUSL_ADD) $(MUSL_INSTALL)
 	$(RUST_FLAGS) cargo build $(release) $(feature) $(KBC) $(MUSL_FLAG)
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)
