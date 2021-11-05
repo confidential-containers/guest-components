@@ -98,9 +98,15 @@ pub struct KeyWrapResults {
 /// new_key_wrapper returns a KeyProviderKeyWrapper
 pub fn new_key_wrapper(
     provider: String,
-    attrs: KeyProviderAttrs,
+    mut attrs: KeyProviderAttrs,
     runner: Option<Box<dyn utils::CommandExecuter>>,
 ) -> KeyProviderKeyWrapper {
+    if let Some(grpc) = &attrs.grpc {
+        if !grpc.starts_with("http://") && !grpc.starts_with("tcp://") {
+            attrs.grpc = Some(format!("http://{}", grpc));
+        }
+    }
+
     KeyProviderKeyWrapper {
         provider,
         attrs,
