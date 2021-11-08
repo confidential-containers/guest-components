@@ -17,15 +17,13 @@ pub mod kbc_runtime;
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
-    let app_matches = App::new("attestation-agent")
+    let app_matches = App::new(grpc::AGENT_NAME)
         .version("1.0.0")
         .arg(
             Arg::with_name("socket addr")
                 .long("grpc_sock")
                 .takes_value(true)
-                .help(
-                    "The socket address which the grpc service will listen to, 
-                    for example: --grpc_sock 127.0.0.1:11223",
+                .help("The socket address which the grpc service will listen to, for example: --grpc_sock 127.0.0.1:11223",
                 ),
         )
         .get_matches();
