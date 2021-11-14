@@ -30,7 +30,7 @@ pub mod key_provider_service_client {
     impl<T> KeyProviderServiceClient<T>
     where
         T: tonic::client::GrpcService<tonic::body::BoxBody>,
-        T::ResponseBody: Body + Send + Sync + 'static,
+        T::ResponseBody: Body + Send + 'static,
         T::Error: Into<StdError>,
         <T::ResponseBody as Body>::Error: Into<StdError> + Send,
     {
@@ -145,7 +145,7 @@ pub mod key_provider_service_server {
     impl<T, B> tonic::codegen::Service<http::Request<B>> for KeyProviderServiceServer<T>
     where
         T: KeyProviderService,
-        B: Body + Send + Sync + 'static,
+        B: Body + Send + 'static,
         B::Error: Into<StdError> + Send + 'static,
     {
         type Response = http::Response<tonic::body::BoxBody>;
