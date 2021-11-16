@@ -73,8 +73,9 @@ impl KbcModuleList {
 
         #[cfg(feature = "offline_sev_kbc")]
         {
-            let instantiate_func: KbcInstantiateFunc =
-                Box::new(|_: String| -> KbcInstance { Box::new(offline_sev_kbc::OfflineSevKbc::new()) });
+            let instantiate_func: KbcInstantiateFunc = Box::new(|_: String| -> KbcInstance {
+                Box::new(offline_sev_kbc::OfflineSevKbc::new())
+            });
             mod_list.insert("offline_sev_kbc".to_string(), instantiate_func);
         }
 

@@ -68,31 +68,11 @@ impl DerefMut for RatsTls {
 }
 
 impl RatsTls {
-    pub fn new(
-        // tls_type: OpenSSL
-        tls_type: &Option<String>,
-        // crypto: OpenSSL
-        crypto: &Option<String>,
-        // attester: Support tdx now
-        attester: &Option<String>,
-        // verifier: Unused, always set to nullverifier
-        verifier: &Option<String>,
-    ) -> Result<RatsTls, RatsTlsErrT> {
+    pub fn new() -> Result<RatsTls, RatsTlsErrT> {
         let mut conf: rats_tls_conf_t = Default::default();
         conf.api_version = RATS_TLS_API_VERSION_DEFAULT;
         conf.log_level = RATS_TLS_LOG_LEVEL_DEBUG;
-        if let Some(tls_type) = tls_type {
-            conf.tls_type[..tls_type.len()].copy_from_slice(tls_type.as_bytes());
-        }
-        if let Some(crypto) = crypto {
-            conf.crypto_type[..crypto.len()].copy_from_slice(crypto.as_bytes());
-        }
-        if let Some(attester) = attester {
-            conf.attester_type[..attester.len()].copy_from_slice(attester.as_bytes());
-        }
-        if let Some(verifier) = verifier {
-            conf.verifier_type[..verifier.len()].copy_from_slice(verifier.as_bytes());
-        }
+
         conf.cert_algo = RATS_TLS_CERT_ALGO_DEFAULT;
         conf.enclave_id = 0;
         conf.flags |= RATS_TLS_CONF_FLAGS_MUTUAL;

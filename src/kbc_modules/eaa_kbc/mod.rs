@@ -81,15 +81,8 @@ impl EAAKbc {
 
     fn establish_new_kbs_connection(&mut self) -> Result<()> {
         debug!("create RATS TLS handle...");
-        self.tls_handle = Some(
-            rats_tls::RatsTls::new(
-                &Some("openssl".to_string()),
-                &Some("openssl".to_string()),
-                &Some("tdx".to_string()),
-                &Some("nullverifier".to_string()),
-            )
-            .map_err(|e| anyhow!("create rats_tls failed!:{:?}", e))?,
-        );
+        self.tls_handle =
+            Some(rats_tls::RatsTls::new().map_err(|e| anyhow!("create rats_tls failed!:{:?}", e))?);
 
         self.tcp_stream = Some(TcpStream::connect(&self.kbs_uri)?);
 
