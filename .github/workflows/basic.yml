@@ -1,8 +1,8 @@
-name: attestation-agent build and unit tests
+name: attestation-agent basic build and unit tests
 on: [push, pull_request, create]
 
 jobs:
-  ci:
+  basic_ci:
     if: github.event_name == 'pull_request'
     name: Check
     runs-on: ubuntu-latest
@@ -27,11 +27,11 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Build and install
+      - name: Build and install with default features
         run: |
           make && make install
 
-      - name: Build with musl
+      - name: Musl build with default features
         run: |
           make MUSL=1
 
