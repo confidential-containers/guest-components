@@ -1,0 +1,50 @@
+name: offline_sev_kbc build CI
+on:
+  push:
+    paths:
+      - 'src/kbc_modules/offline_sev_kbc/**'
+  pull_request:
+    paths:
+      - 'src/kbc_modules/offline_sev_kbc/**'
+  create:
+    paths:
+      - 'src/kbc_modules/offline_sev_kbc/**'
+
+jobs:
+  offline_sev_kbc_ci:
+    if: github.event_name == 'pull_request'
+    name: Check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: Build and install with offline_sev_kbc feature
+        run: |
+          make KBC=offline_sev_kbc && make install
+
+      - name: Musl build with offline_sev_kbc feature
+        run: |
+          make MUSL=1 KBC=offline_sev_kbc
+
+      - name: Run cargo test with offline_sev_kbc feature
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features offline_sev_kbc
