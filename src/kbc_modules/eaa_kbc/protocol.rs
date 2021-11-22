@@ -20,6 +20,12 @@ impl VersionRequest {
     }
 }
 
+impl Default for VersionRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VersionResponse {
     pub status: String,

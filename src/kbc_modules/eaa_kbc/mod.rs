@@ -41,7 +41,7 @@ impl KbcInterface for EAAKbc {
             "protocol_version".to_string(),
             self.protocol_version.clone(),
         );
-        Ok(KbcCheckInfo { kbs_info: kbs_info })
+        Ok(KbcCheckInfo { kbs_info })
     }
 
     fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
@@ -69,7 +69,7 @@ impl KbcInterface for EAAKbc {
 impl EAAKbc {
     pub fn new(kbs_uri: String) -> EAAKbc {
         EAAKbc {
-            kbs_uri: kbs_uri,
+            kbs_uri,
             protocol_version: String::new(),
             algorithm: String::new(),
             key_length: 0,
@@ -99,7 +99,7 @@ impl EAAKbc {
     }
 
     fn kbs_query_version(&mut self) -> Result<String> {
-        let request = VersionRequest::new();
+        let request = VersionRequest::default();
         let trans_json = serde_json::to_string(&request)?;
         let trans_data: &[u8] = trans_json.as_bytes();
         let recv_string: String = self.kbs_trans_and_recv(trans_data, "Version")?;
@@ -107,7 +107,7 @@ impl EAAKbc {
             serde_json::from_str::<VersionResponse>(recv_string.as_str())?;
 
         match response.status.as_str() {
-            "OK" => return Ok(response.version),
+            "OK" => Ok(response.version),
             "Fail" => return Err(anyhow!("The VersionResponse status is 'Fail'!")),
             _ => return Err(anyhow!("Can't understand the VersionResponse status!")),
         }
@@ -120,7 +120,7 @@ impl EAAKbc {
         iv: Vec<u8>,
     ) -> Result<Vec<u8>> {
         let blob = Blob {
-            kid: key_id.clone(),
+            kid: key_id,
             encrypted_data: base64::encode(&encrypted_payload),
             algorithm: "AES".to_string(),
             key_length: 256,
@@ -146,7 +146,7 @@ impl EAAKbc {
                 "There is no field matching the encrypted payload in the data field of DecryptionResponse"
             ))?;
             let decrypted_payload = base64::decode(decrypted_payload_string)?;
-            return Ok(decrypted_payload);
+            Ok(decrypted_payload)
         } else {
             return Err(anyhow!(
                 "DecryptionResponse status is OK but the data is null!"

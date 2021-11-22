@@ -11,7 +11,7 @@ use anyhow::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-const HARDCODED_KEY: &'static [u8] = &[
+const HARDCODED_KEY: &[u8] = &[
     217, 155, 119, 5, 176, 186, 122, 22, 130, 149, 179, 163, 54, 114, 112, 176, 221, 155, 55, 27,
     245, 20, 202, 139, 155, 167, 240, 163, 55, 17, 218, 234,
 ];
@@ -53,7 +53,7 @@ impl SampleKbc {
     pub fn new(kbs_uri: String) -> SampleKbc {
         let mut kbs_info: HashMap<String, String> = HashMap::new();
         kbs_info.insert("kbs_uri".to_string(), kbs_uri);
-        SampleKbc { kbs_info: kbs_info }
+        SampleKbc { kbs_info }
     }
 }
 

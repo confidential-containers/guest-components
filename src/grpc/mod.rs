@@ -143,11 +143,11 @@ fn parse_input(input_byte: Vec<u8>) -> Result<InputPayload> {
         let kbc_name: String = kbc_kbs_pair[..index].to_string();
         let kbs_uri: String = kbc_kbs_pair[(index + 2)..].to_string();
         debug!("Get KBC_NAME:{}, KBS_URI:{}", kbc_name, kbs_uri);
-        return Ok(InputPayload {
-            kbc_name: kbc_name,
-            kbs_uri: kbs_uri,
+        Ok(InputPayload {
+            kbc_name,
+            kbs_uri,
             annotation: jsonstring_annotation.to_string(),
-        });
+        })
     } else {
         return Err(anyhow!(
             "Invalid parameters: invalid {} pair format!",

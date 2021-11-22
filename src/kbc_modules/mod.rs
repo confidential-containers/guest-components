@@ -79,7 +79,7 @@ impl KbcModuleList {
             mod_list.insert("offline_sev_kbc".to_string(), instantiate_func);
         }
 
-        KbcModuleList { mod_list: mod_list }
+        KbcModuleList { mod_list }
     }
 
     pub fn get_func(&self, kbc_name: &str) -> Result<&KbcInstantiateFunc> {

@@ -21,8 +21,6 @@ unsafe impl ForeignTypeRef for RatsTlsRef {
 #[derive(Clone)]
 pub struct RatsTls(NonNull<rats_tls_handle>);
 
-unsafe impl Send for RatsTlsRef {}
-unsafe impl Sync for RatsTlsRef {}
 unsafe impl Send for RatsTls {}
 unsafe impl Sync for RatsTls {}
 
@@ -69,12 +67,13 @@ impl DerefMut for RatsTls {
 
 impl RatsTls {
     pub fn new() -> Result<RatsTls, RatsTlsErrT> {
-        let mut conf: rats_tls_conf_t = Default::default();
-        conf.api_version = RATS_TLS_API_VERSION_DEFAULT;
-        conf.log_level = RATS_TLS_LOG_LEVEL_DEBUG;
-
-        conf.cert_algo = RATS_TLS_CERT_ALGO_DEFAULT;
-        conf.enclave_id = 0;
+        let mut conf = rats_tls_conf_t {
+            api_version: RATS_TLS_API_VERSION_DEFAULT,
+            log_level: RATS_TLS_LOG_LEVEL_DEBUG,
+            cert_algo: RATS_TLS_CERT_ALGO_DEFAULT,
+            enclave_id: 0,
+            ..Default::default()
+        };
         conf.flags |= RATS_TLS_CONF_FLAGS_MUTUAL;
 
         let mut handle: rats_tls_handle = unsafe { std::mem::zeroed() };
@@ -137,6 +136,6 @@ impl RatsTls {
     #[no_mangle]
     extern "C" fn callback(_evidence: *mut ::std::os::raw::c_void) -> ::std::os::raw::c_int {
         info!("EAA KBC Rats-TLS callback function is unimplement!.");
-        return 0;
+        0
     }
 }
