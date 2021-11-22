@@ -14,7 +14,7 @@ jobs:
   eaa_kbc_ci:
     if: github.event_name == 'pull_request'
     name: Check
-    runs-on: ubuntu18.04
+    runs-on: ubuntu-18.04
     strategy:
       fail-fast: false
       matrix:
@@ -22,37 +22,40 @@ jobs:
           - stable
           - beta
           - nightly
-    steps:
-      - name: Install rats-tls dependencies
-        run: |
-          apt-get update && apt-get install -y autoconf gcc g++ make wget git cmake \
-          libseccomp-dev binutils-dev libprotoc-dev protobuf-compiler \
-          pkg-config libssl-dev openssl libtool file curl gnupg;
-
-          wget https://github.com/protobuf-c/protobuf-c/archive/v1.3.1.tar.gz &&\
-          tar -zxvf v1.3.1.tar.gz && cd protobuf-c-1.3.1 && ./autogen.sh && \
-          ./configure && make && make install
-
-          wget https://download.01.org/intel-sgx/sgx-linux/2.14/as.ld.objdump.gold.r3.tar.gz && \
-          tar -zxvf as.ld.objdump.gold.r3.tar.gz && cp -rf external/toolset/ubuntu18.04/* /usr/local/bin/ && \
-          rm -rf external && rm -rf as.ld.objdump.gold.r3.tar.gz
-
-          wget https://download.01.org/intel-sgx/sgx-linux/2.14/distro/ubuntu18.04-server/sgx_linux_x64_sdk_2.14.100.2.bin;
-          chmod +x sgx_linux_x64_sdk_2.14.100.2.bin &&  echo -e 'no\n/opt/intel\n' | ./sgx_linux_x64_sdk_2.14.100.2.bin;
-          rm -rf sgx_linux_x64_sdk_2.14.100.2.bin;
-
-          source /opt/intel/sgxsdk/environment;
-
-          echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' | tee /etc/apt/sources.list.d/intel-sgx.list && \
-          wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -;
           
-          apt-get update -y && apt-get install -y libsgx-dcap-quote-verify libsgx-dcap-default-qpl libsgx-dcap-ql-dev libsgx-uae-service libsgx-dcap-quote-verify-dev;
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
 
-      - name: Install rats-tls
+      - name: Set up docker
+        uses: docker-practice/actions-setup-docker@master
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt
+
+      - name: Create rats-tls compiling container
+        run: |
+          rats_compile_env=$(docker run -itd --privileged --rm --net host -v /usr/local/lib:/usr/local/lib inclavarecontainers/test:compile-check-ubuntu18.04);
+          echo "rats_compile_env=$rats_compile_env" >> $GITHUB_ENV
+
+      - name: Build and install rats-tls
         run: | 
-          git clone https://github.com/alibaba/inclavare-containers && cd inclavare-containers/rats-tls;
-          cmake -DBUILD_SAMPLES=on -H. -Bbuild && make -C build install;
+          docker exec $rats_compile_env bash -c 'git clone https://github.com/alibaba/inclavare-containers;
+          cd inclavare-containers/rats-tls;
+          cmake -DBUILD_SAMPLES=on -H. -Bbuild;
+          make -C build install'
+      
+      - name: Stop rats-tls compiling container
+        run: |
+          docker stop $rats_compile_env
       
       - name: Build AA with EAA KBC
         run: |
-          make KBC=eaa_kbc && make install;
+          make KBC=eaa_kbc && make install
