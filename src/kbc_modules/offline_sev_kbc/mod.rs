@@ -26,9 +26,9 @@ pub struct AnnotationPacket {
     // Key ID to manage multiple keys
     pub kid: String,
     // Encrypted key to unwrap
-    pub wrapped_data: Vec<u8>,
+    pub wrapped_data: String,
     // Initialisation vector
-    pub iv: Vec<u8>,
+    pub iv: String,
     // Wrap type to specify encryption algorithm and mode
     pub wrap_type: String,
 }
@@ -92,8 +92,9 @@ impl KbcInterface for OfflineSevKbc {
         let key = keys
             .get(&kid)
             .ok_or_else(|| anyhow!("Received unknown key ID: {}", kid))?;
-        let iv = annotation_packet.iv;
-        let wrapped_data = annotation_packet.wrapped_data;
+        let iv = decode(annotation_packet.iv).map_err(|e| anyhow!("Failed to decode IV: {}", e))?;
+        let wrapped_data = decode(annotation_packet.wrapped_data)
+            .map_err(|e| anyhow!("Failed to decode wrapped key: {}", e))?;
         let wrap_type = annotation_packet.wrap_type;
 
         let cipher = self
@@ -159,6 +160,7 @@ fn mount_security_fs() -> Result<()> {
 mod tests {
     use super::*;
 
+    use base64::encode;
     use openssl::symm::encrypt;
 
     const KID: &str = "foo";
@@ -171,7 +173,8 @@ mod tests {
 
         let cipher_key = "aes_256_ctr";
         let cipher = get_ciphers().get(cipher_key).unwrap().to_owned();
-        let wrapped_data = encrypt(cipher, &KEY, Some(iv), data).unwrap();
+        let wrapped_data = encode(encrypt(cipher, &KEY, Some(iv), data).unwrap());
+        let encoded_iv = encode(iv);
 
         let annotation = format!(
             "{{
@@ -180,7 +183,7 @@ mod tests {
     \"iv\": {:?},
     \"wrap_type\": \"{}\"
 }}",
-            KID, wrapped_data, iv, cipher_key
+            KID, wrapped_data, encoded_iv, cipher_key
         );
 
         let mut kbc = OfflineSevKbc {
