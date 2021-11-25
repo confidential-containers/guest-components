@@ -34,6 +34,7 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
+          components: rustfmt
 
       - name: Build and install with offline_sev_kbc feature
         run: |
