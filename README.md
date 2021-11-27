@@ -1,6 +1,10 @@
 # Attestation Agent
 
-Attestation Agent (AA for short) is an user space service for attestation procedure. In Kata Confidential Containers (Kata CC for short), AA implements the WrapKey API defined by keyprovider protocol, which is responsible for performing attestation and obtaining the Key Encryption Key (KEK for short) from Key Broker Service (KBS for short) , or requesting KBS to decrypt the encrypted payload stored in the image layer annotation.
+Attestation Agent (AA for short) is a user space service for attestation procedure. 
+In Kata Confidential Containers (Kata CC for short), AA implements the WrapKey API defined by the key-provider protocol, 
+which is responsible for performing attestation and obtaining the Key Encryption Key (KEK for short) from Key Broker Service (KBS for short),
+or requesting KBS to decrypt the encrypted payload stored in the image layer annotation.
+
 
 Current consumers of AA include: 
 
@@ -16,7 +20,7 @@ Here are the steps of building and running AA:
 Build and install AA with all KBC modules:
 
 ```shell
-git glone https://github.com/containers/attestation-agent
+git clone https://github.com/containers/attestation-agent
 cd attestation-agent
 make && make install
 ```
