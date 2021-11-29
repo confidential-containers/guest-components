@@ -117,7 +117,7 @@ impl KeyProviderService for KeyProvider {
         };
         debug!("Reply successfully!");
 
-        Ok(Response::new(reply))
+        Result::Ok(Response::new(reply))
     }
 
     async fn wrap_key(
