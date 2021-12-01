@@ -33,7 +33,7 @@ jobs:
 
       - name: Musl build with default features
         run: |
-          make MUSL=1
+          make LIBC=musl
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
