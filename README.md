@@ -35,7 +35,7 @@ make KBC=sample_kbc
 
 To build and install with musl, just run:
 ```shell
-make MUSL=1 && make install
+make LIBC=musl && make install
 ```
 
 ### Run
