@@ -54,6 +54,23 @@ impl KbcRuntime {
         Ok(plain_payload)
     }
 
+    pub fn get_resource(
+        &mut self,
+        kbc_name: String,
+        kbs_uri: String,
+        resource_description: String,
+    ) -> Result<Vec<u8>> {
+        if self.kbc_instance_map.get_mut(&kbc_name).is_none() {
+            self.instantiate_kbc(kbc_name.clone(), kbs_uri)?;
+        }
+        let kbc_instance = self
+            .kbc_instance_map
+            .get_mut(&kbc_name)
+            .ok_or(anyhow!("KBC runtime: The KBC instance does not existing!"))?;
+        let resource = kbc_instance.get_resource(resource_description)?;
+        Ok(resource)
+    }
+
     pub fn check(&self, kbc_name: String) -> Result<KbcCheckInfo> {
         let kbc_instance = self
             .kbc_instance_map

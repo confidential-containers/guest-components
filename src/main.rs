@@ -20,23 +20,42 @@ async fn main() -> Result<()> {
     let app_matches = App::new(grpc::AGENT_NAME)
         .version("1.0.0")
         .arg(
-            Arg::with_name("socket addr")
-                .long("grpc_sock")
+            Arg::with_name("KeyProvider gRPC socket addr")
+                .long("keyprovider_sock")
                 .takes_value(true)
-                .help("The socket address which the grpc service will listen to, for example: --grpc_sock 127.0.0.1:11223",
+                .help("This socket address which the KeyProvider gRPC service will listen to, for example: --keyprovider_sock 127.0.0.1:11223",
+                ),
+        )
+        .arg(
+            Arg::with_name("GetResource gRPC socket addr")
+                .long("getresource_sock")
+                .takes_value(true)
+                .help("This socket address which the GetResource gRPC service will listen to, for example: --getresource_sock 127.0.0.1:11223",
                 ),
         )
         .get_matches();
 
-    let socket = app_matches
-        .value_of("socket addr")
+    let keyprovider_socket = app_matches
+        .value_of("KeyProvider gRPC socket addr")
         .unwrap_or("127.0.0.0:44444")
         .parse::<SocketAddr>()?;
 
-    debug!("starting keyprovider gRPC service...");
-    debug!("listening to socket addr: {:?}", socket);
+    let getresource_socket = app_matches
+        .value_of("GetResource gRPC socket addr")
+        .unwrap_or("127.0.0.0:55555")
+        .parse::<SocketAddr>()?;
 
-    grpc::start_service(socket).await?;
+    debug!(
+        "KeyProvider gRPC service listening on: {:?}",
+        keyprovider_socket
+    );
+    debug!(
+        "GetResource gRPC service listening on: {:?}",
+        getresource_socket
+    );
 
-    Ok(())
+    let keyprovider_server = grpc::keyprovider::start_service(keyprovider_socket);
+    let getresource_server = grpc::getresource::start_service(getresource_socket);
+
+    tokio::join!(keyprovider_server, getresource_server).0
 }
