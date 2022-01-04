@@ -5,7 +5,7 @@ use crate::blockcipher::{Finalizer, LayerBlockCipher, LayerBlockCipherOptions};
 use anyhow::{anyhow, Result};
 use ctr::cipher::generic_array::GenericArray;
 use ctr::cipher::{NewCipher, StreamCipher};
-use hmac::{Hmac, Mac, NewMac};
+use hmac::{Hmac, Mac};
 use rand::{thread_rng, Rng};
 use sha2::Sha256;
 use std::io::Read;
@@ -51,7 +51,7 @@ impl<R: Read> Read for AESCTRBlockCipher<R> {
             // provide a verdict
             if self.done_encrypting {
                 if let Some(hmac) = self.hmac.as_ref() {
-                    hmac.clone().verify(&self.exp_hmac).map_err(|_| {
+                    hmac.clone().verify_slice(&self.exp_hmac[..]).map_err(|_| {
                         std::io::Error::new(
                             std::io::ErrorKind::Other,
                             format!(
