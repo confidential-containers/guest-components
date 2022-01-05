@@ -210,7 +210,7 @@ mod tests {
 
         let mut encrypted_data: Vec<u8> = Vec::new();
         assert!(lbch
-            .encrypt(layer_data.as_slice(), &AES256CTR.to_string(), &mut lbco)
+            .encrypt(layer_data.as_slice(), AES256CTR, &mut lbco)
             .is_ok());
         let mut encryptor = lbch.aes_ctr_block_cipher.unwrap();
         assert!(encryptor.read_to_end(&mut encrypted_data).is_ok());

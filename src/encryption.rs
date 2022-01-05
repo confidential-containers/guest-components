@@ -262,7 +262,7 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
         let mut lbch = LayerBlockCipherHandler::new()?;
         let mut lbco = LayerBlockCipherOptions::default();
 
-        lbch.encrypt(layer_reader, &AES256CTR.to_string(), &mut lbco)?;
+        lbch.encrypt(layer_reader, AES256CTR, &mut lbco)?;
         lbco.private.digest = desc.digest.clone();
         let enc_layer_finalizer = EncLayerFinalizer { lbco };
 

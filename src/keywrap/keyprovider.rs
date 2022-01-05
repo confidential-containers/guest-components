@@ -163,14 +163,13 @@ impl KeyProviderKeyWrapProtocolOutput {
         cmd: &Option<Command>,
         runner: &dyn utils::CommandExecuter,
     ) -> Result<Self> {
-        let resp_bytes: Vec<u8>;
         let command = cmd.as_ref().unwrap();
         let cmd_name = command.path.to_string();
         let mut args = &vec![];
         if command.args.as_ref().is_some() {
             args = command.args.as_ref().unwrap();
         }
-        resp_bytes = runner
+        let resp_bytes: Vec<u8> = runner
             .exec(cmd_name, args, input)
             .map_err(|_| anyhow!("Error from command executer"))?;
         let protocol_output: KeyProviderKeyWrapProtocolOutput = serde_json::from_slice(&resp_bytes)
@@ -586,7 +585,7 @@ mod tests {
 
         // Perform manual encryption
         let opts_data = b"symmetric_key";
-        let wrapped_key = encrypt_key(&opts_data.to_vec(), unsafe { ENC_KEY }).unwrap();
+        let wrapped_key = encrypt_key(opts_data.as_ref(), unsafe { ENC_KEY }).unwrap();
         let ap = AnnotationPacket {
             key_url: "https://key-provider/key-uuid".to_string(),
             wrapped_key,

@@ -82,7 +82,6 @@ fn decrypter(priv_key: &[u8]) -> Result<Box<dyn JweDecrypter>> {
 
 impl KeyWrapper for JweKeyWrapper {
     fn wrap_keys(&self, ec: &EncryptConfig, opts_data: &[u8]) -> Result<Vec<u8>> {
-        let recipients: Vec<(Option<&JweHeader>, &dyn JweEncrypter)>;
         let mut encrypters: Vec<Box<dyn JweEncrypter>> = vec![];
 
         let mut src_header = JweHeaderSet::new();
@@ -95,7 +94,7 @@ impl KeyWrapper for JweKeyWrapper {
             encrypters.push(encrypter);
         }
 
-        recipients = encrypters
+        let recipients: Vec<(Option<&JweHeader>, &dyn JweEncrypter)> = encrypters
             .iter()
             .map(|x| (Some(&src_rheader), &**x))
             .collect();
