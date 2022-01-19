@@ -5,4 +5,5 @@
 pub mod bundle;
 pub mod decoder;
 pub mod decrypt;
+pub mod snapshots;
 pub mod unpack;
