@@ -12,9 +12,12 @@ edition = "2018"
 anyhow = ">=1.0"
 flate2 = "1.0"
 libc = "0.2"
+oci-distribution = { git = "https://github.com/arronwy/oci-distribution", branch = "export_pull_layer" }
+ocicrypt-rs = { git = "https://github.com/arronwy/ocicrypt-rs", branch = "oci_distribution" }
 serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
 tar = "0.4.37"
+tokio = {version = "1.0", features = ["macros", "fs"]}
 zstd = "0.9"
 
 [dev-dependencies]
