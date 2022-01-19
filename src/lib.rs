@@ -10,6 +10,7 @@ pub mod config;
 pub mod decoder;
 pub mod decrypt;
 pub mod image;
+pub mod meta_store;
 pub mod pull;
 pub mod snapshots;
 pub mod unpack;
