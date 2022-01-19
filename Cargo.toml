@@ -1,0 +1,17 @@
+[package]
+name = "image-rs"
+version = "0.1.0"
+description = "The OCI Images Rust Crate"
+repository = "https://github.com/confidential-containers/image-rs"
+readme = "README.md"
+license = "Apache-2.0"
+authors = ["The image-rs Authors"]
+edition = "2018"
+
+[dependencies]
+anyhow = ">=1.0"
+flate2 = "1.0"
+serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
+serde_json = ">=1.0.9"
+tar = "0.4.37"
+zstd = "0.9"
