@@ -59,11 +59,13 @@ pub mod key_provider_service_client {
         #[doc = r""]
         #[doc = r" This requires the server to support it otherwise it might respond with an"]
         #[doc = r" error."]
+        #[must_use]
         pub fn send_gzip(mut self) -> Self {
             self.inner = self.inner.send_gzip();
             self
         }
         #[doc = r" Enable decompressing responses with `gzip`."]
+        #[must_use]
         pub fn accept_gzip(mut self) -> Self {
             self.inner = self.inner.accept_gzip();
             self
