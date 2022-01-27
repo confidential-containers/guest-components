@@ -89,7 +89,7 @@ pub mod tests {
         );
 
         fs::write(keyfile_path.clone(), "foo").unwrap();
-        assert!(load_keys(&keyfile_name.to_string()).is_err());
+        assert!(load_keys(keyfile_name).is_err());
 
         fs::remove_file(keyfile_name).unwrap();
     }

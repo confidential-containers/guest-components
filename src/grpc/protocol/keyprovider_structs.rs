@@ -52,10 +52,12 @@ impl KeyProviderInput {
         Ok(())
     }
 
+    #[must_use]
     pub fn with_op(self, op: String) -> Self {
         KeyProviderInput { op, ..self }
     }
 
+    #[must_use]
     pub fn with_key_wrap_params(self, params: KeyWrapParams) -> Self {
         KeyProviderInput {
             keywrapparams: params,
@@ -63,6 +65,7 @@ impl KeyProviderInput {
         }
     }
 
+    #[must_use]
     pub fn with_key_unwrap_params(self, params: KeyUnwrapParams) -> Self {
         KeyProviderInput {
             keyunwrapparams: params,
@@ -118,6 +121,7 @@ impl KeyWrapParams {
         Ok(())
     }
 
+    #[must_use]
     pub fn with_ec(self, ec: Ec) -> Self {
         KeyWrapParams {
             ec: Some(ec),
@@ -125,6 +129,7 @@ impl KeyWrapParams {
         }
     }
 
+    #[must_use]
     pub fn with_opts_data(self, data: String) -> Self {
         KeyWrapParams {
             optsdata: Some(data),
@@ -179,6 +184,7 @@ impl KeyUnwrapParams {
         Ok(())
     }
 
+    #[must_use]
     pub fn with_dc(self, dc: Dc) -> Self {
         KeyUnwrapParams {
             dc: Some(dc),
@@ -186,6 +192,7 @@ impl KeyUnwrapParams {
         }
     }
 
+    #[must_use]
     pub fn with_base64_annotation(self, base64_annotation: String) -> Self {
         KeyUnwrapParams {
             annotation: Some(base64_annotation),
@@ -193,6 +200,7 @@ impl KeyUnwrapParams {
         }
     }
 
+    #[must_use]
     pub fn with_annotation(self, annotation: String) -> Self {
         self.with_base64_annotation(base64::encode(annotation))
     }
