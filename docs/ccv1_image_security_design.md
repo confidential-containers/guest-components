@@ -154,55 +154,32 @@ From its `layers` field, we can see the changes we stated above.
 
 ## Image signing
 
-The container image signing mechanism used by the image-rs of confidential containers V1 
-is consistent with the signing mechanism used in [containers/image](https://github.com/containers/image). 
-At present, the only supported cryptographic signature format in this mechanism is OpenPGP([RFC 4880](https://datatracker.ietf.org/doc/html/rfc4880#section-5.4)). 
+There are multiple image signing and verification protocols/solutions in the field, 
+so an extensible modular architecture should be implemented to support them.
+The owner needs to specify the `scheme` field in the image security [policy file](https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md#policy) distributed to image-rs. 
+when verifying the signature, image-rs can select the appropriate scheme for signature verification according to this field.
 
-The signing process will not modify any content of the container image (or an encrypted image), including layer, config, manifest, etc. 
+In CC V1, we start by supporting the [Red Hat simple signing format](https://www.redhat.com/en/blog/container-image-signing).
+This is a simple and direct signature system, 
+which uses the key of OpenPGP([RFC 4880](https://datatracker.ietf.org/doc/html/rfc4880#section-5.4)) 
+and a simple signature [payload format](https://github.com/containers/image/blob/main/docs/containers-signature.5.md).
 
-The container signature is essentially a blob, which consists of two parts:
+In the future, confidential containers will gradually support a variety of image signature schemes. 
+The differences between these schemes are as follows:
 
-- JSON payload, its format is defined in 
-[containers-signatures](https://github.com/containers/image/blob/main/docs/containers-signature.5.md)
+1. Signature payload format.
 
-- OpenPGP cryptographic signature of JSON payload
+2. Signature algorithm.
 
-The JSON payload contains the manifest digest and identity information (reference) of the container image. Examples are as follows:
+3. Signature storage and signature distribution.
 
-```json
-{
-    "critical": {
-        "type": "atomic container signature",
-        "image": {
-            "docker-manifest-digest": "sha256:...."
-        },
-        "identity": {
-            "docker-reference": "docker.io/mylib/example:latest"
-        }
-    },
-    "optional": {
-        "creator": "some software package v1.0.1-35",
-        "timestamp": 1483228800,
-    }
-}
-```
-
-The process of signing a container image is as follows:
-
-1. Create a signature JSON payload file following the structure above, 
-containing the manifest digest and reference for the image (if encrypted, actually the encrypted image), 
-and optional information.
-2. Use the owner's private key to sign the JSON payload generated in the previous step, 
-and package the cryptographic signature together with the JSON payload into a signature claim file.
-
-The signature claim file is what we usually call the container image signature file. 
-Its file name format and store/access protocol are defined in 
-[containers signature-protocols](https://github.com/containers/image/blob/main/docs/signature-protocols.md).
+We make modular design for the above three during signature verification, 
+and select the appropriate signature verification method according to the configuration of policy.
 
 ## Image distribution
 
 After the encryption and signing are completed, we obtain two products: 
-the encrypted container image itself and the signature claim file.
+the encrypted container image itself and the signature.
 In the design of CC V1, the distribution schemes of the two are as follows:
 
 - container image:
@@ -211,10 +188,9 @@ the container image can be directly placed in the rootfs of boot image or pushed
   - When using the unprotected boot image scheme, 
 the owner must push the container image to the remote registry.
 
-- signature claim file: 
+- signature: 
   - If image is pushed to a remote registry: 
-If the registry support `X-Registry-Supports-Signatures` API [extension](https://github.com/containers/image/issues/384), push to the registry together with image,
-else, store in the specified `sigstore` (a web server or a local Dir).
+Stored in different places according to the different signature schemes used.
   - If image is placed in the boot image rootfs:
 Store it in the specified `sigstore` (a customized local Dir in boot image rootfs).
 
@@ -231,12 +207,9 @@ The steps are as follows:
    - If it is unconditional acceptance, skip the second and third steps; 
    - If it is a signature verification requirement, proceed to the following steps
 
-2. (if needed in policy) Download the signature claim file of the container image.
-   - If the registry support `X-Registry-Supports-Signatures` API extension, 
-     download from the registry together with image.
-   - Else, download from `sigstore` according to the config file.
+2. (if signature verification is needed in policy) Get the signature of the container image.
 
-3. (if needed in policy) Verify the signature of the container image according to the configuration of the policy.
+3. (if signature verification is needed in policy) Verify the signature of the container image according to the configuration of the policy.
 
 4. Pull the container image layer by layer. If an encrypted container image layer is encrypted, decrypt it.
 
@@ -244,14 +217,19 @@ After the image is pulled, the subsequent deployment process is consistent with 
 
 ## Policy
 
-Policy file (`policy.json`) is a necessary configuration file for image pulling in CCv1,
-the spec of it is defined in 
-[container/image policy.json](https://github.com/containers/image/blob/main/docs/containers-policy.json.5.md).
+The policy file here comes from the signature verification [policy configuration file](https://github.com/containers/image/blob/main/docs/containers-policy.json.5.md)
+introduced in the implementation of Red Hat simple signing in the [containers/image](https://github.com/containers/image) project. 
+This policy file can not only be used for Red Hat simple signing, in the confidential container design, 
+we will continue to customize and expand the content of the policy file as 
+a general signature verification configuration file compatible with different signature schemes.
+
 Its main functions are as follows:
 
 - Declare a allow list of container images with "transport-scope" granularity
 
-- Specify the public key which should to be used when verifying the image signature
+- Declare the signature scheme used to verify the signature of various images
+
+- (Optional) Specify the public key (path, data, ID, ...) which should to be used when verifying the image signature
 
 At present, the following two types of transport is supported in confidential containers:
 
@@ -269,6 +247,7 @@ In the V1 design of the confidential containers, a safe and reasonable `policy.j
             "docker.io/my_private_registry": [
                 {
                     "type": "signedBy",
+                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyData": "<public Key>",
                 }
@@ -276,6 +255,7 @@ In the V1 design of the confidential containers, a safe and reasonable `policy.j
             "registry.access.redhat.com": [
                 {
                     "type": "signedBy",
+                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyPath": "/etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release",
                 }
@@ -301,18 +281,24 @@ match the policy in the following order according to the [container image refere
 After the matching is successful, the policy set under the corresponding scope is executed, as described in 
 [Policy Requirements](https://github.com/containers/image/blob/main/docs/containers-policy.json.5.md#policy-requirements),
 the `signedBy` policy requires that there must exist at least one signature of this image 
-can be verified by the public key ring provided by `keyPath` or `keyData` filed,
-so when get this policy, signature verification will be performed.
+can be verified with the configuration in it, in other words, when get this policy, signature verification will be performed.
+
+In order to flexibly support different signature schemes, we extend the `signedBy` policy, add a field called `scheme`.
+Currently, the allowed values of this field are as follows:
+
+- `simple`: Red Hat simple signing scheme.
+
+In the future, more signature schemes will be supported, and this field will have more allowed values.
 
 For the example of the policy file given above, the meaning of it is as follows:
 
 1. For images from the local file system, they are allowed to pull and run no matter there is a valid signature or not.
 
 2. For images from the `docker.io/my_private_registry` registry, 
-there must exist at least one signature that can be verified by the keys in `keyData`.
+there must exist at least one signature under simple signing scheme that can be verified by the keys in `keyData`.
 
 3. For images from the `registry.access.redhat.com`, 
-there must exist at least one signature that can be verified by the keys in `/etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release`.
+there must exist at least one signature under simple signing scheme that can be verified by the keys in `/etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release`.
 
 4. Reject all other images.
 
@@ -341,44 +327,31 @@ he just need to change the policy of the member matching the registry under the 
 
 ### Get signatures
 
-If the image is pulled from the remote registry, 
-first try to request signatures with the registry's `X-Registry-Supports-Signatures` API extension. 
-If the image is pulled from the local rootfs or the registry does not support the extension, 
-read the `sigstore` configuration file to get the `sigstore` URL of the image 
-and then get signatures from the `sigstore`.
+Different signature schemes generally use different signature storage locations. 
+When image-rs need to verify the signature, it first need to obtain the signature of the image. 
+The storage location may be:
 
-The `sigstore` configuration file is specified as all `.yaml` files in `registries.d` directory. 
-The entries in the `sigstore` configuration file will claim the `sigstore` URL of the container image
-(the `sigstore` can be a web server, local directory or etc.).
+1. Local file system.
 
-The spec of `sigstore` configuration file is defined in 
-[containers/image registry.d](https://github.com/containers/image/blob/main/docs/containers-registries.d.5.md).
+2. Container registry.
 
-The sample `sigstore` configuration file matching the sample `policy.json` file in the above is as follows:
+3. Customized remote server. Such as a http/https web server.
 
-```yaml
-default:
-    sigstore: file:///var/lib/containers/sigstore
-docker:
-    docker.io/my_private_registry:
-        sigstore: https://my-sigstore.com/example/sigstore
-    registry.access.redhat.com:
-        sigstore: https://access.redhat.com/webassets/docker/content/sigstore
-```
+4. Image metadata.
 
 ### Verification steps
 
 A single signature's verification action is divided into the following steps:
 
-1. Parse the signature claim file and separate the JSON payload and cryptographic signature.
+1. Get and parse the signature blob.
 
-2. Read the `policy.json`'s `signedBy` policy, get the public key used to verify the signature from the `keyPath` or `keyData` field.
+2. Read the `policy.json`'s `signedBy` policy, select the scheme to use when verifying the signature according to the `scheme` field.
 
-3. Use the public key to verify the cryptographic signature in the signature claim file.
+3. Get public key.
 
-4. Compare whether:
-   - the manifest digest in the JSON payload is consistent with that of the container image
-   - the docker reference in the JSON payload is consistent with that of the container image.
+3. Use the public key to verify the cryptographic signature.
+
+4. Compare whether the infomation in the signature payload is consistend with the actual infomation of the image.
 
 ## Image layer decryption
 
@@ -424,7 +397,7 @@ Through this service, the `attestation-agent` can serve `ocicrypt-rs` as a key p
 The `GetResource` gRPC service interface provided by the attestation agent 
 is used to obtain various confidential resources from the relying party (KBS). 
 In the process of protected image deployment, 
-it is usually used to obtain `policy.json` and `sigstore` config file. 
+it is usually used to obtain `policy.json` config file. 
 
 Attestation-agent performs attestation to the KBS, 
 establish an encrypted channel after negotiating the key, 
