@@ -4,7 +4,7 @@
 use crate::blockcipher::{Finalizer, LayerBlockCipher, LayerBlockCipherOptions};
 use anyhow::{anyhow, Result};
 use ctr::cipher::generic_array::GenericArray;
-use ctr::cipher::{NewCipher, StreamCipher};
+use ctr::cipher::{KeyIvInit, StreamCipher};
 use hmac::{Hmac, Mac};
 use rand::{thread_rng, Rng};
 use sha2::Sha256;
@@ -16,7 +16,6 @@ type Aes256Ctr = ctr::Ctr128BE<aes::Aes256>;
 type HmacSha256 = Hmac<Sha256>;
 
 /// AESCTRLayerBlockCipher implements the AES CTR stream cipher
-#[derive(Clone)]
 pub struct AESCTRBlockCipher<R: Read> {
     pub key_len: usize,
     pub reader: Option<R>,
