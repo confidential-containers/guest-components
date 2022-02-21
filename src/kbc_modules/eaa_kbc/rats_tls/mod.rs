@@ -12,6 +12,8 @@ use std::ptr::NonNull;
 mod ffi;
 use ffi::*;
 
+pub const MAX_FRAG_LENGTH: usize = 16384;
+
 pub struct RatsTlsRef(Opaque);
 
 unsafe impl ForeignTypeRef for RatsTlsRef {

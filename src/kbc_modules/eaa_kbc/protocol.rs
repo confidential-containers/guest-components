@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::vec::Vec;
 
+pub const GET_RESOURCE_INFO_COMMAND: &str = "Get Resource Info";
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VersionRequest {
     pub command: String,
@@ -82,5 +84,53 @@ impl GetKekRequest {
 pub struct GetKekResponse {
     pub status: String,
     pub data: Option<HashMap<String, String>>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GetResourceRequest {
+    pub command: String,
+    pub optional: HashMap<String, String>,
+}
+
+impl GetResourceRequest {
+    pub fn new(command: &str, optional: HashMap<String, String>) -> GetResourceRequest {
+        GetResourceRequest {
+            command: String::from(command),
+            optional,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GetResourceErrorInfo {
+    pub status: String,
+    pub error: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GetResourceInfoReq {
+    pub command: String,
+    pub name: String,
+}
+
+impl GetResourceInfoReq {
+    pub fn new(name: &str) -> GetResourceInfoReq {
+        GetResourceInfoReq {
+            command: GET_RESOURCE_INFO_COMMAND.to_string(),
+            name: name.to_string(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ResourceInfo {
+    pub base64size: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GetResourceInfoResponse {
+    pub status: String,
+    pub data: Option<ResourceInfo>,
     pub error: Option<String>,
 }

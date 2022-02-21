@@ -24,7 +24,7 @@ use std::sync::Arc;
 pub trait KbcInterface {
     fn check(&self) -> Result<KbcCheckInfo>;
     fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>>;
-    fn get_resource(&self, _description: String) -> Result<Vec<u8>> {
+    fn get_resource(&mut self, _description: String) -> Result<Vec<u8>> {
         Err(anyhow!("Get Resource API of this KBC is unimplement!"))
     }
 }
