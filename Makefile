@@ -59,7 +59,7 @@ uninstall:
 	rm -f $(DESTDIR)/$(BIN_NAME)
 
 clean:
-	cargo clean && rm -f Cargo.lock
+	cargo clean
 
 help:
 	@echo "==========================Help============================="
