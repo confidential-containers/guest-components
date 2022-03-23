@@ -29,6 +29,12 @@ vim ocicrypt.conf:
 }
 ```
 
+Copy the image you want to encrypt to your current directory. This example uses a *busybox* image:
+
+```
+skopeo copy docker://busybox oci:busybox
+```
+
 Encrypt the container image. You can pass in the special parameters required by the encryption module through the command line parameters of skopeo (here, the string "test" is taken as an exemplary special parameter): 
 
 ```
