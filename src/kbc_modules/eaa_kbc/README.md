@@ -45,7 +45,7 @@ Build and run attestation-agent with integrated EAA KBC module:
 
 ```
 make KBC=eaa_kbc && make install
-RUST_LOG=attestation_agent attestation-agent --grpc_sock 127.0.0.1:50000
+RUST_LOG=attestation_agent attestation-agent --keyprovider_sock 127.0.0.1:47777 --getresource_sock 127.0.0.1:48888
 ```
 
 Set KBC_NAME::KBS_URI pair in the following format: 

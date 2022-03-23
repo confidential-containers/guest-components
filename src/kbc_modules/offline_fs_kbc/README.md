@@ -22,5 +22,5 @@ AA with this KBC can be build and run with e.g.:
 ```
 cd attestation-agent
 make KBC=offline_fs_kbc && make install
-attestation-agent --grpc_sock 127.0.0.1:50000
+attestation-agent --keyprovider_sock 127.0.0.1:47777 --getresource_sock 127.0.0.1:48888
 ```

@@ -18,11 +18,11 @@ async fn main() -> Result<()> {
         .version("1.0.0")
         .arg(
             Arg::with_name("socket addr")
-                .long("grpc_sock")
+                .long("keyprovider_sock")
                 .takes_value(true)
                 .help(
                     "The socket address which the grpc service will listen to, 
-                    for example: --grpc_sock 127.0.0.1:11223",
+                    for example: --keyprovider_sock 127.0.0.1:11223",
                 ),
         )
         .get_matches();

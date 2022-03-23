@@ -14,7 +14,7 @@ Build and run sample KBS. You must explicitly specify the encryption module to u
 
 ```
 cd attestation-agent/sample_kbs
-RUST_LOG=sample_kbs cargo run --features sample_enc --release -- --grpc_sock 127.0.0.1:50000
+RUST_LOG=sample_kbs cargo run --features sample_enc --release -- --keyprovider_sock 127.0.0.1:50000
 ```
 
 vim ocicrypt.conf: 
@@ -44,7 +44,7 @@ Build and run AA:
 ```
 cd attestation-agent
 make KBC=sample_kbc && make install
-RUST_LOG=attestation_agent attestation-agent --grpc_sock 127.0.0.1:48888
+RUST_LOG=attestation_agent attestation-agent --keyprovider_sock 127.0.0.1:48888
 ```
 
 Modify ocicrypt.conf: 

@@ -21,7 +21,7 @@ You can also use the included `generate_keys.sh` to generate some sample keys ba
 
 The KBS can be run with e.g.:
 ```
-cargo run --release --features offline_fs_kbs -- --grpc_sock 127.0.0.1:50000
+cargo run --release --features offline_fs_kbs -- --keyprovider_sock 127.0.0.1:50000
 ```
 
 ### Running skopeo
