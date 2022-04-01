@@ -7,4 +7,5 @@
 extern crate strum;
 
 mod image;
+mod policy;
 mod signatures;
