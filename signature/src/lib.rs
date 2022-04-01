@@ -9,3 +9,6 @@ extern crate strum;
 mod image;
 mod policy;
 mod signatures;
+
+pub use image::Image;
+pub use policy::Policy;
