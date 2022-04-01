@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use anyhow::Result;
 use oci_distribution::Reference;
 
 pub mod digest;
@@ -30,6 +31,8 @@ pub struct Image {
     //
     // issue: https://github.com/confidential-containers/image-rs/issues/12
     pub registry_xrss_api_support: bool,
+
+    signatures: Vec<Vec<u8>>,
 }
 
 impl Image {
@@ -38,6 +41,7 @@ impl Image {
             reference: image_ref,
             manifest_digest: Digest::default(),
             registry_xrss_api_support: false,
+            signatures: Vec::default(),
         }
     }
 
@@ -51,6 +55,10 @@ impl Image {
 
     pub fn set_manifest_digest(&mut self, digest: &str) -> Result<()> {
         self.manifest_digest = Digest::try_from(digest)?;
+    }
+
+    pub fn signatures(&mut self) -> Result<Vec<Vec<u8>>> {
+        Ok(self.signatures.clone())
     }
 }
 
