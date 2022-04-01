@@ -4,3 +4,6 @@
 //
 
 mod sigstore;
+mod verify;
+
+pub use verify::verify_sig_and_extract_payload;

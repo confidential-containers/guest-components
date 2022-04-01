@@ -224,7 +224,16 @@ impl PolicyReqSignedBy {
             fs::read(&self.key_path)?
         };
 
-        // TODO: Verify the signature with the pubkey ring.
+        // Verify the signature with the pubkey ring.
+        let sig_payload = signatures::verify_sig_and_extract_payload(pubkey_ring, sig)?;
+
+        // Verify whether the information recorded in signature payload
+        // is consistent with the real information of the image.
+        //
+        // The match policy of image-reference is the "signedIdentity" field.
+        sig_payload
+            .validate_signed_docker_reference(&image.reference, self.signed_identity.as_ref())?;
+        sig_payload.validate_signed_docker_manifest_digest(&image.manifest_digest.to_string())?;
 
         Ok(())
     }
