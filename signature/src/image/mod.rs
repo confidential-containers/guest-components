@@ -3,8 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::Result;
+use crate::signatures;
+use anyhow::{anyhow, Result};
 use oci_distribution::Reference;
+use url::Url;
 
 pub mod digest;
 
@@ -32,6 +34,7 @@ pub struct Image {
     // issue: https://github.com/confidential-containers/image-rs/issues/12
     pub registry_xrss_api_support: bool,
 
+    sigstore_base_url: Option<Url>,
     signatures: Vec<Vec<u8>>,
 }
 
@@ -41,6 +44,7 @@ impl Image {
             reference: image_ref,
             manifest_digest: Digest::default(),
             registry_xrss_api_support: false,
+            sigstore_base_url: None,
             signatures: Vec::default(),
         }
     }
@@ -55,9 +59,69 @@ impl Image {
 
     pub fn set_manifest_digest(&mut self, digest: &str) -> Result<()> {
         self.manifest_digest = Digest::try_from(digest)?;
+        Ok(())
+    }
+
+    pub fn set_sigstore_base_url(&mut self, url_string: String) -> Result<()> {
+        let url = Url::parse(&url_string)?;
+        self.sigstore_base_url = Some(url);
+        Ok(())
+    }
+
+    pub fn get_sigstore_base_url_string(&self) -> String {
+        match &self.sigstore_base_url {
+            Some(url) => url.to_string(),
+            None => "".to_string(),
+        }
     }
 
     pub fn signatures(&mut self) -> Result<Vec<Vec<u8>>> {
+        if self.signatures.is_empty() {
+            return self.internal_signatures();
+        }
+
+        Ok(self.signatures.clone())
+    }
+
+    fn internal_signatures(&mut self) -> Result<Vec<Vec<u8>>> {
+        // Get image digest (manifest digest)
+        let image_digest = if !self.manifest_digest.is_empty() {
+            self.manifest_digest.clone()
+        } else if let Some(d) = self.reference.digest() {
+            Digest::try_from(d)?
+        } else {
+            return Err(anyhow!("Missing image digest"));
+        };
+
+        // Format the sigstore name: `image-repository@digest-algorithm=digest-value`.
+        let sigstore_name = signatures::format_sigstore_name(&self.reference, image_digest);
+
+        // If the registry support `X-Registry-Supports-Signatures` API extension,
+        // try to get signatures from the registry first.
+        // Else, get signatures from "sigstore" according to the sigstore config file.
+        if self.registry_xrss_api_support {
+            // TODO: Add get signatures from registry X-R-S-S API extension.
+            return Err(anyhow!(
+                "Now not support get signatures from registry X-R-S-S API extension."
+            ));
+        } else if self.sigstore_base_url.is_none() {
+            let sigstore_config =
+                signatures::SigstoreConfig::new_from_configs(signatures::SIGSTORE_CONFIG_DIR)?;
+            if let Some(base_url) = sigstore_config.base_url(&self.reference)? {
+                self.set_sigstore_base_url(base_url)?;
+            }
+        }
+
+        let sigstore = format!(
+            "{}/{}",
+            &self.get_sigstore_base_url_string(),
+            &sigstore_name
+        );
+        let sigstore_uri = url::Url::parse(&sigstore[..])
+            .map_err(|e| anyhow!("Failed to parse sigstore_uri: {:?}", e))?;
+
+        self.signatures = signatures::get_sigs_from_specific_sigstore(sigstore_uri)?;
+
         Ok(self.signatures.clone())
     }
 }
