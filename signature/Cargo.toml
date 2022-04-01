@@ -1,0 +1,9 @@
+[package]
+name = "signature"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hex = "0.4.3"
+oci-distribution = "0.8.0"
+strum = { version = "0.23.0", features = ["derive"] }
