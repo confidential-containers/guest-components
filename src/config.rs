@@ -47,7 +47,7 @@ where
 fn base64_dec(val: &[String]) -> Result<Vec<Vec<u8>>, base64::DecodeError> {
     let mut res_vec = vec![];
     for x in val {
-        res_vec.push(base64::decode_config(x, base64::STANDARD).map_err(|e| e)?);
+        res_vec.push(base64::decode_config(x, base64::STANDARD)?);
     }
 
     Ok(res_vec)
@@ -286,9 +286,9 @@ impl OcicryptConfig {
     /// If no configuration file could be found or read a null pointer is returned
     pub fn from_env(env: &str) -> Result<OcicryptConfig> {
         // find file name from environment variable, ignore error if environment variable is not set.
-        let filename = std::env::var(env).map_err(|v| v)?;
+        let filename = std::env::var(env)?;
 
-        OcicryptConfig::from_file(filename.as_str()).map_err(|e| e)
+        OcicryptConfig::from_file(filename.as_str())
     }
 }
 

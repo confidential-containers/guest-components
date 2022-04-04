@@ -30,7 +30,7 @@ impl CommandExecuter for Runner {
                 .write_all(input.clone().as_mut_slice())
                 .map_err(|_| anyhow!("Failed to write to stdin"))
         });
-        let output = child.wait_with_output().map_err(|e| e)?;
+        let output = child.wait_with_output()?;
 
         Ok(output.stdout)
     }

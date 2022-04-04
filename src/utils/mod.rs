@@ -6,6 +6,7 @@ pub mod runner;
 use anyhow::Result;
 
 #[cfg(feature = "utils-keyprovider")]
+#[rustfmt::skip]
 pub mod keyprovider;
 
 /// CommandExecuter trait which requires implementation for command exec, first argument is the command name, like /usr/bin/<command-name>,
