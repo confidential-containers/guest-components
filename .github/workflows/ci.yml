@@ -27,6 +27,10 @@ jobs:
           override: true
           components: rustfmt, clippy
 
+      - name: Install nettle-sys building dependence
+        run: |
+          sudo apt install clang llvm pkg-config nettle-dev
+
       - name: Run cargo build
         uses: actions-rs/cargo@v1
         with:
