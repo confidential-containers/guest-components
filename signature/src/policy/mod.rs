@@ -70,6 +70,18 @@ impl Policy {
         Ok(())
     }
 
+    // Get the set of signature schemes that need to be verified of the image.
+    pub fn signature_schemes(&self, image: &image::Image) -> Vec<Option<String>> {
+        let mut schemes = Vec::new();
+        let reqs = self.requirements_for_image(&image);
+
+        for req in reqs.iter() {
+            schemes.push(req.signature_scheme());
+        }
+
+        schemes
+    }
+
     // selects the appropriate requirements for the image from Policy.
     fn requirements_for_image(&self, image: &image::Image) -> &PolicyRequirements {
         // Get transport name of the image

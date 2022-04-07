@@ -12,3 +12,9 @@ mod signatures;
 
 pub use image::Image;
 pub use policy::Policy;
+
+#[derive(EnumString, Display, Debug, PartialEq)]
+pub enum SignatureScheme {
+    #[strum(serialize = "simple")]
+    SimpleSigning,
+}
