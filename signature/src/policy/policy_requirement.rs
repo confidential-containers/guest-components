@@ -17,6 +17,7 @@ use crate::signatures;
 
 use crate::policy::ref_match::PolicyReferenceMatcher;
 use crate::policy::ErrorInfo;
+use crate::SignatureScheme;
 
 #[derive(EnumString, Display, Debug, PartialEq)]
 pub enum PolicyReqType {
@@ -41,6 +42,9 @@ pub enum KeyType {
 //   `signedBy`: there must be at least a signature of the image can be verified by the specific key.
 pub trait PolicyRequirement {
     fn is_image_allowed(&self, image: &mut image::Image) -> Result<()>;
+    fn signature_scheme(&self) -> Option<String> {
+        None
+    }
 }
 
 impl<'de> Deserialize<'de> for Box<dyn PolicyRequirement> {
@@ -198,6 +202,14 @@ impl PolicyRequirement for PolicyReqSignedBy {
             "The signatures do not satisfied! Reject reason: {:?}",
             reject_reason
         )))
+    }
+
+    fn signature_scheme(&self) -> Option<String> {
+        // FIXME: Now only support Simple Signing scheme, here is hardcoded.
+        //
+        // refer to the issue: https://github.com/confidential-containers/image-rs/issues/7
+        // refer to the design document PR: https://github.com/confidential-containers/image-rs/pull/6
+        Some(SignatureScheme::SimpleSigning.to_string())
     }
 }
 
