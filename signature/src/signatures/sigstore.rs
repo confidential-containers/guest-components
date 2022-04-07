@@ -11,9 +11,9 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
 
-// FIXME: Now, for Demo, the dir which the sigstore config files locate
-// is hardcoded.
-pub const SIGSTORE_CONFIG_DIR: &str = "/etc/containers/registries.d";
+// The reason for using the `/run` directory here is that in general HW-TEE,
+// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
+pub const SIGSTORE_CONFIG_DIR: &str = "/run/image-security/simple_signing/sigstore_config";
 
 // Format the sigstore name:
 // `image-repository@digest-algorithm=digest-value`

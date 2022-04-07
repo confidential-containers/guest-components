@@ -2,6 +2,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#[macro_use]
+extern crate strum;
+
 /// Environment macro for `image-rs` work dir.
 pub const CC_IMAGE_WORK_DIR: &str = "CC_IMAGE_WORK_DIR";
 
@@ -14,3 +17,4 @@ pub mod meta_store;
 pub mod pull;
 pub mod snapshots;
 pub mod unpack;
+pub mod validate;
