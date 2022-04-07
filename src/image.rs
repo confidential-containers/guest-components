@@ -19,6 +19,7 @@ use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
 use crate::snapshots::overlay::OverLay;
 use crate::snapshots::{SnapshotType, Snapshotter};
+use crate::validate::security_validate;
 
 /// The metadata info for container image layer.
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -126,7 +127,17 @@ impl ImageClient {
             return Ok(id);
         }
 
-        // TODO Image Signature Verification.
+        if let Some(wrapped_aa_kbc_params) = decrypt_config {
+            let wrapped_aa_kbc_params = wrapped_aa_kbc_params.to_string();
+            let aa_kbc_params =
+                wrapped_aa_kbc_params.trim_start_matches("provider:attestation-agent:");
+
+            security_validate(image_url, &image_digest, aa_kbc_params)
+                .await
+                .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
+        } else {
+            return Err(anyhow!("Security validation need aa_kbc_params."));
+        }
 
         let mut image_data = ImageMeta {
             id,
