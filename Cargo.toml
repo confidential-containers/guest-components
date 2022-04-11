@@ -33,7 +33,7 @@ aes = ">=0.8"
 base64-serde = "0.6"
 base64 = "0.13"
 lazy_static = ">=1.4"
-oci-distribution = "0.7"
+oci-distribution = { git = "https://github.com/krustlet/oci-distribution", rev = "1ba0d94a900a97aa1bcac032a67ea23766bcfdef" }
 tokio = { version = "1.17.0", features = ["rt-multi-thread"] }
 
 [dev-dependencies]
