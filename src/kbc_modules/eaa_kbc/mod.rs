@@ -167,7 +167,7 @@ impl EAAKbc {
 
         if let Some(hashmap_content) = payload_hashmap {
             let encrypted_payload_string = base64::encode(&encrypted_payload);
-            let decrypted_payload_string = hashmap_content.get(&encrypted_payload_string).ok_or(anyhow!(
+            let decrypted_payload_string = hashmap_content.get(&encrypted_payload_string).ok_or_else(|| anyhow!(
                 "There is no field matching the encrypted payload in the data field of DecryptionResponse"
             ))?;
             let decrypted_payload = base64::decode(decrypted_payload_string)?;
@@ -252,7 +252,7 @@ impl EAAKbc {
         debug!("Transmit: {}", String::from_utf8(trans_data.to_vec())?);
         self.tls_handle
             .as_ref()
-            .ok_or(anyhow!("Missing TLS handle"))?
+            .ok_or_else(|| anyhow!("Missing TLS handle"))?
             .transmit(trans_data)
             .map_err(|e| {
                 error!("Transmit {} failed", error_info);
@@ -267,7 +267,7 @@ impl EAAKbc {
             let len_single = self
                 .tls_handle
                 .as_ref()
-                .ok_or(anyhow!("Missing TLS handle"))?
+                .ok_or_else(|| anyhow!("Missing TLS handle"))?
                 .receive(&mut recv_buffer)
                 .map_err(|e| {
                     error!("Transmit {} failed", error_info);

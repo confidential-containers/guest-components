@@ -4,6 +4,7 @@
 //
 
 use anyhow::*;
+use attestation_agent::AttestationAPIs;
 use log::*;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -13,7 +14,7 @@ use std::sync::Arc;
 use tonic::{transport::Server, Request, Response, Status};
 
 use crate::grpc::AGENT_NAME;
-use crate::kbc_runtime;
+use crate::ATTESTATION_AGENT;
 use key_provider::key_provider_service_server::{KeyProviderService, KeyProviderServiceServer};
 use key_provider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput};
 use message::*;
@@ -65,34 +66,32 @@ impl KeyProviderService for KeyProvider {
                     ))
                 })?;
 
-        // Pass the KBC name, KBS uri and annotation to the KBC instance for
-        // content parsing and field decryption.
-        let kbc_runtime_mutex_clone = Arc::clone(&kbc_runtime::KBC_RUNTIME);
-        let mut kbc_runtime = kbc_runtime_mutex_clone.lock().map_err(|e| {
-            error!("Get KBC runtime MUTEX failed: {}", e);
+        let attestation_agent_mutex_clone = Arc::clone(&ATTESTATION_AGENT);
+        let mut attestation_agent = attestation_agent_mutex_clone.lock().map_err(|e| {
+            error!("Get attestation agent MUTEX failed: {}", e);
             Status::internal(format!(
-                "[ERROR:{}] Get KBC runtime failed: {}",
+                "[ERROR:{}] Get attestation agent MUTEX failed: {}",
                 AGENT_NAME, e
             ))
         })?;
 
-        debug!("Call KBC to decrypt...");
+        debug!("Call AA-KBC to decrypt...");
 
-        let decrypted_optsdata = kbc_runtime
-            .decrypt(
+        let decrypted_optsdata = attestation_agent
+            .decrypt_image_layer_annotation(
                 input_payload.kbc_name,
                 input_payload.kbs_uri,
                 input_payload.annotation,
             )
             .map_err(|e| {
-                error!("Call KBC to decrypt failed: {}", e);
+                error!("Call AA-KBC to provide key failed: {}", e);
                 Status::internal(format!(
-                    "[ERROR:{}] KBC decryption failed: {}",
+                    "[ERROR:{}] AA-KBC key provider failed: {}",
                     AGENT_NAME, e
                 ))
             })?;
 
-        debug!("Decrypted successfully, get the plain PLBCO");
+        debug!("Provide key successfully, get the plain PLBCO");
 
         // Construct output structure and serialize it as the return value of gRPC
         let output_struct = KeyUnwrapOutput {

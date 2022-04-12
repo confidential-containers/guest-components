@@ -72,6 +72,7 @@ pub struct GetKekRequest {
 }
 
 impl GetKekRequest {
+    #[allow(dead_code)]
     pub fn new(key_id_list: Vec<String>) -> GetKekRequest {
         GetKekRequest {
             command: String::from("Get KEK"),

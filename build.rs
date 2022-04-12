@@ -4,9 +4,6 @@
 //
 
 fn main() -> shadow_rs::SdResult<()> {
-    tonic_build::compile_protos("protos/keyprovider.proto")?;
-    tonic_build::compile_protos("protos/getresource.proto")?;
-
     #[cfg(feature = "eaa_kbc")]
     {
         println!("cargo:rustc-link-search=native=/usr/local/lib/rats-tls");

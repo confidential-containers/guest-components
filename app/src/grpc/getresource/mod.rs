@@ -4,13 +4,14 @@
 //
 
 use anyhow::*;
+use attestation_agent::AttestationAPIs;
 use log::*;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tonic::{transport::Server, Request, Response, Status};
 
 use crate::grpc::AGENT_NAME;
-use crate::kbc_runtime;
+use crate::ATTESTATION_AGENT;
 use get_resource::get_resource_service_server::{GetResourceService, GetResourceServiceServer};
 use get_resource::{GetResourceRequest, GetResourceResponse};
 
@@ -29,27 +30,27 @@ impl GetResourceService for GetResource {
     ) -> Result<Response<GetResourceResponse>, Status> {
         let request = request.into_inner();
 
-        let kbc_runtime_mutex_clone = Arc::clone(&kbc_runtime::KBC_RUNTIME);
-        let mut kbc_runtime = kbc_runtime_mutex_clone.lock().map_err(|e| {
-            error!("Get KBC runtime MUTEX failed: {}", e);
+        let attestation_agent_mutex_clone = Arc::clone(&ATTESTATION_AGENT);
+        let mut attestation_agent = attestation_agent_mutex_clone.lock().map_err(|e| {
+            error!("Get attestation agent MUTEX failed: {}", e);
             Status::internal(format!(
-                "[ERROR:{}] Get KBC runtime failed: {}",
+                "[ERROR:{}] Get attestation agent MUTEX failed: {}",
                 AGENT_NAME, e
             ))
         })?;
 
-        debug!("Call KBC to download resource ...");
+        debug!("Call AA-KBC to download resource ...");
 
-        let target_resource = kbc_runtime
-            .get_resource(
+        let target_resource = attestation_agent
+            .download_confidential_resource(
                 request.kbc_name,
                 request.kbs_uri,
                 request.resource_description,
             )
             .map_err(|e| {
-                error!("Call KBC to get resource failed: {}", e);
+                error!("Call AA-KBC to get resource failed: {}", e);
                 Status::internal(format!(
-                    "[ERROR:{}] KBC get resource failed: {}",
+                    "[ERROR:{}] AA-KBC get resource failed: {}",
                     AGENT_NAME, e
                 ))
             })?;

@@ -58,9 +58,12 @@ pub mod tests {
     pub use std::fs;
     pub use std::path::{Path, PathBuf};
 
+    #[allow(dead_code)]
     pub const KID: &str = "foo";
+    #[allow(dead_code)]
     pub const KEY: [u8; 32] = *b"passphrasewhichneedstobe32bytes!";
 
+    #[allow(dead_code)]
     pub fn create_keyfile(name: &str) -> PathBuf {
         let temp_dir = env::temp_dir();
         let keyfile_path = Path::new(&temp_dir).join(name);

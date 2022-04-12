@@ -18,7 +18,6 @@ pub mod sample_kbc;
 
 use anyhow::*;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 // KbcInterface is a standard interface that all KBC modules need to implement.
 pub trait KbcInterface {
@@ -38,16 +37,12 @@ pub struct KbcCheckInfo {
     // In the future, more KBC status fields will be expanded here.
 }
 
-lazy_static! {
-    pub static ref KBC_MODULE_LIST: Arc<KbcModuleList> = Arc::new(KbcModuleList::new());
-}
-
 pub struct KbcModuleList {
     mod_list: HashMap<String, KbcInstantiateFunc>,
 }
 
 impl KbcModuleList {
-    fn new() -> KbcModuleList {
+    pub fn new() -> KbcModuleList {
         let mut mod_list = HashMap::new();
 
         #[cfg(feature = "sample_kbc")]
@@ -89,7 +84,7 @@ impl KbcModuleList {
         let instantiate_func: &KbcInstantiateFunc = self
             .mod_list
             .get(kbc_name)
-            .ok_or(anyhow!("AA does not support the given KBC module!"))?;
+            .ok_or_else(|| anyhow!("AA does not support the given KBC module!"))?;
         Ok(instantiate_func)
     }
 }

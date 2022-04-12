@@ -5,14 +5,21 @@
 
 #[macro_use]
 extern crate lazy_static;
+
 use anyhow::*;
+use attestation_agent::AttestationAgent;
 use clap::{App, Arg};
 use log::*;
 use std::net::SocketAddr;
+use std::sync::Arc;
+use std::sync::Mutex;
 
-pub mod grpc;
-pub mod kbc_modules;
-pub mod kbc_runtime;
+mod grpc;
+
+lazy_static! {
+    pub static ref ATTESTATION_AGENT: Arc<Mutex<AttestationAgent>> =
+        Arc::new(Mutex::new(AttestationAgent::new()));
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {

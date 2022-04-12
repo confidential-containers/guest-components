@@ -32,6 +32,7 @@ pub struct KeyProviderInput {
     pub keyunwrapparams: KeyUnwrapParams,
 }
 
+#[allow(dead_code)]
 impl KeyProviderInput {
     pub fn valid(&self) -> Result<()> {
         match self.op.as_str() {
@@ -96,6 +97,7 @@ pub struct KeyWrapParams {
     pub optsdata: Option<String>,
 }
 
+#[allow(dead_code)]
 impl KeyWrapParams {
     pub fn valid(&self) -> Result<()> {
         let ec_empty = if let Some(ec) = self.ec.clone() {
@@ -158,6 +160,7 @@ pub struct KeyUnwrapParams {
     pub annotation: Option<String>,
 }
 
+#[allow(dead_code)]
 impl KeyUnwrapParams {
     pub fn valid(&self) -> Result<()> {
         // "empty" means "not defined" or "not set"
