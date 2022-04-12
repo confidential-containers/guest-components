@@ -6,7 +6,7 @@ PREFIX := /usr/local
 REDHATOS := $(shell cat /etc/redhat-release 2> /dev/null)
 DEBIANOS := $(shell cat /etc/debian_version 2> /dev/null)
 
-TARGET_DIR := ./target
+TARGET_DIR := target
 BIN_NAME := attestation-agent
 
 DEBUG ?=
@@ -48,9 +48,9 @@ ifeq ($(KBC), eaa_kbc)
 endif
 
 build:
-	$(RUST_FLAGS) cargo build $(release) $(feature) $(KBC) $(LIBC_FLAG)
+	cd app && $(RUST_FLAGS) cargo build $(release) $(feature) $(KBC) $(LIBC_FLAG)
 
-TARGET := $(TARGET_DIR)/$(BIN_NAME)
+TARGET := app/$(TARGET_DIR)/$(BIN_NAME)
 
 install: 
 	install -D -m0755 $(TARGET) $(DESTDIR)
