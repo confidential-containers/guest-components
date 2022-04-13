@@ -1,23 +1,40 @@
 # Attestation Agent
 
-Attestation Agent (AA for short) is a user space service for attestation procedure. 
-In Kata Confidential Containers (Kata CC for short), AA implements the WrapKey API defined by the key-provider protocol, 
-which is responsible for performing attestation and obtaining the Key Encryption Key (KEK for short) from Key Broker Service (KBS for short),
-or requesting KBS to decrypt the encrypted payload stored in the image layer annotation.
+Attestation Agent (AA for short) is a service function set for attestation procedure
+in Confidential Containers. It provides kinds of service APIs that need to make
+requests to the Relying Party (Key Broker Service) in Confidential Containers,
+and performs an attestation and establishes connection between the Key Broker Client (KBC)
+and corresponding KBS, so as to obtain the trusted services or resources of KBS.
 
 
 Current consumers of AA include: 
 
-- [ocicrypt-rs](https://github.com/containers/ocicrypt-rs)
-- [ocicrypt](https://github.com/containers/ocicrypt)
+- [ocicrypt-rs](https://github.com/confidential-containers/ocicrypt-rs)
+- [image-rs](https://github.com/confidential-containers/image-rs)
 
-## Usage
+## Components
 
-Here are the steps of building and running AA:
+The main body of AA is a rust library crate, which contains KBC modules used to communicate
+with various KBS. In addition, this project also provides a gRPC service application, 
+which allows callers to call the services provided by AA through gRPC.
+
+## Library crate
+
+Import AA in `Cargo.toml` of your project with specific KBC(s):
+
+```toml
+attestation-agent = { git = "https://github.com/confidential-containers/attestation-agent", features = ["sample_kbc"] }
+```
+
+**Note**: When the version is stable, we will release AA on https://crate.io.
+
+## gRPC Application
+
+Here are the steps of building and running gRPC application of AA:
 
 ### Build
 
-Build and install AA with all KBC modules:
+Build and install with default KBC modules:
 
 ```shell
 git clone https://github.com/containers/attestation-agent
