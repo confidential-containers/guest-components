@@ -3,7 +3,7 @@
 The offline file system KBC reads keys from a file present in the guest file system.
 **The offline file system KBC is only secure to use when the guest file system is at no point readable by a hypothetical adversary**, such as with IBM Secure Execution for Linux (IBM Z & LinuxONE).
 Being an offline module, it is not a broker _client_ in the stricter sense of the word.
-See the [offline file system KBS](../../../sample_kbs/src/enc_mods/offline_fs_kbs/README.md) for correspondent software to wrap keys.
+See the [offline file system KBS](../../../sample_keyprovider/src/enc_mods/offline_fs_kbs/README.md) for correspondent software to wrap keys.
 
 ## Usage
 

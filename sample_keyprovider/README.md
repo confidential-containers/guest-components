@@ -1,20 +1,20 @@
 # README
 
-Sample KBS is a very simple KBS skeleton, which currently has the following functions:
+Sample Keyprovider is a very simple Keyprovider skeleton, which currently has the following functions:
 
-1. It can be used to encrypt the container image to test the KBC module in AA. Sample KBS provides a modular encryption mechanism. Different encryption modules can be used according to different kbcs to be tested.
+1. It can be used to encrypt the container image to test the KBC module in AA. Sample Keyprovider provides a modular encryption mechanism. Different encryption modules can be used according to different kbcs to be tested.
 
-Sample KBS can be a reference code base for you to quickly build your own KBS.
+Sample Keyprovider can be a reference code base for you to quickly build your own KBS.
 
 ## Test KBC modules
 
 ### Encryption
 
-Build and run sample KBS. You must explicitly specify the encryption module to use through the --features parameter (sample_enc for example): 
+Build and run sample keyprovider. You must explicitly specify the encryption module to use through the --features parameter (sample_enc for example): 
 
 ```
-cd attestation-agent/sample_kbs
-RUST_LOG=sample_kbs cargo run --features sample_enc --release -- --keyprovider_sock 127.0.0.1:50000
+cd attestation-agent/sample_keyprovider
+RUST_LOG=sample_keyprovider cargo run --features sample_enc --release -- --keyprovider_sock 127.0.0.1:50000
 ```
 
 vim ocicrypt.conf: 

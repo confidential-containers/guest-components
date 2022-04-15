@@ -73,5 +73,5 @@ List of supported KBC modules:
 
 ## Tools
 
-- [sample KBS](./sample_kbs): A simple tool for encrypting container images with skopeo, please refer to its [README](./sample_kbs/README.md).
+- [Sample Keyprovider](./sample_keyprovider): A simple tool for encrypting container images with skopeo, please refer to its [README](./sample_keyprovider/README.md).
 

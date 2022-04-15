@@ -1,5 +1,5 @@
 [package]
-name = "sample_kbs"
+name = "sample_keyprovider"
 version = "1.0.0"
 authors = ["The Attestation Agent Authors"]
 publish = false

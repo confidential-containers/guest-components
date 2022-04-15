@@ -14,7 +14,7 @@ pub mod grpc;
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
-    let app_matches = App::new("sample_kbs")
+    let app_matches = App::new("sample_keyprovider")
         .version("1.0.0")
         .arg(
             Arg::with_name("socket addr")
