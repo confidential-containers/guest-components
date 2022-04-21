@@ -21,6 +21,9 @@ pub struct ImageConfig {
 
     /// The default snapshot for `image-rs` to use.
     pub default_snapshot: SnapshotType,
+
+    /// Security validation control
+    pub security_validate: bool,
 }
 
 impl Default for ImageConfig {
@@ -33,6 +36,7 @@ impl Default for ImageConfig {
         ImageConfig {
             work_dir,
             default_snapshot: SnapshotType::Overlay,
+            security_validate: false,
         }
     }
 }
@@ -79,7 +83,8 @@ mod tests {
     fn test_image_config_from_file() {
         let data = r#"{
             "work_dir": "/var/lib/image-rs/",
-            "default_snapshot": "overlay"
+            "default_snapshot": "overlay",
+            "security_validate": false
         }"#;
 
         let tempdir = tempfile::tempdir().unwrap();

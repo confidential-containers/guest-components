@@ -127,16 +127,18 @@ impl ImageClient {
             return Ok(id);
         }
 
-        if let Some(wrapped_aa_kbc_params) = decrypt_config {
-            let wrapped_aa_kbc_params = wrapped_aa_kbc_params.to_string();
-            let aa_kbc_params =
-                wrapped_aa_kbc_params.trim_start_matches("provider:attestation-agent:");
+        if self.config.security_validate {
+            if let Some(wrapped_aa_kbc_params) = decrypt_config {
+                let wrapped_aa_kbc_params = wrapped_aa_kbc_params.to_string();
+                let aa_kbc_params =
+                    wrapped_aa_kbc_params.trim_start_matches("provider:attestation-agent:");
 
-            security_validate(image_url, &image_digest, aa_kbc_params)
-                .await
-                .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
-        } else {
-            return Err(anyhow!("Security validation need aa_kbc_params."));
+                security_validate(image_url, &image_digest, aa_kbc_params)
+                    .await
+                    .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
+            } else {
+                return Err(anyhow!("Security validation need aa_kbc_params."));
+            }
         }
 
         let mut image_data = ImageMeta {
