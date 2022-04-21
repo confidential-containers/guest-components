@@ -35,22 +35,11 @@ pub fn create_runtime_config(
     bundle_path: &Path,
 ) -> Result<PathBuf> {
     let mut spec = Spec::default();
+    let mut annotations: HashMap<String, String> = HashMap::new();
+    let mut labels = HashMap::new();
 
     // Update the default hostname of `youki`
     spec.set_hostname(Some(BUNDLE_HOSTNAME.to_string()));
-
-    let mut annotations: HashMap<String, String> = HashMap::new();
-    annotations.insert(ANNOTATION_OS.to_string(), image_config.os().to_string());
-    annotations.insert(
-        ANNOTATION_ARCH.to_string(),
-        image_config.architecture().to_string(),
-    );
-    if let Some(author) = image_config.author() {
-        annotations.insert(ANNOTATION_AUTHOR.to_string(), author.to_string());
-    }
-    if let Some(created) = image_config.created() {
-        annotations.insert(ANNOTATION_CREATED.to_string(), created.to_string());
-    }
 
     if let Some(config) = image_config.config() {
         let mut process = Process::default();
@@ -85,12 +74,29 @@ pub fn create_runtime_config(
             process.set_args(Some(args));
         }
 
-        // Annotation Fields
-        if let Some(labels) = config.labels() {
-            annotations.extend(labels.clone());
+        // Annotation Fields:
+        //
+        // These fields all affect the annotations of the runtime configuration, and are thus
+        // subject to precedence: if there is a conflict (same key but different value) between an
+        // implicit annotation and an explicitly specified annotation in Config.Labels, the value
+        // specified in Config.Labels MUST take precedence.
+        // - os: org.opencontainers.image.os
+        // - os.version: org.opencontainers.image.os.version
+        // - os.features: org.opencontainers.image.os.features
+        // - architecture: org.opencontainers.image.architecture
+        // - variant: org.opencontainers.image.variant
+        // - author: org.opencontainers.image.author
+        // - created: org.opencontainers.image.created
+        // - Config.StopSignal: org.opencontainers.image.stopSignal
+        // - Config.Labels
+        if let Some(labels2) = config.labels() {
+            annotations.extend(labels2.clone());
+            labels = labels2.clone();
         }
-        if let Some(stop_signal) = config.stop_signal() {
-            annotations.insert(ANNOTATION_STOP_SIGNAL.to_string(), stop_signal.to_string());
+        if !labels.contains_key(ANNOTATION_STOP_SIGNAL) {
+            if let Some(stop_signal) = config.stop_signal() {
+                annotations.insert(ANNOTATION_STOP_SIGNAL.to_string(), stop_signal.to_string());
+            }
         }
 
         // Parsed Fields:
@@ -153,6 +159,26 @@ pub fn create_runtime_config(
                 }
                 spec.set_mounts(Some(mounts));
             }
+        }
+    }
+
+    if !labels.contains_key(ANNOTATION_OS) {
+        annotations.insert(ANNOTATION_OS.to_string(), image_config.os().to_string());
+    }
+    if !labels.contains_key(ANNOTATION_ARCH) {
+        annotations.insert(
+            ANNOTATION_ARCH.to_string(),
+            image_config.architecture().to_string(),
+        );
+    }
+    if !labels.contains_key(ANNOTATION_AUTHOR) {
+        if let Some(author) = image_config.author() {
+            annotations.insert(ANNOTATION_AUTHOR.to_string(), author.to_string());
+        }
+    }
+    if !labels.contains_key(ANNOTATION_CREATED) {
+        if let Some(created) = image_config.created() {
+            annotations.insert(ANNOTATION_CREATED.to_string(), created.to_string());
         }
     }
 
