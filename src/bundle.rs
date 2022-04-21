@@ -14,7 +14,10 @@ pub const BUNDLE_ROOTFS: &str = "rootfs";
 pub const BUNDLE_HOSTNAME: &str = "image-rs";
 
 const ANNOTATION_OS: &str = "org.opencontainers.image.os";
+const ANNOTATION_OS_VERSION: &str = "org.opencontainers.image.os.version";
+const ANNOTATION_OS_FEATURES: &str = "org.opencontainers.image.os.features";
 const ANNOTATION_ARCH: &str = "org.opencontainers.image.architecture";
+const ANNOTATION_VARIANT: &str = "org.opencontainers.image.variant";
 const ANNOTATION_AUTHOR: &str = "org.opencontainers.image.author";
 const ANNOTATION_CREATED: &str = "org.opencontainers.image.created";
 const ANNOTATION_STOP_SIGNAL: &str = "org.opencontainers.image.stopSignal";
@@ -166,11 +169,28 @@ pub fn create_runtime_config(
     if !labels.contains_key(ANNOTATION_OS) {
         annotations.insert(ANNOTATION_OS.to_string(), image_config.os().to_string());
     }
+    if !labels.contains_key(ANNOTATION_OS_VERSION) {
+        if let Some(version) = image_config.os_version() {
+            annotations.insert(ANNOTATION_OS_VERSION.to_string(), version.to_string());
+        }
+    }
+    if !labels.contains_key(ANNOTATION_OS_FEATURES) {
+        if let Some(features) = image_config.os_features() {
+            if let Ok(v) = serde_json::to_string(features) {
+                annotations.insert(ANNOTATION_OS_FEATURES.to_string(), v);
+            }
+        }
+    }
     if !labels.contains_key(ANNOTATION_ARCH) {
         annotations.insert(
             ANNOTATION_ARCH.to_string(),
             image_config.architecture().to_string(),
         );
+    }
+    if !labels.contains_key(ANNOTATION_VARIANT) {
+        if let Some(variant) = image_config.variant() {
+            annotations.insert(ANNOTATION_VARIANT.to_string(), variant.to_string());
+        }
     }
     if !labels.contains_key(ANNOTATION_AUTHOR) {
         if let Some(author) = image_config.author() {
