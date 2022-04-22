@@ -2,12 +2,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
+use anyhow::{Context, Result};
 use oci_spec::image::ImageConfiguration;
 use oci_spec::runtime::{Mount, Process, Spec};
+use safe_path::PinnedPathBuf;
 
 pub const BUNDLE_CONFIG: &str = "config.json";
 pub const BUNDLE_ROOTFS: &str = "rootfs";
@@ -35,8 +36,8 @@ const ANNOTATION_EXPOSED_PORTS: &str = "org.opencontainers.image.exposedPorts";
 /// runtime configuration".
 pub fn create_runtime_config(
     image_config: &ImageConfiguration,
-    bundle_path: &Path,
-) -> Result<PathBuf> {
+    bundle_path: &PinnedPathBuf,
+) -> Result<PinnedPathBuf> {
     let mut spec = Spec::default();
     let mut annotations: HashMap<String, String> = HashMap::new();
     let mut labels = HashMap::new();
@@ -203,10 +204,12 @@ pub fn create_runtime_config(
     }
 
     spec.set_annotations(Some(annotations));
+    // TODO
     let bundle_config = bundle_path.join(BUNDLE_CONFIG);
     spec.save(&bundle_config)?;
 
-    Ok(bundle_config)
+    PinnedPathBuf::new(bundle_path, BUNDLE_CONFIG)
+        .context("The path of generated config.json file has changed, possible attack!")
 }
 
 #[cfg(test)]
@@ -217,13 +220,14 @@ mod tests {
     #[test]
     fn test_bundle_create_config() {
         let image_config = ImageConfiguration::default();
-
         let tempdir = tempfile::tempdir().unwrap();
-        let filename = tempdir.path().join(BUNDLE_CONFIG);
+        let tempdir = PinnedPathBuf::new("/", tempdir.path()).unwrap();
+        let config_file = create_runtime_config(&image_config, &tempdir).unwrap();
 
-        assert!(!filename.exists());
+        assert!(config_file.target().exists());
+        assert!(config_file.target().is_file());
 
-        assert!(create_runtime_config(&image_config, tempdir.path()).is_ok());
-        assert!(filename.exists());
+        let spec = Spec::load(&config_file).unwrap();
+        assert_eq!(spec.hostname().as_ref().unwrap(), BUNDLE_HOSTNAME);
     }
 }

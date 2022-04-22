@@ -4,6 +4,7 @@
 
 use anyhow::{anyhow, Result};
 use oci_spec::image::{ImageConfiguration, Os};
+use safe_path::PinnedPathBuf;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -113,7 +114,7 @@ impl ImageClient {
     pub async fn pull_image(
         &mut self,
         image_url: &str,
-        bundle_dir: &Path,
+        bundle_dir: &PinnedPathBuf,
         auth_info: &Option<&str>,
         decrypt_config: &Option<&str>,
     ) -> Result<String> {
@@ -222,10 +223,12 @@ mod tests {
 
         let mut image_client = ImageClient::default();
         for image in oci_images.iter() {
-            let bundle_dir = tempfile::tempdir().unwrap();
+            let tempdir = tempfile::tempdir().unwrap();
+            let temp_path = tempdir.path().canonicalize().unwrap();
+            let bundle_dir = PinnedPathBuf::from_path(temp_path).unwrap();
 
             assert!(image_client
-                .pull_image(image, bundle_dir.path(), &None, &None)
+                .pull_image(image, &bundle_dir, &None, &None)
                 .await
                 .is_ok());
         }
