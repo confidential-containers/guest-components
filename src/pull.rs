@@ -10,6 +10,7 @@ use oci_spec::image::MediaType;
 use sha2::Digest;
 use std::convert::TryFrom;
 use std::fs;
+use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -86,7 +87,7 @@ impl PullClient {
             async move {
                 let mut out: Vec<u8> = Vec::new();
                 let mut layer_data: Vec<u8> = Vec::new();
-                let plaintext_layer: Vec<u8>;
+                let reader;
 
                 client
                     .pull_blob(reference, &layer.digest, &mut layer_data)
@@ -98,16 +99,14 @@ impl PullClient {
                 let decryptor = Decryptor::from_media_type(&layer.media_type);
                 if decryptor.is_encrypted() {
                     if let Some(dc) = decrypt_config {
-                        plaintext_layer = decryptor
-                            .get_plaintext_layer(&layer, layer_data, dc)
-                            .await?;
+                        reader = decryptor.get_plaintext_layer(&layer, layer_data, dc)?;
                         media_type_str = decryptor.media_type.as_str();
                         layer_meta.encrypted = true;
                     } else {
                         return Err(anyhow!("decrypt_config is None"));
                     }
                 } else {
-                    plaintext_layer = layer_data;
+                    reader = Box::new(Cursor::new(layer_data));
                 }
 
                 let layer_db = &ms.lock().await.layer_db;
@@ -139,9 +138,7 @@ impl PullClient {
                     layer_meta.compressed_digest = layer.digest.clone();
                 } else {
                     layer_meta.compressed_digest = layer.digest.clone();
-                    layer_meta
-                        .decoder
-                        .decompress(plaintext_layer.as_slice(), &mut out)?;
+                    layer_meta.decoder.decompress(reader, &mut out)?;
 
                     if diff_ids[i].starts_with(DIGEST_SHA256) {
                         layer_meta.uncompressed_digest =

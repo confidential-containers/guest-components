@@ -2,7 +2,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+use std::io::{Cursor, Read};
+
 use anyhow::{anyhow, Result};
+use oci_distribution::manifest::{self, OciDescriptor};
 use ocicrypt_rs::config::CryptoConfig;
 use ocicrypt_rs::encryption::decrypt_layer;
 use ocicrypt_rs::helpers::create_decrypt_config;
@@ -10,11 +13,6 @@ use ocicrypt_rs::spec::{
     MEDIA_TYPE_LAYER_ENC, MEDIA_TYPE_LAYER_GZIP_ENC, MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_ENC,
     MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_GZIP_ENC,
 };
-
-use oci_distribution::manifest;
-use oci_distribution::manifest::OciDescriptor;
-
-use std::io::Read;
 
 #[derive(Default, Clone)]
 pub struct Decryptor {
@@ -60,53 +58,38 @@ impl Decryptor {
     ///           - \<filename>:fd=\<filedescriptor> \
     ///           - \<filename>:\<password> \
     ///           - provider:<cmd/gprc>
-    pub async fn get_plaintext_layer(
+    pub fn get_plaintext_layer(
         &self,
         descriptor: &OciDescriptor,
         encrypted_layer: Vec<u8>,
         decrypt_config: &str,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Box<dyn Read + 'static>> {
         if !self.is_encrypted() {
-            return Err(anyhow!("unencrypted media type: {}", self.media_type));
-        }
-
-        if decrypt_config.is_empty() {
-            return Err(anyhow!("decrypt_config is empty"));
-        }
-
-        let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
-        let descript = descriptor.clone();
-
-        // ocicrypt-rs keyprovider module will create a new runtime to talk with
-        // attestation agent, to avoid startup a runtime within a runtime, we
-        // spawn a new thread here.
-        let handler = tokio::task::spawn_blocking(move || {
-            decrypt_layer_data(&encrypted_layer, &descript, &cc)
-        });
-
-        if let Ok(decrypted_data) = handler.await? {
-            Ok(decrypted_data)
+            Err(anyhow!("unencrypted media type: {}", self.media_type))
+        } else if decrypt_config.is_empty() {
+            Err(anyhow!("decrypt_config is empty"))
         } else {
-            Err(anyhow!("decrypt failed!"))
+            let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
+            decrypt_layer_data(encrypted_layer, descriptor, &cc)
         }
     }
 }
 
 fn decrypt_layer_data(
-    encrypted_layer: &[u8],
+    encrypted_layer: Vec<u8>,
     descriptor: &OciDescriptor,
     crypto_config: &CryptoConfig,
-) -> Result<Vec<u8>> {
-    if let Some(decrypt_config) = &crypto_config.decrypt_config {
-        let (layer_decryptor, _dec_digest) =
-            decrypt_layer(decrypt_config, encrypted_layer, descriptor, false)?;
-        let mut plaintext_data: Vec<u8> = Vec::new();
-        let mut decryptor = layer_decryptor.ok_or_else(|| anyhow!("missing layer decryptor"))?;
-
-        decryptor.read_to_end(&mut plaintext_data)?;
-
-        Ok(plaintext_data)
+) -> Result<Box<dyn Read + 'static>> {
+    if let Some(decrypt_config) = crypto_config.decrypt_config.as_ref() {
+        let (layer_decryptor, _dec_digest) = decrypt_layer(
+            decrypt_config,
+            Cursor::new(encrypted_layer),
+            descriptor,
+            false,
+        )?;
+        let decryptor = layer_decryptor.ok_or_else(|| anyhow!("missing layer decryptor"))?;
+        Ok(Box::new(decryptor))
     } else {
-        return Err(anyhow!("no decrypt config available"));
+        Err(anyhow!("no decrypt config available"))
     }
 }
