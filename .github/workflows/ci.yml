@@ -33,10 +33,47 @@ jobs:
           command: build
           args: --all-features
 
+      - name: Run cargo build - keywrap-none
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --no-default-features
+
+      - name: Run cargo build - keywrap-jwe
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --no-default-features --features=keywrap-jwe
+
+      - name: Run cargo build - keywrap-keyprovider
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --no-default-features --features=keywrap-keyprovider
+
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
+          args: --all-features
+
+      - name: Run cargo test - keywrap-none
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-default-features
+
+      - name: Run cargo test - keywrap-jwe
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-default-features --features=keywrap-jwe
+
+      - name: Run cargo test - keywrap-keyprovider
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-default-features --features=keywrap-keyprovider
 
       - name: Run cargo fmt check
         uses: actions-rs/cargo@v1
