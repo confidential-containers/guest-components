@@ -38,7 +38,7 @@ lazy_static! {
             for (provider_name, attrs) in key_providers.iter() {
                 m.insert(
                     "provider.".to_owned() + provider_name,
-                    Box::new(keyprovider::new_key_wrapper(
+                    Box::new(keyprovider::KeyProviderKeyWrapper::new(
                         provider_name.to_string(),
                         attrs.clone(),
                         None,

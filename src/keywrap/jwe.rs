@@ -140,7 +140,8 @@ mod tests {
 
     #[test]
     fn test_keywrap_jwe() {
-        let path = load_data_path().display();
+        let path = load_data_path();
+        let path = path.display();
         let pub_key_files = vec![
             format!("{}/{}", path, "public_key.pem"),
             format!("{}/{}", path, "public_key_ec.der"),

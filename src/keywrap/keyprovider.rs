@@ -1,30 +1,17 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::config::{Command, DecryptConfig, EncryptConfig, KeyProviderAttrs};
-use crate::keywrap::KeyWrapper;
-use crate::utils;
-use crate::utils::keyprovider as keyproviderpb;
-use crate::utils::CommandExecuter;
-use anyhow::{anyhow, Result};
-use core::fmt;
-use core::fmt::Debug;
-use core::option::Option;
-use serde::Serialize;
-use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
-use tokio;
+use std::fmt::{self, Debug};
+
+use anyhow::{anyhow, Result};
+use serde::Serialize;
 use tokio::runtime::Runtime;
-use tonic;
 use tonic::codegen::http::Uri;
 
-/// A KeyProvider keywrapper
-#[derive(Debug)]
-pub struct KeyProviderKeyWrapper {
-    pub provider: String,
-    pub attrs: KeyProviderAttrs,
-    pub runner: Option<Box<dyn CommandExecuter>>,
-}
+use crate::config::{Command, DecryptConfig, EncryptConfig, KeyProviderAttrs};
+use crate::keywrap::KeyWrapper;
+use crate::utils::{self, keyprovider as keyproviderpb, CommandExecuter};
 
 #[derive(Debug)]
 enum OpKey {
@@ -41,9 +28,33 @@ impl fmt::Display for OpKey {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct KeyWrapParams {
+    pub ec: Option<EncryptConfig>,
+    #[serde(rename = "optsdata")]
+    opts_data: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct KeyUnwrapParams {
+    pub dc: Option<DecryptConfig>,
+    annotation: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct KeyUnwrapResults {
+    #[serde(rename = "optsdata")]
+    opts_data: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct KeyWrapResults {
+    annotation: Vec<u8>,
+}
+
 /// KeyProviderKeyWrapProtocolInput defines the input to the key provider binary or grpc method.
 #[derive(Serialize, Deserialize, Debug, Default)]
-pub struct KeyProviderKeyWrapProtocolInput {
+struct KeyProviderKeyWrapProtocolInput {
     /// op is either "keywrap" or "keyunwrap"
     op: String,
     /// keywrapparams encodes the arguments to key wrap if operation is set to wrap
@@ -56,56 +67,13 @@ pub struct KeyProviderKeyWrapProtocolInput {
 
 /// KeyProviderKeyWrapProtocolOutput defines the output of the key provider binary or grpc method.
 #[derive(Serialize, Deserialize, Default)]
-pub struct KeyProviderKeyWrapProtocolOutput {
+struct KeyProviderKeyWrapProtocolOutput {
     /// keywrapresults encodes the results to key wrap if operation is to keywrap
     #[serde(rename = "keywrapresults", skip_serializing_if = "Option::is_none")]
     key_wrap_results: Option<KeyWrapResults>,
     /// keyunwrapresults encodes the result to key unwrap if operation is to keyunwrap
     #[serde(rename = "keyunwrapresults", skip_serializing_if = "Option::is_none")]
     key_unwrap_results: Option<KeyUnwrapResults>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct KeyWrapParams {
-    pub ec: Option<EncryptConfig>,
-    #[serde(rename = "optsdata")]
-    opts_data: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct KeyUnwrapParams {
-    pub dc: Option<DecryptConfig>,
-    annotation: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct KeyUnwrapResults {
-    #[serde(rename = "optsdata")]
-    opts_data: Vec<u8>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct KeyWrapResults {
-    annotation: Vec<u8>,
-}
-
-/// new_key_wrapper returns a KeyProviderKeyWrapper
-pub fn new_key_wrapper(
-    provider: String,
-    mut attrs: KeyProviderAttrs,
-    runner: Option<Box<dyn utils::CommandExecuter>>,
-) -> KeyProviderKeyWrapper {
-    if let Some(grpc) = &attrs.grpc {
-        if !grpc.starts_with("http://") && !grpc.starts_with("tcp://") {
-            attrs.grpc = Some(format!("http://{}", grpc));
-        }
-    }
-
-    KeyProviderKeyWrapper {
-        provider,
-        attrs,
-        runner,
-    }
 }
 
 impl KeyProviderKeyWrapProtocolOutput {
@@ -115,30 +83,31 @@ impl KeyProviderKeyWrapProtocolOutput {
         let channel = tonic::transport::Channel::builder(uri)
             .connect()
             .await
-            .map_err(|e| anyhow!("Error while creating channel: {:?}", e))?;
+            .map_err(|e| anyhow!("keyprovider: error while creating channel: {:?}", e))?;
 
         let mut client =
             keyproviderpb::key_provider_service_client::KeyProviderServiceClient::new(channel);
-        let request = tonic::Request::new(keyproviderpb::KeyProviderKeyWrapProtocolInput {
+        let msg = keyproviderpb::KeyProviderKeyWrapProtocolInput {
             key_provider_key_wrap_protocol_input: input,
-        });
+        };
+        let request = tonic::Request::new(msg);
         let grpc_output = match operation {
             OpKey::Wrap => client.wrap_key(request).await.map_err(|_| {
                 anyhow!(
-                    "Error from grpc request method on {:?} operation",
+                    "keyprovider: error from grpc server for {:?} operation",
                     OpKey::Wrap.to_string()
                 )
             })?,
 
             OpKey::Unwrap => client.un_wrap_key(request).await.map_err(|_| {
                 anyhow!(
-                    "Error from grpc request method on {:?} operation",
+                    "keyprovider: error from grpc server for {:?} operation",
                     OpKey::Unwrap.to_string()
                 )
             })?,
         };
 
-        let protocol_output = serde_json::from_slice(
+        serde_json::from_slice(
             &grpc_output
                 .into_inner()
                 .key_provider_key_wrap_protocol_output,
@@ -148,37 +117,70 @@ impl KeyProviderKeyWrapProtocolOutput {
                 "Error while deserializing grpc output on {:?} operation",
                 OpKey::Unwrap.to_string()
             )
-        })?;
-        Ok(protocol_output)
+        })
     }
 
     fn from_command(
         input: Vec<u8>,
-        cmd: &Option<Command>,
+        command: &Command,
         runner: &dyn utils::CommandExecuter,
     ) -> Result<Self> {
-        let command = cmd.as_ref().unwrap();
         let cmd_name = command.path.to_string();
-        let mut args = &vec![];
-        if command.args.as_ref().is_some() {
-            args = command.args.as_ref().unwrap();
-        }
+        let default_args = vec![];
+        let args = command.args.as_ref().unwrap_or(&default_args);
         let resp_bytes: Vec<u8> = runner
             .exec(cmd_name, args, input)
-            .map_err(|_| anyhow!("Error from command executer"))?;
-        let protocol_output: KeyProviderKeyWrapProtocolOutput = serde_json::from_slice(&resp_bytes)
-            .map_err(|_| anyhow!("Error while deserializing command executer output"))?;
+            .map_err(|e| anyhow!("keyprovider: error from command executor: {:?}", e))?;
 
-        Ok(protocol_output)
+        serde_json::from_slice(&resp_bytes)
+            .map_err(|_| anyhow!("keyprovider: failed to deserialize message from binary executor"))
+    }
+}
+
+/// A KeyProvider keywrapper
+#[derive(Debug)]
+pub struct KeyProviderKeyWrapper {
+    pub provider: String,
+    pub attrs: KeyProviderAttrs,
+    pub runner: Option<Box<dyn CommandExecuter>>,
+}
+
+impl KeyProviderKeyWrapper {
+    /// Create a new instance of `KeyProviderKeyWrapper`.
+    pub fn new(
+        provider: String,
+        mut attrs: KeyProviderAttrs,
+        runner: Option<Box<dyn utils::CommandExecuter>>,
+    ) -> Self {
+        if let Some(grpc) = &attrs.grpc {
+            if !grpc.starts_with("http://") && !grpc.starts_with("tcp://") {
+                attrs.grpc = Some(format!("http://{}", grpc));
+            }
+        }
+
+        KeyProviderKeyWrapper {
+            provider,
+            attrs,
+            runner,
+        }
     }
 }
 
 impl KeyWrapper for KeyProviderKeyWrapper {
-    /// WrapKeys calls appropriate binary-executable or grpc/ttrpc server for wrapping the session key for recipients and gets encrypted optsData, which
-    /// describe the symmetric key used for encrypting the layer
+    /// WrapKeys calls appropriate binary-executable or grpc/ttrpc server for wrapping the session
+    /// key for recipients and gets encrypted optsData, which describe the symmetric key used for
+    /// encrypting the layer.
     fn wrap_keys(&self, enc_config: &EncryptConfig, opts_data: &[u8]) -> Result<Vec<u8>> {
+        if !enc_config.param.contains_key(&self.provider) {
+            return Err(anyhow!(
+                "keyprovider: unknown provider {} for operation {}",
+                &self.provider,
+                OpKey::Wrap.to_string()
+            ));
+        }
+
         let opts_data_str = String::from_utf8(opts_data.to_vec())
-            .map_err(|_| anyhow!("Error while converting bytes to string"))?;
+            .map_err(|_| anyhow!("keyprovider: can not convert option data to string"))?;
         let key_wrap_params = KeyWrapParams {
             ec: Some(enc_config.clone()),
             opts_data: Some(opts_data_str),
@@ -190,47 +192,58 @@ impl KeyWrapper for KeyProviderKeyWrapper {
         };
         let serialized_input = serde_json::to_vec(&input).map_err(|_| {
             anyhow!(
-                "Error while serializing key provider input parameters on {:?} operation",
+                "keyprovider: error while serializing input parameters for {} operation",
                 OpKey::Wrap.to_string()
             )
         })?;
 
-        if enc_config.param.contains_key(&self.provider.to_string()) {
-            let protocol_output = if self.attrs.cmd.as_ref().is_some() {
-                KeyProviderKeyWrapProtocolOutput::from_command(serialized_input, &self.attrs.cmd, self.runner.as_ref().unwrap()).map_err(|e| anyhow!("Error while key provider {:?} operation, from binary executable provider, error: {:?}", OpKey::Wrap.to_string(), e))?
-            } else if self.attrs.grpc.as_ref().is_some() {
-                let rt =
-                    Runtime::new()
-                        .unwrap()
-                        .block_on(KeyProviderKeyWrapProtocolOutput::from_grpc(
-                            serialized_input,
-                            self.attrs.grpc.as_ref().unwrap(),
-                            OpKey::Wrap,
-                        ));
-                rt.map_err(|e| {
+        let protocol_output = if let Some(cmd) = &self.attrs.cmd {
+            if let Some(runner) = self.runner.as_ref() {
+                KeyProviderKeyWrapProtocolOutput::from_command(serialized_input, cmd, runner)
+                    .map_err(|e| {
+                        anyhow!(
+                            "keyprovider: error from binary provider for {} operation: {:?}",
+                            OpKey::Wrap.to_string(),
+                            e
+                        )
+                    })?
+            } else {
+                return Err(anyhow!("keyprovider: runner for binary provider is NULL"));
+            }
+        } else if let Some(grpc) = self.attrs.grpc.as_ref() {
+            Runtime::new()
+                .map_err(|e| anyhow!("keyprovider: failed to create async runtime, {}", e))?
+                .block_on(KeyProviderKeyWrapProtocolOutput::from_grpc(
+                    serialized_input,
+                    grpc,
+                    OpKey::Wrap,
+                ))
+                .map_err(|e| {
                     anyhow!(
-                        "Error while key provider {:?} operation, from grpc provider, error: {:?}",
+                        "keyprovider: grpc provider failed to execute {} operation: {:?}",
                         OpKey::Wrap.to_string(),
                         e
                     )
                 })?
-            } else {
-                KeyProviderKeyWrapProtocolOutput::default()
-            };
-            Ok(protocol_output.key_wrap_results.unwrap().annotation)
         } else {
             return Err(anyhow!(
-                "Error while key provider {:?} operation, unsupported protocol",
-                OpKey::Wrap.to_string()
+                "keyprovider: invalid configuration, both grpc and runner are NULL"
             ));
+        };
+
+        if let Some(result) = protocol_output.key_wrap_results {
+            Ok(result.annotation)
+        } else {
+            Err(anyhow!("keyprovider: get NULL reply from provider"))
         }
     }
 
-    /// UnwrapKey calls appropriate binary-executable or grpc/ttrpc server for unwrapping the session key based on the protocol given in annotation for recipients and gets decrypted optsData,
-    /// which describe the symmetric key used for decrypting the layer
+    /// UnwrapKey calls appropriate binary-executable or grpc/ttrpc server for unwrapping the
+    /// session key based on the protocol given in annotation for recipients and gets decrypted
+    /// optsData, which describe the symmetric key used for decrypting the layer
     fn unwrap_keys(&self, dc_config: &DecryptConfig, json_string: &[u8]) -> Result<Vec<u8>> {
         let annotation_str = String::from_utf8(json_string.to_vec())
-            .map_err(|_| anyhow!("Error while converting bytes to string"))?;
+            .map_err(|_| anyhow!("keyprovider: can not convert json data to string"))?;
         let key_unwrap_params = KeyUnwrapParams {
             dc: Some(dc_config.clone()),
             annotation: Some(base64::encode(annotation_str)),
@@ -242,40 +255,60 @@ impl KeyWrapper for KeyProviderKeyWrapper {
         };
         let serialized_input = serde_json::to_vec(&input).map_err(|_| {
             anyhow!(
-                "Error while serializing key provider input parameters on {:?} operation",
+                "keyprovider: error while serializing input parameters for {} operation",
                 OpKey::Unwrap.to_string()
             )
         })?;
 
-        let protocol_output = if self.attrs.cmd.as_ref().is_some() {
-            KeyProviderKeyWrapProtocolOutput::from_command(serialized_input, &self.attrs.cmd, self.runner.as_ref().unwrap()).map_err(|e| anyhow!("Error while key provider {:?} operation, from binary executable provider, error: {:?}", OpKey::Unwrap.to_string(), e))?
-        } else if self.attrs.grpc.as_ref().is_some() {
-            let rt = Runtime::new()
-                .unwrap()
+        let protocol_output = if let Some(cmd) = self.attrs.cmd.as_ref() {
+            if let Some(runner) = self.runner.as_ref() {
+                KeyProviderKeyWrapProtocolOutput::from_command(serialized_input, cmd, runner)
+                    .map_err(|e| {
+                        anyhow!(
+                            "keyprovider: error from binary provider for {} operation: {:?}",
+                            OpKey::Unwrap.to_string(),
+                            e
+                        )
+                    })?
+            } else {
+                return Err(anyhow!("keyprovider: runner for binary provider is NULL"));
+            }
+        } else if let Some(grpc) = self.attrs.grpc.as_ref() {
+            Runtime::new()
+                .map_err(|e| anyhow!("keyprovider: failed to create async runtime, {}", e))?
                 .block_on(KeyProviderKeyWrapProtocolOutput::from_grpc(
                     serialized_input,
-                    self.attrs.grpc.as_ref().unwrap(),
+                    grpc,
                     OpKey::Unwrap,
-                ));
-            rt.map_err(|e| anyhow!("Error while key provider {:?} operation, from grpc provider error, error: {:?}", OpKey::Unwrap.to_string(), e))?
+                ))
+                .map_err(|e| {
+                    anyhow!(
+                        "keyprovider: grpc provider failed to execute {} operation: {:?}",
+                        OpKey::Wrap.to_string(),
+                        e
+                    )
+                })?
         } else {
-            KeyProviderKeyWrapProtocolOutput::default()
+            return Err(anyhow!(
+                "keyprovider: invalid configuration, both grpc and runner are NULL"
+            ));
         };
 
-        Ok(protocol_output
-            .key_unwrap_results
-            .unwrap_or_default()
-            .opts_data)
+        if let Some(result) = protocol_output.key_unwrap_results {
+            Ok(result.opts_data)
+        } else {
+            Err(anyhow!("keyprovider: get NULL reply from provider"))
+        }
     }
 
     fn annotation_id(&self) -> String {
         format!(
-            "{}{}",
-            "org.opencontainers.image.enc.keys.provider.", self.provider
+            "org.opencontainers.image.enc.keys.provider.{}",
+            self.provider
         )
     }
 
-    fn probe(&self, _dc_param: &HashMap<String, Vec<Vec<u8>>, RandomState>) -> bool {
+    fn probe(&self, _dc_param: &HashMap<String, Vec<Vec<u8>>>) -> bool {
         true
     }
 }
@@ -285,7 +318,7 @@ mod tests {
     use crate::config;
     use crate::config::{DecryptConfig, EncryptConfig};
     use crate::keywrap::keyprovider::{
-        new_key_wrapper, KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput,
+        KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput, KeyProviderKeyWrapper,
         KeyUnwrapResults, KeyWrapResults,
     };
     use crate::keywrap::{keyprovider, KeyWrapper};
@@ -478,7 +511,7 @@ mod tests {
             grpc: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
-        let mut keyprovider_key_wrapper = new_key_wrapper(
+        let mut keyprovider_key_wrapper = KeyProviderKeyWrapper::new(
             "keyprovider".to_string(),
             attrs.clone(),
             Some(Box::new(test_runner)),
@@ -514,7 +547,7 @@ mod tests {
             grpc: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
-        keyprovider_key_wrapper = new_key_wrapper(
+        keyprovider_key_wrapper = KeyProviderKeyWrapper::new(
             "keyprovider".to_string(),
             attrs,
             Some(Box::new(test_runner)),
@@ -542,7 +575,7 @@ mod tests {
             grpc: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
-        let keyprovider_key_wrapper = new_key_wrapper(
+        let keyprovider_key_wrapper = KeyProviderKeyWrapper::new(
             "keyprovider".to_string(),
             attrs,
             Some(Box::new(test_runner)),
@@ -571,7 +604,7 @@ mod tests {
             grpc: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
-        let keyprovider_key_wrapper = new_key_wrapper(
+        let keyprovider_key_wrapper = KeyProviderKeyWrapper::new(
             "keyprovider".to_string(),
             attrs,
             Some(Box::new(test_runner)),
@@ -640,7 +673,8 @@ mod tests {
             grpc: Some("tcp://127.0.0.1:8990".to_string()),
         };
         provider.insert(String::from("provider"), attrs.clone());
-        let keyprovider_key_wrapper = new_key_wrapper("keyprovider".to_string(), attrs, None);
+        let keyprovider_key_wrapper =
+            KeyProviderKeyWrapper::new("keyprovider".to_string(), attrs, None);
 
         // Prepare encryption config params
         let opts_data = b"symmetric_key";
@@ -685,7 +719,8 @@ mod tests {
             grpc: Some("http://127.0.0.1:8991".to_string()),
         };
         provider.insert(String::from("provider"), attrs.clone());
-        let keyprovider_key_wrapper = new_key_wrapper("keyprovider".to_string(), attrs, None);
+        let keyprovider_key_wrapper =
+            KeyProviderKeyWrapper::new("keyprovider".to_string(), attrs, None);
 
         // Prepare encryption config params
         let opts_data = b"symmetric_key";

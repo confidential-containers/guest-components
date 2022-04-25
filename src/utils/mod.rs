@@ -1,7 +1,7 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 
 use anyhow::Result;
 
