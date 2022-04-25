@@ -1,9 +1,8 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-extern crate tonic_build;
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(feature = "keywrap-keyprovider")]
     tonic_build::configure()
         .build_server(true)
         .out_dir("src/utils/")

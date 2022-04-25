@@ -1,13 +1,12 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::io::Read;
-extern crate base64;
-extern crate base64_serde;
+
+use anyhow::{anyhow, Result};
 use base64_serde::base64_serde_type;
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 pub mod aes_ctr;
 use aes_ctr::AESCTRBlockCipher;

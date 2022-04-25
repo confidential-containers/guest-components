@@ -1,42 +1,52 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+use std::io::Read;
+
+use anyhow::{anyhow, Result};
+use oci_distribution::manifest::OciDescriptor;
+
 use crate::blockcipher::{
     Finalizer, LayerBlockCipherHandler, LayerBlockCipherOptions, PrivateLayerBlockCipherOptions,
     PublicLayerBlockCipherOptions, AES256CTR,
 };
-use crate::config::{DecryptConfig, EncryptConfig, OcicryptConfig, OCICRYPT_ENVVARNAME};
+use crate::config::{DecryptConfig, EncryptConfig};
+#[cfg(feature = "keywrap-jwe")]
 use crate::keywrap::jwe::JweKeyWrapper;
+#[cfg(feature = "keywrap-keyprovider")]
 use crate::keywrap::keyprovider;
 use crate::keywrap::KeyWrapper;
-use anyhow::{anyhow, Result};
-use std::collections::HashMap;
-use std::io::Read;
-extern crate oci_distribution;
-use oci_distribution::manifest::OciDescriptor;
-extern crate base64;
 
 lazy_static! {
     static ref KEY_WRAPPERS: HashMap<String, Box<dyn KeyWrapper>> = {
+        #[allow(unused_mut)]
         let mut m = HashMap::new();
-        m.insert(
-            "jwe".to_string(),
-            Box::new(JweKeyWrapper {}) as Box<dyn KeyWrapper>,
-        );
-// TODO: The error over here needs to be logged to be in consistent with golang version.
-        let ocicrypt_config = OcicryptConfig::from_env(OCICRYPT_ENVVARNAME)
-            .expect("Unable to read ocicrypt config file");
-        let key_providers = ocicrypt_config.key_providers;
-        for (provider_name, attrs) in key_providers.iter() {
+
+        #[cfg(feature = "keywrap-jwe")] {
             m.insert(
-                "provider.".to_owned() + provider_name,
-                Box::new(keyprovider::new_key_wrapper(
-                    provider_name.to_string(),
-                    attrs.clone(),
-                    None,
-                )) as Box<dyn KeyWrapper>,
+                "jwe".to_string(),
+                Box::new(JweKeyWrapper {}) as Box<dyn KeyWrapper>,
             );
         }
+
+        #[cfg(feature = "keywrap-keyprovider")] {
+            // TODO: The error over here needs to be logged to be in consistent with golang version.
+            let ocicrypt_config = crate::config::OcicryptConfig::from_env(crate::config::OCICRYPT_ENVVARNAME)
+                .expect("Unable to read ocicrypt config file");
+            let key_providers = ocicrypt_config.key_providers;
+            for (provider_name, attrs) in key_providers.iter() {
+                m.insert(
+                    "provider.".to_owned() + provider_name,
+                    Box::new(keyprovider::new_key_wrapper(
+                        provider_name.to_string(),
+                        attrs.clone(),
+                        None,
+                    )) as Box<dyn KeyWrapper>,
+                );
+            }
+        }
+
         m
     };
     static ref KEY_WRAPPERS_ANNOTATIONS: HashMap<String, String> = {
