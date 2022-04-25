@@ -218,7 +218,7 @@ fn decrypt_layer_key_opts_data(dc: &DecryptConfig, desc: &OciDescriptor) -> Resu
         if let Some(annotations) = desc.annotations.as_ref() {
             if let Some(b64_annotation) = annotations.get(annotations_id) {
                 let keywrapper = get_key_wrapper(scheme)?;
-                if keywrapper.no_possible_keys(&dc.param) {
+                if !keywrapper.probe(&dc.param) {
                     continue;
                 }
 

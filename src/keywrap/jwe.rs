@@ -125,8 +125,8 @@ impl KeyWrapper for JweKeyWrapper {
         "org.opencontainers.image.enc.keys.jwe".to_string()
     }
 
-    fn no_possible_keys(&self, dc_param: &HashMap<String, Vec<Vec<u8>>>) -> bool {
-        dc_param.get("privkeys").is_none()
+    fn probe(&self, dc_param: &HashMap<String, Vec<Vec<u8>>>) -> bool {
+        dc_param.get("privkeys").is_some()
     }
 
     fn private_keys(&self, dc_param: &HashMap<String, Vec<Vec<u8>>>) -> Option<Vec<Vec<u8>>> {
@@ -155,7 +155,7 @@ mod tests {
 
         let jwe_key_wrapper = JweKeyWrapper {};
 
-        assert!(jwe_key_wrapper.no_possible_keys(&dc.param));
+        assert!(!jwe_key_wrapper.probe(&dc.param));
         assert!(jwe_key_wrapper.private_keys(&dc.param).is_none());
 
         let mut pubkeys = vec![];
@@ -190,7 +190,7 @@ mod tests {
             .decrypt_with_priv_keys(privkeys, privkey_passwords)
             .is_ok());
 
-        assert!(!jwe_key_wrapper.no_possible_keys(&dc.param));
+        assert!(jwe_key_wrapper.probe(&dc.param));
         assert!(jwe_key_wrapper.private_keys(&dc.param).is_some());
         assert_eq!(jwe_key_wrapper.unwrap_keys(&dc, &json).unwrap(), payload);
 

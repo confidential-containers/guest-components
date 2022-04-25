@@ -281,8 +281,8 @@ impl KeyWrapper for KeyProviderKeyWrapper {
         )
     }
 
-    fn no_possible_keys(&self, _dc_param: &HashMap<String, Vec<Vec<u8>>, RandomState>) -> bool {
-        false
+    fn probe(&self, _dc_param: &HashMap<String, Vec<Vec<u8>>, RandomState>) -> bool {
+        true
     }
 }
 

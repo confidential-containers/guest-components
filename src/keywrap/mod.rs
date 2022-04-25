@@ -24,9 +24,8 @@ pub trait KeyWrapper: Send + Sync {
     /// return the keywraper annotation id.
     fn annotation_id(&self) -> String;
 
-    /// no_possible_keys returns true if there is no possibility of performing
-    /// decryption for parameters provided.
-    fn no_possible_keys(&self, dc_param: &HashMap<String, Vec<Vec<u8>>>) -> bool;
+    /// Check whether the driver could handle the decryption request.
+    fn probe(&self, dc_param: &HashMap<String, Vec<Vec<u8>>>) -> bool;
 
     /// private_keys (optional) gets the array of private keys. It is an optional implementation
     /// as in some key services, a private key may not be exportable (i.e. HSM)
@@ -67,8 +66,8 @@ impl<W: KeyWrapper + ?Sized> KeyWrapper for Box<W> {
     }
 
     #[inline]
-    fn no_possible_keys(&self, dc_param: &HashMap<String, Vec<Vec<u8>>>) -> bool {
-        (**self).no_possible_keys(dc_param)
+    fn probe(&self, dc_param: &HashMap<String, Vec<Vec<u8>>>) -> bool {
+        (**self).probe(dc_param)
     }
 
     #[inline]
