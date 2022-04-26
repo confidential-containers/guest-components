@@ -20,9 +20,9 @@ pub struct JweKeyWrapper {}
 // Get the encrypter from public key
 fn encrypter(pubkey: &[u8]) -> Result<Box<dyn JweEncrypter>> {
     let key_info =
-        KeyInfo::detect(&pubkey).ok_or_else(|| anyhow!("failed to detect public key info"))?;
+        KeyInfo::detect(&pubkey).ok_or_else(|| anyhow!("jwe: failed to detect public key info"))?;
     if !key_info.is_public_key() {
-        return Err(anyhow!("expect public key, found private key"));
+        return Err(anyhow!("jwe: expect public key, found private key"));
     }
 
     match key_info.alg() {
@@ -49,10 +49,10 @@ fn encrypter(pubkey: &[u8]) -> Result<Box<dyn JweEncrypter>> {
 
 // Get the decrypter from private key
 fn decrypter(priv_key: &[u8]) -> Result<Box<dyn JweDecrypter>> {
-    let key_info =
-        KeyInfo::detect(&priv_key).ok_or_else(|| anyhow!("failed to detect private key info"))?;
+    let key_info = KeyInfo::detect(&priv_key)
+        .ok_or_else(|| anyhow!("jwe: failed to detect private key info"))?;
     if key_info.is_public_key() {
-        return Err(anyhow!("expect private key, found public key"));
+        return Err(anyhow!("jwe: expect private key, found public key"));
     }
 
     match key_info.alg() {
@@ -79,26 +79,24 @@ fn decrypter(priv_key: &[u8]) -> Result<Box<dyn JweDecrypter>> {
 
 impl KeyWrapper for JweKeyWrapper {
     fn wrap_keys(&self, ec: &EncryptConfig, opts_data: &[u8]) -> Result<Vec<u8>> {
-        let mut src_header = JweHeaderSet::new();
-        src_header.set_content_encryption("A256GCM", true);
-
-        let src_rheader = JweHeader::new();
-
         let pubkeys = ec
             .param
             .get("pubkeys")
-            .ok_or_else(|| anyhow!("Invalid configuration for keywrap"))?;
+            .ok_or_else(|| anyhow!("jwe: invalid configuration for keywrap"))?;
         let mut encrypters: Vec<Box<dyn JweEncrypter>> = Vec::with_capacity(pubkeys.len());
         for pubkey in pubkeys {
             let encrypter = encrypter(pubkey)?;
             encrypters.push(encrypter);
         }
 
+        let src_rheader = JweHeader::new();
+        let mut src_header = JweHeaderSet::new();
+        src_header.set_content_encryption("A256GCM", true);
+
         let recipients: Vec<(Option<&JweHeader>, &dyn JweEncrypter)> = encrypters
             .iter()
             .map(|x| (Some(&src_rheader), &**x))
             .collect();
-
         let json = serialize_general_json(opts_data, Some(&src_header), &recipients, None)?;
 
         Ok(json.as_bytes().to_vec())
@@ -106,10 +104,10 @@ impl KeyWrapper for JweKeyWrapper {
 
     fn unwrap_keys(&self, dc: &DecryptConfig, jwe_string: &[u8]) -> Result<Vec<u8>> {
         let data = std::str::from_utf8(jwe_string)
-            .map_err(|_e| anyhow!("Invalid data to jwe::unwrap_keys"))?;
+            .map_err(|_e| anyhow!("jwe: invalid data to unwrap_keys()"))?;
         let privkeys = self
             .private_keys(&dc.param)
-            .ok_or_else(|| anyhow!("Invalid configuration for keyunwrap"))?;
+            .ok_or_else(|| anyhow!("jwe: invalid configuration for keyunwrap"))?;
         for privkey in privkeys {
             let decrypter = decrypter(&privkey)?;
             if let Ok((keys, _)) = deserialize_json(data, &*decrypter) {
@@ -117,7 +115,7 @@ impl KeyWrapper for JweKeyWrapper {
             }
         }
 
-        Err(anyhow!("JWE: No suitable private key found for decryption"))
+        Err(anyhow!("jwe: No suitable private key found for decryption"))
     }
 
     fn annotation_id(&self) -> String {
@@ -125,6 +123,7 @@ impl KeyWrapper for JweKeyWrapper {
     }
 
     fn probe(&self, dc_param: &HashMap<String, Vec<Vec<u8>>>) -> bool {
+        // FIXME: is this detection method reliable?
         dc_param.get("privkeys").is_some()
     }
 
