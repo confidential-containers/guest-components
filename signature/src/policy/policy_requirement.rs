@@ -47,8 +47,8 @@ pub trait PolicyRequirement {
     }
 }
 
-impl<'de> Deserialize<'de> for Box<dyn PolicyRequirement> {
-    fn deserialize<D>(deserializer: D) -> Result<Box<dyn PolicyRequirement>, D::Error>
+impl<'de> Deserialize<'de> for Box<dyn PolicyRequirement + Send> {
+    fn deserialize<D>(deserializer: D) -> Result<Box<dyn PolicyRequirement + Send>, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -59,7 +59,7 @@ impl<'de> Deserialize<'de> for Box<dyn PolicyRequirement> {
 struct PolicyRequirementVisitor;
 
 impl<'de> Visitor<'de> for PolicyRequirementVisitor {
-    type Value = Box<dyn PolicyRequirement>;
+    type Value = Box<dyn PolicyRequirement + Send>;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         formatter.write_str("Unexpect policy requirement deserialize visit format")
@@ -116,10 +116,10 @@ impl<'de> Visitor<'de> for PolicyRequirementVisitor {
     }
 }
 
-impl TryFrom<&str> for Box<dyn PolicyRequirement> {
+impl TryFrom<&str> for Box<dyn PolicyRequirement + Send> {
     type Error = serde_json::Error;
     fn try_from(json_str: &str) -> Result<Self, Self::Error> {
-        serde_json::from_str::<Box<dyn PolicyRequirement>>(json_str)
+        serde_json::from_str::<Box<dyn PolicyRequirement + Send>>(json_str)
     }
 }
 
@@ -129,6 +129,8 @@ impl TryFrom<&str> for Box<dyn PolicyRequirement> {
 pub struct PolicyReqAccept {
     r#type: String,
 }
+
+unsafe impl Send for PolicyReqAccept {}
 
 impl PolicyRequirement for PolicyReqAccept {
     fn is_image_allowed(&self, _image: &mut image::Image) -> Result<()> {
@@ -142,6 +144,8 @@ impl PolicyRequirement for PolicyReqAccept {
 pub struct PolicyReqReject {
     r#type: String,
 }
+
+unsafe impl Send for PolicyReqReject {}
 
 impl PolicyRequirement for PolicyReqReject {
     fn is_image_allowed(&self, _image: &mut image::Image) -> Result<()> {
@@ -176,6 +180,8 @@ pub struct PolicyReqSignedBy {
     #[serde(default, rename = "signedIdentity")]
     signed_identity: Option<Box<dyn PolicyReferenceMatcher>>,
 }
+
+unsafe impl Send for PolicyReqSignedBy {}
 
 impl PolicyRequirement for PolicyReqSignedBy {
     fn is_image_allowed(&self, image: &mut image::Image) -> Result<()> {
