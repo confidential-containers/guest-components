@@ -18,12 +18,6 @@ use tokio::runtime::Runtime;
 use tonic;
 use tonic::codegen::http::Uri;
 
-impl Debug for dyn CommandExecuter {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "CommandExecuter")
-    }
-}
-
 /// A KeyProvider keywrapper
 #[derive(Debug)]
 pub struct KeyProviderKeyWrapper {

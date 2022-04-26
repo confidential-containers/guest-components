@@ -1,18 +1,17 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 
-use crate::config::DecryptConfig;
-use crate::config::EncryptConfig;
-use crate::keywrap::KeyWrapper;
-use josekit::jwk::{Jwk, KeyAlg, KeyFormat, KeyInfo};
-
+use anyhow::{anyhow, Result};
 use josekit::jwe::{
     deserialize_json, serialize_general_json, JweDecrypter, JweEncrypter, JweHeader, JweHeaderSet,
     ECDH_ES_A256KW, RSA_OAEP,
 };
+use josekit::jwk::{Jwk, KeyAlg, KeyFormat, KeyInfo};
+
+use crate::config::{DecryptConfig, EncryptConfig};
+use crate::keywrap::KeyWrapper;
 
 /// A Jwe keywrapper
 #[derive(Debug)]
@@ -22,7 +21,6 @@ pub struct JweKeyWrapper {}
 fn encrypter(pubkey: &[u8]) -> Result<Box<dyn JweEncrypter>> {
     let key_info =
         KeyInfo::detect(&pubkey).ok_or_else(|| anyhow!("failed to detect public key info"))?;
-
     if !key_info.is_public_key() {
         return Err(anyhow!("expect public key, found private key"));
     }
@@ -53,7 +51,6 @@ fn encrypter(pubkey: &[u8]) -> Result<Box<dyn JweEncrypter>> {
 fn decrypter(priv_key: &[u8]) -> Result<Box<dyn JweDecrypter>> {
     let key_info =
         KeyInfo::detect(&priv_key).ok_or_else(|| anyhow!("failed to detect private key info"))?;
-
     if key_info.is_public_key() {
         return Err(anyhow!("expect private key, found public key"));
     }
@@ -144,7 +141,7 @@ mod tests {
 
     #[test]
     fn test_keywrap_jwe() {
-        let path = load_data_path();
+        let path = load_data_path().display();
         let pub_key_files = vec![
             format!("{}/{}", path, "public_key.pem"),
             format!("{}/{}", path, "public_key_ec.der"),
@@ -209,10 +206,9 @@ mod tests {
             .is_none());
     }
 
-    fn load_data_path() -> String {
+    fn load_data_path() -> PathBuf {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.push("data");
-
-        path.to_str().unwrap().to_string()
+        path
     }
 }

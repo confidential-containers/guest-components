@@ -1,10 +1,11 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::config::DecryptConfig;
-use crate::config::EncryptConfig;
-use anyhow::Result;
 use std::collections::HashMap;
+
+use anyhow::Result;
+
+use crate::config::{DecryptConfig, EncryptConfig};
 
 #[cfg(feature = "keywrap-jwe")]
 pub mod jwe;

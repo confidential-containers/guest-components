@@ -1,14 +1,15 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
 use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::os::unix::io::FromRawFd;
+use std::path::Path;
+
+use anyhow::{anyhow, Result};
 
 use crate::config::{CryptoConfig, DecryptConfig, EncryptConfig};
-use std::path::Path;
 
 // process_recipient_keys sorts the array of recipients by type.
 // Recipients may be either: x509 certificates, public keys,
@@ -180,8 +181,7 @@ fn process_private_keyfiles(keyfiles_and_pwds: Vec<String>) -> Result<[Vec<Vec<u
     ])
 }
 
-/// Create the CryptoConfig object that contains the necessary information
-/// to perform decryption.
+/// Create the CryptoConfig object that contains the necessary information to perform decryption.
 ///
 /// # Arguments
 /// * `keys` - decryption key info in following format:\

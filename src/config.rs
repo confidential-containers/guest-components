@@ -1,11 +1,12 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
-use serde::{de, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
+
+use anyhow::{anyhow, Result};
+use serde::{de, Deserializer, Serialize, Serializer};
 
 pub const OCICRYPT_ENVVARNAME: &str = "OCICRYPT_KEYPROVIDER_CONFIG";
 
@@ -66,15 +67,16 @@ where
         .collect()
 }
 
-/// Command describes the structure of command, it consist of path and args, where path defines the location of
-/// binary executable and args are passed on to the binary executable
+/// Command describes the structure of command, it consist of path and args, where path defines
+/// the location of binary executable and args are passed on to the binary executable
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Command {
     pub path: String,
     pub args: Option<Vec<String>>,
 }
 
-/// KeyProviderAttrs describes the structure of key provider, it defines the different ways of invocation to key provider
+/// KeyProviderAttrs describes the structure of key provider, it defines the different ways of
+/// invocation to key provider
 #[derive(Deserialize, Debug, Clone)]
 pub struct KeyProviderAttrs {
     pub cmd: Option<Command>,
@@ -90,13 +92,13 @@ pub struct OcicryptConfig {
 
 impl DecryptConfig {
     /// Update DecryptConfig param with key and value
-    fn update_param(&mut self, key: String, value: Vec<Vec<u8>>) -> Result<()> {
+    fn update_param(&mut self, key: &str, value: Vec<Vec<u8>>) -> Result<()> {
         if value.is_empty() {
             return Err(anyhow!("decrypt config: value of {} is None", key));
         }
 
         self.param
-            .entry(key)
+            .entry(key.to_string())
             .and_modify(|v| v.extend(value.iter().cloned()))
             .or_insert(value);
 
@@ -115,15 +117,15 @@ impl DecryptConfig {
             ));
         }
 
-        self.update_param("privkeys".to_string(), priv_keys)?;
-        self.update_param("privkeys-passwords".to_string(), priv_key_passwords)?;
+        self.update_param("privkeys", priv_keys)?;
+        self.update_param("privkeys-passwords", priv_key_passwords)?;
 
         Ok(())
     }
 
     /// Add DecryptConfig with configured x509 certs for decryption
     pub fn decrypt_with_x509s(&mut self, x509s: Vec<Vec<u8>>) -> Result<()> {
-        self.update_param("x509s".to_string(), x509s)?;
+        self.update_param("x509s", x509s)?;
 
         Ok(())
     }
@@ -134,8 +136,8 @@ impl DecryptConfig {
         gpg_priv_keys: Vec<Vec<u8>>,
         gpg_priv_pwds: Vec<Vec<u8>>,
     ) -> Result<()> {
-        self.update_param("gpg-privatekeys".to_string(), gpg_priv_keys)?;
-        self.update_param("gpg-privatekeys-passwords".to_string(), gpg_priv_pwds)?;
+        self.update_param("gpg-privatekeys", gpg_priv_keys)?;
+        self.update_param("gpg-privatekeys-passwords", gpg_priv_pwds)?;
 
         Ok(())
     }
@@ -146,8 +148,8 @@ impl DecryptConfig {
         pkcs11_config: Vec<Vec<u8>>,
         pkcs11_yaml: Vec<Vec<u8>>,
     ) -> Result<()> {
-        self.update_param("pkcs11-config".to_string(), pkcs11_config)?;
-        self.update_param("pkcs11-yamls".to_string(), pkcs11_yaml)?;
+        self.update_param("pkcs11-config", pkcs11_config)?;
+        self.update_param("pkcs11-yamls", pkcs11_yaml)?;
 
         Ok(())
     }
@@ -159,9 +161,9 @@ impl DecryptConfig {
                 let key: String = val.chars().take(index).collect();
                 let value: String = val.chars().skip(index + 1).collect();
 
-                self.update_param(key, vec![value.as_bytes().to_vec()])?;
+                self.update_param(&key, vec![value.as_bytes().to_vec()])?;
             } else {
-                self.update_param(val.to_string(), vec![b"Enabled".to_vec()])?;
+                self.update_param(val.as_ref(), vec![b"Enabled".to_vec()])?;
             }
         }
 
@@ -189,13 +191,13 @@ pub struct EncryptConfig {
 
 impl EncryptConfig {
     /// Update EncryptConfig param with key and value
-    fn update_param(&mut self, key: String, value: Vec<Vec<u8>>) -> Result<()> {
+    fn update_param(&mut self, key: &str, value: Vec<Vec<u8>>) -> Result<()> {
         if value.is_empty() {
             return Err(anyhow!("encrypt config: value of {} is None", key));
         }
 
         self.param
-            .entry(key)
+            .entry(key.to_string())
             .and_modify(|v| v.extend(value.iter().cloned()))
             .or_insert(value);
 
@@ -204,16 +206,12 @@ impl EncryptConfig {
 
     /// Add EncryptConfig with jwe public keys for encryption
     pub fn encrypt_with_jwe(&mut self, pubkeys: Vec<Vec<u8>>) -> Result<()> {
-        self.update_param("pubkeys".to_string(), pubkeys)?;
-
-        Ok(())
+        self.update_param("pubkeys", pubkeys)
     }
 
     /// Add EncryptConfig with pkcs7 x509 certs for encryption
     pub fn encrypt_with_pkcs7(&mut self, x509s: Vec<Vec<u8>>) -> Result<()> {
-        self.update_param("x509s".to_string(), x509s)?;
-
-        Ok(())
+        self.update_param("x509s", x509s)
     }
 
     /// Add EncryptConfig with configured gpg parameters for encryption
@@ -222,8 +220,8 @@ impl EncryptConfig {
         gpg_recipients: Vec<Vec<u8>>,
         gpg_pub_ring_file: Vec<u8>,
     ) -> Result<()> {
-        self.update_param("gpg-recipients".to_string(), gpg_recipients)?;
-        self.update_param("gpg-pubkeyringfile".to_string(), vec![gpg_pub_ring_file])?;
+        self.update_param("gpg-recipients", gpg_recipients)?;
+        self.update_param("gpg-pubkeyringfile", vec![gpg_pub_ring_file])?;
 
         Ok(())
     }
@@ -236,12 +234,12 @@ impl EncryptConfig {
         pkcs11_yaml: Vec<Vec<u8>>,
     ) -> Result<()> {
         if !pkcs11_pubkeys.is_empty() {
-            self.update_param("pkcs11-pubkeys".to_string(), pkcs11_pubkeys)?;
+            self.update_param("pkcs11-pubkeys", pkcs11_pubkeys)?;
         }
 
         if !pkcs11_yaml.is_empty() {
-            self.update_param("pkcs11-config".to_string(), pkcs11_config)?;
-            self.update_param("pkcs11-yamls".to_string(), pkcs11_yaml)?;
+            self.update_param("pkcs11-config", pkcs11_config)?;
+            self.update_param("pkcs11-yamls", pkcs11_yaml)?;
         }
 
         Ok(())
@@ -254,9 +252,9 @@ impl EncryptConfig {
                 let key: String = val.chars().take(index).collect();
                 let value: String = val.chars().skip(index + 1).collect();
 
-                self.update_param(key, vec![value.as_bytes().to_vec()])?;
+                self.update_param(&key, vec![value.as_bytes().to_vec()])?;
             } else {
-                self.update_param(val.to_string(), vec![b"Enabled".to_vec()])?;
+                self.update_param(val.as_ref(), vec![b"Enabled".to_vec()])?;
             }
         }
 
@@ -310,6 +308,7 @@ mod tests {
             b"key_p1".to_vec(),
             b"key_p2:abc".to_vec(),
             b"key_p3:abc:abc".to_vec(),
+            b":abc".to_vec(),
         ];
 
         let mut dc = DecryptConfig::default();
