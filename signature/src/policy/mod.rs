@@ -39,7 +39,7 @@ pub struct Policy {
     transports: HashMap<String, PolicyTransportScopes>,
 }
 
-pub type PolicyRequirements = Vec<Box<dyn PolicyRequirement>>;
+pub type PolicyRequirements = Vec<Box<dyn PolicyRequirement + Send>>;
 pub type PolicyTransportScopes = HashMap<String, PolicyRequirements>;
 
 impl Policy {
