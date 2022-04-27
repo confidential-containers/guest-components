@@ -8,8 +8,8 @@ use anyhow::{anyhow, Result};
 use oci_distribution::manifest::OciDescriptor;
 
 use crate::blockcipher::{
-    Finalizer, LayerBlockCipherHandler, LayerBlockCipherOptions, PrivateLayerBlockCipherOptions,
-    PublicLayerBlockCipherOptions, AES256CTR,
+    EncryptionFinalizer, LayerBlockCipherHandler, LayerBlockCipherOptions,
+    PrivateLayerBlockCipherOptions, PublicLayerBlockCipherOptions, AES256CTR,
 };
 use crate::config::{DecryptConfig, EncryptConfig};
 #[cfg(feature = "keywrap-jwe")]
@@ -69,7 +69,7 @@ impl EncLayerFinalizer {
         &mut self,
         ec: &EncryptConfig,
         desc: &OciDescriptor,
-        finalizer: Option<&mut impl Finalizer>,
+        finalizer: Option<&mut impl EncryptionFinalizer>,
     ) -> Result<HashMap<String, String>> {
         let mut priv_opts = vec![];
         let mut pub_opts = vec![];
@@ -250,7 +250,10 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
     ec: &EncryptConfig,
     layer_reader: R,
     desc: &OciDescriptor,
-) -> Result<(Option<impl Read + Finalizer + 'a>, EncLayerFinalizer)> {
+) -> Result<(
+    Option<impl Read + EncryptionFinalizer + 'a>,
+    EncLayerFinalizer,
+)> {
     let mut encrypted = false;
     for (annotations_id, _scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
         if let Some(annotations) = desc.annotations.as_ref() {

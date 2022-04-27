@@ -1,14 +1,16 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::blockcipher::{Finalizer, LayerBlockCipher, LayerBlockCipherOptions};
+use std::io::Read;
+
 use anyhow::{anyhow, Result};
 use ctr::cipher::generic_array::GenericArray;
 use ctr::cipher::{KeyIvInit, StreamCipher};
 use hmac::{Hmac, Mac};
 use rand::{thread_rng, Rng};
 use sha2::Sha256;
-use std::io::Read;
+
+use crate::blockcipher::{EncryptionFinalizer, LayerBlockCipher, LayerBlockCipherOptions};
 
 const AES256_KEY_SIZE: usize = 32;
 const AES256_NONCE_SIZE: usize = 16;
@@ -118,7 +120,7 @@ impl<R: Read> AESCTRBlockCipher<R> {
         }
 
         let mut nonce = vec![0u8; AES256_NONCE_SIZE];
-        match opts.get_opt("nonce".to_string()) {
+        match opts.get_opt("nonce") {
             Some(v) => {
                 if v.len() != AES256_NONCE_SIZE {
                     return Err(anyhow!(
@@ -181,7 +183,7 @@ impl<R: Read> LayerBlockCipher<R> for AESCTRBlockCipher<R> {
     }
 }
 
-impl<R: Read> Finalizer for AESCTRBlockCipher<R> {
+impl<R: Read> EncryptionFinalizer for AESCTRBlockCipher<R> {
     // finalized_lbco update LayerBlockCipherOptions after finished encrypt operation
     fn finalized_lbco(&self, opts: &mut LayerBlockCipherOptions) -> Result<()> {
         if !self.done_encrypting {
