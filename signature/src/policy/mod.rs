@@ -45,7 +45,9 @@ pub type PolicyTransportScopes = HashMap<String, PolicyRequirements>;
 impl Policy {
     // Parse the JSON file of policy (policy.json).
     pub fn from_file(file_path: &str) -> Result<Self> {
-        let policy_json_string = fs::read_to_string(file_path)?;
+        let policy_json_string = fs::read_to_string(file_path)
+            .map_err(|e| anyhow!("Read policy.json file failed: {:?}", e))?;
+
         let policy = serde_json::from_str::<Policy>(&policy_json_string)?;
         Ok(policy)
     }
