@@ -120,7 +120,7 @@ impl LayerBlockCipherOptions {
 }
 
 /// Trait to setup the encryption/decryption context.
-pub trait LayerBlockCipher<R: Read> {
+pub trait LayerBlockCipher<R> {
     /// Create a symmetric key for encryption.
     fn generate_key(&self) -> Result<Vec<u8>>;
 
@@ -138,18 +138,20 @@ pub trait EncryptionFinalizer {
 }
 
 /// Handler for image layer encryption/decryption.
-pub enum LayerBlockCipherHandler<R: Read> {
+pub enum LayerBlockCipherHandler<R> {
     /// AES_256_CTR_HMAC_SHA256
     Aes256Ctr(AESCTRBlockCipher<R>),
 }
 
-impl<R: Read> LayerBlockCipherHandler<R> {
+impl<R> LayerBlockCipherHandler<R> {
     /// Create a [`LayerBlockCipherHandler`] object with default aes ctr block cipher
     pub fn new() -> Result<LayerBlockCipherHandler<R>> {
         let aes_ctr_block_cipher = AESCTRBlockCipher::new(256)?;
         Ok(LayerBlockCipherHandler::Aes256Ctr(aes_ctr_block_cipher))
     }
+}
 
+impl<R> LayerBlockCipherHandler<R> {
     /// Setup the context for image layer encryption.
     pub fn encrypt(
         &mut self,
@@ -192,18 +194,18 @@ impl<R: Read> LayerBlockCipherHandler<R> {
     }
 }
 
-impl<R: Read> Read for LayerBlockCipherHandler<R> {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+impl<R> EncryptionFinalizer for LayerBlockCipherHandler<R> {
+    fn finalized_lbco(&self, opts: &mut LayerBlockCipherOptions) -> Result<()> {
         match self {
-            LayerBlockCipherHandler::Aes256Ctr(block_cipher) => block_cipher.read(buf),
+            LayerBlockCipherHandler::Aes256Ctr(block_cipher) => block_cipher.finalized_lbco(opts),
         }
     }
 }
 
-impl<R: Read> EncryptionFinalizer for LayerBlockCipherHandler<R> {
-    fn finalized_lbco(&self, opts: &mut LayerBlockCipherOptions) -> Result<()> {
+impl<R: Read> Read for LayerBlockCipherHandler<R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         match self {
-            LayerBlockCipherHandler::Aes256Ctr(block_cipher) => block_cipher.finalized_lbco(opts),
+            LayerBlockCipherHandler::Aes256Ctr(block_cipher) => block_cipher.read(buf),
         }
     }
 }

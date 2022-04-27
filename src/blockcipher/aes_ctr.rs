@@ -17,19 +17,121 @@ const AES256_NONCE_SIZE: usize = 16;
 type Aes256Ctr = ctr::Ctr128BE<aes::Aes256>;
 type HmacSha256 = Hmac<Sha256>;
 
-/// AESCTRLayerBlockCipher implements the AES CTR stream cipher
-pub struct AESCTRBlockCipher<R: Read> {
-    pub key_len: usize,
-    pub reader: Option<R>,
-    pub encrypt: bool,
-    pub cipher: Option<Aes256Ctr>,
-    pub hmac: Option<HmacSha256>,
-    pub exp_hmac: Vec<u8>,
-    pub done_encrypting: bool,
+/// Implementation of the AES CTR stream cipher.
+pub struct AESCTRBlockCipher<R> {
+    key_len: usize,
+    encrypt: bool,
+    reader: Option<R>,
+    cipher: Option<Aes256Ctr>,
+    hmac: Option<HmacSha256>,
+    exp_hmac: Vec<u8>,
+    done_encrypting: bool,
+}
+
+impl<R> AESCTRBlockCipher<R> {
+    /// Create a new instance of `AESCTRBlockCipher`.
+    pub fn new(bits: usize) -> Result<AESCTRBlockCipher<R>> {
+        if bits != AES256_KEY_SIZE * 8 {
+            return Err(anyhow!("AES CTR bit count not supported"));
+        }
+
+        Ok(AESCTRBlockCipher {
+            key_len: AES256_KEY_SIZE,
+            reader: None,
+            encrypt: false,
+            cipher: None,
+            hmac: None,
+            exp_hmac: vec![],
+            done_encrypting: false,
+        })
+    }
+
+    // init initializes an instance
+    fn init(
+        &mut self,
+        encrypt: bool,
+        reader: R,
+        opts: &mut LayerBlockCipherOptions,
+    ) -> Result<()> {
+        let symmetric_key = &opts.private.symmetric_key;
+        if symmetric_key.len() != AES256_KEY_SIZE {
+            return Err(anyhow!(
+                "invalid key length of {} bytes; need {} bytes",
+                symmetric_key.len(),
+                AES256_KEY_SIZE
+            ));
+        }
+        if !encrypt && opts.public.hmac.is_empty() {
+            return Err(anyhow!("HMAC is not provided for decryption process"));
+        }
+
+        let mut nonce = vec![0u8; AES256_NONCE_SIZE];
+        match opts.get_opt("nonce") {
+            Some(v) => {
+                if v.len() != AES256_NONCE_SIZE {
+                    return Err(anyhow!(
+                        "invalid nonce length of {} bytes; need {} bytes",
+                        nonce.len(),
+                        AES256_NONCE_SIZE
+                    ));
+                }
+                nonce = v;
+            }
+            None => thread_rng().try_fill(&mut nonce[..])?,
+        }
+
+        let cipher = Aes256Ctr::new(
+            GenericArray::from_slice(symmetric_key.as_slice()),
+            GenericArray::from_slice(nonce.as_slice()),
+        );
+        let hmac = HmacSha256::new_from_slice(symmetric_key.as_slice())
+            .map_err(|_| anyhow!("Failed to create HMAC"))?;
+
+        self.cipher = Some(cipher);
+        self.hmac = Some(hmac);
+        self.reader = Some(reader);
+        self.encrypt = encrypt;
+        self.exp_hmac = opts.public.hmac.clone();
+        self.done_encrypting = false;
+
+        opts.private
+            .cipher_options
+            .entry("nonce".to_string())
+            .or_insert(nonce);
+
+        Ok(())
+    }
+}
+
+impl<R> LayerBlockCipher<R> for AESCTRBlockCipher<R> {
+    fn generate_key(&self) -> Result<Vec<u8>> {
+        let mut key = vec![0; self.key_len];
+        thread_rng().try_fill(&mut key[..])?;
+        Ok(key)
+    }
+
+    fn encrypt(&mut self, input: R, opts: &mut LayerBlockCipherOptions) -> Result<()> {
+        self.init(true, input, opts)
+    }
+
+    fn decrypt(&mut self, input: R, opts: &mut LayerBlockCipherOptions) -> Result<()> {
+        self.init(false, input, opts)
+    }
+}
+
+impl<R> EncryptionFinalizer for AESCTRBlockCipher<R> {
+    fn finalized_lbco(&self, opts: &mut LayerBlockCipherOptions) -> Result<()> {
+        if !self.done_encrypting {
+            return Err(anyhow!("Read()ing not complete, unable to finalize"));
+        }
+
+        opts.public.hmac = self.exp_hmac.to_vec();
+        Ok(())
+    }
 }
 
 impl<R: Read> Read for AESCTRBlockCipher<R> {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize, std::io::Error> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if self.done_encrypting {
             return Ok(0);
         }
@@ -83,115 +185,6 @@ impl<R: Read> Read for AESCTRBlockCipher<R> {
         }
 
         Ok(read_len)
-    }
-}
-
-impl<R: Read> AESCTRBlockCipher<R> {
-    pub fn new(bits: usize) -> Result<AESCTRBlockCipher<R>> {
-        if bits != AES256_KEY_SIZE * 8 {
-            return Err(anyhow!("AES CTR bit count not supported"));
-        }
-
-        Ok(AESCTRBlockCipher {
-            key_len: AES256_KEY_SIZE,
-            reader: None,
-            encrypt: false,
-            cipher: None,
-            hmac: None,
-            exp_hmac: vec![],
-            done_encrypting: false,
-        })
-    }
-
-    // init initializes an instance
-    pub fn init(
-        &mut self,
-        encrypt: bool,
-        reader: R,
-        opts: &mut LayerBlockCipherOptions,
-    ) -> Result<()> {
-        let symmetric_key = &opts.private.symmetric_key;
-        if symmetric_key.len() != AES256_KEY_SIZE {
-            return Err(anyhow!(
-                "invalid key length of {} bytes; need {} bytes",
-                symmetric_key.len(),
-                AES256_KEY_SIZE
-            ));
-        }
-
-        let mut nonce = vec![0u8; AES256_NONCE_SIZE];
-        match opts.get_opt("nonce") {
-            Some(v) => {
-                if v.len() != AES256_NONCE_SIZE {
-                    return Err(anyhow!(
-                        "invalid nonce length of {} bytes; need {} bytes",
-                        nonce.len(),
-                        AES256_NONCE_SIZE
-                    ));
-                }
-                nonce = v;
-            }
-            None => {
-                thread_rng().try_fill(&mut nonce[..])?;
-            }
-        }
-
-        let cipher = Aes256Ctr::new(
-            GenericArray::from_slice(symmetric_key.as_slice()),
-            GenericArray::from_slice(nonce.as_slice()),
-        );
-
-        let hmac = HmacSha256::new_from_slice(symmetric_key.as_slice())
-            .map_err(|_| anyhow!("Failed to create HMAC"))?;
-        self.cipher = Some(cipher);
-        self.hmac = Some(hmac);
-        self.reader = Some(reader);
-        self.encrypt = encrypt;
-        self.exp_hmac = opts.public.hmac.clone();
-        self.done_encrypting = false;
-
-        if !encrypt && self.exp_hmac.is_empty() {
-            return Err(anyhow!("HMAC is not provided for decryption process"));
-        }
-        opts.private
-            .cipher_options
-            .entry("nonce".to_string())
-            .or_insert(nonce);
-
-        Ok(())
-    }
-}
-
-impl<R: Read> LayerBlockCipher<R> for AESCTRBlockCipher<R> {
-    // generate_key creates a symmetric key
-    fn generate_key(&self) -> Result<Vec<u8>> {
-        let mut key = vec![0; self.key_len];
-        thread_rng().try_fill(&mut key[..])?;
-        Ok(key)
-    }
-
-    // encrypt takes in layer data and required LayerBlockCipherOptions to initialize encrypt process
-    fn encrypt(&mut self, input: R, opts: &mut LayerBlockCipherOptions) -> Result<()> {
-        self.init(true, input, opts)?;
-        Ok(())
-    }
-
-    // decrypt takes in layer ciphertext data and required LayerBlockCipherOptions to initialize decrypt process
-    fn decrypt(&mut self, input: R, opts: &mut LayerBlockCipherOptions) -> Result<()> {
-        self.init(false, input, opts)?;
-        Ok(())
-    }
-}
-
-impl<R: Read> EncryptionFinalizer for AESCTRBlockCipher<R> {
-    // finalized_lbco update LayerBlockCipherOptions after finished encrypt operation
-    fn finalized_lbco(&self, opts: &mut LayerBlockCipherOptions) -> Result<()> {
-        if !self.done_encrypting {
-            return Err(anyhow!("Read()ing not complete, unable to finalize"));
-        }
-
-        opts.public.hmac = self.exp_hmac.to_vec();
-        Ok(())
     }
 }
 
