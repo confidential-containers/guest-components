@@ -279,7 +279,7 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
         lbco.private.digest = desc.digest.clone();
         let enc_layer_finalizer = EncLayerFinalizer { lbco };
 
-        Ok((lbch.aes_ctr_block_cipher, enc_layer_finalizer))
+        Ok((Some(lbch), enc_layer_finalizer))
     } else {
         Ok((None, EncLayerFinalizer::default()))
     }
@@ -313,7 +313,7 @@ pub fn decrypt_layer<R: Read>(
 
     lbch.decrypt(layer_reader, &mut opts)?;
 
-    Ok((lbch.aes_ctr_block_cipher, opts.private.digest))
+    Ok((Some(lbch), opts.private.digest))
 }
 
 #[cfg(test)]

@@ -138,19 +138,16 @@ pub trait EncryptionFinalizer {
 }
 
 /// Handler for image layer encryption/decryption.
-pub struct LayerBlockCipherHandler<R: Read> {
-    pub aes_ctr_block_cipher: Option<AESCTRBlockCipher<R>>,
+pub enum LayerBlockCipherHandler<R: Read> {
+    /// AES_256_CTR_HMAC_SHA256
+    Aes256Ctr(AESCTRBlockCipher<R>),
 }
 
 impl<R: Read> LayerBlockCipherHandler<R> {
     /// Create a [`LayerBlockCipherHandler`] object with default aes ctr block cipher
     pub fn new() -> Result<LayerBlockCipherHandler<R>> {
         let aes_ctr_block_cipher = AESCTRBlockCipher::new(256)?;
-        let handler = LayerBlockCipherHandler {
-            aes_ctr_block_cipher: Some(aes_ctr_block_cipher),
-        };
-
-        Ok(handler)
+        Ok(LayerBlockCipherHandler::Aes256Ctr(aes_ctr_block_cipher))
     }
 
     /// Setup the context for image layer encryption.
@@ -160,20 +157,18 @@ impl<R: Read> LayerBlockCipherHandler<R> {
         typ: &str,
         opts: &mut LayerBlockCipherOptions,
     ) -> Result<()> {
-        if typ != AES256CTR {
-            return Err(anyhow!("unsupported cipher type {}", typ));
-        }
-
-        match &mut self.aes_ctr_block_cipher {
-            Some(block_cipher) => {
-                let sk = block_cipher.generate_key()?;
-                opts.private.symmetric_key = sk;
+        match self {
+            LayerBlockCipherHandler::Aes256Ctr(block_cipher) => {
+                if typ != AES256CTR {
+                    return Err(anyhow!("unsupported cipher type {}", typ));
+                }
+                opts.private.symmetric_key = block_cipher.generate_key()?;
                 opts.public.cipher_type = AES256CTR.to_string();
                 block_cipher.encrypt(plain_data_reader, opts)?;
-                Ok(())
             }
-            None => Err(anyhow!("uninitialized cipher")),
         }
+
+        Ok(())
     }
 
     /// Setup the context for image layer decryption.
@@ -183,16 +178,32 @@ impl<R: Read> LayerBlockCipherHandler<R> {
         opts: &mut LayerBlockCipherOptions,
     ) -> Result<()> {
         let typ = &opts.public.cipher_type;
-        if typ != AES256CTR {
-            return Err(anyhow!("unsupported cipher type {}", typ));
+
+        match self {
+            LayerBlockCipherHandler::Aes256Ctr(block_cipher) => {
+                if typ != AES256CTR {
+                    return Err(anyhow!("unsupported cipher type {}", typ));
+                }
+                block_cipher.decrypt(enc_data_reader, opts)?;
+            }
         }
 
-        match &mut self.aes_ctr_block_cipher {
-            Some(block_cipher) => {
-                block_cipher.decrypt(enc_data_reader, opts)?;
-                Ok(())
-            }
-            None => Err(anyhow!("uninitialized cipher")),
+        Ok(())
+    }
+}
+
+impl<R: Read> Read for LayerBlockCipherHandler<R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        match self {
+            LayerBlockCipherHandler::Aes256Ctr(block_cipher) => block_cipher.read(buf),
+        }
+    }
+}
+
+impl<R: Read> EncryptionFinalizer for LayerBlockCipherHandler<R> {
+    fn finalized_lbco(&self, opts: &mut LayerBlockCipherOptions) -> Result<()> {
+        match self {
+            LayerBlockCipherHandler::Aes256Ctr(block_cipher) => block_cipher.finalized_lbco(opts),
         }
     }
 }
