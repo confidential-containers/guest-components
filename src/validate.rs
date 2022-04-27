@@ -37,7 +37,7 @@ pub enum SimpleSigning {
     ConfigDir,
     #[strum(to_string = "/run/image-security/simple_signing/sigstore_config")]
     SigstoreConfigDir,
-    #[strum(to_string = "/run/image-security/simple_signing/keyring.gpg")]
+    #[strum(to_string = "/run/image-security/simple_signing/pubkey.gpg")]
     GpgKeyRing,
 }
 
