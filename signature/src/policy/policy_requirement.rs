@@ -239,7 +239,13 @@ impl PolicyReqSignedBy {
         let pubkey_ring = if !self.key_data.is_empty() {
             base64::decode(&self.key_data)?
         } else {
-            fs::read(&self.key_path)?
+            fs::read(&self.key_path).map_err(|e| {
+                anyhow!(
+                    "Read SignedBy keyPath failed: {:?}, path: {}",
+                    e,
+                    &self.key_path
+                )
+            })?
         };
 
         // Verify the signature with the pubkey ring.

@@ -280,7 +280,7 @@ impl PolicyReferenceMatcher for MatchRemapIdentity {
 
 pub fn default_match_policy() -> Box<dyn PolicyReferenceMatcher> {
     Box::new(MatchExact {
-        r#type: PolicyReqMatchType::TypeMatchRepoDigestOrExact.to_string(),
+        r#type: PolicyReqMatchType::TypeMatchExact.to_string(),
     })
 }
 
