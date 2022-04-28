@@ -17,15 +17,19 @@ const AES256_NONCE_SIZE: usize = 16;
 type Aes256Ctr = ctr::Ctr128BE<aes::Aes256>;
 type HmacSha256 = Hmac<Sha256>;
 
+struct AESCTRBlockCipherState<R> {
+    done: bool,
+    cipher: Aes256Ctr,
+    exp_hmac: Vec<u8>,
+    hmac: HmacSha256,
+    reader: R,
+}
+
 /// Implementation of the AES CTR stream cipher.
 pub struct AESCTRBlockCipher<R> {
     key_len: usize,
     encrypt: bool,
-    reader: Option<R>,
-    cipher: Option<Aes256Ctr>,
-    hmac: Option<HmacSha256>,
-    exp_hmac: Vec<u8>,
-    done_encrypting: bool,
+    state: Option<AESCTRBlockCipherState<R>>,
 }
 
 impl<R> AESCTRBlockCipher<R> {
@@ -37,22 +41,13 @@ impl<R> AESCTRBlockCipher<R> {
 
         Ok(AESCTRBlockCipher {
             key_len: AES256_KEY_SIZE,
-            reader: None,
             encrypt: false,
-            cipher: None,
-            hmac: None,
-            exp_hmac: vec![],
-            done_encrypting: false,
+            state: None,
         })
     }
 
     // init initializes an instance
-    fn init(
-        &mut self,
-        encrypt: bool,
-        reader: R,
-        opts: &mut LayerBlockCipherOptions,
-    ) -> Result<()> {
+    fn init(&mut self, encrypt: bool, reader: R, opts: &mut LayerBlockCipherOptions) -> Result<()> {
         let symmetric_key = &opts.private.symmetric_key;
         if symmetric_key.len() != AES256_KEY_SIZE {
             return Err(anyhow!(
@@ -87,12 +82,14 @@ impl<R> AESCTRBlockCipher<R> {
         let hmac = HmacSha256::new_from_slice(symmetric_key.as_slice())
             .map_err(|_| anyhow!("Failed to create HMAC"))?;
 
-        self.cipher = Some(cipher);
-        self.hmac = Some(hmac);
-        self.reader = Some(reader);
         self.encrypt = encrypt;
-        self.exp_hmac = opts.public.hmac.clone();
-        self.done_encrypting = false;
+        self.state = Some(AESCTRBlockCipherState {
+            cipher,
+            done: false,
+            hmac,
+            exp_hmac: opts.public.hmac.clone(),
+            reader,
+        });
 
         opts.private
             .cipher_options
@@ -121,66 +118,65 @@ impl<R> LayerBlockCipher<R> for AESCTRBlockCipher<R> {
 
 impl<R> EncryptionFinalizer for AESCTRBlockCipher<R> {
     fn finalized_lbco(&self, opts: &mut LayerBlockCipherOptions) -> Result<()> {
-        if !self.done_encrypting {
-            return Err(anyhow!("Read()ing not complete, unable to finalize"));
+        let state = self
+            .state
+            .as_ref()
+            .ok_or_else(|| anyhow!("The AESCTRBlockCipher object hasn't been initialized yet"))?;
+        if !state.done {
+            Err(anyhow!("Read()ing not complete, unable to finalize"))
+        } else {
+            opts.public.hmac = state.exp_hmac.to_vec();
+            Ok(())
         }
-
-        opts.public.hmac = self.exp_hmac.to_vec();
-        Ok(())
     }
 }
 
 impl<R: Read> Read for AESCTRBlockCipher<R> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        if self.done_encrypting {
+        let state = self
+            .state
+            .as_mut()
+            .ok_or_else(|| std::io::Error::from(std::io::ErrorKind::Unsupported))?;
+        if state.done {
             return Ok(0);
         }
 
-        let mut read_len = 0;
-        if let Some(reader) = self.reader.as_mut() {
-            read_len = reader.read(buf)?;
-
-            if read_len == 0 {
-                self.done_encrypting = true;
-            }
+        let read_len = state.reader.read(buf)?;
+        if read_len == 0 {
+            state.done = true;
         }
 
         if !self.encrypt {
-            if let Some(hmac) = self.hmac.as_mut() {
-                hmac.update(&buf[0..read_len]);
+            if read_len > 0 {
+                state.hmac.update(&buf[0..read_len]);
             }
-
-            // If we done encrypting, let the HMAC comparison
-            // provide a verdict
-            if self.done_encrypting {
-                if let Some(hmac) = self.hmac.as_ref() {
-                    hmac.clone().verify_slice(&self.exp_hmac[..]).map_err(|_| {
+            // If we done encrypting, let the HMAC comparison provide a verdict
+            if state.done {
+                state
+                    .hmac
+                    .clone()
+                    .verify_slice(&state.exp_hmac)
+                    .map_err(|_| {
                         std::io::Error::new(
                             std::io::ErrorKind::Other,
                             format!(
                                 "failed decrypt byte stream, exp hmac: {:?} , actual hmac: {:?}",
-                                &self.exp_hmac,
-                                hmac.clone().finalize().into_bytes()
+                                &state.exp_hmac,
+                                state.hmac.clone().finalize().into_bytes()
                             ),
                         )
-                    })?
-                }
+                    })?;
             }
-        }
-
-        if let Some(cipher) = self.cipher.as_mut() {
-            cipher.apply_keystream(&mut buf[0..read_len]);
-        }
-
-        if self.encrypt {
-            if let Some(hmac) = self.hmac.as_mut() {
-                hmac.update(&buf[0..read_len]);
+            if read_len > 0 {
+                state.cipher.apply_keystream(&mut buf[0..read_len]);
             }
-
-            if self.done_encrypting {
-                if let Some(hmac) = self.hmac.as_ref() {
-                    self.exp_hmac = hmac.clone().finalize().into_bytes().to_vec();
-                }
+        } else {
+            if read_len > 0 {
+                state.cipher.apply_keystream(&mut buf[0..read_len]);
+                state.hmac.update(&buf[0..read_len]);
+            }
+            if state.done {
+                state.exp_hmac = state.hmac.clone().finalize().into_bytes().to_vec();
             }
         }
 
@@ -219,12 +215,17 @@ mod tests {
             .read_to_end(&mut encrypted_data)
             .is_ok());
 
-        assert!(aes_ctr_block_cipher.done_encrypting);
+        assert!(aes_ctr_block_cipher.state.as_ref().unwrap().done);
         let finalizer = &mut aes_ctr_block_cipher;
 
         assert!(finalizer.finalized_lbco(&mut lbco).is_ok());
 
-        let exp_hmac = aes_ctr_block_cipher.exp_hmac.to_vec();
+        let exp_hmac = aes_ctr_block_cipher
+            .state
+            .as_ref()
+            .unwrap()
+            .exp_hmac
+            .to_vec();
 
         // Expected HMAC is empty
         lbco.public.hmac = vec![];
@@ -251,7 +252,7 @@ mod tests {
 
         let mut plaintxt_data: Vec<u8> = Vec::new();
         assert!(aes_ctr_block_cipher.read_to_end(&mut plaintxt_data).is_ok());
-        assert!(aes_ctr_block_cipher.done_encrypting);
+        assert!(aes_ctr_block_cipher.state.as_ref().unwrap().done);
         assert_eq!(layer_data, plaintxt_data);
     }
 

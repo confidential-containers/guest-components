@@ -114,7 +114,7 @@ impl LayerBlockCipherOptions {
         self.public
             .cipher_options
             .get(key)
-            .or(self.private.cipher_options.get(key))
+            .or_else(|| self.private.cipher_options.get(key))
             .map(|v| v.to_vec())
     }
 }
@@ -228,7 +228,7 @@ mod tests {
         assert!(lbch
             .encrypt(layer_data.as_slice(), AES256CTR, &mut lbco)
             .is_ok());
-        let mut encryptor = lbch.aes_ctr_block_cipher.unwrap();
+        let LayerBlockCipherHandler::Aes256Ctr(mut encryptor) = lbch;
         assert!(encryptor.read_to_end(&mut encrypted_data).is_ok());
         assert!(encryptor.finalized_lbco(&mut lbco).is_ok());
 
@@ -240,7 +240,7 @@ mod tests {
             serde_json::from_str(&serialized_json).unwrap_or_default();
 
         assert!(lbch.decrypt(encrypted_data.as_slice(), &mut lbco).is_ok());
-        let mut decryptor = lbch.aes_ctr_block_cipher.unwrap();
+        let LayerBlockCipherHandler::Aes256Ctr(mut decryptor) = lbch;
         let mut plaintxt_data: Vec<u8> = Vec::new();
         assert!(decryptor.read_to_end(&mut plaintxt_data).is_ok());
 
@@ -251,7 +251,7 @@ mod tests {
         let mut lbch = LayerBlockCipherHandler::new().unwrap();
         lbco.private.symmetric_key = vec![0; 32];
         assert!(lbch.decrypt(encrypted_data.as_slice(), &mut lbco).is_ok());
-        let mut decryptor = lbch.aes_ctr_block_cipher.unwrap();
+        let LayerBlockCipherHandler::Aes256Ctr(mut decryptor) = lbch;
         let mut plaintxt_data: Vec<u8> = Vec::new();
         assert!(decryptor.read_to_end(&mut plaintxt_data).is_err());
     }
