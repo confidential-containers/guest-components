@@ -15,10 +15,12 @@ aes-gcm = { version = "0.9.2", optional = true }
 base64 = "0.13"
 base64-serde = "0.6"
 ctr = ">=0.9"
+futures = { version = "0.3.21", optional = true }
 hmac = ">=0.12"
 josekit = { version = ">=0.7", optional = true }
 lazy_static = ">=1.4"
 oci-distribution = { git = "https://github.com/krustlet/oci-distribution", rev = "1ba0d94a900a97aa1bcac032a67ea23766bcfdef" }
+pin-project-lite = "0.2.9"
 prost = { version = "0.10.0", optional = true }
 rand = ">=0.8"
 serde = { version = ">=1.0", features = ["derive"] }
@@ -35,6 +37,7 @@ tonic-build = {version = ">=0.7.0", optional = true }
 
 [features]
 default = ["keywrap-jwe", "keywrap-keyprovider"]
+async-io = ["futures", "tokio"]
 keywrap-jwe = ["josekit"]
 keywrap-keyprovider = ["aes-gcm", "tokio", "tonic-build", "utils-runner", "utils-keyprovider"]
 utils-runner = []

@@ -210,6 +210,23 @@ impl<R: Read> Read for LayerBlockCipherHandler<R> {
     }
 }
 
+#[cfg(feature = "async-io")]
+impl<R: tokio::io::AsyncRead> tokio::io::AsyncRead for LayerBlockCipherHandler<R> {
+    fn poll_read(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        // This is okay because `block_cipher` is pinned when `self` is.
+        let aes_ctr_256 = unsafe {
+            self.map_unchecked_mut(|v| match v {
+                LayerBlockCipherHandler::Aes256Ctr(block_cipher) => block_cipher,
+            })
+        };
+        aes_ctr_256.poll_read(cx, buf)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

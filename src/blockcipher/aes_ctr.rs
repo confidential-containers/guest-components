@@ -17,12 +17,15 @@ const AES256_NONCE_SIZE: usize = 16;
 type Aes256Ctr = ctr::Ctr128BE<aes::Aes256>;
 type HmacSha256 = Hmac<Sha256>;
 
-struct AESCTRBlockCipherState<R> {
-    done: bool,
-    cipher: Aes256Ctr,
-    exp_hmac: Vec<u8>,
-    hmac: HmacSha256,
-    reader: R,
+pin_project_lite::pin_project! {
+    struct AESCTRBlockCipherState<R> {
+        done: bool,
+        cipher: Aes256Ctr,
+        exp_hmac: Vec<u8>,
+        hmac: HmacSha256,
+        #[pin]
+        reader: R,
+    }
 }
 
 /// Implementation of the AES CTR stream cipher.
@@ -184,6 +187,74 @@ impl<R: Read> Read for AESCTRBlockCipher<R> {
     }
 }
 
+#[cfg(feature = "async-io")]
+impl<R: tokio::io::AsyncRead> tokio::io::AsyncRead for AESCTRBlockCipher<R> {
+    fn poll_read(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        use std::task::Poll;
+        let encrypt = self.encrypt;
+
+        if self.state.is_none() {
+            return Poll::Ready(Err(std::io::Error::from(std::io::ErrorKind::Unsupported)));
+        }
+
+        // This is okay because `state` is pinned when `self` is.
+        let state = unsafe { self.map_unchecked_mut(|v| v.state.as_mut().unwrap()) };
+        let pinned_state = state.project();
+        let done = pinned_state.done;
+        let cipher = pinned_state.cipher;
+        let exp_hmac = pinned_state.exp_hmac;
+        let hmac = pinned_state.hmac;
+        let reader = pinned_state.reader;
+
+        if *done {
+            return Poll::Ready(Ok(()));
+        }
+
+        let start_pos = buf.filled().len();
+        futures::ready!(reader.poll_read(cx, buf))?;
+        let buf_filled = &mut buf.filled_mut()[start_pos..];
+        if buf_filled.is_empty() {
+            *done = true;
+        }
+
+        if !encrypt {
+            if !buf_filled.is_empty() {
+                hmac.update(buf_filled);
+            }
+            // If we done encrypting, let the HMAC comparison provide a verdict
+            if *done {
+                hmac.clone().verify_slice(exp_hmac).map_err(|_| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!(
+                            "failed decrypt byte stream, exp hmac: {:?} , actual hmac: {:?}",
+                            exp_hmac,
+                            hmac.clone().finalize().into_bytes()
+                        ),
+                    )
+                })?;
+            }
+            if !buf_filled.is_empty() {
+                cipher.apply_keystream(buf_filled);
+            }
+        } else {
+            if !buf_filled.is_empty() {
+                cipher.apply_keystream(buf_filled);
+                hmac.update(buf_filled);
+            }
+            if *done {
+                *exp_hmac = hmac.clone().finalize().into_bytes().to_vec();
+            }
+        }
+
+        Poll::Ready(Ok(()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -254,6 +325,86 @@ mod tests {
         assert!(aes_ctr_block_cipher.read_to_end(&mut plaintxt_data).is_ok());
         assert!(aes_ctr_block_cipher.state.as_ref().unwrap().done);
         assert_eq!(layer_data, plaintxt_data);
+    }
+
+    #[cfg(feature = "async-io")]
+    #[tokio::test]
+    async fn test_async_aes_ctr_block_cipher() {
+        let layer_data: Vec<u8> = b"this is some data".to_vec();
+        let mut lbco = LayerBlockCipherOptions::default();
+        let mut aes_ctr_block_cipher = AESCTRBlockCipher::new(256).unwrap();
+
+        // Error due to LayerBlockCipherOptions without symmetric key
+        assert!(aes_ctr_block_cipher
+            .encrypt(layer_data.as_slice(), &mut lbco)
+            .is_err());
+
+        let key = aes_ctr_block_cipher.generate_key().unwrap();
+        lbco.private.symmetric_key = key;
+        assert!(aes_ctr_block_cipher
+            .encrypt(layer_data.as_slice(), &mut lbco)
+            .is_ok());
+
+        let mut encrypted_data = vec![0u8; layer_data.len()];
+        let enc_len =
+            tokio::io::AsyncReadExt::read_exact(&mut aes_ctr_block_cipher, &mut encrypted_data)
+                .await
+                .unwrap();
+        assert_eq!(enc_len, layer_data.len());
+        let mut encrypted_data2 = vec![0u8; 1024];
+        let enc_len2 =
+            tokio::io::AsyncReadExt::read_buf(&mut aes_ctr_block_cipher, &mut encrypted_data2)
+                .await
+                .unwrap();
+        assert_eq!(enc_len2, 0);
+        assert!(aes_ctr_block_cipher.state.as_ref().unwrap().done);
+
+        let finalizer = &mut aes_ctr_block_cipher;
+        assert!(finalizer.finalized_lbco(&mut lbco).is_ok());
+
+        let exp_hmac = aes_ctr_block_cipher
+            .state
+            .as_ref()
+            .unwrap()
+            .exp_hmac
+            .to_vec();
+
+        // Expected HMAC is empty
+        lbco.public.hmac = vec![];
+        assert!(aes_ctr_block_cipher
+            .decrypt(&encrypted_data[0..enc_len], &mut lbco)
+            .is_err());
+
+        // Expected HMAC is wrong
+        lbco.public.hmac = b"wrong hmac".to_vec();
+        assert!(aes_ctr_block_cipher
+            .decrypt(&encrypted_data[0..enc_len], &mut lbco)
+            .is_ok());
+        let mut plaintxt_data: Vec<u8> = Vec::new();
+        assert!(aes_ctr_block_cipher
+            .read_to_end(&mut plaintxt_data)
+            .is_err());
+
+        // Expected HMAC is right
+        lbco.public.hmac = exp_hmac;
+        assert!(aes_ctr_block_cipher
+            .decrypt(&encrypted_data[0..enc_len], &mut lbco)
+            .is_ok());
+
+        let mut plaintxt_data: Vec<u8> = vec![0u8; layer_data.len()];
+        let dec_len =
+            tokio::io::AsyncReadExt::read_exact(&mut aes_ctr_block_cipher, &mut plaintxt_data)
+                .await
+                .unwrap();
+        assert_eq!(dec_len, layer_data.len());
+        let mut plaintxt_data2: Vec<u8> = vec![0u8; 1024];
+        let dec_len2 =
+            tokio::io::AsyncReadExt::read_buf(&mut aes_ctr_block_cipher, &mut plaintxt_data2)
+                .await
+                .unwrap();
+        assert_eq!(dec_len2, 0);
+        assert!(aes_ctr_block_cipher.state.as_ref().unwrap().done);
+        assert_eq!(layer_data, &plaintxt_data[0..dec_len]);
     }
 
     #[test]
