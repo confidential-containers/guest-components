@@ -7,8 +7,8 @@
 extern crate strum;
 
 mod image;
+mod mechanism;
 mod policy;
-mod signatures;
 
 pub use image::Image;
 pub use policy::Policy;

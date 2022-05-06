@@ -8,12 +8,10 @@ use serde::de::{self, MapAccess, Visitor};
 use serde::*;
 use serde_json::{Map, Value};
 use std::convert::TryFrom;
-use std::fs;
 use std::str::FromStr;
-use std::vec::Vec;
 
 use crate::image;
-use crate::signatures;
+use crate::mechanism;
 
 use crate::policy::ref_match::PolicyReferenceMatcher;
 use crate::policy::ErrorInfo;
@@ -27,12 +25,6 @@ pub enum PolicyReqType {
     TypeReject,
     #[strum(to_string = "signedBy")]
     TypeSignedBy,
-}
-
-#[derive(EnumString, Display, Debug, PartialEq)]
-pub enum KeyType {
-    #[strum(to_string = "GPGKeys")]
-    Gpg,
 }
 
 // Policy requirement is a rule which must be satisfied by the image.
@@ -160,166 +152,51 @@ impl PolicyRequirement for PolicyReqReject {
 pub struct PolicyReqSignedBy {
     r#type: String,
 
-    // KeyType specifies what kind of key reference KeyPath/KeyData is.
-    // Acceptable values are "GPGKeys" | "signedByGPGKeys” "X.509Certificates" | "signedByX.509CAs"
-    // FIXME: now only support "GPGKeys", fllowing the [containers/image](https://github.com/containers/image)
+    // scheme specifies the scheme used to verify the signature.
+    // This field is the basis for selecting an appropriate mechanism for signature verification.
+    pub scheme: String,
+
+    // KeyType specifies what kind of the public key to verify the signatures.
     #[serde(rename = "keyType")]
-    key_type: String,
+    pub key_type: String,
 
     // KeyPath is a pathname to a local file containing the trusted key(s).
-    // Exactly one of KeyPath and KeyData must be specified.
+    // Exactly one of KeyPath and KeyData can be specified.
+    //
+    // This field is optional.
     #[serde(default, rename = "keyPath")]
-    key_path: String,
+    pub key_path: String,
     // KeyData contains the trusted key(s), base64-encoded.
-    // Exactly one of KeyPath and KeyData must be specified.
+    // Exactly one of KeyPath and KeyData can be specified.
+    //
+    // This field is optional.
     #[serde(default, rename = "keyData")]
-    key_data: String,
+    pub key_data: String,
 
     // SignedIdentity specifies what image identity the signature must be claiming about the image.
     // Defaults to "match-exact" if not specified.
+    //
+    // This field is optional.
     #[serde(default, rename = "signedIdentity")]
-    signed_identity: Option<Box<dyn PolicyReferenceMatcher>>,
+    pub signed_identity: Option<Box<dyn PolicyReferenceMatcher>>,
 }
 
 unsafe impl Send for PolicyReqSignedBy {}
 
 impl PolicyRequirement for PolicyReqSignedBy {
     fn is_image_allowed(&self, image: &mut image::Image) -> Result<()> {
-        let sigs = image.signatures()?;
-        if sigs.is_empty() {
-            return Err(anyhow!("Can not find any signatures."));
-        }
-
-        let mut reject_reason: Vec<anyhow::Error> = Vec::new();
-
-        for sig in sigs.iter() {
-            match self.is_signature_valid(image, sig.to_vec()) {
-                // One accepted signature is enough.
-                Ok(()) => {
-                    return Ok(());
-                }
-                Err(e) => {
-                    reject_reason.push(e);
-                }
+        match SignatureScheme::from_str(&self.scheme) {
+            Ok(SignatureScheme::SimpleSigning) => {
+                return mechanism::simple::judge_signatures_accept(self.clone(), image);
             }
+            // TODO: Add more signature mechanism.
+            //
+            // Refer to issue: https://github.com/confidential-containers/image-rs/issues/7
+            _ => Err(anyhow!(ErrorInfo::ErrUnknownScheme.to_string())),
         }
-
-        Err(anyhow!(format!(
-            "The signatures do not satisfied! Reject reason: {:?}",
-            reject_reason
-        )))
     }
 
     fn signature_scheme(&self) -> Option<String> {
-        // FIXME: Now only support Simple Signing scheme, here is hardcoded.
-        //
-        // refer to the issue: https://github.com/confidential-containers/image-rs/issues/7
-        // refer to the design document PR: https://github.com/confidential-containers/image-rs/pull/6
-        Some(SignatureScheme::SimpleSigning.to_string())
-    }
-}
-
-impl PolicyReqSignedBy {
-    #[allow(unused_assignments)]
-    fn is_signature_valid(&self, image: &image::Image, sig: Vec<u8>) -> Result<()> {
-        // FIXME: only support "GPGKeys" type now.
-        //
-        // refer to https://github.com/confidential-containers/image-rs/issues/14
-        if self.key_type != KeyType::Gpg.to_string() {
-            return Err(anyhow!(
-                "Unknown key type in policy config: only support {} now.",
-                KeyType::Gpg.to_string()
-            ));
-        }
-
-        if !self.key_path.is_empty() && !self.key_data.is_empty() {
-            return Err(anyhow!("Both keyPath and keyData specified."));
-        }
-
-        let pubkey_ring = if !self.key_data.is_empty() {
-            base64::decode(&self.key_data)?
-        } else {
-            fs::read(&self.key_path).map_err(|e| {
-                anyhow!(
-                    "Read SignedBy keyPath failed: {:?}, path: {}",
-                    e,
-                    &self.key_path
-                )
-            })?
-        };
-
-        // Verify the signature with the pubkey ring.
-        let sig_payload = signatures::verify_sig_and_extract_payload(pubkey_ring, sig)?;
-
-        // Verify whether the information recorded in signature payload
-        // is consistent with the real information of the image.
-        //
-        // The match policy of image-reference is the "signedIdentity" field.
-        sig_payload
-            .validate_signed_docker_reference(&image.reference, self.signed_identity.as_ref())?;
-        sig_payload.validate_signed_docker_manifest_digest(&image.manifest_digest.to_string())?;
-
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::Image;
-    use crate::Policy;
-    use oci_distribution::Reference;
-    use std::env;
-
-    #[test]
-    fn test_pr_signedby_signature_judge_allowed() {
-        let pr_signedby_json = r#"{
-            "type": "signedBy",
-            "keyType": "GPGKeys",
-            "keyPath": "fixtures/pubring.gpg"
-        }"#;
-        let pr_signedby: PolicyReqSignedBy =
-            serde_json::from_str::<PolicyReqSignedBy>(pr_signedby_json).unwrap();
-
-        let reference = Reference::try_from("quay.io/ali_os_security/alpine:latest").unwrap();
-        let mut image = Image::default_with_reference(reference);
-        image
-            .set_manifest_digest(
-                "sha256:69704ef328d05a9f806b6b8502915e6a0a4faa4d72018dc42343f511490daf8a",
-            )
-            .expect("digest format error");
-
-        let current_dir = env::current_dir().expect("not found path");
-        let test_sigstore_dir =
-            format!("file://{}/fixtures/sigstore", current_dir.to_str().unwrap());
-        image
-            .set_sigstore_base_url(test_sigstore_dir.to_string())
-            .expect("digest format error");
-
-        assert!(pr_signedby.is_image_allowed(&mut image).is_ok());
-    }
-
-    #[test]
-    fn test_pr_simple_judge_allowed() {
-        let policy = Policy::from_file("./fixtures/policy.json").unwrap();
-
-        let tests_accept = &["example.com/playground/busybox:latest"];
-
-        let tests_reject = &[
-            "test:5000/library/busybox:latest",
-            "default/library/repo:tag",
-        ];
-
-        for case in tests_accept {
-            let reference = Reference::try_from(*case).expect("could not parse reference");
-            let image = image::Image::default_with_reference(reference);
-            assert!(policy.is_image_allowed(image).is_ok());
-        }
-
-        for case in tests_reject {
-            let reference = Reference::try_from(*case).expect("could not parse reference");
-            let image = image::Image::default_with_reference(reference);
-            assert!(policy.is_image_allowed(image).is_err());
-        }
+        Some(self.scheme.clone())
     }
 }
