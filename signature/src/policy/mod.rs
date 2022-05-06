@@ -14,6 +14,7 @@ use crate::image;
 mod policy_requirement;
 mod ref_match;
 
+pub use policy_requirement::PolicyReqSignedBy;
 pub use ref_match::default_match_policy;
 pub use ref_match::PolicyReferenceMatcher;
 
@@ -27,6 +28,8 @@ pub enum ErrorInfo {
     ErrUnknowPolicyReqType,
     #[strum(to_string = "The reference match policy type name is Unknown.")]
     ErrUnknownMatchPolicyType,
+    #[strum(to_string = "The signature scheme is Unknown.")]
+    ErrUnknownScheme,
 }
 
 // Policy defines requirements for considering a signature, or an image, valid.

@@ -9,6 +9,7 @@
             "quay.io/kata-containers": [
                 {
                     "type": "signedBy",
+                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyPath": "/run/image-security/simple_signing/pubkey.gpg"
                 }
