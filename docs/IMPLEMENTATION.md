@@ -2,6 +2,10 @@
 
 ## Definition of terms
 
+### CC
+
+CNCF Confidential Containers, the parent project of Attestation Agent.
+
 ### KBS
 
 Key Broker Service.
@@ -28,7 +32,7 @@ The instantiated object of KBC existing in AA runtime. It is used to actually ha
 
 ## KeyProvider protocol
 
-Under Kata CC framework, the protocol for communication between AA caller (ocicrypt) and AA. Since AA exists as a keyprovider service from the perspective of ocicrypt, this protocol conforms to the format of the standard keyprovider protocol. In order to better support the special functions of AA different from keyprovider, we further standardize the DC parameters in the standard keyprovider protocol and set the unique standard format of AA, Its contents and the meanings of its fields are as follows:
+Under CC framework, the protocol for communication between AA caller (ocicrypt) and AA. Since AA exists as a keyprovider service from the perspective of ocicrypt, this protocol conforms to the format of the standard keyprovider protocol. In order to better support the special functions of AA different from keyprovider, we further standardize the DC parameters in the standard keyprovider protocol and set the unique standard format of AA, Its contents and the meanings of its fields are as follows:
 
 ### UnWrapKey API Request
 
@@ -87,7 +91,7 @@ During the compilation of AA, it is optional to specify the KBC module(s) to com
 
 KBC RUNTIME is a subsystem in AA which is used to instantiate KBC, manage KBC instances and encapsulate KBC instance interfaces. At runtime of AA, KBC runtime will dynamically select the corresponding KBC module from the KBC module list according to the KBC name in the UnWrapKey request, create a KBC instance and register it in the map of the current running instance. The KBC standard encapsulation interface provided by KBC runtime is then invoked to handle the request.
 
-For the current design scenario of kata CC, only one KBC instance of AA on a k8s pod exists in the whole life cycle of the pod. This KBC instance will be created when AA receives the first UnWrapKey request. However, the implementation of KBC runtime provides good scalability for multiple KBC instances that may occur in other practice scenarios or in the future of kata CC.
+For the current design scenario of CC, only one KBC instance of AA on a k8s pod exists in the whole life cycle of the pod. This KBC instance will be created when AA receives the first UnWrapKey request. However, the implementation of KBC runtime provides good scalability for multiple KBC instances that may occur in other practice scenarios or in the future of CC.
 
 ## Pass KBC name and KBS URI to AA
 
@@ -137,4 +141,4 @@ At the current stage, the sample KBC module uses hard coded KEK for decryption. 
 
 ### gRPC and ttRPC
 
-Compared with gRPC, ttRPC has the advantage of lighter weight. AA, as a memory resident service on the client side of kata cc V0 architecture, using lightweight ttRPC will save more resources. At present, grpc is used for end-to-end testing. Wait until ocicrypt-rs supports ttrpc, AA can cooperate with the modification. Later, AA can make the use of grpc/ttrpc configurable at compile time. This needs to be discussed with the developers of ocicrypt rs.
+Compared with gRPC, ttRPC has the advantage of lighter weight. AA, as a memory resident service on the client side of CC V0 architecture, using lightweight ttRPC will save more resources. At present, grpc is used for end-to-end testing. Wait until ocicrypt-rs supports ttrpc, AA can cooperate with the modification. Later, AA can make the use of grpc/ttrpc configurable at compile time. This needs to be discussed with the developers of ocicrypt rs.
