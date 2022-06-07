@@ -18,13 +18,18 @@ log = "0.4.14"
 env_logger = "0.9.0"
 foreign-types = "0.5.0"
 openssl = { version = "0.10", optional = true, features = ["vendored"]}
+strum = { version = "0.24.0", features = ["derive"] }
+rsa = "0.6.1"
+sha2 = "0.10"
+rand = "0.8.5"
 
 [build-dependencies]
-shadow-rs = "0.5.25"
+shadow-rs = "0.11.0"
 
 [features]
 default = ["sample_kbc"]
 sample_kbc = []
+cc_kbc = []
 eaa_kbc = []
 offline_fs_kbc = ["openssl"]
 offline_sev_kbc = ["openssl"]

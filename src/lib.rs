@@ -3,6 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#[allow(unused_imports)]
+#[macro_use]
+extern crate strum;
+
 use crate::kbc_modules::{KbcCheckInfo, KbcInstance, KbcModuleList};
 use anyhow::*;
 use std::collections::HashMap;

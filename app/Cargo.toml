@@ -7,13 +7,13 @@ edition = "2018"
 
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
-tonic = "0.5"
-prost = "0.8"
+tonic = "0.7.2"
+prost = "0.10.4"
 futures = "0.3.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 base64 = "0.13.0"
-clap = "2"
+clap = "3.2.5"
 anyhow = "1.0"
 log = "0.4.14"
 env_logger = "0.9.0"
@@ -21,12 +21,13 @@ lazy_static = "1.4.0"
 attestation_agent = { path = "../", default-features = false }
 
 [build-dependencies]
-tonic-build = "0.5"
-shadow-rs = "0.5.25"
+tonic-build = "0.7.2"
+shadow-rs = "0.11.0"
 
 [features]
 default = ["sample_kbc"]
 sample_kbc = ["attestation_agent/sample_kbc"]
+cc_kbc = ["attestation_agent/cc_kbc"]
 eaa_kbc = ["attestation_agent/eaa_kbc"]
 offline_fs_kbc = ["attestation_agent/offline_fs_kbc"]
 offline_sev_kbc = ["attestation_agent/offline_sev_kbc"]
