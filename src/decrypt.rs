@@ -107,6 +107,6 @@ fn decrypt_layer_data(
 
         Ok(plaintext_data)
     } else {
-        return Err(anyhow!("no decrypt config available"));
+        Err(anyhow!("no decrypt config available"))
     }
 }

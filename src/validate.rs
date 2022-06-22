@@ -180,6 +180,6 @@ async fn get_resource_from_kbs(resource_name: &str, aa_kbc_params: &str) -> Resu
 
         Ok(res.into_inner().resource)
     } else {
-        return Err(anyhow!("aa_kbc_params: KBC/KBS pair not found"));
+        Err(anyhow!("aa_kbc_params: KBC/KBS pair not found"))
     }
 }
