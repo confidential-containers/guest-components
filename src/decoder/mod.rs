@@ -10,7 +10,7 @@ use zstd;
 
 /// Represents the layer compression algorithm type,
 /// and allows to decompress corresponding compressed data.
-#[derive(Clone, Copy, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 pub enum Compression {
     Uncompressed,
     Gzip,

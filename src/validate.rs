@@ -33,7 +33,7 @@ mod get_resource {
     tonic::include_proto!("getresource");
 }
 
-#[derive(EnumString, Display, Debug, PartialEq)]
+#[derive(EnumString, Display, Debug, PartialEq, Eq)]
 pub enum SimpleSigning {
     #[strum(to_string = "/run/image-security/simple_signing")]
     ConfigDir,
