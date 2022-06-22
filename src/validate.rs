@@ -28,6 +28,8 @@ const IMAGE_SECURITY_CONFIG_DIR: &str = "/run/image-security";
 const POLICY_FILE_PATH: &str = "/run/image-security/security_policy.json";
 
 mod get_resource {
+    #![allow(unknown_lints)]
+    #![allow(clippy::derive_partial_eq_without_eq)]
     tonic::include_proto!("getresource");
 }
 
