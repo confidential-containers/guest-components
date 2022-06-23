@@ -28,10 +28,12 @@ const IMAGE_SECURITY_CONFIG_DIR: &str = "/run/image-security";
 const POLICY_FILE_PATH: &str = "/run/image-security/security_policy.json";
 
 mod get_resource {
+    #![allow(unknown_lints)]
+    #![allow(clippy::derive_partial_eq_without_eq)]
     tonic::include_proto!("getresource");
 }
 
-#[derive(EnumString, Display, Debug, PartialEq)]
+#[derive(EnumString, Display, Debug, PartialEq, Eq)]
 pub enum SimpleSigning {
     #[strum(to_string = "/run/image-security/simple_signing")]
     ConfigDir,
@@ -178,6 +180,6 @@ async fn get_resource_from_kbs(resource_name: &str, aa_kbc_params: &str) -> Resu
 
         Ok(res.into_inner().resource)
     } else {
-        return Err(anyhow!("aa_kbc_params: KBC/KBS pair not found"));
+        Err(anyhow!("aa_kbc_params: KBC/KBS pair not found"))
     }
 }
