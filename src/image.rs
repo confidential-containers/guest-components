@@ -17,7 +17,13 @@ use crate::config::ImageConfig;
 use crate::decoder::Compression;
 use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
+
+#[cfg(feature = "overlay_feature")]
 use crate::snapshots::overlay::OverLay;
+
+#[cfg(feature = "occlum_feature")]
+use crate::snapshots::occlum::unionfs::Unionfs;
+
 use crate::snapshots::{SnapshotType, Snapshotter};
 
 /// The metadata info for container image layer.
@@ -83,19 +89,39 @@ impl Default for ImageClient {
 
         let mut snapshots = HashMap::new();
 
-        let overlay_index = meta_store
-            .snapshot_db
-            .get(&SnapshotType::Overlay.to_string())
-            .unwrap_or(&0);
-        let overlay = OverLay {
-            data_dir: config.work_dir.join(SnapshotType::Overlay.to_string()),
-            index: AtomicUsize::new(*overlay_index),
-        };
+        #[cfg(feature = "overlay_feature")]
+        {
+            let overlay_index = meta_store
+                .snapshot_db
+                .get(&SnapshotType::Overlay.to_string())
+                .unwrap_or(&0);
+            let overlay = OverLay {
+                data_dir: config.work_dir.join(SnapshotType::Overlay.to_string()),
+                index: AtomicUsize::new(*overlay_index),
+            };
+            snapshots.insert(
+                SnapshotType::Overlay,
+                Box::new(overlay) as Box<dyn Snapshotter>,
+            );
+        }
 
-        snapshots.insert(
-            SnapshotType::Overlay,
-            Box::new(overlay) as Box<dyn Snapshotter>,
-        );
+        #[cfg(feature = "occlum_feature")]
+        {
+            let occlum_unionfs_index = meta_store
+                .snapshot_db
+                .get(&SnapshotType::OcclumUnionfs.to_string())
+                .unwrap_or(&0);
+            let occlum_unionfs = Unionfs {
+                data_dir: config
+                    .work_dir
+                    .join(SnapshotType::OcclumUnionfs.to_string()),
+                index: AtomicUsize::new(*occlum_unionfs_index),
+            };
+            snapshots.insert(
+                SnapshotType::OcclumUnionfs,
+                Box::new(occlum_unionfs) as Box<dyn Snapshotter>,
+            );
+        }
 
         ImageClient {
             config,

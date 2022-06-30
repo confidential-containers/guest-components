@@ -6,6 +6,9 @@ use anyhow::Result;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "occlum_feature")]
+pub mod occlum;
+#[cfg(feature = "overlay_feature")]
 pub mod overlay;
 
 /// Snapshot types.
@@ -13,12 +16,14 @@ pub mod overlay;
 #[serde(rename_all = "lowercase")]
 pub enum SnapshotType {
     Overlay,
+    OcclumUnionfs,
 }
 
 impl std::fmt::Display for SnapshotType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let out = match self {
             Self::Overlay => "overlay",
+            Self::OcclumUnionfs => "occlum_unionfs",
         };
 
         write!(f, "{}", out)
