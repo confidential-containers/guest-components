@@ -23,6 +23,9 @@ sha2 = ">=0.10"
 tar = "0.4.37"
 tokio = {version = "1.0", features = ["full"]}
 zstd = "0.9"
+fs_extra = "1.2.0"
+walkdir = "2"
+dircpy = "0.3.12"
 signature = { path = "./signature" }
 prost = "0.8"
 strum = { version = "0.23.0", features = ["derive"] }
@@ -35,5 +38,10 @@ tempfile = "3.2"
 [workspace]
 members = ["signature"]
 exclude = ["scripts/attestation_agent/app"]
+
+[features]
+default = ["overlay_feature"]
+overlay_feature = []
+occlum_feature = []
 
 [build-dependencies]
