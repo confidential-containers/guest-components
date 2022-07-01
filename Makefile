@@ -22,11 +22,10 @@ ifdef KBC
     feature := --no-default-features --features
 endif
 
-ifeq ($(ARCH), s390x)
-    $(error ERROR: Attestation agent does not support building for the musl libc target for s390x architecture)
-endif
-
 ifeq ($(LIBC), musl)
+    ifeq ($(ARCH), s390x)
+        $(error ERROR: Attestation agent does not support building for the musl libc target for s390x architecture)
+    endif
     MUSL_ADD := $(shell rustup target add ${ARCH}-unknown-linux-musl)
     ifneq ($(DEBIANOS),)
         MUSL_INSTALL := $(shell sudo apt-get install -y musl-tools) 
@@ -42,6 +41,10 @@ ifneq ($(SOURCE_ARCH), $(ARCH))
     else
         $(error ERROR: Cross-compiling is only tested on Debian-like OSes)
     endif
+endif
+
+ifeq ($(SOURCE_ARCH), s390x)
+    PROTOC_BINARY_INSTALL := $(shell wget https://github.com/protocolbuffers/protobuf/releases/download/v21.1/protoc-21.1-linux-s390_64.zip && unzip protoc-21.1-linux-s390_64.zip && sudo cp bin/protoc /usr/local/bin/)
 endif
 
 LIBC_FLAG := --target $(ARCH)-unknown-linux-$(LIBC)
