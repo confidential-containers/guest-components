@@ -34,9 +34,11 @@ endif
 
 ifneq ($(SOURCE_ARCH), $(ARCH))
     ifneq ($(DEBIANOS),)
-        GCC_COMPILER_FOR_TARGET_ARCH := gcc-$(ARCH)-linux-$(LIBC)
-        GCC_FOR_TARGET_ARCH_INSTALL := $(shell sudo apt-get install -y ${GCC_COMPILER_FOR_TARGET_ARCH})
-        RUST_TARGET_FOR_TARGET_ARCH_INSTALL := $(shell rustup target add ${ARCH}-unknown-linux-${LIBC})
+        GCC_COMPILER_PACKAGE_FOR_TARGET_ARCH := gcc-$(ARCH)-linux-$(LIBC)
+        GCC_COMPILER_FOR_TARGET_ARCH := $(ARCH)-linux-$(LIBC)-gcc
+        RUSTC_TARGET_FOR_TARGET_ARCH := $(ARCH)-unknown-linux-$(LIBC)
+        GCC_FOR_TARGET_ARCH_INSTALL := $(shell sudo apt-get install -y ${GCC_COMPILER_PACKAGE_FOR_TARGET_ARCH})
+        RUST_TARGET_FOR_TARGET_ARCH_INSTALL := $(shell rustup target add ${RUSTC_TARGET_FOR_TARGET_ARCH})
         RUSTFLAGS_ARGS += -C linker=$(GCC_COMPILER_FOR_TARGET_ARCH)
     else
         $(error ERROR: Cross-compiling is only tested on Debian-like OSes)
