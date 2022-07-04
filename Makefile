@@ -18,13 +18,16 @@ KBC ?=
 DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
 
+PROTOC_S390X_VERSION := v21.1
+PROTOC_S390X_ARCHIVE := protoc-$(PROTOC_S390X_VERSION)-linux-s390_64.zip
+
 ifdef KBC
     feature := --no-default-features --features
 endif
 
 ifeq ($(LIBC), musl)
     ifeq ($(ARCH), s390x)
-        $(error ERROR: Attestation agent does not support building for the musl libc target for s390x architecture)
+        $(error ERROR: Attestation agent does not support building with the musl libc target for s390x architecture!)
     endif
     MUSL_ADD := $(shell rustup target add ${ARCH}-unknown-linux-musl)
     ifneq ($(DEBIANOS),)
@@ -46,7 +49,7 @@ ifneq ($(SOURCE_ARCH), $(ARCH))
 endif
 
 ifeq ($(SOURCE_ARCH), s390x)
-    PROTOC_BINARY_INSTALL := $(shell wget https://github.com/protocolbuffers/protobuf/releases/download/v21.1/protoc-21.1-linux-s390_64.zip && unzip protoc-21.1-linux-s390_64.zip && sudo cp bin/protoc /usr/local/bin/)
+    PROTOC_BINARY_INSTALL := $(shell wget https://github.com/protocolbuffers/protobuf/releases/download/${PROTOC_S390X_VERSION}/${PROTOC_S390X_ARCHIVE} && unzip -u ${PROTOC_S390X_ARCHIVE} && sudo cp bin/protoc /usr/local/bin/ && rm -f ${PROTOC_S390X_ARCHIVE})
 endif
 
 LIBC_FLAG := --target $(ARCH)-unknown-linux-$(LIBC)
