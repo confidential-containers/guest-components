@@ -41,6 +41,10 @@ jobs:
       - name: Musl build with offline_sev_kbc feature
         run: |
           make LIBC=musl KBC=offline_sev_kbc
+    
+      - name: s390x build with offline_sev_kbc feature
+        run: |
+          make ARCH=s390x KBC=offline_sev_kbc
 
       - name: Run cargo test with offline_sev_kbc feature
         uses: actions-rs/cargo@v1

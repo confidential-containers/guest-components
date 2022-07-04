@@ -32,6 +32,10 @@ jobs:
       - name: Musl build with default features
         run: |
           make LIBC=musl
+      
+      - name: s390x build with default features
+        run:
+          make ARCH=s390x
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
