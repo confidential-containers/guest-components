@@ -33,9 +33,9 @@ jobs:
         run: |
           make LIBC=musl
       
-      - name: s390x build with default features
+      - name: s390x build with offline_fs_kbc feature
         run:
-          make ARCH=s390x
+          make ARCH=s390x KBC=offline_fs_kbc
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1

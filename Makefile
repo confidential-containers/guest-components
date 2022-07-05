@@ -78,6 +78,12 @@ ifeq ($(KBC), eaa_kbc)
     RUSTFLAGS_ARGS += -C link-args=-Wl,-rpath,/usr/local/lib/rats-tls
 endif
 
+ifeq ($(KBC), offline_sev_kbc)
+    ifeq ($(ARCH), s390x)
+        $(error ERROR: Offline SEV KBC does not support s390x architecture!)
+    endif
+endif
+
 ifneq ($(RUSTFLAGS_ARGS),)
     RUST_FLAGS := RUSTFLAGS="$(RUSTFLAGS_ARGS)"
 endif
