@@ -18,9 +18,6 @@ KBC ?=
 DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
 
-PROTOC_S390X_VERSION := 21.1
-PROTOC_S390X_ARCHIVE := protoc-$(PROTOC_S390X_VERSION)-linux-s390_64.zip
-
 ifdef KBC
     feature := --no-default-features --features
 endif
@@ -49,7 +46,7 @@ ifneq ($(SOURCE_ARCH), $(ARCH))
 endif
 
 ifeq ($(SOURCE_ARCH), s390x)
-    PROTOC_BINARY_INSTALL := $(shell wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_S390X_VERSION}/${PROTOC_S390X_ARCHIVE} && unzip -u ${PROTOC_S390X_ARCHIVE} && sudo cp bin/protoc /usr/local/bin/ && rm -f ${PROTOC_S390X_ARCHIVE})
+    PROTOC_BINARY_INSTALL := $(shell sudo apt-get install -y protobuf-compiler)
 endif
 
 LIBC_FLAG := --target $(ARCH)-unknown-linux-$(LIBC)
