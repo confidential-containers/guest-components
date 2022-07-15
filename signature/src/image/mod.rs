@@ -3,11 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::mechanism;
-use crate::SignatureScheme;
-use anyhow::{anyhow, Result};
+use anyhow::*;
 use oci_distribution::Reference;
-use std::str::FromStr;
 
 pub mod digest;
 
@@ -47,20 +44,6 @@ impl Image {
     pub fn set_manifest_digest(&mut self, digest: &str) -> Result<()> {
         self.manifest_digest = Digest::try_from(digest)?;
         Ok(())
-    }
-
-    pub fn signatures(&mut self, scheme: &str) -> Result<Vec<Vec<u8>>> {
-        match crate::SignatureScheme::from_str(scheme) {
-            Ok(SignatureScheme::SimpleSigning) => {
-                return Ok(mechanism::simple::get_signatures(self)?);
-            }
-            // TODO: Add more signature mechanism.
-            //
-            // Refer to issue: https://github.com/confidential-containers/image-rs/issues/7
-            _ => {
-                return Err(anyhow!(crate::policy::ErrorInfo::ErrUnknownScheme));
-            }
-        }
     }
 }
 

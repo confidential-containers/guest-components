@@ -21,13 +21,11 @@
             "example.com/hardened": [
                 {
                     "type": "signedBy",
-                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyPath": "/keys/public-gpg-keyring"
                 },
                 {
                     "type": "signedBy",
-                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyData": "bm9uc2Vuc2U="
                 }
@@ -35,13 +33,11 @@
             "registry.access.redhat.com": [
                 {
                     "type": "signedBy",
-                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyData": "bm9uc2Vuc2U="
                 },
                 {
                     "type": "signedBy",
-                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyPath": "/keys/public-gpg-keyring",
                     "signedIdentity": {
@@ -52,13 +48,11 @@
             "*.access.redhat.com": [
                 {
                     "type": "signedBy",
-                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyData": "bm9uc2Vuc2U="
                 },
                 {
                     "type": "signedBy",
-                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyPath": "/keys/public-gpg-keyring",
                     "signedIdentity": {
@@ -70,13 +64,11 @@
             "*.redhat.com": [
                 {
                     "type": "signedBy",
-                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyData": "bm9uc2Vuc2U="
                 },
                 {
                     "type": "signedBy",
-                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyPath": "/keys/public-gpg-keyring",
                     "signedIdentity": {
@@ -88,13 +80,11 @@
             "*.com": [
                 {
                     "type": "signedBy",
-                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyData": "bm9uc2Vuc2U="
                 },
                 {
                     "type": "signedBy",
-                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyPath": "/keys/public-gpg-keyring",
                     "signedIdentity": {

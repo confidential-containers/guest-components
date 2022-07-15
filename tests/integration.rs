@@ -8,6 +8,7 @@ mod tests {
     use image_rs::image::ImageClient;
     use std::path::Path;
     use std::process::{Child, Command};
+    use tempfile::TempDir;
 
     fn start_attestation_agent() -> Result<Child> {
         let script_dir = format!("{}/{}", std::env!("CARGO_MANIFEST_DIR"), "scripts");
@@ -22,8 +23,86 @@ mod tests {
 
         Ok(Command::new(aa_path)
             .args(&["--keyprovider_sock"])
-            .args(&["127.0.0.1:48888"])
+            .args(&["127.0.0.1:50001"])
             .spawn()?)
+    }
+
+    async fn test_pull_signed_image_simple_signing_deny(
+        image_client: &mut ImageClient,
+        bundle_dir: &TempDir,
+    ) {
+        let images_cannot_be_pulled = vec![
+            // Test cannot pull an unencrypted unsigned image from a protected registry.
+            "quay.io/kata-containers/confidential-containers:unsigned",
+            // Test unencrypted signed image with unknown signature is rejected.
+            "quay.io/kata-containers/confidential-containers:other_signed",
+        ];
+
+        for image in images_cannot_be_pulled.iter() {
+            assert!(image_client
+                .pull_image(
+                    image,
+                    bundle_dir.path(),
+                    &None,
+                    &Some("provider:attestation-agent:null_kbc::null")
+                )
+                .await
+                .is_err());
+        }
+    }
+
+    async fn test_pull_signed_image_simple_signing_allow(
+        image_client: &mut ImageClient,
+        bundle_dir: &TempDir,
+    ) {
+        let images_can_be_pulled = vec![
+            // Test can pull a unencrypted signed image from a protected registry.
+            "quay.io/kata-containers/confidential-containers:signed",
+            // Test can pull an unencrypted unsigned image from an unprotected registry.
+            "quay.io/prometheus/busybox:latest",
+        ];
+
+        for image in images_can_be_pulled.iter() {
+            assert!(image_client
+                .pull_image(
+                    image,
+                    bundle_dir.path(),
+                    &None,
+                    &Some("provider:attestation-agent:null_kbc::null")
+                )
+                .await
+                .is_ok());
+        }
+    }
+
+    async fn test_pull_signed_image() {
+        let work_dir = tempfile::tempdir().unwrap();
+        std::env::set_var("CC_IMAGE_WORK_DIR", &work_dir.path());
+        let signature_script = format!(
+            "scripts/install_test_signatures.sh",
+            // std::env::var("CARGO_MANIFEST_DIR").unwrap()
+        );
+
+        // let signature_script = "scripts/install_test_signatures.sh";
+        Command::new(&signature_script)
+            .arg("install")
+            .output()
+            .unwrap();
+
+        let mut image_client = ImageClient::default();
+        image_client.config.security_validate = true;
+
+        let bundle_dir = tempfile::tempdir().unwrap();
+
+        test_pull_signed_image_simple_signing_deny(&mut image_client, &bundle_dir).await;
+        test_pull_signed_image_simple_signing_allow(&mut image_client, &bundle_dir).await;
+
+        assert_eq!(image_client.meta_store.lock().await.image_db.len(), 2);
+
+        Command::new(&signature_script)
+            .arg("clean")
+            .output()
+            .unwrap();
     }
 
     #[tokio::test]
@@ -48,6 +127,7 @@ mod tests {
             .await
             .is_ok());
 
+        test_pull_signed_image().await;
         aa.kill().expect("Failed to stop attestation agent!");
     }
 }
