@@ -25,19 +25,19 @@ pub enum Algorithm {
 #[derive(Debug, PartialEq, Eq)]
 pub enum ParseError {
     /// Invalid checksum digest format
-    DigestInvalidFormat,
+    InvalidFormat,
     /// Invalid checksum digest length
-    DigestInvalidLength,
+    InvalidLength,
     /// Unsupported digest algorithm
-    DigestUnsupportedAlgorithm,
+    UnsupportedAlgorithm,
 }
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParseError::DigestInvalidFormat => write!(f, "invalid checksum digest format"),
-            ParseError::DigestInvalidLength => write!(f, "invalid checksum digest length"),
-            ParseError::DigestUnsupportedAlgorithm => write!(f, "unsupported digest algorithm"),
+            ParseError::InvalidFormat => write!(f, "invalid checksum digest format"),
+            ParseError::InvalidLength => write!(f, "invalid checksum digest length"),
+            ParseError::UnsupportedAlgorithm => write!(f, "unsupported digest algorithm"),
         }
     }
 }
@@ -85,21 +85,21 @@ impl TryFrom<&str> for Digest {
     type Error = ParseError;
 
     fn try_from(digest: &str) -> Result<Self, Self::Error> {
-        let parsed_digest: Vec<&str> = digest.split(":").collect();
+        let parsed_digest: Vec<&str> = digest.split(':').collect();
 
         if parsed_digest.len() != 2 {
-            return Err(ParseError::DigestInvalidFormat);
+            return Err(ParseError::InvalidFormat);
         }
 
         let algorithm = parsed_digest[0];
         let value = parsed_digest[1];
 
         if algorithm.is_empty() || value.is_empty() {
-            return Err(ParseError::DigestInvalidFormat);
+            return Err(ParseError::InvalidFormat);
         }
 
         if hex::decode(value).is_err() {
-            return Err(ParseError::DigestInvalidFormat);
+            return Err(ParseError::InvalidFormat);
         }
 
         if let Some(expect_value_len_str) = match Algorithm::from_str(algorithm) {
@@ -107,13 +107,13 @@ impl TryFrom<&str> for Digest {
             Result::Ok(Algorithm::Sha384) => Algorithm::Sha384.get_str("Length"),
             Result::Ok(Algorithm::Sha512) => Algorithm::Sha512.get_str("Length"),
             _ => {
-                return Err(ParseError::DigestUnsupportedAlgorithm);
+                return Err(ParseError::UnsupportedAlgorithm);
             }
         } {
             let expect_value_len = expect_value_len_str.to_string().parse::<usize>();
 
             if Ok(value.to_string().len()) != expect_value_len {
-                return Err(ParseError::DigestInvalidLength);
+                return Err(ParseError::InvalidLength);
             }
         }
 
@@ -142,52 +142,52 @@ mod tests {
         let unexpect_cases = &[
             TestData {
                 digest: "",
-                err: Some(ParseError::DigestInvalidFormat),
+                err: Some(ParseError::InvalidFormat),
                 res: None,
             },
             TestData {
                 digest: "unexpect format",
-                err: Some(ParseError::DigestInvalidFormat),
+                err: Some(ParseError::InvalidFormat),
                 res: None,
             },
             TestData {
                 digest: "sha256@:12345@&:67890",
-                err: Some(ParseError::DigestInvalidFormat),
+                err: Some(ParseError::InvalidFormat),
                 res: None,
             },
             TestData {
                 digest: "sha256:",
-                err: Some(ParseError::DigestInvalidFormat),
+                err: Some(ParseError::InvalidFormat),
                 res: None,
             },
             TestData {
                 digest: ":69704ef328d05a9f806b6b8502915e6a0a4faa4d72018dc42343f511490daf8a",
-                err: Some(ParseError::DigestInvalidFormat),
+                err: Some(ParseError::InvalidFormat),
                 res: None,
             },
             TestData {
                 digest: "sha123:69704ef328d05a9f806b6b8502915e6a0a4faa4d72018dc42343f511490daf8a",
-                err: Some(ParseError::DigestUnsupportedAlgorithm),
+                err: Some(ParseError::UnsupportedAlgorithm),
                 res: None,
             },
             TestData {
                 digest: "sha256:69704ef328d05a9f806b6b8502915e6a0a4faa4d72018dc42343f511490d",
-                err: Some(ParseError::DigestInvalidLength),
+                err: Some(ParseError::InvalidLength),
                 res: None,
             },
             TestData {
                 digest: "sha384:69704ef328d05a9f806b6b8502915e6a0a4faa4d72018dc42343f511490daf8a",
-                err: Some(ParseError::DigestInvalidLength),
+                err: Some(ParseError::InvalidLength),
                 res: None,
             },
             TestData {
                 digest: "sha512:69704ef328d05a9f806b6b8502915e6a0a4faa4d72018dc42343f511490daf8a",
-                err: Some(ParseError::DigestInvalidLength),
+                err: Some(ParseError::InvalidLength),
                 res: None,
             },
             TestData {
                 digest: "sha256:gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
-                err: Some(ParseError::DigestInvalidFormat),
+                err: Some(ParseError::InvalidFormat),
                 res: None,
             },
         ];

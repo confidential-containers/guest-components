@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::policy;
+use crate::policy::ref_match::PolicyReqMatchType;
 use anyhow::{anyhow, Result};
 use oci_distribution::Reference;
 use serde::{Deserialize, Serialize};
@@ -11,8 +11,6 @@ use serde::{Deserialize, Serialize};
 use openpgp::parse::Parse;
 use openpgp::PacketPile;
 use sequoia_openpgp as openpgp;
-
-use crate::policy::PolicyReferenceMatcher;
 
 // Signature is a parsed content of a signature.
 // The only way to get this structure from a blob should be as a return value
@@ -31,14 +29,14 @@ impl SigPayload {
     pub fn validate_signed_docker_reference(
         &self,
         image_ref: &Reference,
-        match_policy: Option<&Box<dyn PolicyReferenceMatcher>>,
+        match_policy: Option<&PolicyReqMatchType>,
     ) -> Result<()> {
         if let Some(signed_identity) = match_policy {
             signed_identity.matches_docker_reference(image_ref, &self.docker_reference())
         } else {
             // If the match policy is None,
             // use default match policy: "matchExact".
-            let default_signed_identity = policy::default_match_policy();
+            let default_signed_identity = PolicyReqMatchType::default_match_policy();
             default_signed_identity.matches_docker_reference(image_ref, &self.docker_reference())
         }
     }
@@ -215,7 +213,6 @@ pub fn verify_sig_and_extract_payload(pubkey_ring: Vec<u8>, sig: Vec<u8>) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::policy;
     use oci_distribution::Reference;
 
     const SIG_PAYLOAD_JSON: &str = r#"{
@@ -275,7 +272,7 @@ mod tests {
         let match_policy_json = r#"{
             "type": "matchExact"
         }"#;
-        let match_reference_policy: Box<dyn policy::PolicyReferenceMatcher> =
+        let match_reference_policy: PolicyReqMatchType =
             serde_json::from_str(match_policy_json).unwrap();
 
         #[derive(Debug)]

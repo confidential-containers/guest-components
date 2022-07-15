@@ -19,7 +19,6 @@ use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
 use crate::snapshots::overlay::OverLay;
 use crate::snapshots::{SnapshotType, Snapshotter};
-use crate::validate::security_validate;
 
 /// The metadata info for container image layer.
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -133,7 +132,7 @@ impl ImageClient {
                 let aa_kbc_params =
                     wrapped_aa_kbc_params.trim_start_matches("provider:attestation-agent:");
 
-                security_validate(image_url, &image_digest, aa_kbc_params)
+                signature::allows_image(image_url, &image_digest, aa_kbc_params)
                     .await
                     .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
             } else {
@@ -210,7 +209,6 @@ impl ImageClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::process::Command;
 
     #[tokio::test]
     async fn test_pull_image() {
@@ -245,70 +243,5 @@ mod tests {
         }
 
         assert_eq!(image_client.meta_store.lock().await.image_db.len(), 4);
-    }
-
-    #[tokio::test]
-    async fn test_pull_signed_image() {
-        let work_dir = tempfile::tempdir().unwrap();
-        std::env::set_var("CC_IMAGE_WORK_DIR", &work_dir.path());
-        let signature_script = format!(
-            "{}/scripts/install_test_signatures.sh",
-            std::env::var("CARGO_MANIFEST_DIR").unwrap()
-        );
-
-        Command::new(&signature_script)
-            .arg("install")
-            .output()
-            .unwrap();
-
-        let images_can_be_pulled = vec![
-            // Test can pull a unencrypted signed image from a protected registry.
-            "quay.io/kata-containers/confidential-containers:signed",
-            // Test can pull an unencrypted unsigned image from an unprotected registry.
-            "quay.io/prometheus/busybox:latest",
-        ];
-
-        let images_cannot_be_pulled = vec![
-            // Test cannot pull an unencrypted unsigned image from a protected registry.
-            "quay.io/kata-containers/confidential-containers:unsigned",
-            // Test unencrypted signed image with unknown signature is rejected.
-            "quay.io/kata-containers/confidential-containers:other_signed",
-        ];
-
-        let mut image_client = ImageClient::default();
-        image_client.config.security_validate = true;
-
-        let bundle_dir = tempfile::tempdir().unwrap();
-
-        for image in images_cannot_be_pulled.iter() {
-            assert!(image_client
-                .pull_image(
-                    image,
-                    bundle_dir.path(),
-                    &None,
-                    &Some("provider:attestation-agent:null_kbc::null")
-                )
-                .await
-                .is_err());
-        }
-
-        for image in images_can_be_pulled.iter() {
-            assert!(image_client
-                .pull_image(
-                    image,
-                    bundle_dir.path(),
-                    &None,
-                    &Some("provider:attestation-agent:null_kbc::null")
-                )
-                .await
-                .is_ok());
-        }
-
-        assert_eq!(image_client.meta_store.lock().await.image_db.len(), 2);
-
-        Command::new(&signature_script)
-            .arg("clean")
-            .output()
-            .unwrap();
     }
 }
