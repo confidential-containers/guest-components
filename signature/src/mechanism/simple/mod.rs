@@ -4,8 +4,9 @@
 //
 
 use crate::image;
-use crate::policy;
+use crate::policy::ref_match::PolicyReqMatchType;
 use anyhow::*;
+use serde::*;
 use std::fs;
 
 mod sigstore;
@@ -16,7 +17,34 @@ pub use sigstore::SIGSTORE_CONFIG_DIR;
 pub use sigstore::{format_sigstore_name, get_sigs_from_specific_sigstore};
 pub use verify::verify_sig_and_extract_payload;
 
-#[derive(EnumString, Display, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Serialize)]
+pub struct SimpleParameters {
+    // KeyType specifies what kind of the public key to verify the signatures.
+    #[serde(rename = "keyType")]
+    pub key_type: String,
+
+    // KeyPath is a pathname to a local file containing the trusted key(s).
+    // Exactly one of KeyPath and KeyData can be specified.
+    //
+    // This field is optional.
+    #[serde(rename = "keyPath")]
+    pub key_path: Option<String>,
+    // KeyData contains the trusted key(s), base64-encoded.
+    // Exactly one of KeyPath and KeyData can be specified.
+    //
+    // This field is optional.
+    #[serde(rename = "keyData")]
+    pub key_data: Option<String>,
+
+    // SignedIdentity specifies what image identity the signature must be claiming about the image.
+    // Defaults to "match-exact" if not specified.
+    //
+    // This field is optional.
+    #[serde(default, rename = "signedIdentity")]
+    pub signed_identity: Option<PolicyReqMatchType>,
+}
+
+#[derive(Deserialize, EnumString, Display, Debug, PartialEq, Clone)]
 pub enum KeyType {
     #[strum(to_string = "GPGKeys")]
     Gpg,
@@ -24,42 +52,41 @@ pub enum KeyType {
 
 #[allow(unused_assignments)]
 pub fn judge_signatures_accept(
-    signedby_req: &policy::PolicyReqSignedBy,
+    parameters: &SimpleParameters,
     image: &mut image::Image,
 ) -> Result<()> {
     // FIXME: only support "GPGKeys" type now.
     //
     // refer to https://github.com/confidential-containers/image-rs/issues/14
-    if signedby_req.key_type != KeyType::Gpg.to_string() {
+    if parameters.key_type != KeyType::Gpg.to_string() {
         return Err(anyhow!(
             "Unknown key type in policy config: only support {} now.",
             KeyType::Gpg.to_string()
         ));
     }
 
-    if !signedby_req.key_path.is_empty() && !signedby_req.key_data.is_empty() {
-        return Err(anyhow!("Both keyPath and keyData specified."));
-    }
-
-    let pubkey_ring = if !signedby_req.key_data.is_empty() {
-        base64::decode(&signedby_req.key_data)?
-    } else {
-        fs::read(&signedby_req.key_path).map_err(|e| {
-            anyhow!(
-                "Read SignedBy keyPath failed: {:?}, path: {}",
-                e,
-                &signedby_req.key_path
-            )
-        })?
+    let pubkey_ring = match (&parameters.key_path, &parameters.key_data) {
+        (None, None) => return Err(anyhow!("Neither keyPath or keyData specified.")),
+        (Some(_), Some(_)) => return Err(anyhow!("Both keyPath and keyData specified.")),
+        (None, Some(key_data)) => base64::decode(key_data)?,
+        (Some(key_path), None) => {
+            fs::read(key_path).map_err(|e| {
+                anyhow!(
+                    "Read SignedBy keyPath failed: {:?}, path: {}",
+                    e,
+                    key_path
+                )
+            })?
+        }
     };
 
-    let sigs = image.signatures(&signedby_req.scheme)?;
+    let sigs = get_signatures(image)?;
     let mut reject_reasons: Vec<anyhow::Error> = Vec::new();
 
     for sig in sigs.iter() {
         match judge_single_signature(
             image,
-            signedby_req.signed_identity.as_ref(),
+            parameters.signed_identity.as_ref(),
             pubkey_ring.clone(),
             sig.to_vec(),
         ) {
@@ -85,7 +112,7 @@ pub fn judge_signatures_accept(
 
 pub fn judge_single_signature(
     image: &image::Image,
-    signed_identity: Option<&Box<dyn policy::PolicyReferenceMatcher>>,
+    signed_identity: Option<&PolicyReqMatchType>,
     pubkey_ring: Vec<u8>,
     sig: Vec<u8>,
 ) -> Result<()> {

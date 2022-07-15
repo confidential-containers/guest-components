@@ -9,16 +9,12 @@ use std::collections::HashMap;
 use std::fs;
 use std::vec::Vec;
 
-use crate::image;
+use crate::{image, SignScheme};
 
-mod policy_requirement;
-mod ref_match;
+use self::policy_requirement::PolicyReqType;
 
-pub use policy_requirement::PolicyReqSignedBy;
-pub use ref_match::default_match_policy;
-pub use ref_match::PolicyReferenceMatcher;
-
-use policy_requirement::*;
+pub mod policy_requirement;
+pub mod ref_match;
 
 #[derive(EnumString, Display, Debug, PartialEq)]
 pub enum ErrorInfo {
@@ -38,12 +34,11 @@ pub enum ErrorInfo {
 pub struct Policy {
     // `default` applies to any image which does not have a matching policy in Transports.
     // Note that this can happen even if a matching `PolicyTransportScopes` exists in `transports`.
-    default: PolicyRequirements,
+    default: Vec<PolicyReqType>,
     transports: HashMap<String, PolicyTransportScopes>,
 }
 
-pub type PolicyRequirements = Vec<Box<dyn PolicyRequirement + Send>>;
-pub type PolicyTransportScopes = HashMap<String, PolicyRequirements>;
+pub type PolicyTransportScopes = HashMap<String, Vec<PolicyReqType>>;
 
 impl Policy {
     // Parse the JSON file of policy (policy.json).
@@ -69,26 +64,25 @@ impl Policy {
 
         // The image must meet the requirements of each policy in the policy set.
         for req in reqs.iter() {
-            req.is_image_allowed(&mut image)?;
+            req.allows_image(&mut image)?;
         }
 
         Ok(())
     }
 
     // Get the set of signature schemes that need to be verified of the image.
-    pub fn signature_schemes(&self, image: &image::Image) -> Vec<Option<String>> {
-        let mut schemes = Vec::new();
-        let reqs = self.requirements_for_image(&image);
-
-        for req in reqs.iter() {
-            schemes.push(req.signature_scheme());
-        }
-
-        schemes
+    pub fn signature_schemes(&self, image: &image::Image) -> Vec<&SignScheme> {
+        self.requirements_for_image(&image)
+            .iter()
+            .filter_map(|req| match req {
+                PolicyReqType::SignedBy(scheme) => Some(scheme),
+                _ => None,
+            })
+            .collect()
     }
 
     // selects the appropriate requirements for the image from Policy.
-    fn requirements_for_image(&self, image: &image::Image) -> &PolicyRequirements {
+    fn requirements_for_image(&self, image: &image::Image) -> &Vec<PolicyReqType> {
         // Get transport name of the image
         let transport_name = image.transport_name();
 

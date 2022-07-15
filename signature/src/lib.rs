@@ -3,6 +3,21 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+//! # Overall
+//! For signature verification in Confidential-Containers.
+//!
+//! # Interfaces
+//! #### Image
+//! An image struct is a well-encapsulated struct used to do
+//! image verification.
+//!
+//! #### Policy
+//! A `Policy` is a policy used to verify the image, usually
+//! including signing scheme of the image, or some other rules.
+//! 
+//! #### SignScheme
+//! Sign Scheme for the given signature.
+
 #[macro_use]
 extern crate strum;
 
@@ -12,9 +27,4 @@ mod policy;
 
 pub use image::Image;
 pub use policy::Policy;
-
-#[derive(EnumString, Display, Debug, PartialEq)]
-pub enum SignatureScheme {
-    #[strum(serialize = "simple")]
-    SimpleSigning,
-}
+pub use mechanism::SignScheme;
