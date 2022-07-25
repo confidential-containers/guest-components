@@ -86,6 +86,7 @@ List of supported KBC modules:
 | offline_fs_kbc     | [Offline file system KBC](src/kbc_modules/offline_fs_kbc/README.md) | Null         | IBM                       |
 | eaa_kbc            | [EAA KBC](src/kbc_modules/eaa_kbc/README.md)                        | EAA protocol | Alibaba Cloud             |
 | offline_sev_kbc    | [Offline SEV KBC](src/kbc_modules/offline_sev_kbc/README.md)        | Null         | IBM                       |
+| online_sev_kbc     | [Online SEV KBC](src/kbc_modules/online_sev_kbc/README.md)          | simple-kbs   | IBM                       |
 
 
 ## Tools
