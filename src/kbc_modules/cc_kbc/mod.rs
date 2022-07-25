@@ -10,6 +10,7 @@ mod crypto;
 mod kbs_protocol;
 
 use anyhow::*;
+use async_trait::async_trait;
 use attester::{detect_tee_type, Attester};
 use crypto::{hash_chunks, TeeKey};
 use kbs_protocol::message::*;
@@ -22,12 +23,13 @@ pub struct Kbc {
     attester: Option<Box<dyn Attester + Send + Sync>>,
 }
 
+#[async_trait]
 impl KbcInterface for Kbc {
     fn check(&self) -> Result<KbcCheckInfo> {
         Err(anyhow!("Check API of this KBC is unimplemented."))
     }
 
-    fn decrypt_payload(&mut self, _annotation: &str) -> Result<Vec<u8>> {
+    async fn decrypt_payload(&mut self, _annotation: &str) -> Result<Vec<u8>> {
         Err(anyhow!("Decrypt Payload API of this KBC is unimplemented."))
     }
 }

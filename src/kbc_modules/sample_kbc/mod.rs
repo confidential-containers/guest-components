@@ -8,6 +8,7 @@ use crate::kbc_modules::{KbcCheckInfo, KbcInterface};
 use aes_gcm::aead::{Aead, NewAead};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use anyhow::*;
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -32,6 +33,7 @@ pub struct SampleKbc {
 
 // As a KBS client for attestation-agent,
 // it must implement KbcInterface trait.
+#[async_trait]
 impl KbcInterface for SampleKbc {
     fn check(&self) -> Result<KbcCheckInfo> {
         Ok(KbcCheckInfo {
@@ -39,7 +41,7 @@ impl KbcInterface for SampleKbc {
         })
     }
 
-    fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
+    async fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
         let annotation_packet: AnnotationPacket = serde_json::from_str(annotation)?;
         let encrypted_payload: Vec<u8> = annotation_packet.wrapped_data;
 

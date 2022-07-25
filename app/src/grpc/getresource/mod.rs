@@ -31,13 +31,7 @@ impl GetResourceService for GetResource {
         let request = request.into_inner();
 
         let attestation_agent_mutex_clone = Arc::clone(&ATTESTATION_AGENT);
-        let mut attestation_agent = attestation_agent_mutex_clone.lock().map_err(|e| {
-            error!("Get attestation agent MUTEX failed: {}", e);
-            Status::internal(format!(
-                "[ERROR:{}] Get attestation agent MUTEX failed: {}",
-                AGENT_NAME, e
-            ))
-        })?;
+        let mut attestation_agent = attestation_agent_mutex_clone.lock().await;
 
         debug!("Call AA-KBC to download resource ...");
 
@@ -47,6 +41,7 @@ impl GetResourceService for GetResource {
                 request.kbs_uri,
                 request.resource_description,
             )
+            .await
             .map_err(|e| {
                 error!("Call AA-KBC to get resource failed: {}", e);
                 Status::internal(format!(

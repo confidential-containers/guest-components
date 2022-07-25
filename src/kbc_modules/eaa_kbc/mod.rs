@@ -5,6 +5,7 @@
 
 use crate::kbc_modules::{KbcCheckInfo, KbcInterface};
 use anyhow::*;
+use async_trait::async_trait;
 use log::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -39,6 +40,7 @@ pub struct EAAKbc {
     pub tls_handle: Option<rats_tls::RatsTls>,
 }
 
+#[async_trait]
 impl KbcInterface for EAAKbc {
     fn check(&self) -> Result<KbcCheckInfo> {
         let mut kbs_info: HashMap<String, String> = HashMap::new();
@@ -50,7 +52,7 @@ impl KbcInterface for EAAKbc {
         Ok(KbcCheckInfo { kbs_info })
     }
 
-    fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
+    async fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
         debug!("EAA KBC decrypt_payload() is called");
         let annotation_packet: AnnotationPacket = serde_json::from_str(annotation)?;
         self.algorithm = annotation_packet.algorithm;
@@ -71,7 +73,7 @@ impl KbcInterface for EAAKbc {
         Ok(decrypted_payload)
     }
 
-    fn get_resource(&mut self, description: String) -> Result<Vec<u8>> {
+    async fn get_resource(&mut self, description: String) -> Result<Vec<u8>> {
         if self.tcp_stream.is_none() {
             debug!("First request, connecting KBS...");
             self.establish_new_kbs_connection()?;

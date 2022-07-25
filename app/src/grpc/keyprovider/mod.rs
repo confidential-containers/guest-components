@@ -67,13 +67,7 @@ impl KeyProviderService for KeyProvider {
                 })?;
 
         let attestation_agent_mutex_clone = Arc::clone(&ATTESTATION_AGENT);
-        let mut attestation_agent = attestation_agent_mutex_clone.lock().map_err(|e| {
-            error!("Get attestation agent MUTEX failed: {}", e);
-            Status::internal(format!(
-                "[ERROR:{}] Get attestation agent MUTEX failed: {}",
-                AGENT_NAME, e
-            ))
-        })?;
+        let mut attestation_agent = attestation_agent_mutex_clone.lock().await;
 
         debug!("Call AA-KBC to decrypt...");
 
@@ -83,6 +77,7 @@ impl KeyProviderService for KeyProvider {
                 input_payload.kbs_uri,
                 input_payload.annotation,
             )
+            .await
             .map_err(|e| {
                 error!("Call AA-KBC to provide key failed: {}", e);
                 Status::internal(format!(

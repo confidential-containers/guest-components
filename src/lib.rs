@@ -9,6 +9,7 @@ extern crate strum;
 
 use crate::kbc_modules::{KbcCheckInfo, KbcInstance, KbcModuleList};
 use anyhow::*;
+use async_trait::async_trait;
 use std::collections::HashMap;
 
 mod kbc_modules;
@@ -39,13 +40,14 @@ mod kbc_modules;
 ///
 /// For every service API, the `kbc_name` and `kbs_uri` is necessary, `kbc_name` tells
 /// attestation agent which KBC module it should use and `kbs_uri` specifies the KBS address.
+#[async_trait]
 pub trait AttestationAPIs {
     /// `decrypt_image_layer_annotation`is used to decrypt the encrypted information in `annotation`.
     /// The specific format of `annotation` is defined by different KBC and corresponding KBS.
     /// The decryption method may be to obtain the key from KBS for decryption, or
     /// directly send the `annotation` to KBS for decryption, which depends on the
     /// specific implementation of each KBC module.
-    fn decrypt_image_layer_annotation(
+    async fn decrypt_image_layer_annotation(
         &mut self,
         kbc_name: String,
         kbs_uri: String,
@@ -55,7 +57,7 @@ pub trait AttestationAPIs {
     /// `download_confidential_resource` is used to request KBS to obtain confidential resources, including
     /// confidential data or files. The specific format of `resource_description` is defined by
     /// different KBC and corresponding KBS.
-    fn download_confidential_resource(
+    async fn download_confidential_resource(
         &mut self,
         kbc_name: String,
         kbs_uri: String,
@@ -106,8 +108,9 @@ impl AttestationAgent {
     }
 }
 
+#[async_trait]
 impl AttestationAPIs for AttestationAgent {
-    fn decrypt_image_layer_annotation(
+    async fn decrypt_image_layer_annotation(
         &mut self,
         kbc_name: String,
         kbs_uri: String,
@@ -120,11 +123,11 @@ impl AttestationAPIs for AttestationAgent {
             .kbc_instance_map
             .get_mut(&kbc_name)
             .ok_or_else(|| anyhow!("The KBC instance does not existing!"))?;
-        let plain_payload = kbc_instance.decrypt_payload(&annotation)?;
+        let plain_payload = kbc_instance.decrypt_payload(&annotation).await?;
         Ok(plain_payload)
     }
 
-    fn download_confidential_resource(
+    async fn download_confidential_resource(
         &mut self,
         kbc_name: String,
         kbs_uri: String,
@@ -137,7 +140,7 @@ impl AttestationAPIs for AttestationAgent {
             .kbc_instance_map
             .get_mut(&kbc_name)
             .ok_or_else(|| anyhow!("The KBC instance does not existing!"))?;
-        let resource = kbc_instance.get_resource(resource_description)?;
+        let resource = kbc_instance.get_resource(resource_description).await?;
         Ok(resource)
     }
 }

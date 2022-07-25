@@ -22,13 +22,15 @@ pub mod offline_sev_kbc;
 pub mod sample_kbc;
 
 use anyhow::*;
+use async_trait::async_trait;
 use std::collections::HashMap;
 
 // KbcInterface is a standard interface that all KBC modules need to implement.
-pub trait KbcInterface {
+#[async_trait]
+pub trait KbcInterface: Send {
     fn check(&self) -> Result<KbcCheckInfo>;
-    fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>>;
-    fn get_resource(&mut self, _description: String) -> Result<Vec<u8>> {
+    async fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>>;
+    async fn get_resource(&mut self, _description: String) -> Result<Vec<u8>> {
         Err(anyhow!("Get Resource API of this KBC is unimplement!"))
     }
 }

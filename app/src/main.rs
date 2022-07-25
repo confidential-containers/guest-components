@@ -12,7 +12,7 @@ use clap::{App, Arg};
 use log::*;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 mod grpc;
 

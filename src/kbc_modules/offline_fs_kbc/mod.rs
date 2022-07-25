@@ -8,6 +8,7 @@ pub mod common;
 use common::*;
 
 use anyhow::{anyhow, Result};
+use async_trait::async_trait;
 use base64::decode;
 use openssl::symm::decrypt;
 use std::collections::HashMap;
@@ -23,6 +24,7 @@ pub struct OfflineFsKbc {
     ciphers: Ciphers,
 }
 
+#[async_trait]
 impl KbcInterface for OfflineFsKbc {
     fn check(&self) -> Result<KbcCheckInfo> {
         Ok(KbcCheckInfo {
@@ -30,7 +32,7 @@ impl KbcInterface for OfflineFsKbc {
         })
     }
 
-    fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
+    async fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
         let annotation_packet: AnnotationPacket = serde_json::from_str(annotation)
             .map_err(|e| anyhow!("Failed to parse annotation: {}", e))?;
         let kid = annotation_packet.kid;
@@ -72,8 +74,8 @@ mod tests {
     use base64::encode;
     use openssl::symm::encrypt;
 
-    #[test]
-    fn test_decrypt_payload() {
+    #[tokio::test]
+    async fn test_decrypt_payload() {
         let iv = b"ivmustbe16bytes!";
         let data = b"bar";
 
@@ -98,17 +100,20 @@ mod tests {
             ciphers: ciphers(),
         };
 
-        assert_eq!(kbc.decrypt_payload(&annotation).unwrap(), data);
+        assert_eq!(kbc.decrypt_payload(&annotation).await.unwrap(), data);
 
         let invalid_annotation = &annotation[..annotation.len() - 1];
-        assert!(kbc.decrypt_payload(invalid_annotation).is_err());
+        assert!(kbc.decrypt_payload(invalid_annotation).await.is_err());
 
         let mut key_load_failure_kbc = OfflineFsKbc {
             kbs_info: HashMap::new(),
             keys: Err(anyhow!("")),
             ciphers: ciphers(),
         };
-        assert!(key_load_failure_kbc.decrypt_payload(&annotation).is_err());
+        assert!(key_load_failure_kbc
+            .decrypt_payload(&annotation)
+            .await
+            .is_err());
 
         let mut unknown_kid_kbc = OfflineFsKbc {
             kbs_info: HashMap::new(),
@@ -118,7 +123,7 @@ mod tests {
                 .collect()),
             ciphers: ciphers(),
         };
-        assert!(unknown_kid_kbc.decrypt_payload(&annotation).is_err());
+        assert!(unknown_kid_kbc.decrypt_payload(&annotation).await.is_err());
 
         // Notice that a valid, but incorrect key does not yield an error
         let mut invalid_key_kbc = OfflineFsKbc {
@@ -132,6 +137,6 @@ mod tests {
             .collect()),
             ciphers: ciphers(),
         };
-        assert!(invalid_key_kbc.decrypt_payload(&annotation).is_err());
+        assert!(invalid_key_kbc.decrypt_payload(&annotation).await.is_err());
     }
 }
