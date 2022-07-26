@@ -3,9 +3,11 @@ on:
   push:
     paths:
       - 'src/kbc_modules/eaa_kbc/**'
+      - '.github/workflows/eaa_kbc.yml'
   pull_request:
     paths:
       - 'src/kbc_modules/eaa_kbc/**'
+      - '.github/workflows/eaa_kbc.yml'
   create:
     paths:
       - 'src/kbc_modules/eaa_kbc/**'
@@ -14,12 +16,14 @@ jobs:
   eaa_kbc_ci:
     if: github.event_name == 'pull_request'
     name: Check
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
         rust:
           - stable
+
+    container: runetest/compilation-testing:ubuntu18.04
           
     steps:
       - name: Code checkout
@@ -27,32 +31,20 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Set up docker
-        uses: docker-practice/actions-setup-docker@master
-
-      - name: Install Rust toolchain (${{ matrix.rust }})
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
-          components: rustfmt
-
-      - name: Create rats-tls compiling container
+      - name: Install Rust toolchain
         run: |
-          rats_compile_env=$(docker run -itd --privileged --rm --net host -v /usr/local/lib:/usr/local/lib inclavarecontainers/test:compile-check-ubuntu18.04);
-          echo "rats_compile_env=$rats_compile_env" >> $GITHUB_ENV
+          apt-get update && apt-get install -y cargo
+          cp -r /root/.cargo /github/home/.cargo
+          rustup install stable
+          rustup default stable
 
       - name: Build and install rats-tls
         run: | 
-          docker exec $rats_compile_env bash -c 'git clone https://github.com/alibaba/inclavare-containers;
-          cd inclavare-containers/rats-tls;
-          cmake -DBUILD_SAMPLES=on -H. -Bbuild;
-          make -C build install'
-      
-      - name: Stop rats-tls compiling container
-        run: |
-          docker stop $rats_compile_env
+          apt-get install -y libcurl4-openssl-dev
+          git clone https://github.com/inclavare-containers/rats-tls
+          cd rats-tls
+          cmake -DBUILD_SAMPLES=on -H. -Bbuild
+          make -C build install
       
       - name: Build AA with EAA KBC
         run: |
