@@ -49,6 +49,20 @@ impl KbcInterface for SampleKbc {
 
         Ok(plain_text)
     }
+
+    async fn get_resource(&mut self, description: String) -> Result<Vec<u8>> {
+        let desc: ResourceDescription =
+            serde_json::from_str::<ResourceDescription>(description.as_str())?;
+
+        match desc.name.as_str() {
+            "Policy" => Ok(std::include_str!("policy.json").as_bytes().to_vec()),
+            "Sigstore Config" => Ok(std::include_str!("sigstore_config.yaml")
+                .as_bytes()
+                .to_vec()),
+            "GPG Keyring" => Ok(std::include_str!("pubkey.gpg").as_bytes().to_vec()),
+            _ => Err(anyhow!("Unknown resource name")),
+        }
+    }
 }
 
 impl SampleKbc {
@@ -68,4 +82,10 @@ fn decrypt(encrypted_data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
         .map_err(|e| anyhow!("Decrypt failed: {:?}", e))?;
 
     Ok(plain_text)
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ResourceDescription {
+    name: String,
+    optional: HashMap<String, String>,
 }
