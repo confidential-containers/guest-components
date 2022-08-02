@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::kbc_modules::{KbcCheckInfo, KbcInterface};
+use crate::kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription, ResourceName};
 
 use aes_gcm::aead::{Aead, NewAead};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
@@ -11,6 +11,7 @@ use anyhow::*;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::str::FromStr;
 
 const HARDCODED_KEY: &[u8] = &[
     217, 155, 119, 5, 176, 186, 122, 22, 130, 149, 179, 163, 54, 114, 112, 176, 221, 155, 55, 27,
@@ -54,12 +55,18 @@ impl KbcInterface for SampleKbc {
         let desc: ResourceDescription =
             serde_json::from_str::<ResourceDescription>(description.as_str())?;
 
-        match desc.name.as_str() {
-            "Policy" => Ok(std::include_str!("policy.json").as_bytes().to_vec()),
-            "Sigstore Config" => Ok(std::include_str!("sigstore_config.yaml")
-                .as_bytes()
-                .to_vec()),
-            "GPG Keyring" => Ok(std::include_str!("pubkey.gpg").as_bytes().to_vec()),
+        match ResourceName::from_str(desc.name.as_str()) {
+            Result::Ok(ResourceName::Policy) => {
+                Ok(std::include_str!("policy.json").as_bytes().to_vec())
+            }
+            Result::Ok(ResourceName::SigstoreConfig) => {
+                Ok(std::include_str!("sigstore_config.yaml")
+                    .as_bytes()
+                    .to_vec())
+            }
+            Result::Ok(ResourceName::GPGPublicKey) => {
+                Ok(std::include_str!("pubkey.gpg").as_bytes().to_vec())
+            }
             _ => Err(anyhow!("Unknown resource name")),
         }
     }
@@ -82,10 +89,4 @@ fn decrypt(encrypted_data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
         .map_err(|e| anyhow!("Decrypt failed: {:?}", e))?;
 
     Ok(plain_text)
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ResourceDescription {
-    name: String,
-    optional: HashMap<String, String>,
 }

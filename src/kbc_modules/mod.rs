@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use serde::{Deserialize, Serialize};
+
 // Add your specific kbc declaration here.
 // For example: "pub mod sample_kbc;"
 #[allow(dead_code)]
@@ -101,4 +103,20 @@ impl KbcModuleList {
             .ok_or_else(|| anyhow!("AA does not support the given KBC module!"))?;
         Ok(instantiate_func)
     }
+}
+
+#[derive(EnumString, Display, Debug, PartialEq)]
+pub enum ResourceName {
+    #[strum(serialize = "Policy")]
+    Policy,
+    #[strum(serialize = "Sigstore Config")]
+    SigstoreConfig,
+    #[strum(serialize = "GPG Keyring")]
+    GPGPublicKey,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ResourceDescription {
+    name: String,
+    optional: HashMap<String, String>,
 }

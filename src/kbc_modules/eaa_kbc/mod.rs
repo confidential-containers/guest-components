@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::kbc_modules::{KbcCheckInfo, KbcInterface};
+use crate::kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription};
 use anyhow::*;
 use async_trait::async_trait;
 use log::*;
@@ -288,10 +288,4 @@ impl EAAKbc {
 
         Ok(recv_string)
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ResourceDescription {
-    name: String,
-    optional: HashMap<String, String>,
 }
