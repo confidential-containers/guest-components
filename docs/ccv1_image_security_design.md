@@ -154,9 +154,11 @@ From its `layers` field, we can see the changes we stated above.
 
 ## Image signing
 
-There are multiple image signing and verification protocols/solutions in the field, 
-so an extensible modular architecture should be implemented to support them.
-The owner needs to specify the `scheme` field in the image security [policy file](https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md#policy) distributed to image-rs. 
+There are multiple image signing and verification protocols/solutions in the field.
+
+The signing scheme is specified by `type` field by the owner of the image
+security [policy file](https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md#policy) distributed to image-rs.
+
 when verifying the signature, image-rs can select the appropriate scheme for signature verification according to this field.
 
 In CC V1, we start by supporting the [Red Hat simple signing format](https://www.redhat.com/en/blog/container-image-signing).
@@ -247,7 +249,6 @@ In the V1 design of the confidential containers, a safe and reasonable `policy.j
             "docker.io/my_private_registry": [
                 {
                     "type": "signedBy",
-                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyData": "<public Key>",
                 }
@@ -255,7 +256,6 @@ In the V1 design of the confidential containers, a safe and reasonable `policy.j
             "registry.access.redhat.com": [
                 {
                     "type": "signedBy",
-                    "scheme": "simple",
                     "keyType": "GPGKeys",
                     "keyPath": "/etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release",
                 }
@@ -280,13 +280,14 @@ match the policy in the following order according to the [container image refere
 
 After the matching is successful, the policy set under the corresponding scope is executed, as described in 
 [Policy Requirements](https://github.com/containers/image/blob/main/docs/containers-policy.json.5.md#policy-requirements),
-the `signedBy` policy requires that there must exist at least one signature of this image 
-can be verified with the configuration in it, in other words, when get this policy, signature verification will be performed.
 
-In order to flexibly support different signature schemes, we extend the `signedBy` policy, add a field called `scheme`.
-Currently, the allowed values of this field are as follows:
+In order to flexibly support different signature schemes, we will check the field `type` to see whether it is a
+signing scheme, as what [Policy Requirements](https://github.com/containers/image/blob/main/docs/containers-policy.json.5.md#policy-requirements)
+does.
 
-- `simple`: Red Hat simple signing scheme.
+Currently, the values of `type` showing signature verification should be involved is:
+
+- `signedBy`: Red Hat simple signing scheme.
 
 In the future, more signature schemes will be supported, and this field will have more allowed values.
 
@@ -345,7 +346,7 @@ A single signature's verification action is divided into the following steps:
 
 1. Get and parse the signature blob.
 
-2. Read the `policy.json`'s `signedBy` policy, select the scheme to use when verifying the signature according to the `scheme` field.
+2. Read the `policy.json`'s policy, select the scheme to use when verifying the signature according to the `type` field.
 
 3. Get public key.
 
