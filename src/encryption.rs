@@ -226,7 +226,7 @@ fn decrypt_layer_key_opts_data(dc: &DecryptConfig, desc: &OciDescriptor) -> Resu
                     priv_key_given = true;
                 }
 
-                if let Ok(opts_data) = pre_unwrap_key(&*keywrapper, dc, b64_annotation) {
+                if let Ok(opts_data) = pre_unwrap_key(keywrapper, dc, b64_annotation) {
                     if !opts_data.is_empty() {
                         return Ok(opts_data);
                     }

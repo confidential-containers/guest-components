@@ -104,10 +104,9 @@ fn process_pwd_string(pwd_string: String) -> Result<Vec<u8>> {
     } else if let Some(pwd) = pwd_string.strip_prefix("fd=") {
         let fd = pwd.parse::<i32>().unwrap();
         let mut fd_file = unsafe { File::from_raw_fd(fd) };
-        let mut contents = vec![];
-        fd_file.read_exact(&mut contents)?;
-
-        return Ok(contents);
+        let mut contents = String::new();
+        fd_file.read_to_string(&mut contents)?;
+        return Ok(contents.as_bytes().to_vec());
     }
 
     Ok(pwd_string.as_bytes().to_vec())
