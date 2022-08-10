@@ -97,7 +97,7 @@ fn process_x509_certs(keys: Vec<String>) -> Result<Vec<Vec<u8>>> {
 // - <password>
 fn process_pwd_string(pwd_string: String) -> Result<Vec<u8>> {
     if let Some(pwd) = pwd_string.strip_prefix("file=") {
-        let contents = fs::read(&pwd)?;
+        let contents = fs::read(pwd)?;
         return Ok(contents);
     } else if let Some(pwd) = pwd_string.strip_prefix("pass=") {
         return Ok(pwd.as_bytes().to_vec());

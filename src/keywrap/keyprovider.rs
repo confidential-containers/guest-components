@@ -1,10 +1,15 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+use futures::executor::block_on;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::{anyhow, Result};
+use attestation_agent::AttestationAPIs;
+use attestation_agent::AttestationAgent;
 use serde::Serialize;
 use tokio::runtime::Runtime;
 use tonic::codegen::http::Uri;
@@ -12,6 +17,11 @@ use tonic::codegen::http::Uri;
 use crate::config::{Command, DecryptConfig, EncryptConfig, KeyProviderAttrs};
 use crate::keywrap::KeyWrapper;
 use crate::utils::{self, keyprovider as keyproviderpb, CommandExecuter};
+
+lazy_static! {
+    pub static ref ATTESTATION_AGENT: Arc<Mutex<AttestationAgent>> =
+        Arc::new(Mutex::new(AttestationAgent::new()));
+}
 
 #[derive(Debug)]
 enum OpKey {
@@ -66,7 +76,7 @@ struct KeyProviderKeyWrapProtocolInput {
 }
 
 /// KeyProviderKeyWrapProtocolOutput defines the output of the key provider binary or grpc method.
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 struct KeyProviderKeyWrapProtocolOutput {
     /// keywrapresults encodes the results to key wrap if operation is to keywrap
     #[serde(rename = "keywrapresults", skip_serializing_if = "Option::is_none")]
@@ -134,6 +144,39 @@ impl KeyProviderKeyWrapProtocolOutput {
 
         serde_json::from_slice(&resp_bytes)
             .map_err(|_| anyhow!("keyprovider: failed to deserialize message from binary executor"))
+    }
+
+    fn from_native(annotation: &str, dc_config: &DecryptConfig) -> Result<Self> {
+        let attestation_agent_mutex_clone = Arc::clone(&ATTESTATION_AGENT);
+        let mut attestation_agent = attestation_agent_mutex_clone.lock().map_err(|e| {
+            anyhow!(
+                "keyprovider: failed to retrieve the native attestation agent: {:?}",
+                e
+            )
+        })?;
+        let kbc_kbs_pair = if let Some(list) = dc_config.param.get("attestation-agent") {
+            list.get(0)
+                .ok_or_else(|| anyhow!("keyprovider: empty kbc::kbs pair"))?
+        } else {
+            return Err(anyhow!("keyprovider: not supported attestation agent"));
+        };
+        let pair_str = String::from_utf8(kbc_kbs_pair.to_vec())?;
+        let (kbc, kbs) = pair_str
+            .split_once("::")
+            .ok_or_else(|| anyhow!("keyprovider: invalid kbc::kbs pair"))?;
+
+        let decrypted_optsdata = block_on(attestation_agent.decrypt_image_layer_annotation(
+            kbc.to_string(),
+            kbs.to_string(),
+            annotation.to_string(),
+        ))
+        .map_err(|e| anyhow!("keyprovider: retrieve opts_data failed: {:?}", e))?;
+        Ok(KeyProviderKeyWrapProtocolOutput {
+            key_unwrap_results: Some(KeyUnwrapResults {
+                opts_data: decrypted_optsdata,
+            }),
+            ..Default::default()
+        })
     }
 }
 
@@ -288,6 +331,18 @@ impl KeyWrapper for KeyProviderKeyWrapper {
                         e
                     )
                 })?
+        } else if let Some(_native) = self.attrs.native.as_ref() {
+            KeyProviderKeyWrapProtocolOutput::from_native(
+                &String::from_utf8(json_string.to_vec())?,
+                dc_config,
+            )
+            .map_err(|e| {
+                anyhow!(
+                    "keyprovider: error from crate provider for {} operation: {:?}",
+                    OpKey::Unwrap.to_string(),
+                    e
+                )
+            })?
         } else {
             return Err(anyhow!(
                 "keyprovider: invalid configuration, both grpc and runner are NULL"
@@ -317,6 +372,7 @@ impl KeyWrapper for KeyProviderKeyWrapper {
 mod tests {
     use crate::config;
     use crate::config::{DecryptConfig, EncryptConfig};
+    use crate::helpers::create_decrypt_config;
     use crate::keywrap::keyprovider::{
         KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput, KeyProviderKeyWrapper,
         KeyUnwrapResults, KeyWrapResults,
@@ -333,6 +389,7 @@ mod tests {
     use aes_gcm::{Aes256Gcm, Key, Nonce};
     use anyhow::{anyhow, Result};
     use std::collections::HashMap;
+    use std::fs;
     use std::io::{Error, ErrorKind};
     use std::net::SocketAddr;
     use std::thread::sleep;
@@ -509,6 +566,7 @@ mod tests {
                 args: None,
             }),
             grpc: None,
+            native: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
         let mut keyprovider_key_wrapper = KeyProviderKeyWrapper::new(
@@ -545,6 +603,7 @@ mod tests {
                 args: None,
             }),
             grpc: None,
+            native: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
         keyprovider_key_wrapper = KeyProviderKeyWrapper::new(
@@ -573,6 +632,7 @@ mod tests {
                 args: None,
             }),
             grpc: None,
+            native: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
         let keyprovider_key_wrapper = KeyProviderKeyWrapper::new(
@@ -602,6 +662,7 @@ mod tests {
                 args: None,
             }),
             grpc: None,
+            native: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
         let keyprovider_key_wrapper = KeyProviderKeyWrapper::new(
@@ -671,6 +732,7 @@ mod tests {
         let attrs = config::KeyProviderAttrs {
             cmd: None,
             grpc: Some("tcp://127.0.0.1:8990".to_string()),
+            native: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
         let keyprovider_key_wrapper =
@@ -717,6 +779,7 @@ mod tests {
         let attrs = config::KeyProviderAttrs {
             cmd: None,
             grpc: Some("http://127.0.0.1:8991".to_string()),
+            native: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
         let keyprovider_key_wrapper =
@@ -745,5 +808,67 @@ mod tests {
 
         // runtime shutdown for stopping grpc server
         rt.shutdown_background();
+    }
+
+    #[test]
+    fn test_key_provider_native_fail() {
+        let dummy_annotation: &str = "{}";
+        let mut provider = HashMap::new();
+        let attrs = config::KeyProviderAttrs {
+            cmd: None,
+            grpc: None,
+            native: Some("attestation-agent".to_string()),
+        };
+        provider.insert(String::from("provider"), attrs.clone());
+        let keyprovider_key_wrapper =
+            KeyProviderKeyWrapper::new("attestation-agent".to_string(), attrs, None);
+
+        let unsupported_aa_parameters: &str = "provider:unsupported-aa:sample_kbc::null";
+        let unsupported_cc =
+            create_decrypt_config(vec![unsupported_aa_parameters.to_string()], vec![]).unwrap();
+        let unsupported_dc = unsupported_cc.decrypt_config.unwrap();
+        let unsupported_res =
+            keyprovider_key_wrapper.unwrap_keys(&unsupported_dc, dummy_annotation.as_bytes());
+        assert!(unsupported_res.is_err());
+        let unsupported_msg = format!("{}", unsupported_res.unwrap_err());
+        assert!(unsupported_msg.contains("keyprovider: not supported attestation agent"));
+
+        let invalid_pair_aa_parameters: &str = "provider:attestation-agent:*";
+        let invalid_pair_cc =
+            create_decrypt_config(vec![invalid_pair_aa_parameters.to_string()], vec![]).unwrap();
+        let invalid_pair_dc = invalid_pair_cc.decrypt_config.unwrap();
+        let invalid_pair_res =
+            keyprovider_key_wrapper.unwrap_keys(&invalid_pair_dc, dummy_annotation.as_bytes());
+        assert!(invalid_pair_res.is_err());
+        let invalid_pair_msg = format!("{}", invalid_pair_res.unwrap_err());
+        assert!(invalid_pair_msg.contains("keyprovider: invalid kbc::kbs pair"));
+    }
+
+    #[test]
+    fn test_key_provider_native_succuss() {
+        let annotation_from_sample_kbc: Vec<u8> = {
+            let res = fs::read("data/sample_kbc_annotation.json");
+            if let Ok(out) = res {
+                out
+            } else {
+                vec![]
+            }
+        };
+
+        let mut provider = HashMap::new();
+        let attrs = config::KeyProviderAttrs {
+            cmd: None,
+            grpc: None,
+            native: Some("attestation-agent".to_string()),
+        };
+        provider.insert(String::from("provider"), attrs.clone());
+        let keyprovider_key_wrapper =
+            KeyProviderKeyWrapper::new("attestation-agent".to_string(), attrs, None);
+
+        let aa_parameters: &str = "provider:attestation-agent:sample_kbc::null";
+        let cc = create_decrypt_config(vec![aa_parameters.to_string()], vec![]).unwrap();
+        let dc = cc.decrypt_config.unwrap();
+        let res = keyprovider_key_wrapper.unwrap_keys(&dc, &annotation_from_sample_kbc);
+        assert!(res.is_ok());
     }
 }

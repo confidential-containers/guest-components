@@ -20,7 +20,7 @@ hmac = ">=0.12"
 josekit = { version = ">=0.7", optional = true }
 lazy_static = ">=1.4"
 oci-distribution = { git = "https://github.com/krustlet/oci-distribution", rev = "1ba0d94a900a97aa1bcac032a67ea23766bcfdef" }
-openssl = ">=0.10"
+openssl = { version = ">=0.10", features = ["vendored"] }
 pin-project-lite = "0.2.9"
 prost = { version = ">=0.11.0", optional = true }
 serde = { version = ">=1.0", features = ["derive"] }
@@ -28,14 +28,15 @@ serde_json = ">=1.0"
 sha2 = ">=0.10"
 tokio = { version = "1.17.0", features = ["rt-multi-thread"], optional = true }
 tonic = { version = ">=0.8.0", optional = true }
+attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent" }
 
 [build-dependencies]
-tonic-build = {version = ">=0.7.0", optional = true }
+tonic-build = {version = "0.8.0", optional = true }
 
 [features]
 default = ["keywrap-jwe", "keywrap-keyprovider"]
 async-io = ["futures", "tokio"]
 keywrap-jwe = ["josekit"]
-keywrap-keyprovider = ["aes-gcm", "tokio", "tonic-build", "utils-runner", "utils-keyprovider"]
+keywrap-keyprovider = ["aes-gcm", "futures", "tokio", "tonic-build", "utils-runner", "utils-keyprovider"]
 utils-runner = []
 utils-keyprovider = ["prost", "tonic"]
