@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::process::Command;
 
-const KEYS_PATH: &str = "/sys/kernel/security/coco/efi_secret/e6f5a162-d67f-4750-a67c-5d065f2a9910";
+const KEYS_PATH: &str = "/sys/kernel/security/secrets/coco/e6f5a162-d67f-4750-a67c-5d065f2a9910";
 const SECRET_MODULE_NAME: &str = "efi_secret";
 const MODPROBE_PATH: &str = "/usr/sbin/modprobe";
 const MOUNT_PATH: &str = "/usr/bin/mount";
