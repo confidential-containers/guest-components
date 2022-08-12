@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::kbc_modules::{KbcCheckInfo, KbcInterface};
+use crate::kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription};
 
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
@@ -103,6 +103,11 @@ impl KbcInterface for OnlineSevKbc {
         })
     }
 
+    async fn get_resource(&mut self, description: String) -> Result<Vec<u8>> {
+        let desc = serde_json::from_str::<ResourceDescription>(description.as_str())?;
+        self.get_resource_from_kbs(desc.name).await
+    }
+
     async fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
         let annotation_packet: AnnotationPacket = serde_json::from_str(annotation)
             .map_err(|e| anyhow!("Failed to parse annotation: {}", e))?;
@@ -181,6 +186,10 @@ impl OnlineSevKbc {
 
     async fn get_key_from_kbs(&self, key_id: String) -> Result<Vec<u8>> {
         self.query_kbs("key".to_string(), key_id).await
+    }
+
+    async fn get_resource_from_kbs(&self, key_id: String) -> Result<Vec<u8>> {
+        self.query_kbs("resource".to_string(), key_id).await
     }
 }
 
