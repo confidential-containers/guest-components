@@ -27,8 +27,8 @@ mod getsecret {
 
 const KEYS_PATH: &str = "/sys/kernel/security/secrets/coco/1ee27366-0c87-43a6-af48-28543eaf7cb0";
 const SECRET_MODULE_NAME: &str = "efi_secret";
-const MODPROBE_PATH: &str = "/usr/sbin/modprobe";
-const MOUNT_PATH: &str = "/usr/bin/mount";
+const MODPROBE_PATH: &str = "/sbin/modprobe";
+const MOUNT_PATH: &str = "/bin/mount";
 
 type Ciphers = HashMap<String, Cipher>;
 

@@ -16,8 +16,8 @@ use std::process::Command;
 
 const KEYS_PATH: &str = "/sys/kernel/security/secrets/coco/e6f5a162-d67f-4750-a67c-5d065f2a9910";
 const SECRET_MODULE_NAME: &str = "efi_secret";
-const MODPROBE_PATH: &str = "/usr/sbin/modprobe";
-const MOUNT_PATH: &str = "/usr/bin/mount";
+const MODPROBE_PATH: &str = "/sbin/modprobe";
+const MOUNT_PATH: &str = "/bin/mount";
 
 type Keys = HashMap<String, Vec<u8>>;
 type Ciphers = HashMap<String, Cipher>;
