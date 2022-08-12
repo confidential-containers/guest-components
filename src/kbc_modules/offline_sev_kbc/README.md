@@ -40,6 +40,6 @@ This KBC has no adjustable parameters. The KBC will not function without the EFI
 To run:
 
 ```
-make KBS=offline_sev_kbc && make install
+make KBC=offline_sev_kbc && make install
 attestation-agent --keyprovider_sock 127.0.0.1:47777 --getresource_sock 127.0.0.1:48888
 ```

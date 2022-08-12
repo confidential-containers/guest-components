@@ -19,6 +19,6 @@ This KBC expects a `KBS_URI` parameter. The KBC will not function without the EF
 To run:
 
 ```
-make KBS=online_sev_kbc && make install
+make KBC=online_sev_kbc && make install
 attestation-agent --keyprovider_sock 127.0.0.1:47777 --getresource_sock 127.0.0.1:48888
 ```
