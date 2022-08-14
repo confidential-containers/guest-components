@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use aes_gcm::aead::{Aead, NewAead};
+use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use anyhow::*;
 
@@ -13,7 +13,7 @@ pub const HARDCODED_KEY: &'static [u8] = &[
 ];
 
 pub fn encrypt(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
-    let encryption_key = Key::from_slice(key);
+    let encryption_key = Key::<Aes256Gcm>::from_slice(key);
     let cipher = Aes256Gcm::new(encryption_key);
     let nonce = Nonce::from_slice(iv);
     let encrypted_data = cipher

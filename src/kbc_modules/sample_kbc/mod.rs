@@ -5,7 +5,7 @@
 
 use crate::kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription, ResourceName};
 
-use aes_gcm::aead::{Aead, NewAead};
+use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use anyhow::*;
 use async_trait::async_trait;
@@ -81,7 +81,7 @@ impl SampleKbc {
 }
 
 fn decrypt(encrypted_data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
-    let decrypting_key = Key::from_slice(key);
+    let decrypting_key = Key::<Aes256Gcm>::from_slice(key);
     let cipher = Aes256Gcm::new(decrypting_key);
     let nonce = Nonce::from_slice(iv);
     let plain_text = cipher

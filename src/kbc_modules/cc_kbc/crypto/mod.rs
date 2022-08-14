@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use aes_gcm::aead::{Aead, NewAead};
+use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::Aes256Gcm;
 use anyhow::*;
 use rsa::pkcs8::EncodePublicKey;
@@ -98,7 +98,7 @@ impl CryptoAnnotation {
         // Support various algorithm.
         let plain_text = match self.algorithm.as_str() {
             AES_GCM_256_ALGORITHM => {
-                let decrypting_key = aes_gcm::Key::from_slice(&symkey);
+                let decrypting_key = aes_gcm::Key::<Aes256Gcm>::from_slice(&symkey);
                 let aes_gcm_cipher = Aes256Gcm::new(decrypting_key);
 
                 let iv_decoded = base64::decode(self.initialization_vector.clone())?;

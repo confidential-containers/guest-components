@@ -5,7 +5,7 @@
 
 use crate::kbc_modules::{KbcCheckInfo, KbcInterface};
 
-use aes_gcm::aead::{Aead, NewAead};
+use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
@@ -164,7 +164,7 @@ impl OnlineSevKbc {
         let key_bytes = base64::decode(connection.key.clone())?;
 
         let nonce = Nonce::from_slice(&iv_bytes);
-        let key = Key::from_slice(&key_bytes);
+        let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
         let cipher = Aes256Gcm::new(key);
 
         let decrypted_payload = cipher
