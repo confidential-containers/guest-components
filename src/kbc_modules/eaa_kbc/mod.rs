@@ -128,8 +128,8 @@ impl EAAKbc {
 
         match response.status.as_str() {
             "OK" => Ok(response.version),
-            "Fail" => return Err(anyhow!("The VersionResponse status is Fail")),
-            _ => return Err(anyhow!("Cannot understand the VersionResponse status")),
+            "Fail" => Err(anyhow!("The VersionResponse status is Fail")),
+            _ => Err(anyhow!("Cannot understand the VersionResponse status")),
         }
     }
 
@@ -175,9 +175,9 @@ impl EAAKbc {
             let decrypted_payload = base64::decode(decrypted_payload_string)?;
             Ok(decrypted_payload)
         } else {
-            return Err(anyhow!(
+            Err(anyhow!(
                 "DecryptionResponse status is OK but the data is null"
-            ));
+            ))
         }
     }
 
@@ -225,18 +225,14 @@ impl EAAKbc {
             "OK" => response
                 .data
                 .ok_or_else(|| anyhow!("{}: Resource info payload is null", EAA_KBS_NAME)),
-            "Fail" => {
-                return Err(anyhow!(format!(
-                    "{}: {}",
-                    EAA_KBS_NAME,
-                    response.error.unwrap()
-                )))
-            }
-            _ => {
-                return Err(anyhow!(
-                    "Cannot understand the GetResourceInfoResponse status"
-                ))
-            }
+            "Fail" => Err(anyhow!(format!(
+                "{}: {}",
+                EAA_KBS_NAME,
+                response.error.unwrap()
+            ))),
+            _ => Err(anyhow!(
+                "Cannot understand the GetResourceInfoResponse status"
+            )),
         }
     }
 
