@@ -195,3 +195,4 @@ pub fn try_into_sign_scheme(&self) -> Option<&dyn SignScheme> {
 |Sign Scheme|Readme|
 |---|---|
 |[Simple Signing](src/mechanism/simple)| [README](src/mechanism/simple/README.md) |
+|[Cosign](src/mechanism/cosign)| [README](src/mechanism/cosign/README.md)|

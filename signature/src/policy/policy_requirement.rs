@@ -8,7 +8,7 @@ use serde::*;
 
 use crate::{
     image::Image,
-    mechanism::{simple::SimpleParameters, SignScheme},
+    mechanism::{cosign::CosignParameters, simple::SimpleParameters, SignScheme},
 };
 
 /// Policy Requirement Types.
@@ -30,6 +30,10 @@ pub enum PolicyReqType {
     /// Signed by Simple Signing
     #[serde(rename = "signedBy")]
     SimpleSigning(SimpleParameters),
+
+    /// Signed by Cosign
+    #[serde(rename = "sigstoreSigned")]
+    Cosign(CosignParameters),
     // TODO: Add more signature mechanism.
     //
     // Refer to issue: https://github.com/confidential-containers/image-rs/issues/7
@@ -42,6 +46,7 @@ impl PolicyReqType {
             PolicyReqType::Accept => Ok(()),
             PolicyReqType::Reject => Err(anyhow!(r#"The policy is "reject""#)),
             PolicyReqType::SimpleSigning(inner) => inner.allows_image(image).await,
+            PolicyReqType::Cosign(inner) => inner.allows_image(image).await,
         }
     }
 
@@ -50,6 +55,7 @@ impl PolicyReqType {
     pub fn try_into_sign_scheme(&self) -> Option<&dyn SignScheme> {
         match self {
             PolicyReqType::SimpleSigning(scheme) => Some(scheme as &dyn SignScheme),
+            PolicyReqType::Cosign(scheme) => Some(scheme as &dyn SignScheme),
             _ => None,
         }
     }

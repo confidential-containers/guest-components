@@ -21,6 +21,7 @@ use async_trait::async_trait;
 
 use crate::image::Image;
 
+pub mod cosign;
 pub mod simple;
 
 /// The interface of a signing scheme
