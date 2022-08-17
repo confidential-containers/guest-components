@@ -179,6 +179,13 @@ pub fn judge_single_signature(
     // is consistent with the real information of the image.
     //
     // The match policy of image-reference is the "signedIdentity" field.
+    // If the signedIdentity field is not set, by default will be set
+    // `matchRepoDigestOrExact`
+    let signed_identity = match signed_identity {
+        Some(rule) => rule,
+        None => &PolicyReqMatchType::MatchRepoDigestOrExact,
+    };
+
     sig_payload.validate_signed_docker_reference(&image.reference, signed_identity)?;
     sig_payload.validate_signed_docker_manifest_digest(&image.manifest_digest.to_string())?;
 

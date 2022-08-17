@@ -3,97 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::policy::ref_match::PolicyReqMatchType;
 use anyhow::{anyhow, Result};
-use oci_distribution::Reference;
-use serde::{Deserialize, Serialize};
-
 use openpgp::parse::Parse;
 use openpgp::PacketPile;
 use sequoia_openpgp as openpgp;
 
-// Signature is a parsed content of a signature.
-// The only way to get this structure from a blob should be as a return value
-// from a successful call to `verify_sig_and_extract_payload` below.
-//
-// The spec of SigPayload is defined in https://github.com/containers/image/blob/main/docs/containers-signature.5.md.
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct SigPayload {
-    critical: SigPayloadCritical,
-    optional: serde_json::Value,
-}
-
-impl SigPayload {
-    // Compare wether the docker reference in the JSON payload
-    // is consistent with that of the container image.
-    pub fn validate_signed_docker_reference(
-        &self,
-        image_ref: &Reference,
-        match_policy: Option<&PolicyReqMatchType>,
-    ) -> Result<()> {
-        if let Some(signed_identity) = match_policy {
-            signed_identity.matches_docker_reference(image_ref, &self.docker_reference())
-        } else {
-            // If the match policy is None,
-            // use default match policy: "matchExact".
-            let default_signed_identity = PolicyReqMatchType::default_match_policy();
-            default_signed_identity.matches_docker_reference(image_ref, &self.docker_reference())
-        }
-    }
-
-    // Compare wether the manifest digest in the JSON payload
-    // is consistent with that of the container image.
-    pub fn validate_signed_docker_manifest_digest(&self, ref_manifest_digest: &str) -> Result<()> {
-        if self.manifest_digest() != ref_manifest_digest {
-            return Err(anyhow!(
-                "SigPayload's manifest digest does not match, the input is {}, but in SigPayload it is {}",
-                &ref_manifest_digest,
-                &self.manifest_digest()
-            ));
-        }
-        Ok(())
-    }
-
-    fn manifest_digest(&self) -> String {
-        self.critical.image.docker_manifest_digest.clone()
-    }
-
-    fn docker_reference(&self) -> String {
-        self.critical.identity.docker_reference.clone()
-    }
-}
-
-// A JSON object which contains data critical to correctly evaluating the validity of a signature.
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-struct SigPayloadCritical {
-    r#type: String,
-    pub image: PayloadCriticalImage,
-    pub identity: PayloadCriticalIdentity,
-}
-
-// A JSON object which identifies the container image this signature applies to.
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-struct PayloadCriticalImage {
-    // A JSON string, in the github.com/opencontainers/go-digest.Digest string format.
-    #[serde(rename = "docker-manifest-digest")]
-    pub docker_manifest_digest: String,
-}
-
-// A JSON object which identifies the claimed identity of the image
-// (usually the purpose of the image, or the application, along with a version information),
-// as asserted by the author of the signature.
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-struct PayloadCriticalIdentity {
-    // A JSON string, in the github.com/docker/distribution/reference string format,
-    // and using the same normalization semantics
-    // (where e.g. busybox:latest is equivalent to docker.io/library/busybox:latest).
-    // If the normalization semantics allows multiple string representations
-    // of the claimed identity with equivalent meaning,
-    // the critical.identity.docker-reference member SHOULD use the fully explicit form
-    // (including the full host name and namespaces).
-    #[serde(rename = "docker-reference")]
-    pub docker_reference: String,
-}
+use crate::payload::simple_signing::SigPayload;
 
 const GPG_KEY_ID_BYTES_LENGTH: usize = 20;
 const GPG_KEY_ID_SUFFIX_BYTES_LENGTH_IN_SIG: usize = 8;
@@ -213,7 +128,9 @@ pub fn verify_sig_and_extract_payload(pubkey_ring: Vec<u8>, sig: Vec<u8>) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::policy::ref_match::PolicyReqMatchType;
     use oci_distribution::Reference;
+    use serde_json::json;
 
     const SIG_PAYLOAD_JSON: &str = r#"{
         "critical": {
@@ -297,7 +214,7 @@ mod tests {
                 .is_ok());
 
             assert!(sig_payload
-                .validate_signed_docker_reference(&case.reference, Some(&match_reference_policy))
+                .validate_signed_docker_reference(&case.reference, &match_reference_policy)
                 .is_ok());
         }
 
@@ -307,21 +224,37 @@ mod tests {
                 .is_err());
 
             assert!(sig_payload
-                .validate_signed_docker_reference(&case.reference, Some(&match_reference_policy))
+                .validate_signed_docker_reference(&case.reference, &match_reference_policy)
                 .is_err());
         }
     }
 
     #[test]
     fn test_verify_sig_and_extract_payload() {
-        let sig_payload = serde_json::from_str::<SigPayload>(SIG_PAYLOAD_JSON).unwrap();
+        let sig_payload_parsed = json!({
+            "critical": {
+                "identity": {
+                    "docker-reference": "quay.io/ali_os_security/alpine:latest"
+                },
+                  "image": {
+                    "docker-manifest-digest": "sha256:69704ef328d05a9f806b6b8502915e6a0a4faa4d72018dc42343f511490daf8a"
+                },
+                  "type": "atomic container signature"
+            },
+            "optional": {
+                "creator": "atomic 2.0.0",
+                "timestamp": 1634533638
+            }
+        });
 
         let keyring_bytes_case_1 = ::std::fs::read("./fixtures/pubring.gpg").unwrap();
         let sig_bytes_case_1 = ::std::fs::read("./fixtures/signatures/signature-1").unwrap();
 
-        assert_eq!(
-            sig_payload,
-            verify_sig_and_extract_payload(keyring_bytes_case_1, sig_bytes_case_1).unwrap()
-        );
+        let sig_payload_verified =
+            verify_sig_and_extract_payload(keyring_bytes_case_1, sig_bytes_case_1).unwrap();
+
+        let sig_payload_verified = serde_json::to_value(&sig_payload_verified).unwrap();
+
+        assert_eq!(sig_payload_parsed, sig_payload_verified);
     }
 }
