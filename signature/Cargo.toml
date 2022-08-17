@@ -19,7 +19,12 @@ tokio = { version = "1.0", features = [ "rt", "macros", "rt-multi-thread" ] }
 tonic = "0.5"
 prost = "0.8"
 strum_macros = "0.24.2"
+sigstore_rs = { git = "https://github.com/sigstore/sigstore-rs", rev = "6dd3281c25270f0d82550368abfb399ed3da7b41", package = "sigstore" }
 
 [build-dependencies]
 tonic-build = "0.5"
 shadow-rs = "0.5.25"
+
+[dev-dependencies]
+rstest = "0.15.0"
+serial_test = "0.9.0"
