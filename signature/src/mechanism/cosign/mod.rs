@@ -194,7 +194,7 @@ mod tests {
     // All the test images are the same image, but different
     // registry and repository
     const IMAGE_DIGEST: &str =
-        "sha256:9b2a28eb47540823042a2ba401386845089bb7b62a9637d55816132c4c3c36eb";
+        "sha256:7bd0c945d7e4cc2ce5c21d449ba07eb89c8e6c28085edbcf6f5fa4bf90e7eedc";
 
     #[rstest]
     #[case(
@@ -219,7 +219,7 @@ mod tests {
             key_data: None,
             signed_identity: None,
         },
-        "quay.io/xynnn/cosign:latest",
+        "quay.io/kata-containers/confidential-containers:cosign-signed",
     )]
     #[tokio::test]
     #[serial]
@@ -293,7 +293,7 @@ mod tests {
             "type": "sigstoreSigned",
             "keyPath": "fixtures/cosign/cosign2.pub"
         }"#,
-        "quay.io/xynnn/cosign:latest",
+        "quay.io/kata-containers/confidential-containers:cosign-signed",
         false,
         // If verified failed, the pubkey given to verify will be printed.
         "[PublicKeyVerifier { key: CosignVerificationKey { verification_algorithm: ECDSA_P256_SHA256_ASN1, data: [4, 192, 146, 124, 21, 74, 44, 46, 129, 189, 211, 135, 35, 87, 145, 71, 172, 25, 92, 98, 102, 245, 109, 29, 191, 50, 55, 236, 233, 47, 136, 66, 124, 253, 181, 135, 68, 180, 68, 84, 60, 97, 97, 147, 39, 218, 80, 228, 49, 224, 66, 101, 2, 236, 78, 109, 162, 5, 171, 119, 141, 234, 112, 247, 247] } }]",
@@ -306,7 +306,7 @@ mod tests {
                 "type" : "matchExact"
             }
         }"#,
-        "quay.io/xynnn/cosign:latest",
+        "quay.io/kata-containers/confidential-containers:cosign-signed",
         false,
         // Only MatchRepository and ExactRepository are supported.
         "Denied by MatchExact",
@@ -316,7 +316,7 @@ mod tests {
             "type": "sigstoreSigned",
             "keyPath": "fixtures/cosign/cosign1.pub"
         }"#,
-        "registry.cn-hangzhou.aliyuncs.com/xynnn/cosign:latest",
+        "registry.cn-hangzhou.aliyuncs.com/xynnn/cosign:signed",
         true,
         ""
     )]
@@ -334,7 +334,7 @@ mod tests {
             "type": "sigstoreSigned",
             "keyPath": "fixtures/cosign/cosign1.pub"
         }"#,
-        "quay.io/xynnn/cosign:latest",
+        "quay.io/kata-containers/confidential-containers:cosign-signed",
         true,
         ""
     )]
