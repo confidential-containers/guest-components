@@ -37,6 +37,7 @@ use anyhow::Result;
 pub mod agent;
 pub mod image;
 pub mod mechanism;
+pub mod payload;
 pub mod policy;
 
 /// `allows_image` will check all the `PolicyRequirements` suitable for
