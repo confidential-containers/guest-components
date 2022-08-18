@@ -32,4 +32,8 @@ log = "0.4.14"
 filetime = "0.2"
 tempfile = "3.2"
 
+[workspace]
+members = ["signature"]
+exclude = ["scripts/attestation_agent/app"]
+
 [build-dependencies]
