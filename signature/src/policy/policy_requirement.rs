@@ -16,7 +16,7 @@ use crate::{
 /// * `Reject`: s.t. `reject`, reject the image directly.
 /// * `SignedBy`: s.t. `signBy`, means that the image is signed by `Simple Signing`,
 /// and the related parameters are inside the enum.
-#[derive(Deserialize, Debug, PartialEq, Serialize)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "type")]
 pub enum PolicyReqType {
     /// Accept all images

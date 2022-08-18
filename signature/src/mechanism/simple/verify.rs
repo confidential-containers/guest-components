@@ -123,13 +123,13 @@ impl SigKeyIDs {
         {
             Ok(())
         } else {
-            return Err(
+            Err(
                 anyhow!(
                     "Key ID not matched. trusted key id is: {:X?}, but key id in signature info is: {:X?}", 
                     &self.trusted_key_id,
                     &self.sig_info_key_id
                 )
-            );
+            )
         }
     }
 }
@@ -206,7 +206,7 @@ pub fn verify_sig_and_extract_payload(pubkey_ring: Vec<u8>, sig: Vec<u8>) -> Res
         let sig_payload = serde_json::from_str::<SigPayload>(&body_message)?;
         Ok(sig_payload)
     } else {
-        return Err(anyhow!("Signature format error: no literal field in it!"));
+        Err(anyhow!("Signature format error: no literal field in it!"))
     }
 }
 
