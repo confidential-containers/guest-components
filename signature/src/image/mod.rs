@@ -10,7 +10,7 @@ pub mod digest;
 
 use digest::Digest;
 
-#[derive(EnumString, Display, Debug, PartialEq)]
+#[derive(EnumString, Display, Debug, PartialEq, Eq)]
 pub enum TransportName {
     #[strum(to_string = "docker")]
     Docker,

@@ -17,7 +17,7 @@ use self::policy_requirement::PolicyReqType;
 pub mod policy_requirement;
 pub mod ref_match;
 
-#[derive(EnumString, Display, Debug, PartialEq)]
+#[derive(EnumString, Display, Debug, PartialEq, Eq)]
 pub enum ErrorInfo {
     #[strum(to_string = "Match reference failed.")]
     MatchReference,

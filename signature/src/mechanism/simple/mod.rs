@@ -40,7 +40,7 @@ pub const SIG_STORE_CONFIG_KBS: &str = "Sigstore Config";
 /// The name of gpg key ring to request sigstore config from kbs
 pub const GPG_KEY_RING_KBS: &str = "GPG Keyring";
 
-#[derive(Deserialize, Debug, PartialEq, Serialize, Default)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Serialize, Default)]
 pub struct SimpleParameters {
     // KeyType specifies what kind of the public key to verify the signatures.
     #[serde(rename = "keyType")]
@@ -160,7 +160,7 @@ impl SignScheme for SimpleParameters {
     }
 }
 
-#[derive(Deserialize, EnumString, Display, Debug, PartialEq, Clone)]
+#[derive(Deserialize, EnumString, Display, Debug, PartialEq, Eq, Clone)]
 pub enum KeyType {
     #[strum(to_string = "GPGKeys")]
     Gpg,

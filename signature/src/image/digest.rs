@@ -11,7 +11,7 @@ use std::str::FromStr;
 use std::string::ToString;
 
 // Supported digest algorithm types
-#[derive(EnumString, Display, Debug, PartialEq, EnumProperty)]
+#[derive(EnumString, Display, Debug, PartialEq, Eq, EnumProperty)]
 pub enum Algorithm {
     #[strum(serialize = "sha256", props(Length = "64"))]
     Sha256,
@@ -55,7 +55,7 @@ impl Error for ParseError {}
 //
 // This allows to abstract the digest behind this type and work only in those
 // terms.
-#[derive(Default, PartialEq, Debug, Clone)]
+#[derive(Default, PartialEq, Eq, Debug, Clone)]
 pub struct Digest {
     algorithm: String,
     value: String,
