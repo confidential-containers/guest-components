@@ -22,9 +22,9 @@ pub fn start_attestation_agent() -> Result<Child> {
 
     Ok(Command::new(aa_path)
         .args(&["--keyprovider_sock"])
-        .args(&["127.0.0.1:47777"])
+        .args(&["127.0.0.1:50000"])
         .args(&["--getresource_sock"])
-        .args(&["127.0.0.1:48888"])
+        .args(&["127.0.0.1:50001"])
         .spawn()?)
 }
 

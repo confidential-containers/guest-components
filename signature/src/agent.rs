@@ -34,7 +34,7 @@ pub const POLICY_FILE_PATH: &str = "/run/image-security/security_policy.json";
 
 /// Attestation Agent's GetResource gRPC address.
 /// It's given <https://github.com/confidential-containers/attestation-agent#run>
-pub const AA_GETRESOURCE_ADDR: &str = "http://127.0.0.1:48888";
+pub const AA_GETRESOURCE_ADDR: &str = "http://127.0.0.1:50001";
 
 /// Signature submodule agent for image signature veriication.
 pub struct Agent {
