@@ -16,6 +16,9 @@ use tokio::sync::Mutex;
 
 mod grpc;
 
+const DEFAULT_KEYPROVIDER_ADDR: &str = "127.0.0.1:50000";
+const DEFAULT_GETRESOURCE_ADDR: &str = "127.0.0.1:50001";
+
 lazy_static! {
     pub static ref ATTESTATION_AGENT: Arc<Mutex<AttestationAgent>> =
         Arc::new(Mutex::new(AttestationAgent::new()));
@@ -44,12 +47,12 @@ async fn main() -> Result<()> {
 
     let keyprovider_socket = app_matches
         .value_of("KeyProvider gRPC socket addr")
-        .unwrap_or("127.0.0.0:44444")
+        .unwrap_or(DEFAULT_KEYPROVIDER_ADDR)
         .parse::<SocketAddr>()?;
 
     let getresource_socket = app_matches
         .value_of("GetResource gRPC socket addr")
-        .unwrap_or("127.0.0.0:55555")
+        .unwrap_or(DEFAULT_GETRESOURCE_ADDR)
         .parse::<SocketAddr>()?;
 
     debug!(

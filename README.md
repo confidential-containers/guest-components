@@ -66,12 +66,18 @@ attestation-agent --help
 Start AA and specify the endpoint of AA's gRPC service:
 
 ```shell
-attestation-agent --keyprovider_sock 127.0.0.1:47777 --getresource_sock 127.0.0.1:48888
+attestation-agent --keyprovider_sock 127.0.0.1:50000 --getresource_sock 127.0.0.1:50001
+```
+
+Or start AA with default keyprovider address (127.0.0.1:50000) and default getresource address (127.0.0.1:50001):
+
+```
+attestation-agent
 ```
 
 If you want to see the runtime log:
 ```
-RUST_LOG=attestation_agent attestation-agent --keyprovider_sock 127.0.0.1:47777 --getresource_sock 127.0.0.1:48888
+RUST_LOG=attestation_agent attestation-agent --keyprovider_sock 127.0.0.1:50000 --getresource_sock 127.0.0.1:50001
 ```
 
 ## Supported KBC modules
