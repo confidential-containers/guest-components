@@ -135,8 +135,23 @@ impl PullClient {
                 };
 
                 if layer_meta.decoder == Compression::Uncompressed {
-                    layer_meta.uncompressed_digest = layer.digest.clone();
-                    layer_meta.compressed_digest = layer.digest.clone();
+                    let digest = if diff_ids[i].starts_with(DIGEST_SHA256) {
+                        format!(
+                            "{}:{:x}",
+                            DIGEST_SHA256,
+                            sha2::Sha256::digest(&plaintext_layer.as_slice())
+                        )
+                    } else if diff_ids[i].starts_with(DIGEST_SHA512) {
+                        format!(
+                            "{}:{:x}",
+                            DIGEST_SHA512,
+                            sha2::Sha512::digest(&plaintext_layer.as_slice())
+                        )
+                    } else {
+                        return Err(anyhow!("unsupported digest format: {}", diff_ids[i]));
+                    };
+                    layer_meta.uncompressed_digest = digest.clone();
+                    layer_meta.compressed_digest = digest;
                 } else {
                     layer_meta.compressed_digest = layer.digest.clone();
                     layer_meta
