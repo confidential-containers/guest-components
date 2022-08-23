@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::kbc_modules::{KbcCheckInfo, KbcInterface};
+use crate::kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription};
 pub mod common;
 use common::*;
 
@@ -14,6 +14,7 @@ use openssl::symm::decrypt;
 use std::collections::HashMap;
 
 const KEYS_PATH: &str = "/etc/aa-offline_fs_kbc-keys.json";
+const RESOURCES_PATH: &str = "/etc/aa-offline_fs_kbc-resources.json";
 
 pub struct OfflineFsKbc {
     // KBS info for compatibility; unused
@@ -22,6 +23,8 @@ pub struct OfflineFsKbc {
     keys: Result<Keys>,
     // Known ciphers, corresponding to wrap_type
     ciphers: Ciphers,
+    // Stored resources, loaded from file system; load might fail
+    resources: Result<Resources>,
 }
 
 #[async_trait]
@@ -53,6 +56,16 @@ impl KbcInterface for OfflineFsKbc {
         // Redact decryption errors to avoid oracles
         decrypt(*cipher, key, Some(&iv), &wrapped_data).map_err(|_| anyhow!("Failed to decrypt"))
     }
+
+    async fn get_resource(&mut self, description: String) -> Result<Vec<u8>> {
+        let desc: ResourceDescription =
+            serde_json::from_str::<ResourceDescription>(description.as_str())?;
+        let resources = self.resources.as_ref().map_err(|e| anyhow!("{}", e))?;
+        let resource = resources
+            .get(desc.name.as_str())
+            .ok_or_else(|| anyhow!("Received unknown resource name: {}", desc.name.as_str()))?;
+        Ok(resource.to_vec())
+    }
 }
 
 impl OfflineFsKbc {
@@ -62,6 +75,8 @@ impl OfflineFsKbc {
             kbs_info: HashMap::new(),
             keys: load_keys(KEYS_PATH).map_err(|e| anyhow!("Failed to load keys: {}", e)),
             ciphers: ciphers(),
+            resources: load_resources(RESOURCES_PATH)
+                .map_err(|e| anyhow!("Failed to load resources: {}", e)),
         }
     }
 }
@@ -69,9 +84,10 @@ impl OfflineFsKbc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use common::tests::{KEY, KID};
+    use crate::kbc_modules::ResourceName;
+    use common::tests::{KEY, KID, POLICYJSON, PUBKEY, SIGSTORECONFIG};
 
-    use base64::encode;
+    use base64;
     use openssl::symm::encrypt;
 
     #[tokio::test]
@@ -81,8 +97,8 @@ mod tests {
 
         let cipher_key = "aes_256_ctr";
         let cipher = ciphers().get(cipher_key).unwrap().to_owned();
-        let wrapped_data = encode(encrypt(cipher, &KEY, Some(iv), data).unwrap());
-        let encoded_iv = encode(iv);
+        let wrapped_data = base64::encode(encrypt(cipher, &KEY, Some(iv), data).unwrap());
+        let encoded_iv = base64::encode(iv);
 
         let annotation = format!(
             "{{
@@ -98,6 +114,23 @@ mod tests {
             kbs_info: HashMap::new(),
             keys: Ok([(KID.to_string(), KEY.to_vec())].iter().cloned().collect()),
             ciphers: ciphers(),
+            resources: Ok([
+                (
+                    ResourceName::Policy.to_string(),
+                    POLICYJSON.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::SigstoreConfig.to_string(),
+                    SIGSTORECONFIG.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::GPGPublicKey.to_string(),
+                    PUBKEY.as_bytes().to_vec(),
+                ),
+            ]
+            .iter()
+            .cloned()
+            .collect()),
         };
 
         assert_eq!(kbc.decrypt_payload(&annotation).await.unwrap(), data);
@@ -109,6 +142,23 @@ mod tests {
             kbs_info: HashMap::new(),
             keys: Err(anyhow!("")),
             ciphers: ciphers(),
+            resources: Ok([
+                (
+                    ResourceName::Policy.to_string(),
+                    POLICYJSON.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::SigstoreConfig.to_string(),
+                    SIGSTORECONFIG.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::GPGPublicKey.to_string(),
+                    PUBKEY.as_bytes().to_vec(),
+                ),
+            ]
+            .iter()
+            .cloned()
+            .collect()),
         };
         assert!(key_load_failure_kbc
             .decrypt_payload(&annotation)
@@ -122,6 +172,23 @@ mod tests {
                 .cloned()
                 .collect()),
             ciphers: ciphers(),
+            resources: Ok([
+                (
+                    ResourceName::Policy.to_string(),
+                    POLICYJSON.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::SigstoreConfig.to_string(),
+                    SIGSTORECONFIG.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::GPGPublicKey.to_string(),
+                    PUBKEY.as_bytes().to_vec(),
+                ),
+            ]
+            .iter()
+            .cloned()
+            .collect()),
         };
         assert!(unknown_kid_kbc.decrypt_payload(&annotation).await.is_err());
 
@@ -136,7 +203,102 @@ mod tests {
             .cloned()
             .collect()),
             ciphers: ciphers(),
+            resources: Ok([
+                (
+                    ResourceName::Policy.to_string(),
+                    POLICYJSON.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::SigstoreConfig.to_string(),
+                    SIGSTORECONFIG.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::GPGPublicKey.to_string(),
+                    PUBKEY.as_bytes().to_vec(),
+                ),
+            ]
+            .iter()
+            .cloned()
+            .collect()),
         };
         assert!(invalid_key_kbc.decrypt_payload(&annotation).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_resource() {
+        // Case 1. Get resources from good kbc instance correctly
+        let mut kbc = OfflineFsKbc {
+            kbs_info: HashMap::new(),
+            keys: Ok([(KID.to_string(), KEY.to_vec())].iter().cloned().collect()),
+            ciphers: ciphers(),
+            resources: Ok([
+                (
+                    ResourceName::Policy.to_string(),
+                    POLICYJSON.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::SigstoreConfig.to_string(),
+                    SIGSTORECONFIG.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::GPGPublicKey.to_string(),
+                    PUBKEY.as_bytes().to_vec(),
+                ),
+            ]
+            .iter()
+            .cloned()
+            .collect()),
+        };
+
+        let policy_rd = serde_json::to_string(&ResourceDescription {
+            name: ResourceName::Policy.to_string(),
+            optional: HashMap::new(),
+        })
+        .unwrap();
+        assert_eq!(
+            kbc.get_resource(policy_rd).await.unwrap(),
+            POLICYJSON.as_bytes()
+        );
+
+        let sigstore_config_rd = serde_json::to_string(&ResourceDescription {
+            name: ResourceName::SigstoreConfig.to_string(),
+            optional: HashMap::new(),
+        })
+        .unwrap();
+        assert_eq!(
+            kbc.get_resource(sigstore_config_rd).await.unwrap(),
+            SIGSTORECONFIG.as_bytes()
+        );
+
+        let public_key_rd = serde_json::to_string(&ResourceDescription {
+            name: ResourceName::GPGPublicKey.to_string(),
+            optional: HashMap::new(),
+        })
+        .unwrap();
+        assert_eq!(
+            kbc.get_resource(public_key_rd).await.unwrap(),
+            PUBKEY.as_bytes()
+        );
+
+        // Case 2. Error while get bad resource name from a good kbc instance
+        assert!(kbc.get_resource("bad".to_string()).await.is_err());
+
+        // Case 3. Error while get good resource name from bad kbc instance
+        let mut resources_load_failure_kbc = OfflineFsKbc {
+            kbs_info: HashMap::new(),
+            keys: Ok([(KID.to_string(), KEY.to_vec())].iter().cloned().collect()),
+            ciphers: ciphers(),
+            resources: Err(anyhow!("")),
+        };
+        let good_policy_rd = serde_json::to_string(&ResourceDescription {
+            name: ResourceName::Policy.to_string(),
+            optional: HashMap::new(),
+        })
+        .unwrap();
+
+        assert!(resources_load_failure_kbc
+            .get_resource(good_policy_rd)
+            .await
+            .is_err());
     }
 }

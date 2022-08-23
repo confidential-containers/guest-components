@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::fs;
 
 pub type Keys = HashMap<String, Vec<u8>>;
+pub type Resources = HashMap<String, Vec<u8>>;
 pub type Ciphers = HashMap<String, Cipher>;
 
 #[derive(Serialize, Deserialize)]
@@ -50,10 +51,23 @@ pub fn load_keys(keyfile_name: &str) -> Result<Keys> {
         .collect()
 }
 
+pub fn load_resources(resources_file_name: &str) -> Result<Resources> {
+    let resources_json = fs::read_to_string(resources_file_name)?;
+    let encoded_resources: HashMap<String, String> = serde_json::from_str(&resources_json)
+        .map_err(|_| anyhow!("Failed to parse resources JSON file"))?;
+    encoded_resources
+        .iter()
+        .map(|(k, v)| match decode(v) {
+            Ok(resource) => Ok((k.clone(), resource)),
+            Err(_) => Err(anyhow!("Failed to decode resource")),
+        })
+        .collect()
+}
+
 pub mod tests {
     pub use super::*;
-
-    pub use base64::encode;
+    use crate::kbc_modules::ResourceName;
+    pub use base64;
     pub use std::env;
     pub use std::fs;
     pub use std::path::{Path, PathBuf};
@@ -62,6 +76,11 @@ pub mod tests {
     pub const KID: &str = "foo";
     #[allow(dead_code)]
     pub const KEY: [u8; 32] = *b"passphrasewhichneedstobe32bytes!";
+    pub const POLICYJSON: &str = "{\"a\":\"b\"}";
+    pub const SIGSTORECONFIG: &str = "sigstore_config:docker";
+    pub const PUBKEY: &str = "pubkey";
+    #[allow(dead_code)]
+    pub const RESOURCES_NAME: &str = "aa-offline_fs_kbc-resources.json";
 
     #[allow(dead_code)]
     pub fn create_keyfile(name: &str) -> PathBuf {
@@ -75,11 +94,26 @@ pub mod tests {
     \"{}\": \"{}\"
 }}",
                 KID,
-                encode(KEY),
+                base64::encode(KEY),
             ),
         )
         .unwrap();
         keyfile_path
+    }
+
+    #[allow(dead_code)]
+    pub fn create_resources_file(resources_file_path: &Path) {
+        let resources_file_content = serde_json::json!({
+          ResourceName::Policy.to_string(): base64::encode(POLICYJSON.as_bytes()),
+          ResourceName::SigstoreConfig.to_string(): base64::encode(SIGSTORECONFIG.as_bytes()),
+          ResourceName::GPGPublicKey.to_string(): base64::encode(PUBKEY.as_bytes()),
+        });
+
+        fs::write(
+            resources_file_path,
+            serde_json::to_string(&resources_file_content).unwrap(),
+        )
+        .unwrap();
     }
 
     #[test]
@@ -95,5 +129,37 @@ pub mod tests {
         assert!(load_keys(keyfile_name).is_err());
 
         fs::remove_file(keyfile_name).unwrap();
+    }
+    #[test]
+    fn test_load_resources() {
+        let temp_dir = env::temp_dir();
+        let resources_file_path = &Path::new(&temp_dir).join(RESOURCES_NAME);
+        create_resources_file(resources_file_path);
+        let resources_file_name = &resources_file_path.to_str().unwrap();
+        assert_eq!(
+            load_resources(resources_file_name).unwrap(),
+            [
+                (
+                    ResourceName::Policy.to_string(),
+                    POLICYJSON.as_bytes().to_vec()
+                ),
+                (
+                    ResourceName::SigstoreConfig.to_string(),
+                    SIGSTORECONFIG.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::GPGPublicKey.to_string(),
+                    PUBKEY.as_bytes().to_vec()
+                ),
+            ]
+            .iter()
+            .cloned()
+            .collect()
+        );
+
+        fs::write(resources_file_path.clone(), "foo").unwrap();
+        assert!(load_resources(resources_file_name).is_err());
+
+        fs::remove_file(resources_file_name).unwrap();
     }
 }
