@@ -25,7 +25,7 @@ pub mod simple;
 
 /// The interface of a signing scheme
 #[async_trait]
-pub trait SignScheme {
+pub trait SignScheme: Send + Sync {
     /// Do initialization jobs for this scheme. This may include the following
     /// * preparing runtime directories for storing signatures, configurations, etc.
     /// * gathering necessary files.
