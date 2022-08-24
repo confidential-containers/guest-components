@@ -10,7 +10,7 @@ use crate::image::{ImageMeta, LayerMeta};
 pub const METAFILE: &str = "meta_store.json";
 
 /// `image-rs` container metadata storage database.
-#[derive(Clone, Default, Deserialize)]
+#[derive(Clone, Default, Deserialize, Debug)]
 pub struct MetaStore {
     // image_db holds map of image ID with image data.
     pub image_db: HashMap<String, ImageMeta>,

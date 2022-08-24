@@ -27,7 +27,7 @@ use crate::snapshots::occlum::unionfs::Unionfs;
 use crate::snapshots::{SnapshotType, Snapshotter};
 
 /// The metadata info for container image layer.
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
 pub struct LayerMeta {
     /// Image layer compression algorithm type.
     pub decoder: Compression,

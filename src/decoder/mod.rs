@@ -2,11 +2,17 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::{anyhow, Result};
 use flate2;
+use oci_distribution::manifest;
+use oci_spec::image::MediaType;
 use serde::Deserialize;
+use std::convert::TryFrom;
 use std::fmt;
 use std::io;
 use zstd;
+
+pub const ERR_BAD_MEDIA_TYPE: &str = "unhandled media type";
 
 /// Represents the layer compression algorithm type,
 /// and allows to decompress corresponding compressed data.
@@ -76,11 +82,43 @@ where
     Ok(())
 }
 
+impl TryFrom<&str> for Compression {
+    type Error = anyhow::Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        let mut media_type_str = s;
+
+        // convert docker layer media type to oci format
+        if media_type_str == manifest::IMAGE_DOCKER_LAYER_GZIP_MEDIA_TYPE {
+            media_type_str = manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE;
+        }
+
+        let media_type = MediaType::from(media_type_str);
+
+        let decoder = match media_type {
+            MediaType::ImageLayer | MediaType::ImageLayerNonDistributable => {
+                Compression::Uncompressed
+            }
+            MediaType::ImageLayerGzip | MediaType::ImageLayerNonDistributableGzip => {
+                Compression::Gzip
+            }
+            MediaType::ImageLayerZstd | MediaType::ImageLayerNonDistributableZstd => {
+                Compression::Zstd
+            }
+            _ => return Err(anyhow!("{}: {}", ERR_BAD_MEDIA_TYPE, media_type)),
+        };
+
+        Ok(decoder)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use flate2::write::GzEncoder;
     use std::io::Write;
+
+    use test_utils::assert_result;
 
     #[test]
     fn test_uncompressed_decode() {
@@ -127,5 +165,71 @@ mod tests {
             .decompress(bytes.as_slice(), &mut output)
             .is_ok());
         assert_eq!(data, output);
+    }
+
+    #[tokio::test]
+    async fn test_try_from_compression() {
+        #[derive(Debug)]
+        struct TestData<'a> {
+            media_type_str: &'a str,
+            result: Result<Compression>,
+        }
+
+        let tests = &[
+            TestData {
+                media_type_str: "",
+                result: Err(anyhow!("{}: {}", ERR_BAD_MEDIA_TYPE, "")),
+            },
+            TestData {
+                media_type_str: "foo",
+                result: Err(anyhow!("{}: {}", ERR_BAD_MEDIA_TYPE, "foo")),
+            },
+            TestData {
+                media_type_str: "foo/ bar",
+                result: Err(anyhow!("{}: {}", ERR_BAD_MEDIA_TYPE, "foo/ bar")),
+            },
+            TestData {
+                media_type_str: manifest::IMAGE_LAYER_MEDIA_TYPE,
+                result: Ok(Compression::Uncompressed),
+            },
+            TestData {
+                media_type_str: "application/vnd.oci.image.layer.nondistributable.v1.tar",
+                result: Ok(Compression::Uncompressed),
+            },
+            TestData {
+                media_type_str: manifest::IMAGE_DOCKER_LAYER_GZIP_MEDIA_TYPE,
+                result: Ok(Compression::Gzip),
+            },
+            TestData {
+                media_type_str: manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE,
+                result: Ok(Compression::Gzip),
+            },
+            TestData {
+                media_type_str: "application/vnd.oci.image.layer.nondistributable.v1.tar+gzip",
+                result: Ok(Compression::Gzip),
+            },
+            TestData {
+                media_type_str: "application/vnd.oci.image.layer.v1.tar+gzip",
+                result: Ok(Compression::Gzip),
+            },
+            TestData {
+                media_type_str: "application/vnd.oci.image.layer.v1.tar+zstd",
+                result: Ok(Compression::Zstd),
+            },
+            TestData {
+                media_type_str: "application/vnd.oci.image.layer.nondistributable.v1.tar+zstd",
+                result: Ok(Compression::Zstd),
+            },
+        ];
+
+        for (i, d) in tests.iter().enumerate() {
+            let msg = format!("test[{}]: {:?}", i, d);
+
+            let result = Compression::try_from(d.media_type_str);
+
+            let msg = format!("{}: result: {:?}", msg, result);
+
+            assert_result!(d.result, result, msg);
+        }
     }
 }
