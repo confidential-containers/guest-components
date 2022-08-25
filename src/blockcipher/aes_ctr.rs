@@ -7,7 +7,7 @@ use anyhow::{anyhow, Result};
 use ctr::cipher::generic_array::GenericArray;
 use ctr::cipher::{KeyIvInit, StreamCipher};
 use hmac::{Hmac, Mac};
-use rand::{thread_rng, Rng};
+use openssl::rand::rand_bytes;
 use sha2::Sha256;
 
 use crate::blockcipher::{EncryptionFinalizer, LayerBlockCipher, LayerBlockCipherOptions};
@@ -75,7 +75,7 @@ impl<R> AESCTRBlockCipher<R> {
                 }
                 nonce = v;
             }
-            None => thread_rng().try_fill(&mut nonce[..])?,
+            None => rand_bytes(&mut nonce[..])?,
         }
 
         let cipher = Aes256Ctr::new(
@@ -106,7 +106,7 @@ impl<R> AESCTRBlockCipher<R> {
 impl<R> LayerBlockCipher<R> for AESCTRBlockCipher<R> {
     fn generate_key(&self) -> Result<Vec<u8>> {
         let mut key = vec![0; self.key_len];
-        thread_rng().try_fill(&mut key[..])?;
+        rand_bytes(&mut key[..])?;
         Ok(key)
     }
 
@@ -413,10 +413,10 @@ mod tests {
         let layer_data: Vec<u8> = b"this is some data".to_vec();
 
         let mut symmetric_key = vec![0; 32];
-        thread_rng().try_fill(&mut symmetric_key[..]).unwrap();
+        rand_bytes(&mut symmetric_key[..]).unwrap();
 
         let mut nonce = vec![0; 16];
-        thread_rng().try_fill(&mut nonce[..]).unwrap();
+        rand_bytes(&mut nonce[..]).unwrap();
 
         let mut crypto_encrypt = Aes256Ctr::new(
             GenericArray::from_slice(symmetric_key.as_slice()),
