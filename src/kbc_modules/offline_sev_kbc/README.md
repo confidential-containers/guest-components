@@ -1,6 +1,6 @@
 # Offline SEV KBC module
 
-This KBC does not communicate with a KBS at runtime, but rather retrieves keys that were injected at boot. This KBC is designed for use with SEV or SEV-ES secret injection and the EFI Secret kernel module, which coordinates with OVMF to expose injected secrets to guest userspace. If you would like to use an offline KBC without secret injection, consider the offline\_fs\_kbc.
+This KBC does not communicate with a KBS at runtime, but rather retrieves keys that were injected at boot. This KBC is designed for use with SEV or SEV-ES secret injection and the [EFI Secret](https://docs.kernel.org/security/secrets/coco.html) kernel module, which coordinates with OVMF to expose injected secrets to guest userspace. If you would like to use an offline KBC without secret injection, consider the offline\_fs\_kbc.
 
 ## Secret Injection
 
@@ -35,7 +35,8 @@ The secret table should include an entry with the GUID `e6f5a162-d67f-4750-a67c-
 
 ## Usage
 
-This KBC has no adjustable parameters. The KBC will not function without the EFI Secret module. The module should be available but not loaded before KBC is invoked. The KBC will not be able to unload the module if /proc has not been mounted.
+This KBC has no adjustable parameters. The KBC will not function without the EFI Secret module. The EFI Secret module is supported by the 5.19 or newer kernel.
+The module should be available but not loaded before KBC is invoked. The KBC will not be able to unload the module if /proc has not been mounted.
 
 To run:
 
