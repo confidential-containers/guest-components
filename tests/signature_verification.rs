@@ -6,21 +6,16 @@
 
 //! Test for signature verification.
 
-use std::process::Command;
-
+use common::KBC;
 use image_rs::image::ImageClient;
+use rstest::rstest;
+use serial_test::serial;
 
 mod common;
 
 /// Name of different signing schemes.
 const SIMPLE_SIGNING: &str = "Simple Signing";
 const NONE_SIGNING: &str = "None";
-
-/// Script for preparing Simple Signing GPG signature file.
-const SIGNATURE_SCRIPT: &str = "scripts/install_test_signatures.sh";
-
-/// Parameter `decrypt_config` provided for `ImageClient`.
-const AA_PARAMETERS: &str = "provider:attestation-agent:sample_kbc::null";
 
 struct TestItem<'a, 'b, 'c> {
     image_ref: &'a str,
@@ -29,43 +24,47 @@ struct TestItem<'a, 'b, 'c> {
     description: &'c str,
 }
 
+/// Four test cases.
+const TESTS: [TestItem; 4] = [
+    TestItem {
+        image_ref: "quay.io/prometheus/busybox:latest",
+        allow: true,
+        signing_scheme: NONE_SIGNING,
+        description: "Allow pulling an unencrypted unsigned image from an unprotected registry.",
+    },
+    TestItem {
+        image_ref: "quay.io/kata-containers/confidential-containers:signed",
+        allow: true,
+        signing_scheme: SIMPLE_SIGNING,
+        description: "Allow pulling a unencrypted signed image from a protected registry.",
+    },
+    TestItem {
+        image_ref: "quay.io/kata-containers/confidential-containers:unsigned",
+        allow: false,
+        signing_scheme: NONE_SIGNING,
+        description: "Deny pulling an unencrypted unsigned image from a protected registry.",
+    },
+    TestItem {
+        image_ref: "quay.io/kata-containers/confidential-containers:other_signed",
+        allow: false,
+        signing_scheme: SIMPLE_SIGNING,
+        description: "Deny pulling an unencrypted signed image with an unknown signature",
+    },
+];
+
+#[rstest]
+#[trace]
+#[case(KBC::Sample)]
+#[case(KBC::OfflineFs)]
 #[tokio::test]
-async fn test_signature_verification() {
-    Command::new(SIGNATURE_SCRIPT)
-        .arg("install")
-        .output()
-        .expect("Install GPG signature file failed.");
-
-    let tests = [
-        TestItem {
-            image_ref: "quay.io/prometheus/busybox:latest",
-            allow: true,
-            signing_scheme: NONE_SIGNING,
-            description:
-                "Allow pulling an unencrypted unsigned image from an unprotected registry.",
-        },
-        TestItem {
-            image_ref: "quay.io/kata-containers/confidential-containers:signed",
-            allow: true,
-            signing_scheme: SIMPLE_SIGNING,
-            description: "Allow pulling a unencrypted signed image from a protected registry.",
-        },
-        TestItem {
-            image_ref: "quay.io/kata-containers/confidential-containers:unsigned",
-            allow: false,
-            signing_scheme: NONE_SIGNING,
-            description: "Deny pulling an unencrypted unsigned image from a protected registry.",
-        },
-        TestItem {
-            image_ref: "quay.io/kata-containers/confidential-containers:other_signed",
-            allow: false,
-            signing_scheme: SIMPLE_SIGNING,
-            description: "Deny pulling an unencrypted signed image with an unknown signature",
-        },
-    ];
-
+#[serial]
+async fn signature_verification_one_kbc(#[case] kbc: KBC) {
+    kbc.prepare_test();
     // Init AA
     let mut aa = common::start_attestation_agent().expect("Failed to start attestation agent!");
+
+    // AA parameter
+    let aa_parameters = kbc.aa_parameter();
 
     // Init tempdirs
     let work_dir = tempfile::tempdir().unwrap();
@@ -73,7 +72,7 @@ async fn test_signature_verification() {
 
     let bundle_dir = tempfile::tempdir().unwrap();
 
-    for test in &tests {
+    for test in &TESTS {
         // clean former test files, which will help to test
         // a full interaction with sample-kbc.
         common::clean_configs()
@@ -92,27 +91,19 @@ async fn test_signature_verification() {
                 test.image_ref,
                 bundle_dir.path(),
                 &None,
-                &Some(AA_PARAMETERS),
+                &Some(&aa_parameters),
             )
             .await;
-        match test.allow {
-            true => {
-                assert!(
-                    res.is_ok(),
-                    "Test: {}, Signing scheme: {}",
-                    test.description,
-                    test.signing_scheme
-                );
-            }
-            false => assert!(
-                res.is_err(),
-                "Test: {}, Signing scheme: {}",
-                test.description,
-                test.signing_scheme
-            ),
-        };
+        assert_eq!(
+            res.is_ok(),
+            test.allow,
+            "Test: {}, Signing scheme: {}",
+            test.description,
+            test.signing_scheme
+        );
     }
 
     // kill AA when the test is finished
     aa.kill().expect("Failed to stop attestation agent!");
+    kbc.clean();
 }
