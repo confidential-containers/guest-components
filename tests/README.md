@@ -8,8 +8,11 @@ This integration test has 2 main sub-type tests:
 
 Implemented in `image_decryption.rs`.
 
-Image decryption will involve the image `"docker.io/arronwang/busybox_kbs_encrypted"`,
-following the steps:
+Image decryption will cover both Sample KBC and Offline-fs-kbc:
+* Sample KBC uses `"docker.io/arronwang/busybox_kbs_encrypted"`
+* Offline-fs-kbc uses `docker.io/xynnn007/busybox:encrypted`
+
+Each test suite will follow these steps:
 
 * Pull manifefst of `"docker.io/arronwang/busybox_kbs_encrypted"` without verification of signature.
 * Pull layers of the mentioned image.
@@ -24,7 +27,7 @@ The way to genetate KBS encrypted image please refer to
 
 Implemented in `signature_verification.rs`.
 
-Image Signature Verification includes the following 4
+Image Signature Verification includes the following four
 tests illustrated in 
 <https://github.com/confidential-containers/image-rs/issues/43>,
 s.t.
@@ -41,3 +44,7 @@ any entry (`transports/docker`) in the policy.json. Now it refers to
 repository `quay.io/kata-containers/confidential-containers` concretely.
 * `allow/deny`: Whether the image to be pulled in this test should be allowed
 or denied.
+
+In `signature_verification.rs`, the tests are organized due different kinds
+of KBCs, which means for each given KBC, all four tests mentioned will be
+covered. We use `rstest` crate to parametrize different KBCs.

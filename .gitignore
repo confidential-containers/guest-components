@@ -2,3 +2,5 @@
 Cargo.lock
 
 .DS_Store
+
+scripts/attestation-agent
