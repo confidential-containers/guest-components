@@ -11,12 +11,16 @@ The guest must provide OpenSSL at runtime.
 Keys must be provided in the guest file system at `/etc/aa-offline_fs_kbc-keys.json` like:
 ```json
 {
-    "key_id1": "cGFzc3BocmFzZXdoaWNobmVlZHN0b2JlMzJieXRlcyE=",
+    "key_id1": "base64-encoded-key",
+    "key_id2": "base64-encoded-key",
     ...
 }
 ```
 
 with the 32-byte keys base64-encoded.
+
+The script [`generate_keys.sh`](https://github.com/confidential-containers/attestation-agent/blob/main/sample_keyprovider/src/enc_mods/offline_fs_kbs/generate_keys.sh) can be used to generate some sample keys based on `/dev/random` if it fits your use case sufficiently well.
+Here is a sample generated keys file [`aa-offline_fs_kbc-keys.json`](aa-offline_fs_kbc-keys.json)
 
 Resources must be provide in the guest file system at `/etc/aa-offline_fs_kbc-resources.json` like:
 ```json
@@ -32,10 +36,10 @@ cat </path/to/policy.json> | base64
 cat </path/to/sigstore_config.yaml> | base64
 cat </path/to/pubkey.gpg> | base64
 ```
-Here is a sample resource file [aa-offline_fs_kbc-resources.json](aa-offline_fs_kbc-resources.json) which base on the files under sample_kbc folder:
-- [policy.json](../sample_kbc/policy.json)
-- [sigstore_config.yaml](../sample_kbc/sigstore_config.yaml)
-- [pubkey.gpg](../sample_kbc/pubkey.gpg)
+Here is a sample resource file [`aa-offline_fs_kbc-resources.json`](aa-offline_fs_kbc-resources.json) which base on the files under sample_kbc folder:
+- [`policy.json`](../sample_kbc/policy.json)
+- [`sigstore_config.yaml`](../sample_kbc/sigstore_config.yaml)
+- [`pubkey.gpg`](../sample_kbc/pubkey.gpg)
 
 
 AA with this KBC can be build and run with e.g.:
