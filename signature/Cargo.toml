@@ -20,6 +20,8 @@ tonic = "0.5"
 prost = "0.8"
 strum_macros = "0.24.2"
 sigstore_rs = { git = "https://github.com/sigstore/sigstore-rs", rev = "6dd3281c25270f0d82550368abfb399ed3da7b41", package = "sigstore" }
+ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", optional = true }
+attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent", rev = "3b4716dd3d8bbf0d5f8cec7bc0d528421f00fd06", optional = true }
 
 [build-dependencies]
 tonic-build = "0.5"
@@ -28,3 +30,7 @@ shadow-rs = "0.17.1"
 [dev-dependencies]
 rstest = "0.15.0"
 serial_test = "0.9.0"
+
+[features]
+default = ["attestation_agent/default", "ocicrypt-rs/default"]
+eaa_kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]

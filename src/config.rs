@@ -32,7 +32,6 @@ impl Default for ImageConfig {
         let work_dir = PathBuf::from(
             std::env::var(CC_IMAGE_WORK_DIR).unwrap_or_else(|_| DEFAULT_WORK_DIR.to_string()),
         );
-
         ImageConfig {
             work_dir,
             default_snapshot: SnapshotType::Overlay,
