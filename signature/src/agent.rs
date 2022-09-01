@@ -6,8 +6,12 @@
 use std::{collections::HashMap, path::Path};
 
 use anyhow::*;
+use attestation_agent::AttestationAPIs;
+use attestation_agent::AttestationAgent;
 use oci_distribution::Reference;
+use ocicrypt_rs::config::{OcicryptConfig, OCICRYPT_ENVVARNAME};
 use serde::{Deserialize, Serialize};
+use std::result::Result::Ok;
 use tokio::fs;
 use tonic::transport::Channel;
 
@@ -35,13 +39,49 @@ pub const POLICY_FILE_PATH: &str = "/run/image-security/security_policy.json";
 /// Attestation Agent's GetResource gRPC address.
 /// It's given <https://github.com/confidential-containers/attestation-agent#run>
 pub const AA_GETRESOURCE_ADDR: &str = "http://127.0.0.1:50001";
+/// The native attestation agent's name.
+/// It's given <https://github.com/confidential-containers/attestation-agent>
+pub const NATIVE_AA_NAME: &str = "attestation-agent";
 
-/// Signature submodule agent for image signature veriication.
+/// Signature submodule agent for image signature verification.
 pub struct Agent {
-    /// Get Resource Service client.
-    client: GetResourceServiceClient<Channel>,
+    /// Get Resource Client
+    client: SigClient,
     kbc_name: String,
-    kbc_uri: String,
+    kbs_uri: String,
+}
+
+// Types of the signature client
+enum SigClient {
+    /// Get Resource Service gRPC client
+    ServiceGPRC(GetResourceServiceClient<Channel>),
+    /// Get Rserouce native AA client
+    NativeAA(AttestationAgent),
+}
+
+impl SigClient {
+    // get_resource retrieves verification resource
+    async fn get_resource(
+        &mut self,
+        kbc_name: String,
+        kbs_uri: String,
+        resource_description: String,
+    ) -> Result<Vec<u8>> {
+        match self {
+            Self::ServiceGPRC(client) => {
+                let req = tonic::Request::new(GetResourceRequest {
+                    kbc_name,
+                    kbs_uri,
+                    resource_description,
+                });
+                Ok(client.get_resource(req).await?.into_inner().resource)
+            }
+            Self::NativeAA(aa) => {
+                aa.download_confidential_resource(kbc_name, kbs_uri, resource_description)
+                    .await
+            }
+        }
+    }
 }
 
 /// The resource description that will be passed to AA when get resource.
@@ -70,15 +110,19 @@ impl Agent {
             if kbc_name.is_empty() {
                 return Err(anyhow!("aa_kbc_params: missing KBC name"));
             }
-
             if kbs_uri.is_empty() {
                 return Err(anyhow!("aa_kbc_params: missing KBS URI"));
             }
-
             Ok(Self {
-                client: GetResourceServiceClient::connect(AA_GETRESOURCE_ADDR).await?,
+                client: if is_native_aa() {
+                    SigClient::NativeAA(AttestationAgent::new())
+                } else {
+                    SigClient::ServiceGPRC(
+                        GetResourceServiceClient::connect(AA_GETRESOURCE_ADDR).await?,
+                    )
+                },
+                kbs_uri: kbs_uri.into(),
                 kbc_name: kbc_name.into(),
-                kbc_uri: kbs_uri.into(),
             })
         } else {
             Err(anyhow!("aa_kbc_params: KBC/KBS pair not found"))
@@ -91,14 +135,15 @@ impl Agent {
     /// Then save the gathered data into `path`
     async fn get_resource(&mut self, resource_name: &str, path: &str) -> Result<()> {
         let resource_description = serde_json::to_string(&ResourceDescription::new(resource_name))?;
-        let req = tonic::Request::new(GetResourceRequest {
-            kbc_name: self.kbc_name.clone(),
-            kbs_uri: self.kbc_uri.clone(),
-            resource_description,
-        });
-        let res = self.client.get_resource(req).await?;
-
-        fs::write(path, res.into_inner().resource).await?;
+        let res = self
+            .client
+            .get_resource(
+                self.kbc_name.clone(),
+                self.kbs_uri.clone(),
+                resource_description,
+            )
+            .await?;
+        fs::write(path, res).await?;
         Ok(())
     }
 
@@ -143,4 +188,18 @@ impl Agent {
             .await
             .map_err(|e| anyhow!("Validate image failed: {:?}", e))
     }
+}
+
+fn is_native_aa() -> bool {
+    let ocicrypt_config = match OcicryptConfig::from_env(OCICRYPT_ENVVARNAME) {
+        Ok(oc) => oc,
+        Err(_) => return false,
+    };
+    let key_providers = ocicrypt_config.key_providers;
+    for (provider_name, attrs) in key_providers.iter() {
+        if provider_name == NATIVE_AA_NAME && attrs.native.is_some() {
+            return true;
+        }
+    }
+    false
 }

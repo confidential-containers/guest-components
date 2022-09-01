@@ -16,7 +16,8 @@ libc = "0.2"
 nix = "0.23.0"
 oci-distribution = "0.9.3"
 oci-spec = { git = "https://github.com/containers/oci-spec-rs" }
-ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", tag = "v0.2.0" }
+ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", tag = "v0.2.0", optional = true }
+
 serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
 sha2 = ">=0.10"
@@ -26,7 +27,7 @@ zstd = "0.9"
 fs_extra = "1.2.0"
 walkdir = "2"
 dircpy = "0.3.12"
-signature = { path = "./signature" }
+signature = { path = "./signature", optional = true }
 prost = "0.8"
 strum = { version = "0.23.0", features = ["derive"] }
 log = "0.4.14"
@@ -45,8 +46,6 @@ members = ["signature", "libs/test-utils"]
 exclude = ["scripts/attestation_agent/app"]
 
 [features]
-default = ["overlay_feature"]
+default = ["overlay_feature", "ocicrypt-rs", "signature"]
 overlay_feature = []
-occlum_feature = []
-
-[build-dependencies]
+occlum_feature = ["ocicrypt-rs/eaa_kbc", "signature/eaa_kbc"]
