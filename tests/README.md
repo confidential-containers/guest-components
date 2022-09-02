@@ -1,27 +1,34 @@
 # Integration Test for Image-rs
 
-This integration test has 2 main sub-type tests:
+This integration test has two main sub-type test sets:
 * Image decryption using [ocicrypt-rs](https://github.com/confidential-containers/ocicrypt-rs)
 * Image signature verification.
+
+And both of test set will use the following key broker client:
+* `Sample Kbc`
+* `Offline-fs-kbc`
 
 ## Image Decryption
 
 Implemented in `image_decryption.rs`.
 
-Image decryption will cover both Sample KBC and Offline-fs-kbc:
-* Sample KBC uses `"docker.io/arronwang/busybox_kbs_encrypted"`
-* Offline-fs-kbc uses `docker.io/xynnn007/busybox:encrypted`
+Image decryption will cover both `Sample Kbc` and `Offline-fs-kbc`:
+* `Sample Kbc` uses `"docker.io/arronwang/busybox_kbs_encrypted"`
+* `Offline-fs-kbc` uses `docker.io/xynnn007/busybox:encrypted`
 
 Each test suite will follow these steps:
 
-* Pull manifefst of `"docker.io/arronwang/busybox_kbs_encrypted"` without verification of signature.
+* Pull manifest of the image without verification of signature.
 * Pull layers of the mentioned image.
 * Ocicrypt-rs will ask the Attestation-Agent to decrypt the Layer Encryption Key (LEK for short), which is 
 encrypted using Key Encryption Key (KEK for short). KEK is hard-coded in sample-kbc.
 * Ocicrypt-rs decrypt the layers using LEK. Finish the image pulling.
 
-The way to genetate KBS encrypted image please refer to
-[the guide](https://github.com/confidential-containers/image-rs/blob/main/test_data/generate_test_data.md)
+Different KBCs use different protocol format, so different KBSs are needed to
+encrypt the images. To genetate KBS encrypted image, please refer to the following link:
+
+* [Using Sample Kbs](https://github.com/confidential-containers/image-rs/blob/main/test_data/generate_test_data.md)
+* [Using Offline-fs-kbs](https://github.com/confidential-containers/attestation-agent/tree/main/sample_keyprovider/src/enc_mods/offline_fs_kbs/README.md)
 
 ## Image Signature Verification
 
