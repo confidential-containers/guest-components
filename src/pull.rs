@@ -147,13 +147,13 @@ impl PullClient {
                 format!(
                     "{}:{:x}",
                     DIGEST_SHA256,
-                    sha2::Sha256::digest(&plaintext_layer.as_slice())
+                    sha2::Sha256::digest(plaintext_layer.as_slice())
                 )
             } else if diff_id.starts_with(DIGEST_SHA512) {
                 format!(
                     "{}:{:x}",
                     DIGEST_SHA512,
-                    sha2::Sha512::digest(&plaintext_layer.as_slice())
+                    sha2::Sha512::digest(plaintext_layer.as_slice())
                 )
             } else {
                 return Err(anyhow!("{}: {:?}", ERR_BAD_UNCOMPRESSED_DIGEST, diff_id));
