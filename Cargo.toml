@@ -28,15 +28,16 @@ serde_json = ">=1.0"
 sha2 = ">=0.10"
 tokio = { version = "1.17.0", features = ["rt-multi-thread"], optional = true }
 tonic = { version = ">=0.8.0", optional = true }
-attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent" }
+attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent", rev = "3b4716dd3d8bbf0d5f8cec7bc0d528421f00fd06", optional = true  }
 
 [build-dependencies]
 tonic-build = {version = "0.8.0", optional = true }
 
 [features]
 default = ["keywrap-jwe", "keywrap-keyprovider"]
+eaa_kbc = ["keywrap-jwe", "keywrap-keyprovider", "attestation_agent/eaa_kbc"]
 async-io = ["futures", "tokio"]
 keywrap-jwe = ["josekit"]
-keywrap-keyprovider = ["aes-gcm", "futures", "tokio", "tonic-build", "utils-runner", "utils-keyprovider"]
+keywrap-keyprovider = ["aes-gcm", "futures", "tokio", "tonic-build", "utils-runner", "utils-keyprovider", "attestation_agent"]
 utils-runner = []
 utils-keyprovider = ["prost", "tonic"]

@@ -13,12 +13,22 @@ jobs:
           - stable
           - beta
           - nightly
+
+    # Run all steps in the compilation testing containers
+    container:
+      image: runetest/compilation-testing:ubuntu18.04
+      env:
+        LD_LIBRARY_PATH: /usr/local/lib/rats-tls
+
     steps:
       - name: Code checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 1
-
+      - name: Update cargo home
+        run: |
+          apt-get update && apt-get install -y cargo
+          cp -r /root/.cargo /github/home/.cargo
       - name: Install Rust toolchain (${{ matrix.rust }})
         uses: actions-rs/toolchain@v1
         with:
@@ -29,8 +39,14 @@ jobs:
 
       - name: Install tonic's protoc dependencies
         run: |
-          sudo apt install apt protobuf-compiler libprotobuf-dev
-
+          apt install apt protobuf-compiler libprotobuf-dev
+      - name: Build and install rats-tls
+        run: | 
+          apt-get install -y libcurl4-openssl-dev
+          git clone https://github.com/inclavare-containers/rats-tls
+          cd rats-tls
+          cmake -DBUILD_SAMPLES=on -H. -Bbuild
+          make -C build install
       - name: Run cargo build
         uses: actions-rs/cargo@v1
         with:
