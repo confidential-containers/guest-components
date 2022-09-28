@@ -28,7 +28,7 @@ lazy_static! {
 async fn main() -> Result<()> {
     env_logger::init();
     let app_matches = App::new(grpc::AGENT_NAME)
-        .version("1.0.0")
+        .version(env!("CARGO_PKG_VERSION"))
         .arg(
             Arg::with_name("KeyProvider gRPC socket addr")
                 .long("keyprovider_sock")

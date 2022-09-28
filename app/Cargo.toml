@@ -1,9 +1,9 @@
 [package]
 name = "attestation-agent"
-version = "1.0.0"
+version = "0.1.0"
 authors = ["The Attestation Agent Authors"]
 publish = false
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
