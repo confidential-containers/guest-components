@@ -148,8 +148,23 @@ impl ImageClient {
         let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
 
         let id = image_manifest.config.digest.clone();
-        if self.meta_store.lock().await.image_db.contains_key(&id) {
-            return Ok(id);
+
+        let snapshot = match self.snapshots.get_mut(&self.config.default_snapshot) {
+            Some(s) => s,
+            _ => {
+                return Err(anyhow!(
+                    "default snapshot {} not found",
+                    &self.config.default_snapshot
+                ));
+            }
+        };
+
+        // If image has already been populated, just create the bundle.
+        {
+            let m = self.meta_store.lock().await;
+            if let Some(image_data) = &m.image_db.get(&id) {
+                return create_bundle(image_data, bundle_dir, snapshot);
+            }
         }
 
         if self.config.security_validate {
@@ -199,29 +214,8 @@ impl ImageClient {
 
         self.meta_store.lock().await.layer_db.extend(layer_db);
 
-        let layer_path = image_data
-            .layer_metas
-            .iter()
-            .rev()
-            .map(|l| l.store_path.as_str())
-            .collect::<Vec<&str>>();
+        let image_id = create_bundle(&image_data, bundle_dir, snapshot)?;
 
-        if let Some(snapshot) = self.snapshots.get_mut(&self.config.default_snapshot) {
-            snapshot.mount(&layer_path, &bundle_dir.join(BUNDLE_ROOTFS))?;
-        } else {
-            return Err(anyhow!(
-                "default snapshot {} not found",
-                &self.config.default_snapshot
-            ));
-        }
-
-        let image_config = image_data.image_config.clone();
-        if image_config.os() != &Os::Linux {
-            return Err(anyhow!("unsupport OS image {:?}", image_config.os()));
-        }
-
-        create_runtime_config(&image_config, bundle_dir)?;
-        let image_id = image_data.id.clone();
         self.meta_store
             .lock()
             .await
@@ -230,6 +224,30 @@ impl ImageClient {
 
         Ok(image_id)
     }
+}
+
+fn create_bundle(
+    image_data: &ImageMeta,
+    bundle_dir: &Path,
+    snapshot: &mut Box<dyn Snapshotter>,
+) -> Result<String> {
+    let layer_path = image_data
+        .layer_metas
+        .iter()
+        .rev()
+        .map(|l| l.store_path.as_str())
+        .collect::<Vec<&str>>();
+
+    snapshot.mount(&layer_path, &bundle_dir.join(BUNDLE_ROOTFS))?;
+
+    let image_config = image_data.image_config.clone();
+    if image_config.os() != &Os::Linux {
+        return Err(anyhow!("unsupport OS image {:?}", image_config.os()));
+    }
+
+    create_runtime_config(&image_config, bundle_dir)?;
+    let image_id = image_data.id.clone();
+    Ok(image_id)
 }
 
 #[cfg(test)]
@@ -269,5 +287,39 @@ mod tests {
         }
 
         assert_eq!(image_client.meta_store.lock().await.image_db.len(), 4);
+    }
+
+    #[tokio::test]
+    async fn test_image_reuse() {
+        let work_dir = tempfile::tempdir().unwrap();
+        std::env::set_var("CC_IMAGE_WORK_DIR", &work_dir.path());
+
+        let image = "mcr.microsoft.com/hello-world";
+
+        let mut image_client = ImageClient::default();
+
+        let bundle1_dir = tempfile::tempdir().unwrap();
+        assert!(image_client
+            .pull_image(image, bundle1_dir.path(), &None, &None)
+            .await
+            .is_ok());
+
+        // Pull image again.
+        let bundle2_dir = tempfile::tempdir().unwrap();
+        assert!(image_client
+            .pull_image(image, bundle2_dir.path(), &None, &None)
+            .await
+            .is_ok());
+
+        // Assert that config is written out.
+        assert!(bundle1_dir.path().join("config.json").exists());
+        assert!(bundle2_dir.path().join("config.json").exists());
+
+        // Assert that rootfs is populated.
+        assert!(bundle1_dir.path().join("rootfs").join("hello").exists());
+        assert!(bundle2_dir.path().join("rootfs").join("hello").exists());
+
+        // Assert that image is pulled only once.
+        assert_eq!(image_client.meta_store.lock().await.image_db.len(), 1);
     }
 }
