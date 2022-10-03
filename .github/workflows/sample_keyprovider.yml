@@ -1,0 +1,50 @@
+name: Sample Keyprovider CI
+on:
+  push:
+    paths:
+      - 'sample_keyprovider/**'
+  pull_request:
+    paths:
+      - 'sample_keyprovider/**'
+  create:
+    paths:
+      - 'sample_keyprovider/**'
+
+jobs:
+  sample_keyprovider_ci:
+    if: github.event_name == 'pull_request'
+    name: Check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+        feature:
+          - sample_enc
+          - offline_fs_kbs
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt
+
+      - name: Build and install with ${{ matrix.feature }} feature
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --manifest-path sample_keyprovider/Cargo.toml --features ${{ matrix.feature }}
+
+      - name: Run cargo test with ${{ matrix.feature }} feature
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path sample_keyprovider/Cargo.toml --features ${{ matrix.feature }}
