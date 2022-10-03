@@ -3,12 +3,15 @@ on:
   push:
     paths:
       - 'src/kbc_modules/offline_sev_kbc/**'
+      - 'src/kbc_modules/online_sev_kbc/**'
   pull_request:
     paths:
       - 'src/kbc_modules/offline_sev_kbc/**'
+      - 'src/kbc_modules/online_sev_kbc/**'
   create:
     paths:
       - 'src/kbc_modules/offline_sev_kbc/**'
+      - 'src/kbc_modules/online_sev_kbc/**'
 
 jobs:
   offline_sev_kbc_ci:
@@ -20,6 +23,9 @@ jobs:
       matrix:
         rust:
           - stable
+        kbc:
+          - offline_sev_kbc
+          - online_sev_kbc
     steps:
       - name: Code checkout
         uses: actions/checkout@v2
@@ -34,16 +40,16 @@ jobs:
           override: true
           components: rustfmt
 
-      - name: Build and install with offline_sev_kbc feature
+      - name: Build and install with ${{ matrix.kbc } feature
         run: |
-          make KBC=offline_sev_kbc && make install
+          make KBC=${{ matrix.kbc } && make install
 
-      - name: Musl build with offline_sev_kbc feature
+      - name: Musl build with ${{ matrix.kbc } feature
         run: |
-          make LIBC=musl KBC=offline_sev_kbc
+          make LIBC=musl KBC=${{ matrix.kbc }
 
-      - name: Run cargo test with offline_sev_kbc feature
+      - name: Run cargo test with ${{ matrix.kbc } feature
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --features offline_sev_kbc
+          args: --features ${{ matrix.kbc }}
