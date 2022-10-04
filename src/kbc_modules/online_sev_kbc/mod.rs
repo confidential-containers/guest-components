@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use crate::common::sev::*;
 use crate::kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription};
 
 use aes_gcm::aead::{Aead, KeyInit};
@@ -14,7 +15,6 @@ use openssl::symm::{decrypt, Cipher};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
-use std::process::Command;
 use tonic::codegen::http::Uri;
 use uuid::Uuid;
 
@@ -26,9 +26,6 @@ mod getsecret {
 }
 
 const KEYS_PATH: &str = "/sys/kernel/security/secrets/coco/1ee27366-0c87-43a6-af48-28543eaf7cb0";
-const SECRET_MODULE_NAME: &str = "efi_secret";
-const MODPROBE_PATH: &str = "/sbin/modprobe";
-const MOUNT_PATH: &str = "/bin/mount";
 
 type Ciphers = HashMap<String, Cipher>;
 
@@ -48,30 +45,6 @@ pub struct AnnotationPacket {
     pub iv: String,
     // Wrap type to specify encryption algorithm and mode
     pub wrap_type: String,
-}
-
-struct SecretKernelModule;
-
-impl SecretKernelModule {
-    fn new() -> Result<SecretKernelModule> {
-        if !Command::new(MODPROBE_PATH)
-            .arg(SECRET_MODULE_NAME)
-            .status()?
-            .success()
-        {
-            return Err(anyhow!("Failed to load secret module."));
-        }
-        Ok(SecretKernelModule {})
-    }
-}
-impl Drop for SecretKernelModule {
-    fn drop(&mut self) {
-        Command::new(MODPROBE_PATH)
-            .arg("-r")
-            .arg(SECRET_MODULE_NAME)
-            .status()
-            .expect("Failed to unload secret module.");
-    }
 }
 
 pub struct OnlineSevKbc {
@@ -201,18 +174,4 @@ fn load_connection() -> Result<Connection> {
     fs::remove_file(KEYS_PATH).expect("Failed to remove secret file.");
 
     Ok(serde_json::from_str(&connection_json)?)
-}
-
-fn mount_security_fs() -> Result<()> {
-    if !Command::new(MOUNT_PATH)
-        .arg("-t")
-        .arg("securityfs")
-        .arg("securityfs")
-        .arg("/sys/kernel/security")
-        .status()?
-        .success()
-    {
-        return Err(anyhow!("Failed to mount security fs"));
-    }
-    Ok(())
 }
