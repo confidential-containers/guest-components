@@ -211,12 +211,37 @@ fn get_layer_pub_opts(desc: &OciDescriptor) -> Result<Vec<u8>> {
     )
 }
 
+fn get_layer_key_opts(
+    annotations_id: &str,
+    annotations: &HashMap<String, String>,
+) -> Option<String> {
+    if annotations_id
+        .strip_prefix("org.opencontainers.image.enc.keys.provider")
+        .is_some()
+    {
+        annotations.iter().find_map(|(k, v)| {
+            // During decryption, ignore keyprovider name in annotations and use the
+            // keyprovider defined in OCICRYPT_KEYPROVIDER_CONFIG.
+            if k.strip_prefix("org.opencontainers.image.enc.keys.provider")
+                .is_some()
+            {
+                Some(v)
+            } else {
+                None
+            }
+        })
+    } else {
+        annotations.get(annotations_id)
+    }
+    .cloned()
+}
+
 fn decrypt_layer_key_opts_data(dc: &DecryptConfig, desc: &OciDescriptor) -> Result<Vec<u8>> {
     let mut priv_key_given = false;
 
     for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
         if let Some(annotations) = desc.annotations.as_ref() {
-            if let Some(b64_annotation) = annotations.get(annotations_id) {
+            if let Some(b64_annotation) = get_layer_key_opts(annotations_id, annotations) {
                 let keywrapper = get_key_wrapper(scheme)?;
                 if !keywrapper.probe(&dc.param) {
                     continue;
@@ -226,7 +251,7 @@ fn decrypt_layer_key_opts_data(dc: &DecryptConfig, desc: &OciDescriptor) -> Resu
                     priv_key_given = true;
                 }
 
-                if let Ok(opts_data) = pre_unwrap_key(keywrapper, dc, b64_annotation) {
+                if let Ok(opts_data) = pre_unwrap_key(keywrapper, dc, &b64_annotation) {
                     if !opts_data.is_empty() {
                         return Ok(opts_data);
                     }

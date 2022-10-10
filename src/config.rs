@@ -8,6 +8,9 @@ use std::io::BufReader;
 use anyhow::{anyhow, Result};
 use serde::{de, Deserializer, Serialize, Serializer};
 
+/// OCICRYPT_ENVVARNAME is the environment name for ocicrypt provider config file,
+/// the key will be "OCICRYPT_KEYPROVIDER_CONFIG" and format is defined at:
+/// <https://github.com/containers/ocicrypt/blob/main/docs/keyprovider.md>
 pub const OCICRYPT_ENVVARNAME: &str = "OCICRYPT_KEYPROVIDER_CONFIG";
 
 /// DecryptConfig wraps the Parameters map that holds the decryption key
@@ -84,7 +87,9 @@ pub struct KeyProviderAttrs {
     pub native: Option<String>,
 }
 
-/// OcicryptConfig represents the format of an ocicrypt_provider.conf config file
+/// OcicryptConfig represents the format of an ocicrypt_provider.conf config file.
+/// Detail ocicrypt keyprovider protocol and config file format is defined at:
+/// <https://github.com/containers/ocicrypt/blob/main/docs/keyprovider.md>
 #[derive(Deserialize)]
 pub struct OcicryptConfig {
     #[serde(rename = "key-providers")]
