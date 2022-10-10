@@ -19,7 +19,7 @@ futures = { version = "0.3.21", optional = true }
 hmac = ">=0.12"
 josekit = { version = ">=0.7", optional = true }
 lazy_static = ">=1.4"
-oci-distribution = { git = "https://github.com/krustlet/oci-distribution", rev = "1ba0d94a900a97aa1bcac032a67ea23766bcfdef" }
+oci-distribution = "0.9.3"
 openssl = { version = ">=0.10", features = ["vendored"] }
 pin-project-lite = "0.2.9"
 prost = { version = ">=0.11.0", optional = true }
