@@ -127,6 +127,8 @@ pub enum ResourceName {
     SigstoreConfig,
     #[strum(serialize = "GPG Keyring")]
     GPGPublicKey,
+    #[strum(serialize = "Cosign Key")]
+    CosignVerificationKey,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

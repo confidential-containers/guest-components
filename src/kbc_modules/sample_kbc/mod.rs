@@ -67,6 +67,9 @@ impl KbcInterface for SampleKbc {
             Result::Ok(ResourceName::GPGPublicKey) => {
                 Ok(std::include_str!("pubkey.gpg").as_bytes().to_vec())
             }
+            Result::Ok(ResourceName::CosignVerificationKey) => {
+                Ok(std::include_str!("cosign.pub").as_bytes().to_vec())
+            }
             _ => Err(anyhow!("Unknown resource name")),
         }
     }
