@@ -6,14 +6,20 @@
     ],
     "transports": {
         "docker": {
-            "quay.io/kata-containers": [
+            "quay.io/kata-containers/confidential-containers": [
                 {
                     "type": "signedBy",
                     "keyType": "GPGKeys",
                     "keyPath": "/run/image-security/simple_signing/pubkey.gpg"
                 }
             ],
-            "quay.io/xynnn/cosign": [
+            "quay.io/kata-containers/confidential-containers:cosign-signed": [
+                {
+                    "type": "sigstoreSigned",
+                    "keyPath": "/run/image-security/cosign/cosign.pub"
+                }
+            ],
+            "quay.io/kata-containers/confidential-containers:cosign-signed-key2": [
                 {
                     "type": "sigstoreSigned",
                     "keyPath": "/run/image-security/cosign/cosign.pub"
