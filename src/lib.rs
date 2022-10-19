@@ -12,7 +12,7 @@ use anyhow::*;
 use async_trait::async_trait;
 use std::collections::HashMap;
 
-mod common;
+pub mod common;
 mod kbc_modules;
 
 /// Attestation Agent (AA for short) is a rust library crate for attestation procedure
