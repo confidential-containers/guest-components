@@ -45,12 +45,12 @@ s.t.
 |unprotected registry|-|unprotected_unsigned_allow|
 
 Here
-* `signed/unsigned`: Whether this image is signed or unsigned.
-* `protected/unprotected`: Whether this image is covered by
-any entry (`transports/docker`) in the policy.json. Now it refers to
-repository `quay.io/kata-containers/confidential-containers` concretely.
-* `allow/deny`: Whether the image to be pulled in this test should be allowed
-or denied.
+* `protected_signed_allow`: Allow pulling image from a protected registry, including `Simple Signing` and `Cosign`
+* `protected_signed_deny`: Deny pulling image from a protected registry, including 
+    * `Simple Signing` with an unknown signature
+    * `Cosign` with a wrong public key
+* `protected_unsigned_deny`: Deny pulling an unsigned image from a protected registry
+* `unprotected_unsigned_allow`: Allow pulling an unsigned image from a unprotected registry
 
 In `signature_verification.rs`, the tests are organized due different kinds
 of KBCs, which means for each given KBC, all four tests mentioned will be

@@ -10,45 +10,65 @@ use common::KBC;
 use image_rs::image::ImageClient;
 use rstest::rstest;
 use serial_test::serial;
+use strum_macros::{Display, EnumString};
 
 mod common;
 
 /// Name of different signing schemes.
-const SIMPLE_SIGNING: &str = "Simple Signing";
-const NONE_SIGNING: &str = "None";
+#[derive(EnumString, Display, Debug, PartialEq)]
+pub enum SigningName {
+    #[strum(serialize = "Simple Signing")]
+    SimpleSigning,
+    #[strum(serialize = "None")]
+    None,
+    #[strum(serialize = "Cosign")]
+    Cosign,
+}
 
-struct TestItem<'a, 'b, 'c> {
+struct TestItem<'a, 'b> {
     image_ref: &'a str,
     allow: bool,
-    signing_scheme: &'b str,
-    description: &'c str,
+    signing_scheme: SigningName,
+    description: &'b str,
 }
 
 /// Four test cases.
-const TESTS: [TestItem; 4] = [
+const TESTS: [TestItem; 6] = [
     TestItem {
         image_ref: "quay.io/prometheus/busybox:latest",
         allow: true,
-        signing_scheme: NONE_SIGNING,
+        signing_scheme: SigningName::None,
         description: "Allow pulling an unencrypted unsigned image from an unprotected registry.",
     },
     TestItem {
         image_ref: "quay.io/kata-containers/confidential-containers:signed",
         allow: true,
-        signing_scheme: SIMPLE_SIGNING,
+        signing_scheme: SigningName::SimpleSigning,
         description: "Allow pulling a unencrypted signed image from a protected registry.",
     },
     TestItem {
         image_ref: "quay.io/kata-containers/confidential-containers:unsigned",
         allow: false,
-        signing_scheme: NONE_SIGNING,
+        signing_scheme: SigningName::None,
         description: "Deny pulling an unencrypted unsigned image from a protected registry.",
     },
     TestItem {
         image_ref: "quay.io/kata-containers/confidential-containers:other_signed",
         allow: false,
-        signing_scheme: SIMPLE_SIGNING,
+        signing_scheme: SigningName::SimpleSigning,
         description: "Deny pulling an unencrypted signed image with an unknown signature",
+    },
+    TestItem {
+        image_ref: "quay.io/kata-containers/confidential-containers:cosign-signed",
+        allow: true,
+        signing_scheme: SigningName::Cosign,
+        description: "Allow pulling an unencrypted signed image with cosign-signed signature",
+    },
+    TestItem {
+        image_ref: "quay.io/kata-containers/confidential-containers:cosign-signed-key2",
+        allow: false,
+        signing_scheme: SigningName::Cosign,
+        description: "Deny pulling an unencrypted signed image by cosign using a wrong public key",
     },
 ];
 
@@ -66,12 +86,6 @@ async fn signature_verification_one_kbc(#[case] kbc: KBC) {
     // AA parameter
     let aa_parameters = kbc.aa_parameter();
 
-    // Init tempdirs
-    let work_dir = tempfile::tempdir().unwrap();
-    std::env::set_var("CC_IMAGE_WORK_DIR", &work_dir.path());
-
-    let bundle_dir = tempfile::tempdir().unwrap();
-
     for test in &TESTS {
         // clean former test files, which will help to test
         // a full interaction with sample-kbc.
@@ -79,12 +93,18 @@ async fn signature_verification_one_kbc(#[case] kbc: KBC) {
             .await
             .expect("Delete configs failed.");
 
+        // Init tempdirs
+        let work_dir = tempfile::tempdir().unwrap();
+        std::env::set_var("CC_IMAGE_WORK_DIR", &work_dir.path());
+
         // a new client for every pulling, avoid effection
         // of cache of old client.
         let mut image_client = ImageClient::default();
 
         // enable signature verification
         image_client.config.security_validate = true;
+
+        let bundle_dir = tempfile::tempdir().unwrap();
 
         let res = image_client
             .pull_image(
@@ -97,9 +117,10 @@ async fn signature_verification_one_kbc(#[case] kbc: KBC) {
         assert_eq!(
             res.is_ok(),
             test.allow,
-            "Test: {}, Signing scheme: {}",
+            "Test: {}, Signing scheme: {}, {:?}",
             test.description,
-            test.signing_scheme
+            test.signing_scheme.to_string(),
+            res
         );
     }
 
