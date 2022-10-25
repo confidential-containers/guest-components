@@ -86,7 +86,7 @@ impl RatsTls {
             return Err(err);
         }
 
-        let err = unsafe { rats_tls_set_verification_callback(&mut tls, Some(Self::callback)) };
+        let err = unsafe { rats_tls_set_verification_callback(&mut tls, None) };
         if err == RATS_TLS_ERR_NONE {
             Ok(unsafe { RatsTls::from_ptr(tls) })
         } else {
