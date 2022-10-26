@@ -71,6 +71,7 @@ impl PullClient {
         self.client
             .pull_manifest_and_config(&self.reference, &self.auth)
             .await
+            .map_err(|e| anyhow!("failed to pull manifest {}", e.to_string()))
     }
 
     /// pull_layers pulls an image layers and do ondemand decrypt/decompress.
