@@ -83,6 +83,8 @@ pub mod tests {
     pub const POLICYJSON: &str = "{\"a\":\"b\"}";
     pub const SIGSTORECONFIG: &str = "sigstore_config:docker";
     pub const PUBKEY: &str = "pubkey";
+    pub const COSIGNKEY: &str = "cosignkey";
+    pub const CREDENTIAL: &str = "base64-content-of-auth.json";
     #[allow(dead_code)]
     pub const RESOURCES_NAME: &str = "aa-offline_fs_kbc-resources.json";
 
@@ -111,6 +113,8 @@ pub mod tests {
           ResourceName::Policy.to_string(): base64::encode(POLICYJSON.as_bytes()),
           ResourceName::SigstoreConfig.to_string(): base64::encode(SIGSTORECONFIG.as_bytes()),
           ResourceName::GPGPublicKey.to_string(): base64::encode(PUBKEY.as_bytes()),
+          ResourceName::CosignVerificationKey.to_string(): base64::encode(COSIGNKEY.as_bytes()),
+          ResourceName::Credential.to_string(): base64::encode(CREDENTIAL.as_bytes()),
         });
 
         fs::write(
@@ -154,6 +158,14 @@ pub mod tests {
                 (
                     ResourceName::GPGPublicKey.to_string(),
                     PUBKEY.as_bytes().to_vec()
+                ),
+                (
+                    ResourceName::CosignVerificationKey.to_string(),
+                    COSIGNKEY.as_bytes().to_vec()
+                ),
+                (
+                    ResourceName::Credential.to_string(),
+                    CREDENTIAL.as_bytes().to_vec()
                 ),
             ]
             .iter()

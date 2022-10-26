@@ -85,7 +85,7 @@ impl OfflineFsKbc {
 mod tests {
     use super::*;
     use crate::kbc_modules::ResourceName;
-    use common::tests::{KEY, KID, POLICYJSON, PUBKEY, SIGSTORECONFIG};
+    use common::tests::{COSIGNKEY, CREDENTIAL, KEY, KID, POLICYJSON, PUBKEY, SIGSTORECONFIG};
 
     use base64;
     use openssl::symm::encrypt;
@@ -126,6 +126,14 @@ mod tests {
                 (
                     ResourceName::GPGPublicKey.to_string(),
                     PUBKEY.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::CosignVerificationKey.to_string(),
+                    COSIGNKEY.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::Credential.to_string(),
+                    CREDENTIAL.as_bytes().to_vec(),
                 ),
             ]
             .iter()
@@ -244,6 +252,18 @@ mod tests {
                     ResourceName::GPGPublicKey.to_string(),
                     PUBKEY.as_bytes().to_vec(),
                 ),
+                (
+                    ResourceName::CosignVerificationKey.to_string(),
+                    COSIGNKEY.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::Credential.to_string(),
+                    CREDENTIAL.as_bytes().to_vec(),
+                ),
+                (
+                    ResourceName::Credential.to_string() + "." + "quay.io",
+                    CREDENTIAL.as_bytes().to_vec(),
+                ),
             ]
             .iter()
             .cloned()
@@ -278,6 +298,26 @@ mod tests {
         assert_eq!(
             kbc.get_resource(public_key_rd).await.unwrap(),
             PUBKEY.as_bytes()
+        );
+
+        let cosign_key_rd = serde_json::to_string(&ResourceDescription {
+            name: ResourceName::CosignVerificationKey.to_string(),
+            optional: HashMap::new(),
+        })
+        .unwrap();
+        assert_eq!(
+            kbc.get_resource(cosign_key_rd).await.unwrap(),
+            COSIGNKEY.as_bytes()
+        );
+
+        let credential_rd = serde_json::to_string(&ResourceDescription {
+            name: ResourceName::Credential.to_string(),
+            optional: HashMap::new(),
+        })
+        .unwrap();
+        assert_eq!(
+            kbc.get_resource(credential_rd).await.unwrap(),
+            CREDENTIAL.as_bytes()
         );
 
         // Case 2. Error while get bad resource name from a good kbc instance

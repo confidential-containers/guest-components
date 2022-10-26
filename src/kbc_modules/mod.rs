@@ -129,6 +129,8 @@ pub enum ResourceName {
     GPGPublicKey,
     #[strum(serialize = "Cosign Key")]
     CosignVerificationKey,
+    #[strum(serialize = "Credential")]
+    Credential,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

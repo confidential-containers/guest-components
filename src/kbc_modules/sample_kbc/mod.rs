@@ -70,6 +70,9 @@ impl KbcInterface for SampleKbc {
             Result::Ok(ResourceName::CosignVerificationKey) => {
                 Ok(std::include_str!("cosign.pub").as_bytes().to_vec())
             }
+            Result::Ok(ResourceName::Credential) => {
+                Ok(std::include_str!("auth.json").as_bytes().to_vec())
+            }
             _ => Err(anyhow!("Unknown resource name")),
         }
     }
