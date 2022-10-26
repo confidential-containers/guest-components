@@ -23,7 +23,7 @@ sigstore_rs = { git = "https://github.com/sigstore/sigstore-rs", rev = "6dd3281c
 
 [build-dependencies]
 tonic-build = "0.5"
-shadow-rs = "0.5.25"
+shadow-rs = "0.17.1"
 
 [dev-dependencies]
 rstest = "0.15.0"

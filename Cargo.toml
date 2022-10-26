@@ -14,9 +14,9 @@ flate2 = "1.0"
 futures-util = "0.3"
 libc = "0.2"
 nix = "0.23.0"
-oci-distribution = { git = "https://github.com/krustlet/oci-distribution", rev = "1ba0d94a900a97aa1bcac032a67ea23766bcfdef" }
+oci-distribution = "0.9.3"
 oci-spec = { git = "https://github.com/containers/oci-spec-rs" }
-ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", rev = "e28e1d922aad72f3faeff480fc26af9c7643124c" }
+ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", rev = "2a09bd03abbfae99e065e3ec4bdddd0054a62d2f" }
 serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
 sha2 = ">=0.10"
