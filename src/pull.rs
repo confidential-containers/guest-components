@@ -169,10 +169,10 @@ impl PullClient {
 
             if diff_id.starts_with(DIGEST_SHA256) {
                 layer_meta.uncompressed_digest =
-                    format!("{}:{:x}", DIGEST_SHA256, sha2::Sha256::digest(&out));
+                    format!("{DIGEST_SHA256}:{:x}", sha2::Sha256::digest(&out));
             } else if diff_id.starts_with(DIGEST_SHA512) {
                 layer_meta.uncompressed_digest =
-                    format!("{}:{:x}", DIGEST_SHA512, sha2::Sha512::digest(&out));
+                    format!("{DIGEST_SHA512}:{:x}", sha2::Sha512::digest(&out));
             } else {
                 return Err(anyhow!("{}: {:?}", ERR_BAD_COMPRESSED_DIGEST, diff_id));
             }

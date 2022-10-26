@@ -37,7 +37,7 @@ impl fmt::Display for Compression {
             Compression::Zstd => "zstd",
         };
 
-        write!(f, "{}", output)
+        write!(f, "{output}")
     }
 }
 

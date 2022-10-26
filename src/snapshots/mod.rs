@@ -26,7 +26,7 @@ impl std::fmt::Display for SnapshotType {
             Self::OcclumUnionfs => "occlum_unionfs",
         };
 
-        write!(f, "{}", out)
+        write!(f, "{out}")
     }
 }
 

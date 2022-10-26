@@ -21,7 +21,7 @@ impl Snapshotter for OverLay {
         let fs_type = SnapshotType::Overlay.to_string();
         let overlay_lowerdir = layer_path.join(":");
         let index = self.index.fetch_add(1, Ordering::SeqCst).to_string();
-        let work_dir = self.data_dir.join(&index);
+        let work_dir = self.data_dir.join(index);
         let overlay_upperdir = work_dir.join("upperdir");
         let overlay_workdir = work_dir.join("workdir");
 
