@@ -121,7 +121,7 @@ impl PolicyReqMatchType {
                 let mut origin_ref_string = origin.whole();
 
                 if let Some(ref_with_no_prefix) = origin_ref_string.strip_prefix(prefix) {
-                    origin_ref_string = format!("{}{}", signed_prefix, ref_with_no_prefix);
+                    origin_ref_string = format!("{signed_prefix}{ref_with_no_prefix}");
                 }
 
                 let new_origin_ref = Reference::try_from(origin_ref_string.as_str())?;
