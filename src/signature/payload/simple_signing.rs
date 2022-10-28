@@ -9,7 +9,7 @@ use anyhow::{anyhow, Result};
 use oci_distribution::Reference;
 use serde::{Deserialize, Serialize};
 
-use crate::policy::ref_match::PolicyReqMatchType;
+use crate::signature::policy::ref_match::PolicyReqMatchType;
 
 // The spec of SigPayload is defined in https://github.com/containers/image/blob/main/docs/containers-signature.5.md.
 #[derive(Serialize, Deserialize, Debug, Clone)]

@@ -3,13 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::image;
 use anyhow::{anyhow, Result};
 use oci_distribution::Reference;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use tokio::fs;
+
+use crate::signature::image;
 
 // Format the sigstore name:
 // `image-repository@digest-algorithm=digest-value`
@@ -179,6 +180,7 @@ pub async fn get_sigs_from_specific_sigstore(sigstore_uri: url::Url) -> Result<V
 mod tests {
     use super::*;
     use oci_distribution::Reference;
+    use std::convert::TryFrom;
     use std::env;
     use std::fs;
 
@@ -188,7 +190,7 @@ mod tests {
     async fn test_get_sigs_from_specific_sigstore() {
         let current_dir = env::current_dir().expect("not found path");
         let test_sigstore_dir = format!(
-            "file://{}/fixtures/signatures",
+            "file://{}/test_data/signature/signatures",
             current_dir.to_str().unwrap()
         );
         let test_sigstore_uri = url::Url::parse(test_sigstore_dir.as_str()).unwrap();
@@ -225,7 +227,7 @@ mod tests {
             },
         ];
 
-        let test_sigstore_config_dir = "./fixtures/sigstore_config";
+        let test_sigstore_config_dir = "./test_data/signature/sigstore_config";
         let sigstore_config = SigstoreConfig::new_from_configs(test_sigstore_config_dir)
             .await
             .unwrap();
@@ -250,13 +252,13 @@ mod tests {
         }
 
         let tests_unexpect = &[
-            "./fixtures/sigstore_config/test_case_1",
-            "./fixtures/sigstore_config/test_case_2",
+            "./test_data/signature/sigstore_config/test_case_1",
+            "./test_data/signature/sigstore_config/test_case_2",
         ];
 
         let tests_expect = &[TestData {
-            sigstore_config_path: "./fixtures/sigstore_config/test_case_3",
-            merged_res_path: "./fixtures/sigstore_config/res.yaml",
+            sigstore_config_path: "./test_data/signature/sigstore_config/test_case_3",
+            merged_res_path: "./test_data/signature/sigstore_config/res.yaml",
         }];
 
         for case in tests_unexpect.iter() {

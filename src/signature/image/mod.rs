@@ -3,12 +3,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::convert::TryFrom;
+
 use anyhow::*;
 use oci_distribution::Reference;
 
 pub mod digest;
 
 use digest::Digest;
+use strum::{Display, EnumString};
 
 #[derive(EnumString, Display, Debug, PartialEq, Eq)]
 pub enum TransportName {

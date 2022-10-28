@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use anyhow::*;
 use async_trait::async_trait;
 
-use crate::image::Image;
+use super::image::Image;
 
 pub mod cosign;
 pub mod simple;

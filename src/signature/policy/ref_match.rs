@@ -8,8 +8,7 @@ use oci_distribution::Reference;
 use serde::*;
 use std::convert::TryFrom;
 
-use crate::image;
-use crate::policy::ErrorInfo;
+use crate::signature::{image, policy::ErrorInfo};
 
 /// The `signedIdentity` field in simple signing. It is a JSON object, specifying what image
 /// identity the signature claims about the image.
@@ -143,9 +142,11 @@ impl PolicyReqMatchType {
     }
 }
 
+#[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
-    use crate::policy::ref_match::PolicyReqMatchType;
+    use std::convert::TryFrom;
+
+    use crate::signature::policy::ref_match::PolicyReqMatchType;
 
     #[test]
     fn test_policy_matches_docker_reference() {

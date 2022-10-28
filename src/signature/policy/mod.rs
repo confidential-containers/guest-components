@@ -7,12 +7,13 @@ use anyhow::{anyhow, Result};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::vec::Vec;
+use strum_macros::{Display, EnumString};
 use tokio::fs;
 
-use crate::image;
-use crate::mechanism::SignScheme;
-
 use self::policy_requirement::PolicyReqType;
+
+use super::image;
+use super::mechanism::SignScheme;
 
 pub mod policy_requirement;
 pub mod ref_match;
