@@ -3,15 +3,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::image::digest::Digest;
-use crate::image::Image;
-use crate::policy::ref_match::PolicyReqMatchType;
 use anyhow::*;
 use async_trait::async_trait;
 use serde::*;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::path::Path;
 use std::path::PathBuf;
+use strum_macros::Display;
+use strum_macros::EnumString;
 use tokio::fs;
 
 mod sigstore;
@@ -20,6 +20,10 @@ mod verify;
 pub use sigstore::SigstoreConfig;
 pub use sigstore::{format_sigstore_name, get_sigs_from_specific_sigstore};
 pub use verify::verify_sig_and_extract_payload;
+
+use crate::signature::image::digest::Digest;
+use crate::signature::image::Image;
+use crate::signature::policy::ref_match::PolicyReqMatchType;
 
 use super::SignScheme;
 

@@ -8,7 +8,7 @@ use openpgp::parse::Parse;
 use openpgp::PacketPile;
 use sequoia_openpgp as openpgp;
 
-use crate::payload::simple_signing::SigPayload;
+use crate::signature::payload::simple_signing::SigPayload;
 
 const GPG_KEY_ID_BYTES_LENGTH: usize = 20;
 const GPG_KEY_ID_SUFFIX_BYTES_LENGTH_IN_SIG: usize = 8;
@@ -127,8 +127,11 @@ pub fn verify_sig_and_extract_payload(pubkey_ring: Vec<u8>, sig: Vec<u8>) -> Res
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryFrom;
+
+    use crate::signature::policy::ref_match::PolicyReqMatchType;
+
     use super::*;
-    use crate::policy::ref_match::PolicyReqMatchType;
     use oci_distribution::Reference;
     use serde_json::json;
 
@@ -247,8 +250,9 @@ mod tests {
             }
         });
 
-        let keyring_bytes_case_1 = ::std::fs::read("./fixtures/pubring.gpg").unwrap();
-        let sig_bytes_case_1 = ::std::fs::read("./fixtures/signatures/signature-1").unwrap();
+        let keyring_bytes_case_1 = ::std::fs::read("./test_data/signature/pubring.gpg").unwrap();
+        let sig_bytes_case_1 =
+            ::std::fs::read("./test_data/signature/signatures/signature-1").unwrap();
 
         let sig_payload_verified =
             verify_sig_and_extract_payload(keyring_bytes_case_1, sig_bytes_case_1).unwrap();

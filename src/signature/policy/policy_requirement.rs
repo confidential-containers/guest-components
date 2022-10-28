@@ -6,7 +6,7 @@
 use anyhow::{anyhow, Result};
 use serde::*;
 
-use crate::{
+use crate::signature::{
     image::Image,
     mechanism::{cosign::CosignParameters, simple::SimpleParameters, SignScheme},
 };
@@ -63,9 +63,9 @@ impl PolicyReqType {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
+    use crate::signature::{
         mechanism::simple::SimpleParameters,
-        policy::{ref_match::PolicyReqMatchType, PolicyReqType},
+        policy::{policy_requirement::PolicyReqType, ref_match::PolicyReqMatchType},
     };
 
     #[test]

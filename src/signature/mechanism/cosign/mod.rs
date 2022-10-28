@@ -20,11 +20,11 @@ use sigstore_rs::{
 };
 use tokio::fs;
 
-use crate::{
-    mechanism::{Image, SignScheme},
-    payload::simple_signing::SigPayload,
-    policy::ref_match::PolicyReqMatchType,
+use crate::signature::{
+    image::Image, payload::simple_signing::SigPayload, policy::ref_match::PolicyReqMatchType,
 };
+
+use super::SignScheme;
 
 /// Dir for storage of cosign verification keys.
 pub const COSIGN_KEY_DIR: &str = "/run/image-security/cosign";
@@ -181,12 +181,15 @@ async fn read_key_from(path: &str) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::image::Image;
-    use crate::mechanism::SignScheme;
-    use crate::policy::policy_requirement::PolicyReqType;
-    use crate::policy::ref_match::PolicyReqMatchType;
-
     use super::CosignParameters;
+    use crate::signature::{
+        mechanism::SignScheme,
+        policy::{policy_requirement::PolicyReqType, ref_match::PolicyReqMatchType},
+        Image,
+    };
+
+    use std::convert::TryFrom;
+
     use oci_distribution::Reference;
     use rstest::rstest;
     use serial_test::serial;
@@ -199,7 +202,7 @@ mod tests {
     #[rstest]
     #[case(
         CosignParameters{
-            key_path: Some("fixtures/cosign/cosign1.pub".into()),
+            key_path: Some("test_data/signature/cosign/cosign1.pub".into()),
             key_data: None,
             signed_identity: None,
         },
@@ -207,7 +210,7 @@ mod tests {
     )]
     #[case(
         CosignParameters{
-            key_path: Some("fixtures/cosign/cosign1.pub".into()),
+            key_path: Some("test_data/signature/cosign/cosign1.pub".into()),
             key_data: None,
             signed_identity: None,
         },
@@ -215,7 +218,7 @@ mod tests {
     )]
     #[case(
         CosignParameters{
-            key_path: Some("fixtures/cosign/cosign1.pub".into()),
+            key_path: Some("test_data/signature/cosign/cosign1.pub".into()),
             key_data: None,
             signed_identity: None,
         },
@@ -267,7 +270,7 @@ mod tests {
     #[case(
         r#"{
             "type": "sigstoreSigned",
-            "keyPath": "fixtures/cosign/cosign2.pub"
+            "keyPath": "test_data/signature/cosign/cosign2.pub"
         }"#, 
         "registry.cn-hangzhou.aliyuncs.com/xynnn/cosign:latest",
         false,
@@ -277,7 +280,7 @@ mod tests {
     #[case(
         r#"{
             "type": "sigstoreSigned",
-            "keyPath": "fixtures/cosign/cosign1.pub",
+            "keyPath": "test_data/signature/cosign/cosign1.pub",
             "signedIdentity": {
                 "type": "exactRepository",
                 "dockerRepository": "registry-1.docker.io/xynnn007/cosign-err"
@@ -291,7 +294,7 @@ mod tests {
     #[case(
         r#"{
             "type": "sigstoreSigned",
-            "keyPath": "fixtures/cosign/cosign2.pub"
+            "keyPath": "test_data/signature/cosign/cosign2.pub"
         }"#,
         "quay.io/kata-containers/confidential-containers:cosign-signed",
         false,
@@ -301,7 +304,7 @@ mod tests {
     #[case(
         r#"{
             "type": "sigstoreSigned",
-            "keyPath": "fixtures/cosign/cosign1.pub",
+            "keyPath": "test_data/signature/cosign/cosign1.pub",
             "signedIdentity": {
                 "type" : "matchExact"
             }
@@ -314,7 +317,7 @@ mod tests {
     #[case(
         r#"{
             "type": "sigstoreSigned",
-            "keyPath": "fixtures/cosign/cosign1.pub"
+            "keyPath": "test_data/signature/cosign/cosign1.pub"
         }"#,
         "registry.cn-hangzhou.aliyuncs.com/xynnn/cosign:signed",
         true,
@@ -323,7 +326,7 @@ mod tests {
     #[case(
         r#"{
             "type": "sigstoreSigned",
-            "keyPath": "fixtures/cosign/cosign1.pub"
+            "keyPath": "test_data/signature/cosign/cosign1.pub"
         }"#,
         "registry-1.docker.io/xynnn007/cosign:latest",
         true,
@@ -332,7 +335,7 @@ mod tests {
     #[case(
         r#"{
             "type": "sigstoreSigned",
-            "keyPath": "fixtures/cosign/cosign1.pub"
+            "keyPath": "test_data/signature/cosign/cosign1.pub"
         }"#,
         "quay.io/kata-containers/confidential-containers:cosign-signed",
         true,

@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::strum::EnumProperty;
+use strum::{Display, EnumProperty, EnumString};
+
 use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt;

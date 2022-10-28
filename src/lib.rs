@@ -12,5 +12,7 @@ pub mod decrypt;
 pub mod image;
 pub mod meta_store;
 pub mod pull;
+pub mod secure_channel;
+pub mod signature;
 pub mod snapshots;
 pub mod unpack;

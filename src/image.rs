@@ -18,6 +18,8 @@ use crate::decoder::Compression;
 use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
 
+use crate::secure_channel::SecureChannel;
+use crate::signature;
 #[cfg(feature = "overlay_feature")]
 use crate::snapshots::overlay::OverLay;
 
@@ -173,7 +175,9 @@ impl ImageClient {
                 let aa_kbc_params =
                     wrapped_aa_kbc_params.trim_start_matches("provider:attestation-agent:");
 
-                signature::allows_image(image_url, &image_digest, aa_kbc_params)
+                // The secure channel to communicate with KBS.
+                let secure_channel = Arc::new(Mutex::new(SecureChannel::new(aa_kbc_params).await?));
+                signature::allows_image(image_url, &image_digest, secure_channel)
                     .await
                     .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
             } else {
