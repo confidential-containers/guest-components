@@ -4,6 +4,7 @@
 //
 
 use anyhow::{anyhow, Result};
+use oci_distribution::secrets::RegistryAuth;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::vec::Vec;
@@ -56,7 +57,11 @@ impl Policy {
     // Returns Ok(()) if the requirement allows running an image.
     // WARNING: This validates signatures and the manifest, but does not download or validate the
     // layers. Users must validate that the layers match their expected digests.
-    pub async fn is_image_allowed(&self, mut image: image::Image) -> Result<()> {
+    pub async fn is_image_allowed(
+        &self,
+        mut image: image::Image,
+        auth: &RegistryAuth,
+    ) -> Result<()> {
         // Get the policy set that matches the image.
         let reqs = self.requirements_for_image(&image);
         if reqs.is_empty() {
@@ -67,7 +72,7 @@ impl Policy {
 
         // The image must meet the requirements of each policy in the policy set.
         for req in reqs.iter() {
-            req.allows_image(&mut image).await?;
+            req.allows_image(&mut image, auth).await?;
         }
 
         Ok(())

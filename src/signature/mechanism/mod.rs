@@ -18,6 +18,7 @@ use std::collections::HashMap;
 
 use anyhow::*;
 use async_trait::async_trait;
+use oci_distribution::secrets::RegistryAuth;
 
 use super::image::Image;
 
@@ -48,5 +49,5 @@ pub trait SignScheme: Send + Sync {
     fn resource_manifest(&self) -> HashMap<&str, &str>;
 
     /// Judge whether an image is allowed by this SignScheme.
-    async fn allows_image(&self, image: &mut Image) -> Result<()>;
+    async fn allows_image(&self, image: &mut Image, auth: &RegistryAuth) -> Result<()>;
 }

@@ -5,7 +5,7 @@
 //
 
 use anyhow::Result;
-use image_rs::signature::IMAGE_SECURITY_CONFIG_DIR;
+use image_rs::image::IMAGE_SECURITY_CONFIG_DIR;
 use std::path::Path;
 use std::process::{Child, Command};
 use strum_macros::{AsRefStr, EnumString};

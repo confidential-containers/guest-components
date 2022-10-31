@@ -24,6 +24,9 @@ pub struct ImageConfig {
 
     /// Security validation control
     pub security_validate: bool,
+
+    /// Use `auth.json` control
+    pub auth: bool,
 }
 
 impl Default for ImageConfig {
@@ -36,6 +39,7 @@ impl Default for ImageConfig {
             work_dir,
             default_snapshot: SnapshotType::Overlay,
             security_validate: false,
+            auth: false,
         }
     }
 }
@@ -83,7 +87,8 @@ mod tests {
         let data = r#"{
             "work_dir": "/var/lib/image-rs/",
             "default_snapshot": "overlay",
-            "security_validate": false
+            "security_validate": false,
+            "auth": false
         }"#;
 
         let tempdir = tempfile::tempdir().unwrap();

@@ -5,6 +5,7 @@
 /// Environment macro for `image-rs` work dir.
 pub const CC_IMAGE_WORK_DIR: &str = "CC_IMAGE_WORK_DIR";
 
+pub mod auth;
 pub mod bundle;
 pub mod config;
 pub mod decoder;
