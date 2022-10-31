@@ -29,9 +29,11 @@ const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider.conf";
 #[tokio::test]
 #[serial]
 async fn test_decrypt_layers(#[case] kbc: KBC, #[case] image: &str) {
-    kbc.prepare_test();
+    kbc.prepare_test().await;
     // Init AA
-    let mut aa = common::start_attestation_agent().expect("Failed to start attestation agent!");
+    let mut aa = common::start_attestation_agent()
+        .await
+        .expect("Failed to start attestation agent!");
 
     // AA parameter
     let aa_parameters = kbc.aa_parameter();
@@ -58,6 +60,6 @@ async fn test_decrypt_layers(#[case] kbc: KBC, #[case] image: &str) {
         .is_ok());
 
     // kill AA when the test is finished
-    aa.kill().expect("Failed to stop attestation agent!");
-    kbc.clean();
+    aa.kill().await.expect("Failed to stop attestation agent!");
+    kbc.clean().await;
 }

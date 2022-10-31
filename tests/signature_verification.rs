@@ -79,9 +79,11 @@ const TESTS: [TestItem; 6] = [
 #[tokio::test]
 #[serial]
 async fn signature_verification_one_kbc(#[case] kbc: KBC) {
-    kbc.prepare_test();
+    kbc.prepare_test().await;
     // Init AA
-    let mut aa = common::start_attestation_agent().expect("Failed to start attestation agent!");
+    let mut aa = common::start_attestation_agent()
+        .await
+        .expect("Failed to start attestation agent!");
 
     // AA parameter
     let aa_parameters = kbc.aa_parameter();
@@ -125,6 +127,6 @@ async fn signature_verification_one_kbc(#[case] kbc: KBC) {
     }
 
     // kill AA when the test is finished
-    aa.kill().expect("Failed to stop attestation agent!");
-    kbc.clean();
+    aa.kill().await.expect("Failed to stop attestation agent!");
+    kbc.clean().await;
 }
