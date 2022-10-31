@@ -55,3 +55,17 @@ Here
 In `signature_verification.rs`, the tests are organized due different kinds
 of KBCs, which means for each given KBC, all four tests mentioned will be
 covered. We use `rstest` crate to parametrize different KBCs.
+
+## Registry Credential Retrievement
+
+Implemented in `credential.rs`.
+
+Registry Credential Retrievement will do the following steps to test this feature.
+- Get `auth.json` from the Attestation Agent. The test KBC is `Offline-Fs-Kbc`.
+- Try to pull images from private registry using the matched credential in `auth.json`
+
+The test cases are
+| Image Reference | Related credential|
+|---|---|
+|`docker.io/liudalibj/private-busy-box` |`bGl1ZGFsaWJqOlBhc3N3MHJkIXFhego=`|
+|`quay.io/liudalibj/private-busy-box`|`bGl1ZGFsaWJqOlBhc3N3MHJkIXFhego=`|
