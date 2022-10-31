@@ -4,6 +4,7 @@
 //
 
 use anyhow::{anyhow, Result};
+use oci_distribution::secrets::RegistryAuth;
 use serde::*;
 
 use crate::signature::{
@@ -41,12 +42,12 @@ pub enum PolicyReqType {
 
 impl PolicyReqType {
     /// Check whether an image is allowed by a given policy requirement.
-    pub async fn allows_image(&self, image: &mut Image) -> Result<()> {
+    pub async fn allows_image(&self, image: &mut Image, auth: &RegistryAuth) -> Result<()> {
         match self {
             PolicyReqType::Accept => Ok(()),
             PolicyReqType::Reject => Err(anyhow!(r#"The policy is "reject""#)),
-            PolicyReqType::SimpleSigning(inner) => inner.allows_image(image).await,
-            PolicyReqType::Cosign(inner) => inner.allows_image(image).await,
+            PolicyReqType::SimpleSigning(inner) => inner.allows_image(image, auth).await,
+            PolicyReqType::Cosign(inner) => inner.allows_image(image, auth).await,
         }
     }
 

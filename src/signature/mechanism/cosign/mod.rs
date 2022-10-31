@@ -9,6 +9,7 @@ use std::{collections::HashMap, path::Path};
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use oci_distribution::secrets::RegistryAuth;
 use serde::{Deserialize, Serialize};
 use sigstore_rs::{
     cosign::{
@@ -80,12 +81,12 @@ impl SignScheme for CosignParameters {
     }
 
     /// Judge whether an image is allowed by this SignScheme.
-    async fn allows_image(&self, image: &mut Image) -> Result<()> {
+    async fn allows_image(&self, image: &mut Image, auth: &RegistryAuth) -> Result<()> {
         // Check before we access the network
         self.check_reference_rule_types()?;
 
         // Verification, will access the network
-        let payloads = self.verify_signature_and_get_payload(image).await?;
+        let payloads = self.verify_signature_and_get_payload(image, auth).await?;
 
         // check the reference rules (signed identity)
         for payload in payloads {
@@ -125,7 +126,11 @@ impl CosignParameters {
     /// * Download the signature image, gather the signatures and verify them
     /// using the pubkey.
     /// If succeeds, the payloads of the signature will be returned.
-    async fn verify_signature_and_get_payload(&self, image: &mut Image) -> Result<Vec<SigPayload>> {
+    async fn verify_signature_and_get_payload(
+        &self,
+        image: &mut Image,
+        auth: &RegistryAuth,
+    ) -> Result<Vec<SigPayload>> {
         // Get the pubkey
         let key = match (&self.key_data, &self.key_path) {
             (None, None) => return Err(anyhow!("Neither keyPath nor keyData is specified.")),
@@ -136,7 +141,7 @@ impl CosignParameters {
 
         let mut client = sigstore_rs::cosign::ClientBuilder::default().build()?;
 
-        let auth = &sigstore_rs::registry::Auth::Anonymous;
+        let auth = &sigstore_rs::registry::Auth::from(auth);
         let image_ref = image.reference.whole();
 
         // Get the cosign signature "image"'s uri and the signed image's digest
@@ -238,7 +243,10 @@ mod tests {
             .expect("Set manifest digest failed.");
         assert!(
             parameter
-                .verify_signature_and_get_payload(&mut image)
+                .verify_signature_and_get_payload(
+                    &mut image,
+                    &oci_distribution::secrets::RegistryAuth::Anonymous
+                )
                 .await
                 .is_ok(),
             "failed test:\nparameter:{:?}\nimage reference:{}",
@@ -360,7 +368,12 @@ mod tests {
             .expect("Set manifest digest failed.");
 
         if let PolicyReqType::Cosign(scheme) = policy_requirement {
-            let res = scheme.allows_image(&mut image).await;
+            let res = scheme
+                .allows_image(
+                    &mut image,
+                    &oci_distribution::secrets::RegistryAuth::Anonymous,
+                )
+                .await;
             assert_eq!(
                 res.is_ok(),
                 allow,

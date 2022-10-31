@@ -5,6 +5,7 @@
 
 use anyhow::*;
 use async_trait::async_trait;
+use oci_distribution::secrets::RegistryAuth;
 use serde::*;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -113,7 +114,7 @@ impl SignScheme for SimpleParameters {
         res
     }
 
-    async fn allows_image(&self, image: &mut Image) -> Result<()> {
+    async fn allows_image(&self, image: &mut Image, _auth: &RegistryAuth) -> Result<()> {
         // FIXME: only support "GPGKeys" type now.
         //
         // refer to https://github.com/confidential-containers/image-rs/issues/14
