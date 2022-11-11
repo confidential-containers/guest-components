@@ -32,6 +32,10 @@ impl KbcInterface for Kbc {
     async fn decrypt_payload(&mut self, _annotation: &str) -> Result<Vec<u8>> {
         Err(anyhow!("Decrypt Payload API of this KBC is unimplemented."))
     }
+
+    async fn get_resource(&mut self, _description: String) -> Result<Vec<u8>> {
+        Err(anyhow!("Unimplemented"))
+    }
 }
 
 impl Kbc {
