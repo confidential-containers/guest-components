@@ -55,7 +55,7 @@ impl Kbc {
         }
     }
 
-    fn generate_evidence(&self) -> Result<Evidence> {
+    fn generate_evidence(&self) -> Result<Attestation> {
         let key = self
             .tee_key
             .as_ref()
@@ -81,9 +81,7 @@ impl Kbc {
             .get_evidence(ehd)
             .map_err(|e| anyhow!("Get TEE evidence failed: {:?}", e))?;
 
-        Ok(Evidence {
-            nonce: self.nonce.clone(),
-            tee: self.tee.clone(),
+        Ok(Attestation {
             tee_pubkey: tee_pubkey_string,
             tee_evidence,
         })
