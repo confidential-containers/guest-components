@@ -12,17 +12,21 @@ pub mod sample;
 
 #[cfg(feature = "az-snp-vtpm-attester")]
 pub mod az_snp_vtpm;
+
 #[cfg(feature = "tdx-attester")]
 pub mod tdx;
 
 #[cfg(feature = "occlum-attester")]
 pub mod sgx_occlum;
 
+#[cfg(feature = "snp-attester")]
+pub mod snp;
+
 /// The supported TEE types:
 /// - Tdx: TDX TEE.
 /// - SgxOcclum: SGX TEE with Occlum Libos.
 /// - AzSnpVtpm: SEV-SNP TEE for Azure CVMs.
-/// - Sevsnp: SEV-SNP TEE.
+/// - Snp: SEV-SNP TEE.
 /// - Sample: A dummy TEE that used to test/demo the KBC functionalities.
 #[derive(Debug, EnumString, Display)]
 #[strum(ascii_case_insensitive, serialize_all = "lowercase")]
@@ -30,8 +34,8 @@ pub enum Tee {
     Tdx,
     #[strum(serialize = "sgx")]
     SgxOcclum,
-    Sevsnp,
     AzSnpVtpm,
+    Snp,
     Sample,
     Unknown,
 }
@@ -46,6 +50,8 @@ impl Tee {
             Tee::SgxOcclum => Ok(Box::<sgx_occlum::SgxOcclumAttester>::default()),
             #[cfg(feature = "az-snp-vtpm-attester")]
             Tee::AzSnpVtpm => Ok(Box::<az_snp_vtpm::AzSnpVtpmAttester>::default()),
+            #[cfg(feature = "snp-attester")]
+            Tee::Snp => Ok(Box::<snp::SnpAttester>::default()),
             _ => bail!("TEE is not supported!"),
         }
     }
@@ -76,5 +82,9 @@ pub fn detect_tee_type() -> Tee {
         return Tee::AzSnpVtpm;
     }
 
+    #[cfg(feature = "snp-attester")]
+    if snp::detect_platform() {
+        return Tee::Snp;
+    }
     Tee::Unknown
 }

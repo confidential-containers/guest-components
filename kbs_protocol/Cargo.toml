@@ -25,6 +25,7 @@ all-attesters = ["attester/all-attesters"]
 tdx-attester = ["attester/tdx-attester"]
 occlum-attester = ["attester/occlum-attester"]
 az-snp-vtpm-attester = ["attester/az-snp-vtpm-attester"]
+snp-attester = ["attester/snp-attester"]
 
 rust-crypto = ["reqwest", "reqwest?/rustls-tls", "crypto/rust-crypto"]
 openssl = ["reqwest", "reqwest?/native-tls-vendored", "crypto/openssl"]

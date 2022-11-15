@@ -30,6 +30,7 @@ jobs:
           - cc_kbc_tdx
           - cc_kbc_occlum
           - cc_kbc_az_snp_vtpm
+          - cc_kbc_snp
     steps:
       - name: Code checkout
         uses: actions/checkout@v2

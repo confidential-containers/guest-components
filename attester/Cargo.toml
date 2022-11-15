@@ -13,13 +13,15 @@ log.workspace = true
 occlum_dcap = { git = "https://github.com/occlum/occlum", rev = "dbe404f", optional = true }
 serde.workspace = true
 serde_json.workspace = true
+sev = { git = "https://github.com/virtee/sev", rev = "3dca05d2c93388cb00534ad18f5928fd812e99cc", optional = true }
 strum.workspace = true
 tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", rev = "cc582e8be0c9010295c66fb58c59f74744017600", optional = true }
 
 [features]
 default = ["all-attesters"]
-all-attesters = ["tdx-attester", "occlum-attester", "az-snp-vtpm-attester"]
+all-attesters = ["tdx-attester", "occlum-attester", "az-snp-vtpm-attester", "snp-attester"]
 
 tdx-attester = ["tdx-attest-rs"]
 occlum-attester = ["occlum_dcap"]
 az-snp-vtpm-attester = ["az-snp-vtpm"]
+snp-attester = ["sev"]

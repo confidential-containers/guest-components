@@ -27,6 +27,7 @@ all-attesters = ["kbc/all-attesters"]
 tdx-attester = ["kbc/tdx-attester"]
 occlum-attester = ["kbc/occlum-attester"]
 az-snp-vtpm-attester= ["kbc/az-snp-vtpm-attester"]
+snp-attester = ["kbc/snp-attester"]
 
 sample_kbc = ["kbc/sample_kbc"]
 eaa_kbc = ["kbc/eaa_kbc"]
