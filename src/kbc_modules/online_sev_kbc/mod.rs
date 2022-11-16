@@ -4,17 +4,18 @@
 //
 
 use crate::common::sev::*;
-use crate::kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription};
+use crate::kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription, ResourceName};
 
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
-use anyhow::{anyhow, Result};
+use anyhow::*;
 use async_trait::async_trait;
 use base64::decode;
 use openssl::symm::{decrypt, Cipher};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
+use std::str::FromStr;
 use tonic::codegen::http::Uri;
 use uuid::Uuid;
 
@@ -29,7 +30,7 @@ const KEYS_PATH: &str = "/sys/kernel/security/secrets/coco/1ee27366-0c87-43a6-af
 
 type Ciphers = HashMap<String, Cipher>;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct Connection {
     client_id: Uuid,
     key: String,
@@ -78,7 +79,16 @@ impl KbcInterface for OnlineSevKbc {
 
     async fn get_resource(&mut self, description: String) -> Result<Vec<u8>> {
         let desc = serde_json::from_str::<ResourceDescription>(description.as_str())?;
-        self.get_resource_from_kbs(desc.name).await
+        match ResourceName::from_str(desc.name.as_str()) {
+            Result::Ok(ResourceName::ClientId) => {
+                let connection = self
+                    .connection
+                    .as_ref()
+                    .map_err(|e| anyhow!("Failed to get injected connection. {}", e))?;
+                Ok(connection.client_id.hyphenated().to_string().into_bytes())
+            }
+            _ => self.get_resource_from_kbs(desc.name).await,
+        }
     }
 
     async fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {

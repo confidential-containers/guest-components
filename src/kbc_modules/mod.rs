@@ -131,6 +131,8 @@ pub enum ResourceName {
     CosignVerificationKey,
     #[strum(serialize = "Credential")]
     Credential,
+    #[strum(serialize = "Client Id")]
+    ClientId,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
