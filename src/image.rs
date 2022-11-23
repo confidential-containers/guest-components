@@ -8,7 +8,7 @@ use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
 use oci_spec::image::{ImageConfiguration, Os};
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::convert::TryFrom;
 use std::path::Path;
 use std::sync::atomic::AtomicUsize;
@@ -282,9 +282,20 @@ impl ImageClient {
             ));
         }
 
+        let mut unique_layers = Vec::new();
+        let mut digests = BTreeSet::new();
+        for l in &image_manifest.layers {
+            if digests.contains(&l.digest) {
+                continue;
+            }
+
+            digests.insert(&l.digest);
+            unique_layers.push(l.clone());
+        }
+
         let layer_metas = client
             .pull_layers(
-                image_manifest.layers.clone(),
+                unique_layers,
                 diff_ids,
                 decrypt_config,
                 self.meta_store.clone(),
@@ -347,6 +358,8 @@ mod tests {
 
         // TODO test with more OCI image registries and fix broken registries.
         let oci_images = vec![
+            // image with duplicated layers
+            "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master",
             // Alibaba Container Registry
             "registry.cn-hangzhou.aliyuncs.com/acs/busybox:v1.29.2",
             // Amazon Elastic Container Registry
@@ -372,7 +385,7 @@ mod tests {
                 .is_ok());
         }
 
-        assert_eq!(image_client.meta_store.lock().await.image_db.len(), 4);
+        assert_eq!(image_client.meta_store.lock().await.image_db.len(), 5);
     }
 
     #[tokio::test]
