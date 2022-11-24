@@ -293,6 +293,7 @@ impl ImageClient {
             unique_layers.push(l.clone());
         }
 
+        let unique_layers_len = unique_layers.len();
         let layer_metas = client
             .pull_layers(
                 unique_layers,
@@ -310,6 +311,12 @@ impl ImageClient {
             .collect();
 
         self.meta_store.lock().await.layer_db.extend(layer_db);
+        if unique_layers_len != image_data.layer_metas.len() {
+            return Err(anyhow!(
+                " {} layers failed to pull",
+                unique_layers_len - image_data.layer_metas.len()
+            ));
+        }
 
         let image_id = create_bundle(&image_data, bundle_dir, snapshot)?;
 

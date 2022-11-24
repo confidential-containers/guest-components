@@ -94,7 +94,11 @@ impl<'a> PullClient<'a> {
             }
         });
 
-        let layer_metas = future::try_join_all(layer_metas).await?;
+        let layer_metas = future::join_all(layer_metas)
+            .await
+            .into_iter()
+            .filter_map(|v| v.ok())
+            .collect();
 
         Ok(layer_metas)
     }
