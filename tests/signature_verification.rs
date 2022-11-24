@@ -32,6 +32,12 @@ struct TestItem<'a, 'b> {
     description: &'b str,
 }
 
+#[cfg(feature = "cosign")]
+const ALLOW_COSIGN: bool = true;
+
+#[cfg(not(feature = "cosign"))]
+const ALLOW_COSIGN: bool = false;
+
 /// Four test cases.
 const TESTS: [TestItem; 6] = [
     TestItem {
@@ -60,7 +66,7 @@ const TESTS: [TestItem; 6] = [
     },
     TestItem {
         image_ref: "quay.io/kata-containers/confidential-containers:cosign-signed",
-        allow: true,
+        allow: ALLOW_COSIGN,
         signing_scheme: SigningName::Cosign,
         description: "Allow pulling an unencrypted signed image with cosign-signed signature",
     },

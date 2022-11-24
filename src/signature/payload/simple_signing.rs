@@ -54,6 +54,7 @@ impl SigPayload {
     }
 }
 
+#[cfg(feature = "cosign")]
 impl From<sigstore_rs::simple_signing::SimpleSigning> for SigPayload {
     fn from(s: sigstore_rs::simple_signing::SimpleSigning) -> Self {
         Self {

@@ -37,7 +37,7 @@ sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["co
 async-trait = "0.1.56"
 tonic = "0.5"
 strum_macros = "0.24"
-sigstore_rs = { git = "https://github.com/sigstore/sigstore-rs", rev = "6dd3281c25270f0d82550368abfb399ed3da7b41", package = "sigstore" }
+sigstore_rs = { git = "https://github.com/sigstore/sigstore-rs", rev = "6dd3281c25270f0d82550368abfb399ed3da7b41", package = "sigstore",  optional = true}
 url = "2.2.2"
 
 [dev-dependencies]
@@ -54,7 +54,8 @@ members = ["libs/test-utils"]
 exclude = ["scripts/attestation_agent/app"]
 
 [features]
-default = ["overlay_feature", "ocicrypt-rs", "attestation_agent/default", "ocicrypt-rs/default"]
+default = ["overlay_feature", "ocicrypt-rs", "attestation_agent/default", "ocicrypt-rs/default", "cosign"]
+cosign = ["dep:sigstore_rs"]
 overlay_feature = []
 occlum_feature = ["eaa_kbc"]
 eaa_kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]
