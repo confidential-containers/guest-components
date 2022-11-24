@@ -22,8 +22,10 @@ use oci_distribution::secrets::RegistryAuth;
 
 use super::image::Image;
 
-pub mod cosign;
 pub mod simple;
+
+#[cfg(feature = "cosign")]
+pub mod cosign;
 
 /// The interface of a signing scheme
 #[async_trait]
