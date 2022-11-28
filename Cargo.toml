@@ -29,6 +29,7 @@ tokio = { version = "1.0", features = ["macros", "rt-multi-thread"], optional = 
 uuid = { version = "1.1.2", features = ["serde", "v4"], optional = true }
 bincode = { version = "1.3.3", optional = true }
 futures-util = "0.3.21"
+tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
@@ -40,7 +41,7 @@ shadow-rs = "0.16.1"
 [features]
 default = ["sample_kbc"]
 sample_kbc = []
-cc_kbc = []
+cc_kbc = ["tdx-attest-rs"]
 eaa_kbc = []
 offline_fs_kbc = ["openssl"]
 offline_sev_kbc = ["openssl"]

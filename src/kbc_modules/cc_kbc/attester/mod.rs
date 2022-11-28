@@ -6,6 +6,7 @@
 use anyhow::*;
 
 pub mod sample;
+pub mod tdx;
 
 /// The supported TEE types:
 /// - Tdx: TDX TEE.
@@ -28,6 +29,9 @@ impl TEE {
             TEE::Sample => {
                 Ok(Box::new(sample::SampleAttester::default()) as Box<dyn Attester + Send + Sync>)
             }
+            TEE::Tdx => {
+                Ok(Box::new(tdx::TdxAttester::default()) as Box<dyn Attester + Send + Sync>)
+            }
             _ => Err(anyhow!("TEE is not supported!")),
         }
     }
@@ -41,6 +45,8 @@ pub trait Attester {
 pub fn detect_tee_type() -> TEE {
     if sample::detect_platform() {
         TEE::Sample
+    } else if tdx::detect_platform() {
+        TEE::Tdx
     } else {
         TEE::Unknown
     }
