@@ -17,7 +17,6 @@ use crate::signature::{
 use crate::signature::{
     image::Image,
     mechanism::{simple::SimpleParameters, SignScheme},
-    policy::ref_match::PolicyReqMatchType,
 };
 
 /// Policy Requirement Types.
@@ -41,37 +40,12 @@ pub enum PolicyReqType {
     SimpleSigning(SimpleParameters),
 
     /// Signed by Cosign
+    #[cfg(feature = "cosign")]
     #[serde(rename = "sigstoreSigned")]
     Cosign(CosignParameters),
     // TODO: Add more signature mechanism.
     //
     // Refer to issue: https://github.com/confidential-containers/image-rs/issues/7
-}
-
-/// Copy cosign parameters struct from mechansim/cosign/mod.rs when image-rs isn't
-/// built with the cosign module
-#[cfg(not(feature = "cosign"))]
-#[derive(Deserialize, Debug, Eq, PartialEq, Serialize, Default)]
-pub struct CosignParameters {
-    // KeyPath is a pathname to a local file containing the trusted key(s).
-    // Exactly one of KeyPath and KeyData can be specified.
-    //
-    // This field is optional.
-    #[serde(rename = "keyPath")]
-    pub key_path: Option<String>,
-    // KeyData contains the trusted key(s), base64-encoded.
-    // Exactly one of KeyPath and KeyData can be specified.
-    //
-    // This field is optional.
-    #[serde(rename = "keyData")]
-    pub key_data: Option<String>,
-
-    // SignedIdentity specifies what image identity the signature must be claiming about the image.
-    // Defaults to "match-exact" if not specified.
-    //
-    // This field is optional.
-    #[serde(default, rename = "signedIdentity")]
-    pub signed_identity: Option<PolicyReqMatchType>,
 }
 
 impl PolicyReqType {
@@ -87,10 +61,6 @@ impl PolicyReqType {
             PolicyReqType::SimpleSigning(inner) => inner.allows_image(image, auth).await,
             #[cfg(feature = "cosign")]
             PolicyReqType::Cosign(inner) => inner.allows_image(image, auth).await,
-            #[cfg(not(feature = "cosign"))]
-            PolicyReqType::Cosign(inner) => Err(anyhow!(
-                r#"image-rs was built without support for cosign image signing"#
-            )),
         }
     }
 

@@ -6,7 +6,7 @@
 
 //! Test for decryption of image layers.
 
-use common::KBC;
+use common::{KbcType, KBC};
 use image_rs::image::ImageClient;
 use rstest::rstest;
 use serial_test::serial;
@@ -24,11 +24,15 @@ const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider.conf";
 
 #[rstest]
 #[trace]
-#[case(KBC::Sample, ENCRYPTED_IMAGE_REFERENCE_SAMPLE_KBS)]
-#[case(KBC::OfflineFs, ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS)]
+#[case(KbcType::Sample, ENCRYPTED_IMAGE_REFERENCE_SAMPLE_KBS)]
+#[case(KbcType::OfflineFs, ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS)]
 #[tokio::test]
 #[serial]
-async fn test_decrypt_layers(#[case] kbc: KBC, #[case] image: &str) {
+async fn test_decrypt_layers(#[case] kbc_type: KbcType, #[case] image: &str) {
+    let kbc = KBC {
+        kbc_type: kbc_type,
+        resources_file: String::new(),
+    };
     kbc.prepare_test().await;
     // Init AA
     let mut aa = common::start_attestation_agent()

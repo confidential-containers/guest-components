@@ -23,11 +23,17 @@ const AA_PARAMETERS_PREFIX: &str = "provider:attestation-agent";
 const AA_PARAMETERS_KBC_URL: &str = "null";
 
 #[derive(EnumString, AsRefStr, Debug)]
-pub enum KBC {
+pub enum KbcType {
     #[strum(to_string = "sample_kbc")]
     Sample,
     #[strum(to_string = "offline_fs_kbc")]
     OfflineFs,
+}
+
+#[derive(Debug)]
+pub struct KBC {
+    pub kbc_type: KbcType,
+    pub resources_file: String,
 }
 
 impl KBC {
@@ -35,7 +41,7 @@ impl KBC {
         format!(
             "{}:{}::{}",
             AA_PARAMETERS_PREFIX,
-            self.as_ref(),
+            self.kbc_type.as_ref(),
             AA_PARAMETERS_KBC_URL
         )
     }
@@ -54,11 +60,12 @@ impl KBC {
             .await
             .expect("Install GPG signature file failed.");
 
-        match self {
-            KBC::Sample => {}
-            KBC::OfflineFs => {
+        match self.kbc_type {
+            KbcType::Sample => {}
+            KbcType::OfflineFs => {
                 Command::new(OFFLINE_FS_KBC_RESOURCE_SCRIPT)
                     .arg("install")
+                    .arg(&self.resources_file)
                     .output()
                     .await
                     .expect("Install offline-fs-kbcs's resources failed.");
@@ -67,9 +74,9 @@ impl KBC {
     }
 
     pub async fn clean(&self) {
-        match self {
-            KBC::Sample => {}
-            KBC::OfflineFs => {
+        match self.kbc_type {
+            KbcType::Sample => {}
+            KbcType::OfflineFs => {
                 Command::new(OFFLINE_FS_KBC_RESOURCE_SCRIPT)
                     .arg("clean")
                     .output()
