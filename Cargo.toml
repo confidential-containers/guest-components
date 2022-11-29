@@ -46,7 +46,7 @@ tempfile = "3.2"
 strum = "0.24"
 strum_macros = "0.24"
 serial_test = "0.9.0"
-rstest = "0.15.0"
+rstest = "0.16.0"
 test-utils = { path = "libs/test-utils" }
 
 [workspace]
