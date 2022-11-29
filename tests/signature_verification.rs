@@ -6,7 +6,7 @@
 
 //! Test for signature verification.
 
-use common::KBC;
+use common::{KbcType, KBC};
 use image_rs::image::ImageClient;
 use rstest::rstest;
 use serial_test::serial;
@@ -78,13 +78,7 @@ const TESTS: [TestItem; 6] = [
     },
 ];
 
-#[rstest]
-#[trace]
-#[case(KBC::Sample)]
-#[case(KBC::OfflineFs)]
-#[tokio::test]
-#[serial]
-async fn signature_verification_one_kbc(#[case] kbc: KBC) {
+async fn run_signature_verification_one_kbc(kbc: KBC) {
     kbc.prepare_test().await;
     // Init AA
     let mut aa = common::start_attestation_agent()
@@ -135,4 +129,38 @@ async fn signature_verification_one_kbc(#[case] kbc: KBC) {
     // kill AA when the test is finished
     aa.kill().await.expect("Failed to stop attestation agent!");
     kbc.clean().await;
+}
+
+#[cfg(feature = "cosign")]
+#[rstest]
+#[trace]
+#[case(KbcType::Sample)]
+#[case(KbcType::OfflineFs)]
+#[tokio::test]
+#[serial]
+async fn signature_verification_one_kbc(#[case] kbc_type: KbcType) {
+    let kbc = KBC {
+        kbc_type: kbc_type,
+        resources_file: "aa-offline_fs_kbc-resources.json".to_string(),
+    };
+    run_signature_verification_one_kbc(kbc).await;
+}
+
+/// image-rs built without support for cosign image signing cannot use a policy that includes a type that
+/// uses cosign (type: sigstoreSigned), even if the image being pulled is not signed using cosign. The
+/// policy.json included with the sample kbc attestation agent includes policies that use cosign, so if cosign is
+/// disabled only run the test cases using the offline filesystem KBC type KBC
+/// https://github.com/confidential-containers/attestation-agent/blob/main/src/kbc_modules/sample_kbc/policy.json
+#[cfg(not(feature = "cosign"))]
+#[rstest]
+#[trace]
+#[case(KbcType::OfflineFs)]
+#[tokio::test]
+#[serial]
+async fn signature_verification_one_kbc(#[case] kbc_type: KbcType) {
+    let kbc = KBC {
+        kbc_type: kbc_type,
+        resources_file: "aa-offline_fs_kbc-resources-no-cosign.json".to_string(),
+    };
+    run_signature_verification_one_kbc(kbc).await;
 }

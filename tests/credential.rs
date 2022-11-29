@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use common::KBC;
+use common::{KbcType, KBC};
 use image_rs::image::ImageClient;
 use rstest::rstest;
 use serial_test::serial;
@@ -16,7 +16,10 @@ mod common;
 #[tokio::test]
 #[serial]
 async fn test_use_credential(#[case] image_ref: &str) {
-    let kbc = KBC::OfflineFs;
+    let kbc = KBC {
+        kbc_type: KbcType::OfflineFs,
+        resources_file: String::new(),
+    };
     kbc.prepare_test().await;
 
     // Init AA
