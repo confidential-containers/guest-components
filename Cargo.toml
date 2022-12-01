@@ -55,6 +55,7 @@ exclude = ["scripts/attestation_agent/app"]
 
 [features]
 default = ["overlay_feature", "ocicrypt-rs", "attestation_agent/default", "ocicrypt-rs/default", "cosign"]
+default_s390x = ["overlay_feature", "ocicrypt-rs", "attestation_agent/default", "ocicrypt-rs/default"]
 cosign = ["dep:sigstore_rs"]
 overlay_feature = []
 occlum_feature = ["eaa_kbc"]
