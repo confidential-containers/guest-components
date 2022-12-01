@@ -20,7 +20,7 @@ AA_DIR=$SCRIPT_DIR/attestation_agent
 pushd $SCRIPT_DIR
 git clone --depth 1 "https://github.com/confidential-containers/attestation-agent.git" $AA_DIR
 pushd $AA_DIR
-make KBC=sample_kbc,offline_fs_kbc
+make KBC=offline_fs_kbc
 make DESTDIR="$SCRIPT_DIR" install
 popd
 

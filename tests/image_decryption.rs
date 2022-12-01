@@ -6,15 +6,10 @@
 
 //! Test for decryption of image layers.
 
-use common::{KbcType, KBC};
 use image_rs::image::ImageClient;
-use rstest::rstest;
 use serial_test::serial;
 
 mod common;
-
-/// The image to be decrypted using sample kbc
-const ENCRYPTED_IMAGE_REFERENCE_SAMPLE_KBS: &str = "docker.io/arronwang/busybox_kbs_encrypted";
 
 /// The image to be decrypted using offline-fs-kbc
 const ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS: &str = "docker.io/xynnn007/busybox:encrypted";
@@ -22,25 +17,14 @@ const ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS: &str = "docker.io/xynnn007/busyb
 /// Ocicrypt-rs config
 const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider.conf";
 
-#[rstest]
-#[trace]
-#[case(KbcType::Sample, ENCRYPTED_IMAGE_REFERENCE_SAMPLE_KBS)]
-#[case(KbcType::OfflineFs, ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS)]
 #[tokio::test]
 #[serial]
-async fn test_decrypt_layers(#[case] kbc_type: KbcType, #[case] image: &str) {
-    let kbc = KBC {
-        kbc_type: kbc_type,
-        resources_file: String::new(),
-    };
-    kbc.prepare_test().await;
+async fn test_decrypt_layers() {
+    common::prepare_test().await;
     // Init AA
     let mut aa = common::start_attestation_agent()
         .await
         .expect("Failed to start attestation agent!");
-
-    // AA parameter
-    let aa_parameters = kbc.aa_parameter();
 
     // Set env for ocicrypt-rs. The env is needed by ocicrypt-rs
     // to communicate with AA
@@ -59,11 +43,16 @@ async fn test_decrypt_layers(#[case] kbc_type: KbcType, #[case] image: &str) {
         .expect("Delete configs failed.");
     let mut image_client = ImageClient::default();
     assert!(image_client
-        .pull_image(image, bundle_dir.path(), &None, &Some(&aa_parameters))
+        .pull_image(
+            ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS,
+            bundle_dir.path(),
+            &None,
+            &Some(common::AA_PARAMETER)
+        )
         .await
         .is_ok());
 
     // kill AA when the test is finished
     aa.kill().await.expect("Failed to stop attestation agent!");
-    kbc.clean().await;
+    common::clean().await;
 }
