@@ -6,9 +6,7 @@
 
 //! Test for signature verification.
 
-use common::{KbcType, KBC};
 use image_rs::image::ImageClient;
-use rstest::rstest;
 use serial_test::serial;
 use strum_macros::{Display, EnumString};
 
@@ -78,19 +76,20 @@ const TESTS: [TestItem; 6] = [
     },
 ];
 
-async fn run_signature_verification_one_kbc(kbc: KBC) {
-    kbc.prepare_test().await;
+/// image-rs built without support for cosign image signing cannot use a policy that includes a type that
+/// uses cosign (type: sigstoreSigned), even if the image being pulled is not signed using cosign.
+/// https://github.com/confidential-containers/attestation-agent/blob/main/src/kbc_modules/sample_kbc/policy.json
+#[tokio::test]
+#[serial]
+async fn signature_verification() {
+    common::prepare_test().await;
     // Init AA
     let mut aa = common::start_attestation_agent()
         .await
         .expect("Failed to start attestation agent!");
 
-    // AA parameter
-    let aa_parameters = kbc.aa_parameter();
-
     for test in &TESTS {
-        // clean former test files, which will help to test
-        // a full interaction with sample-kbc.
+        // clean former test files
         common::clean_configs()
             .await
             .expect("Delete configs failed.");
@@ -113,7 +112,7 @@ async fn run_signature_verification_one_kbc(kbc: KBC) {
                 test.image_ref,
                 bundle_dir.path(),
                 &None,
-                &Some(&aa_parameters),
+                &Some(common::AA_PARAMETER),
             )
             .await;
         assert_eq!(
@@ -128,39 +127,5 @@ async fn run_signature_verification_one_kbc(kbc: KBC) {
 
     // kill AA when the test is finished
     aa.kill().await.expect("Failed to stop attestation agent!");
-    kbc.clean().await;
-}
-
-#[cfg(feature = "cosign")]
-#[rstest]
-#[trace]
-#[case(KbcType::Sample)]
-#[case(KbcType::OfflineFs)]
-#[tokio::test]
-#[serial]
-async fn signature_verification_one_kbc(#[case] kbc_type: KbcType) {
-    let kbc = KBC {
-        kbc_type: kbc_type,
-        resources_file: "aa-offline_fs_kbc-resources.json".to_string(),
-    };
-    run_signature_verification_one_kbc(kbc).await;
-}
-
-/// image-rs built without support for cosign image signing cannot use a policy that includes a type that
-/// uses cosign (type: sigstoreSigned), even if the image being pulled is not signed using cosign. The
-/// policy.json included with the sample kbc attestation agent includes policies that use cosign, so if cosign is
-/// disabled only run the test cases using the offline filesystem KBC type KBC
-/// https://github.com/confidential-containers/attestation-agent/blob/main/src/kbc_modules/sample_kbc/policy.json
-#[cfg(not(feature = "cosign"))]
-#[rstest]
-#[trace]
-#[case(KbcType::OfflineFs)]
-#[tokio::test]
-#[serial]
-async fn signature_verification_one_kbc(#[case] kbc_type: KbcType) {
-    let kbc = KBC {
-        kbc_type: kbc_type,
-        resources_file: "aa-offline_fs_kbc-resources-no-cosign.json".to_string(),
-    };
-    run_signature_verification_one_kbc(kbc).await;
+    common::clean().await;
 }

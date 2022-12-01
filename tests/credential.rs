@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use common::{KbcType, KBC};
 use image_rs::image::ImageClient;
 use rstest::rstest;
 use serial_test::serial;
@@ -16,11 +15,7 @@ mod common;
 #[tokio::test]
 #[serial]
 async fn test_use_credential(#[case] image_ref: &str) {
-    let kbc = KBC {
-        kbc_type: KbcType::OfflineFs,
-        resources_file: String::new(),
-    };
-    kbc.prepare_test().await;
+    common::prepare_test().await;
 
     // Init AA
     let mut aa = common::start_attestation_agent()
@@ -28,7 +23,7 @@ async fn test_use_credential(#[case] image_ref: &str) {
         .expect("Failed to start attestation agent!");
 
     // AA parameter
-    let aa_parameters = kbc.aa_parameter();
+    let aa_parameters = common::AA_PARAMETER;
 
     // clean former test files, which is needed to prevent
     // lint from warning dead code.
@@ -55,5 +50,5 @@ async fn test_use_credential(#[case] image_ref: &str) {
 
     // kill AA when the test is finished
     aa.kill().await.expect("Failed to stop attestation agent!");
-    kbc.clean().await;
+    common::clean().await;
 }

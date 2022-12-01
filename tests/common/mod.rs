@@ -7,7 +7,6 @@
 use anyhow::Result;
 use image_rs::image::IMAGE_SECURITY_CONFIG_DIR;
 use std::path::Path;
-use strum_macros::{AsRefStr, EnumString};
 use tokio::process::{Child, Command};
 
 /// Script for preparing Simple Signing GPG signature file.
@@ -16,82 +15,50 @@ const SIGNATURE_SCRIPT: &str = "scripts/install_test_signatures.sh";
 /// Script for preparing resources.json for offline-fs-kbc.
 const OFFLINE_FS_KBC_RESOURCE_SCRIPT: &str = "scripts/install_offline_fs_kbc_files.sh";
 
-/// Parameter `decrypt_config`'s prefix provided for `ImageClient`.
-const AA_PARAMETERS_PREFIX: &str = "provider:attestation-agent";
+/// Attestation Agent Key Provider Parameter
+pub const AA_PARAMETER: &str = "provider:attestation-agent:offline_fs_kbc::null";
 
-/// Parameter `decrypt_config`'s suffix provided for `ImageClient`.
-const AA_PARAMETERS_KBC_URL: &str = "null";
+#[cfg(not(feature = "cosign"))]
+const OFFLINE_FS_KBC_RESOURCE: &str = "aa-offline_fs_kbc-resources-no-cosign.json";
 
-#[derive(EnumString, AsRefStr, Debug)]
-pub enum KbcType {
-    #[strum(to_string = "sample_kbc")]
-    Sample,
-    #[strum(to_string = "offline_fs_kbc")]
-    OfflineFs,
+#[cfg(feature = "cosign")]
+const OFFLINE_FS_KBC_RESOURCE: &str = "aa-offline_fs_kbc-resources.json";
+
+pub async fn prepare_test() {
+    // Check whether is in root privilege
+    assert!(
+        nix::unistd::Uid::effective().is_root(),
+        "The test needs to run as root."
+    );
+
+    // Prepare files
+    Command::new(SIGNATURE_SCRIPT)
+        .arg("install")
+        .output()
+        .await
+        .expect("Install GPG signature file failed.");
+
+    Command::new(OFFLINE_FS_KBC_RESOURCE_SCRIPT)
+        .arg("install")
+        .arg(OFFLINE_FS_KBC_RESOURCE)
+        .output()
+        .await
+        .expect("Install offline-fs-kbcs's resources failed.");
 }
 
-#[derive(Debug)]
-pub struct KBC {
-    pub kbc_type: KbcType,
-    pub resources_file: String,
-}
+pub async fn clean() {
+    Command::new(OFFLINE_FS_KBC_RESOURCE_SCRIPT)
+        .arg("clean")
+        .output()
+        .await
+        .expect("Clean offline-fs-kbcs's resources failed.");
 
-impl KBC {
-    pub fn aa_parameter(&self) -> String {
-        format!(
-            "{}:{}::{}",
-            AA_PARAMETERS_PREFIX,
-            self.kbc_type.as_ref(),
-            AA_PARAMETERS_KBC_URL
-        )
-    }
-
-    pub async fn prepare_test(&self) {
-        // Check whether is in root privilege
-        assert!(
-            nix::unistd::Uid::effective().is_root(),
-            "The test needs to run as root."
-        );
-
-        // Prepare files
-        Command::new(SIGNATURE_SCRIPT)
-            .arg("install")
-            .output()
-            .await
-            .expect("Install GPG signature file failed.");
-
-        match self.kbc_type {
-            KbcType::Sample => {}
-            KbcType::OfflineFs => {
-                Command::new(OFFLINE_FS_KBC_RESOURCE_SCRIPT)
-                    .arg("install")
-                    .arg(&self.resources_file)
-                    .output()
-                    .await
-                    .expect("Install offline-fs-kbcs's resources failed.");
-            }
-        }
-    }
-
-    pub async fn clean(&self) {
-        match self.kbc_type {
-            KbcType::Sample => {}
-            KbcType::OfflineFs => {
-                Command::new(OFFLINE_FS_KBC_RESOURCE_SCRIPT)
-                    .arg("clean")
-                    .output()
-                    .await
-                    .expect("Clean offline-fs-kbcs's resources failed.");
-            }
-        }
-
-        // Clean files
-        Command::new(SIGNATURE_SCRIPT)
-            .arg("clean")
-            .output()
-            .await
-            .expect("Clean GPG signature file failed.");
-    }
+    // Clean files
+    Command::new(SIGNATURE_SCRIPT)
+        .arg("clean")
+        .output()
+        .await
+        .expect("Clean GPG signature file failed.");
 }
 
 pub async fn start_attestation_agent() -> Result<Child> {
