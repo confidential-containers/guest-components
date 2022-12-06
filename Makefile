@@ -3,8 +3,13 @@ TOP_DIR := .
 CUR_DIR := $(shell pwd)
 PREFIX := /usr/local
 
-REDHATOS := $(shell cat /etc/redhat-release 2> /dev/null)
-DEBIANOS := $(shell cat /etc/debian_version 2> /dev/null)
+ifeq ($(shell test -e /etc/debian_version && echo -n yes),yes)
+    DEBIANOS = true
+else
+    DEBIANOS = false
+endif
+
+$(info DEBIANOS is: $(DEBIANOS))
 
 TARGET_DIR := target
 BIN_NAME := attestation-agent
@@ -27,13 +32,13 @@ ifeq ($(LIBC), musl)
         $(error ERROR: Attestation agent does not support building with the musl libc target for s390x architecture!)
     endif
     MUSL_ADD := $(shell rustup target add ${ARCH}-unknown-linux-musl)
-    ifneq ($(DEBIANOS),)
+    ifeq ($(DEBIANOS), true)
         MUSL_INSTALL := $(shell sudo apt-get install -y musl-tools) 
     endif
 endif
 
 ifneq ($(SOURCE_ARCH), $(ARCH))
-    ifneq ($(DEBIANOS),)
+    ifeq ($(DEBIANOS), true)
         GCC_COMPILER_PACKAGE_FOR_TARGET_ARCH := gcc-$(ARCH)-linux-$(LIBC)
         GCC_COMPILER_FOR_TARGET_ARCH := $(ARCH)-linux-$(LIBC)-gcc
         RUSTC_TARGET_FOR_TARGET_ARCH := $(ARCH)-unknown-linux-$(LIBC)
@@ -46,7 +51,9 @@ ifneq ($(SOURCE_ARCH), $(ARCH))
 endif
 
 ifeq ($(SOURCE_ARCH), s390x)
-    PROTOC_BINARY_INSTALL := $(shell sudo apt-get install -y protobuf-compiler)
+    ifeq ($(DEBIANOS), true)
+        PROTOC_BINARY_INSTALL := $(shell sudo apt-get install -y protobuf-compiler)  
+    endif
 endif
 
 LIBC_FLAG := --target $(ARCH)-unknown-linux-$(LIBC)
