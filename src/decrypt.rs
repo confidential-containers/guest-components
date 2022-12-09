@@ -4,7 +4,7 @@
 
 use anyhow::{anyhow, Result};
 use ocicrypt_rs::config::CryptoConfig;
-use ocicrypt_rs::encryption::decrypt_layer;
+use ocicrypt_rs::encryption::{async_decrypt_layer, decrypt_layer, decrypt_layer_key_opts_data};
 use ocicrypt_rs::helpers::create_decrypt_config;
 use ocicrypt_rs::spec::{
     MEDIA_TYPE_LAYER_ENC, MEDIA_TYPE_LAYER_GZIP_ENC, MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_ENC,
@@ -15,6 +15,7 @@ use oci_distribution::manifest;
 use oci_distribution::manifest::OciDescriptor;
 
 use std::io::Read;
+use tokio::io::AsyncRead;
 
 #[derive(Default, Clone, Debug)]
 pub struct Decryptor {
@@ -96,6 +97,52 @@ impl Decryptor {
         } else {
             Err(anyhow!("decrypt failed!"))
         }
+    }
+
+    pub async fn get_decrypt_key(
+        &self,
+        descriptor: &OciDescriptor,
+        decrypt_config: &str,
+    ) -> Result<Vec<u8>> {
+        if !self.is_encrypted() {
+            return Err(anyhow!("unencrypted media type: {}", self.media_type));
+        }
+
+        if decrypt_config.is_empty() {
+            return Err(anyhow!("decrypt_config is empty"));
+        }
+
+        let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
+        let descript = descriptor.clone();
+
+        // ocicrypt-rs keyprovider module will create a new runtime to talk with
+        // attestation agent, to avoid startup a runtime within a runtime, we
+        // spawn a new thread here.
+        let handler = tokio::task::spawn_blocking(move || {
+            if let Some(decrypt_config) = cc.decrypt_config {
+                decrypt_layer_key_opts_data(&decrypt_config, &descript)
+            } else {
+                Err(anyhow!("no decrypt config available"))
+            }
+        });
+
+        if let Ok(priv_opts_data) = handler.await? {
+            Ok(priv_opts_data)
+        } else {
+            Err(anyhow!("failed to retrive decrypt key!"))
+        }
+    }
+
+    pub fn async_get_plaintext_layer(
+        &self,
+        encrypted_layer: impl AsyncRead,
+        descriptor: &OciDescriptor,
+        priv_opts_data: &[u8],
+    ) -> Result<impl tokio::io::AsyncRead> {
+        let (layer_decryptor, _dec_digest) =
+            async_decrypt_layer(encrypted_layer, descriptor, priv_opts_data)
+                .map_err(|e| anyhow!("failed to async decrypt layer {}", e.to_string()))?;
+        Ok(layer_decryptor)
     }
 }
 

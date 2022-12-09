@@ -153,10 +153,12 @@ fn is_native_aa() -> bool {
         Ok(oc) => oc,
         Err(_) => return false,
     };
-    let key_providers = ocicrypt_config.key_providers;
-    for (provider_name, attrs) in key_providers.iter() {
-        if provider_name == NATIVE_AA_NAME && attrs.native.is_some() {
-            return true;
+    if let Some(ocicrypt_config) = ocicrypt_config {
+        let key_providers = ocicrypt_config.key_providers;
+        for (provider_name, attrs) in key_providers.iter() {
+            if provider_name == NATIVE_AA_NAME && attrs.native.is_some() {
+                return true;
+            }
         }
     }
     false
