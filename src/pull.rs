@@ -194,7 +194,7 @@ impl<'a> PullClient<'a> {
 
         let destination = Path::new(&store_path);
 
-        if let Err(e) = unpack(out, destination) {
+        if let Err(e) = unpack(out.as_slice(), destination) {
             fs::remove_dir_all(destination)?;
             return Err(e);
         }

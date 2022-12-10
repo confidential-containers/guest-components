@@ -12,8 +12,8 @@ use std::path::Path;
 use tar::Archive;
 
 /// Unpack the contents of tarball to the destination path
-pub fn unpack(input: Vec<u8>, destination: &Path) -> Result<()> {
-    let mut archive = Archive::new(input.as_slice());
+pub fn unpack<R: io::Read>(input: R, destination: &Path) -> Result<()> {
+    let mut archive = Archive::new(input);
 
     if destination.exists() {
         return Err(anyhow!(
@@ -116,7 +116,7 @@ mod tests {
             fs::remove_dir_all(destination).unwrap();
         }
 
-        assert!(unpack(data.clone(), destination).is_ok());
+        assert!(unpack(data.as_slice(), destination).is_ok());
 
         let path = destination.join("file.txt");
         let metadata = fs::metadata(&path).unwrap();
@@ -129,6 +129,6 @@ mod tests {
         assert_eq!(mtime, new_mtime);
 
         // destination already exists
-        assert!(unpack(data, destination).is_err());
+        assert!(unpack(data.as_slice(), destination).is_err());
     }
 }
