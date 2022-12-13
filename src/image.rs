@@ -295,7 +295,7 @@ impl ImageClient {
 
         let unique_layers_len = unique_layers.len();
         let layer_metas = client
-            .pull_layers(
+            .async_pull_layers(
                 unique_layers,
                 diff_ids,
                 decrypt_config,
