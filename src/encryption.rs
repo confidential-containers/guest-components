@@ -380,13 +380,13 @@ mod tests {
     fn test_encrypt_decrypt_layer() {
         let path = load_data_path();
         let test_conf_path = format!("{}/{}", path, "ocicrypt_config.json");
-        env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", &test_conf_path);
+        env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", test_conf_path);
 
         let pub_key_file = format!("{}/{}", path, "public_key.pem");
-        let pub_key = fs::read(&pub_key_file).unwrap();
+        let pub_key = fs::read(pub_key_file).unwrap();
 
         let priv_key_file = format!("{}/{}", path, "private_key.pem");
-        let priv_key = fs::read(&priv_key_file).unwrap();
+        let priv_key = fs::read(priv_key_file).unwrap();
 
         let mut ec = EncryptConfig::default();
         assert!(ec.encrypt_with_jwe(vec![pub_key.clone()]).is_ok());

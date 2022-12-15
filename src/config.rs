@@ -329,7 +329,7 @@ mod tests {
         assert!(dc.decrypt_with_gpg(priv_keys1, priv_keys2).is_ok());
         assert!(dc.decrypt_with_pkcs11(pkcs11_config, pkcs11_yaml).is_ok());
         assert!(dc.decrypt_with_key_provider(key_providers).is_ok());
-        println!("final decrypt config is: {:?}", dc);
+        println!("final decrypt config is: {dc:?}");
     }
 
     #[test]
@@ -371,7 +371,7 @@ mod tests {
         assert_eq!(vec![b"abc".to_vec()], ec.param["key_p2"]);
         assert_eq!(vec![b"abc:abc".to_vec()], ec.param["key_p3"]);
 
-        println!("final encrypt config is: {:?}", ec);
+        println!("final encrypt config is: {ec:?}");
     }
 
     #[test]
@@ -393,7 +393,7 @@ mod tests {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.push("data");
         let test_conf_path = format!("{}/{}", path.to_str().unwrap(), "ocicrypt_config.json");
-        env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", &test_conf_path);
+        env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", test_conf_path);
 
         let mut provider = HashMap::new();
         let args: Vec<String> = Vec::default();
