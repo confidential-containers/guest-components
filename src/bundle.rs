@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -205,6 +205,14 @@ pub fn create_runtime_config(
 
     spec.set_annotations(Some(annotations));
     let bundle_config = bundle_path.join(BUNDLE_CONFIG);
+
+    if bundle_config.exists() {
+        return Err(anyhow!(
+            "OCI config file already exists: {:?}",
+            bundle_config
+        ));
+    }
+
     spec.save(&bundle_config)?;
 
     Ok(bundle_config)
@@ -225,6 +233,9 @@ mod tests {
         assert!(!filename.exists());
 
         assert!(create_runtime_config(&image_config, tempdir.path()).is_ok());
+        assert!(filename.exists());
+
+        assert!(create_runtime_config(&image_config, tempdir.path()).is_err());
         assert!(filename.exists());
     }
 }
