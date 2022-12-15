@@ -104,5 +104,11 @@ mod tests {
 
         assert_eq!(config.work_dir, work_dir);
         assert_eq!(config.default_snapshot, SnapshotType::Overlay);
+
+        let invalid_config_file = tempdir.path().join("does-not-exist");
+        assert!(!invalid_config_file.exists());
+
+        let _ = ImageConfig::try_from(invalid_config_file.as_path()).is_err();
+        assert!(!invalid_config_file.exists());
     }
 }
