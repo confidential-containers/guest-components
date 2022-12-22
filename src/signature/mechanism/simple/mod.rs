@@ -158,10 +158,10 @@ impl SignScheme for SimpleParameters {
             reject_reasons.push(anyhow!("Can not find any signatures."));
         }
 
-        Err(anyhow!(format!(
+        Err(anyhow!(
             "The signatures do not satisfied! Reject reason: {:?}",
             reject_reasons
-        )))
+        ))
     }
 }
 
