@@ -57,6 +57,13 @@ To build and install with musl, just run:
 make LIBC=musl && make install
 ```
 
+#### Openssl support
+
+To build and install with openssl support (which is helpful in specific machines like `s390x`)
+```
+make OPENSSL=1 && make install
+```
+
 ### Run
 
 For help information, just run:
@@ -90,11 +97,12 @@ List of supported KBC modules:
 
 | KBC module name    | README                                                              | KBS protocol | Maintainer                |
 | ------------------ | ------------------------------------------------------------------- | ------------ | ------------------------- |
-| sample_kbc         | Null                                                                | Null         | Attestation Agent Authors |
+| sample_kbc	     |  Null                                                               | Null         |	Attestation Agent Authors |
 | offline_fs_kbc     | [Offline file system KBC](src/kbc_modules/offline_fs_kbc/README.md) | Null         | IBM                       |
 | eaa_kbc            | [EAA KBC](src/kbc_modules/eaa_kbc/README.md)                        | EAA protocol | Alibaba Cloud             |
 | offline_sev_kbc    | [Offline SEV KBC](src/kbc_modules/offline_sev_kbc/README.md)        | Null         | IBM                       |
 | online_sev_kbc     | [Online SEV KBC](src/kbc_modules/online_sev_kbc/README.md)          | simple-kbs   | IBM                       |
+| cc_kbc             | [CC KBC](src/kbc_modules/cc_kbc/README.md)                          | [CoCo KBS protocol](https://github.com/confidential-containers/kbs/blob/main/docs/kbs_attestation_protocol.md) | CoCo Community            |
 
 
 ## Tools

@@ -3,7 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription};
+use crate::{
+    common::crypto::decrypt,
+    kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription},
+};
 
 mod attester;
 mod crypto;
@@ -13,9 +16,12 @@ use anyhow::*;
 use async_trait::async_trait;
 use attester::{detect_tee_type, Attester};
 use core::time::Duration;
-use crypto::{hash_chunks, AnnotationPacket, TeeKey};
+use crypto::{hash_chunks, TeeKey};
 use kbs_protocol::message::*;
 use kbs_types::ErrorInformation;
+use zeroize::Zeroizing;
+
+use super::AnnotationPacket;
 
 const KBS_REQ_TIMEOUT_SEC: u64 = 60;
 const KBS_GET_RESOURCE_MAX_ATTEMPT: u64 = 3;
@@ -33,21 +39,26 @@ pub struct Kbc {
     authenticated: bool,
 }
 
+pub fn key_url(kid: &str) -> Result<String> {
+    let kid_without_prefix = kid.split("://").collect::<Vec<&str>>()[1].to_string();
+    let (kbs_addr, key_path) = kid_without_prefix
+        .split_once('/')
+        .ok_or_else(|| anyhow!("Invalid KID in AnnotationPacket"))?;
+
+    // Now only support `http://` prefix.
+    Ok(format!(
+        "http://{kbs_addr}/{KBS_URL_PREFIX}/resource/{key_path}"
+    ))
+}
+
 #[async_trait]
 impl KbcInterface for Kbc {
     fn check(&self) -> Result<KbcCheckInfo> {
         Err(anyhow!("Check API of this KBC is unimplemented."))
     }
 
-    async fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
-        let annotation_packet: AnnotationPacket = serde_json::from_str(annotation)
-            .map_err(|e| anyhow!("Failed to parse annotation: {}", e))?;
-
-        if annotation_packet.kbc_name() != "cc_kbc" {
-            bail!("Unmatch KBS name: {}", annotation_packet.kbc_name())
-        }
-
-        let key_url = annotation_packet.key_url()?;
+    async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
+        let key_url = key_url(&annotation_packet.kid)?;
         if !key_url.starts_with(&self.kbs_uri) {
             bail!(
                 "Multi-KBS resource is not supported, Unmatch KBS address: {}",
@@ -56,9 +67,14 @@ impl KbcInterface for Kbc {
         }
 
         let response = self.request_kbs_resource(key_url).await?;
-        let key = self.decrypt_response_output(response)?;
+        let key = Zeroizing::new(self.decrypt_response_output(response)?);
 
-        annotation_packet.decrypt(&key)
+        decrypt(
+            key,
+            base64::decode(annotation_packet.wrapped_data)?,
+            base64::decode(annotation_packet.iv)?,
+            &annotation_packet.wrap_type,
+        )
     }
 
     #[allow(unused_assignments)]

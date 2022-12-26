@@ -9,6 +9,8 @@ use anyhow::*;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
+pub use self::annotation_packet::AnnotationPacket;
+
 // Add your specific kbc declaration here.
 // For example: "pub mod sample_kbc;"
 #[allow(dead_code)]
@@ -30,6 +32,8 @@ pub mod online_sev_kbc;
 #[cfg(feature = "sample_kbc")]
 pub mod sample_kbc;
 
+pub mod annotation_packet;
+
 // KbcInterface is a standard interface that all KBC modules need to implement.
 #[async_trait]
 pub trait KbcInterface: Send {
@@ -37,11 +41,14 @@ pub trait KbcInterface: Send {
     fn check(&self) -> Result<KbcCheckInfo>;
 
     /// Decrypt module specific encrypted payload into plaintext in asynchronous mode.
-    async fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>>;
+    /// The reason why this interface consumes the [`AnnotationPacket`] instead of simply
+    /// return the key by key id is that some potential KBCs which use specific KMS can not
+    /// return the key, and the actual decryption process occurs in the KMS.
+    async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>>;
 
     /// Get resources managed by the attestation agent in asynchronous mode.
     async fn get_resource(&mut self, _description: &str) -> Result<Vec<u8>> {
-        Err(anyhow!("Get Resource API of this KBC is unimplement!"))
+        bail!("Get Resource API of this KBC is unimplement!")
     }
 }
 

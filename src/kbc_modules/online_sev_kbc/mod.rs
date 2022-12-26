@@ -3,31 +3,29 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::common::sev::*;
+use crate::common::crypto::WrapType;
+use crate::common::{crypto, sev::*};
 use crate::kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription, ResourceName};
 
-use aes_gcm::aead::{Aead, KeyInit};
-use aes_gcm::{Aes256Gcm, Key, Nonce};
 use anyhow::*;
 use async_trait::async_trait;
-use base64::decode;
-use openssl::symm::{decrypt, Cipher};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
 use std::str::FromStr;
 use tonic::codegen::http::Uri;
 use uuid::Uuid;
+use zeroize::Zeroizing;
 
 use keybroker::key_broker_service_client::KeyBrokerServiceClient;
 use keybroker::{OnlineSecretRequest, RequestDetails};
+
+use super::AnnotationPacket;
 
 #[rustfmt::skip]
 mod keybroker;
 
 const KEYS_PATH: &str = "/sys/kernel/security/secrets/coco/1ee27366-0c87-43a6-af48-28543eaf7cb0";
-
-type Ciphers = HashMap<String, Cipher>;
 
 #[derive(Deserialize, Clone)]
 struct Connection {
@@ -35,37 +33,11 @@ struct Connection {
     key: String,
 }
 
-#[derive(Deserialize)]
-pub struct AnnotationPacket {
-    // Key ID to manage multiple keys
-    pub kid: String,
-    // Encrypted key to unwrap
-    pub wrapped_data: String,
-    // Initialisation vector
-    pub iv: String,
-    // Wrap type to specify encryption algorithm and mode
-    pub wrap_type: String,
-}
-
 pub struct OnlineSevKbc {
     // KBS info for compatibility; unused
     kbs_info: HashMap<String, String>,
-
-    // Known ciphers, corresponding to wrap_type
-    ciphers: Ciphers,
     kbs_uri: String,
     connection: Result<Connection>,
-}
-
-fn get_ciphers() -> Ciphers {
-    // The sample KBC uses aes-gcm (Rust implementation). The offline file system KBC uses OpenSSL
-    // instead to get access to hardware acceleration on more platforms (e.g. s390x). As opposed
-    // to aes-gcm, OpenSSL will only allow GCM when using AEAD. Because authentication is not
-    // handled here, AEAD cannot be used, therefore, CTR is used instead.
-    [(String::from("aes_256_ctr"), Cipher::aes_256_ctr())]
-        .iter()
-        .cloned()
-        .collect()
 }
 
 #[async_trait]
@@ -74,6 +46,18 @@ impl KbcInterface for OnlineSevKbc {
         Ok(KbcCheckInfo {
             kbs_info: self.kbs_info.clone(),
         })
+    }
+
+    async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
+        let key = self.get_key_from_kbs(annotation_packet.kid).await?;
+        let plain_payload = crypto::decrypt(
+            key,
+            base64::decode(annotation_packet.wrapped_data)?,
+            base64::decode(annotation_packet.iv)?,
+            &annotation_packet.wrap_type,
+        )?;
+
+        Ok(plain_payload)
     }
 
     async fn get_resource(&mut self, description: &str) -> Result<Vec<u8>> {
@@ -89,25 +73,6 @@ impl KbcInterface for OnlineSevKbc {
             _ => self.get_resource_from_kbs(desc.name).await,
         }
     }
-
-    async fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
-        let annotation_packet: AnnotationPacket = serde_json::from_str(annotation)
-            .map_err(|e| anyhow!("Failed to parse annotation: {}", e))?;
-
-        let key = self.get_key_from_kbs(annotation_packet.kid).await?;
-
-        let iv = decode(annotation_packet.iv).map_err(|e| anyhow!("Failed to decode IV: {}", e))?;
-        let wrapped_data = decode(annotation_packet.wrapped_data)
-            .map_err(|e| anyhow!("Failed to decode wrapped key: {}", e))?;
-        let wrap_type = annotation_packet.wrap_type;
-
-        let cipher = self
-            .ciphers
-            .get(&wrap_type)
-            .ok_or_else(|| anyhow!("Received unknown wrap type: {}", wrap_type))?;
-        // Redact decryption errors to avoid oracles
-        decrypt(*cipher, &key, Some(&iv), &wrapped_data).map_err(|_| anyhow!("Failed to decrypt"))
-    }
 }
 
 impl OnlineSevKbc {
@@ -115,7 +80,6 @@ impl OnlineSevKbc {
     pub fn new(kbs_uri: String) -> OnlineSevKbc {
         OnlineSevKbc {
             kbs_info: HashMap::new(),
-            ciphers: get_ciphers(),
             kbs_uri,
             connection: load_connection(),
         }
@@ -145,18 +109,12 @@ impl OnlineSevKbc {
         });
 
         let response = client.get_online_secret(request).await?.into_inner();
-
-        let iv_bytes = base64::decode(response.iv)?;
-        let payload_bytes = base64::decode(response.payload)?;
-        let key_bytes = base64::decode(connection.key.clone())?;
-
-        let nonce = Nonce::from_slice(&iv_bytes);
-        let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
-        let cipher = Aes256Gcm::new(key);
-
-        let decrypted_payload = cipher
-            .decrypt(nonce, payload_bytes.as_ref())
-            .map_err(|e| anyhow!("Failed to decrypt secret payload. {}", e))?;
+        let decrypted_payload = crypto::decrypt(
+            Zeroizing::new(base64::decode(connection.key.clone())?),
+            base64::decode(response.payload)?,
+            base64::decode(response.iv)?,
+            WrapType::Aes256Gcm.as_ref(),
+        )?;
 
         let payload_dict: HashMap<String, Vec<u8>> = bincode::deserialize(&decrypted_payload)?;
 
@@ -166,8 +124,10 @@ impl OnlineSevKbc {
             .to_vec())
     }
 
-    async fn get_key_from_kbs(&self, key_id: String) -> Result<Vec<u8>> {
-        self.query_kbs("key".to_string(), key_id).await
+    async fn get_key_from_kbs(&self, key_id: String) -> Result<Zeroizing<Vec<u8>>> {
+        let key = self.query_kbs("key".to_string(), key_id).await?;
+        let key = Zeroizing::new(key);
+        Ok(key)
     }
 
     async fn get_resource_from_kbs(&self, key_id: String) -> Result<Vec<u8>> {

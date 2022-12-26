@@ -7,7 +7,6 @@ use crate::kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription};
 use anyhow::*;
 use async_trait::async_trait;
 use log::*;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::TcpStream;
 use std::os::unix::io::AsRawFd;
@@ -16,20 +15,13 @@ pub mod protocol;
 pub mod rats_tls;
 use protocol::*;
 
+use super::AnnotationPacket;
+
 // Verdictd is the EAA KBS's name,
 // the repo is here: https://github.com/inclavare-containers/verdictd
 const EAA_KBS_NAME: &str = "Verdictd";
 
 const DEFAULT_RECV_BYTES_SIZE: usize = 4096;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct AnnotationPacket {
-    pub kid: String,
-    pub wrapped_data: Vec<u8>,
-    pub iv: Vec<u8>,
-    pub algorithm: String,
-    pub key_length: u16,
-}
 
 pub struct EAAKbc {
     pub kbs_uri: String,
@@ -52,11 +44,9 @@ impl KbcInterface for EAAKbc {
         Ok(KbcCheckInfo { kbs_info })
     }
 
-    async fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
+    async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
         debug!("EAA KBC decrypt_payload() is called");
-        let annotation_packet: AnnotationPacket = serde_json::from_str(annotation)?;
-        self.algorithm = annotation_packet.algorithm;
-        self.key_length = annotation_packet.key_length;
+
         if self.tcp_stream.is_none() {
             debug!("First request, connecting KBS...");
             self.establish_new_kbs_connection()?;
@@ -65,9 +55,9 @@ impl KbcInterface for EAAKbc {
 
         debug!("start decrypt...");
         let decrypted_payload = self.kbs_decrypt_payload(
-            annotation_packet.wrapped_data,
+            base64::decode(annotation_packet.wrapped_data)?,
             annotation_packet.kid,
-            annotation_packet.iv,
+            base64::decode(annotation_packet.iv)?,
         )?;
         debug!("decrypted success");
         Ok(decrypted_payload)
@@ -144,7 +134,7 @@ impl EAAKbc {
             encrypted_data: base64::encode(&encrypted_payload),
             algorithm: "AES".to_string(),
             key_length: 256,
-            iv: base64::encode(&iv),
+            iv: base64::encode(iv),
         };
         let request = DecryptionRequest::new(blob);
         let trans_json = serde_json::to_string(&request)?;

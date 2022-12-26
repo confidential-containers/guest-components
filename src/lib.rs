@@ -9,11 +9,13 @@ extern crate strum;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use kbc_modules::AnnotationPacket;
 use std::collections::HashMap;
 
 use crate::kbc_modules::{KbcCheckInfo, KbcInstance, KbcModuleList};
 
 pub mod common;
+
 mod kbc_modules;
 
 /// Attestation Agent (AA for short) is a rust library crate for attestation procedure
@@ -121,6 +123,9 @@ impl AttestationAPIs for AttestationAgent {
         if !self.kbc_instance_map.contains_key(kbc_name) {
             self.instantiate_kbc(kbc_name, kbs_uri)?;
         }
+
+        let annotation: AnnotationPacket = serde_json::from_str(annotation)?;
+
         self.kbc_instance_map
             .get_mut(kbc_name)
             .ok_or_else(|| anyhow!("The KBC instance does not existing!"))?
@@ -137,6 +142,7 @@ impl AttestationAPIs for AttestationAgent {
         if !self.kbc_instance_map.contains_key(kbc_name) {
             self.instantiate_kbc(kbc_name, kbs_uri)?;
         }
+
         self.kbc_instance_map
             .get_mut(kbc_name)
             .ok_or_else(|| anyhow!("The KBC instance does not existing!"))?

@@ -5,37 +5,11 @@
 
 use anyhow::{anyhow, Result};
 use base64::decode;
-use openssl::symm::Cipher;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 
 pub type Keys = HashMap<String, Vec<u8>>;
 pub type Resources = HashMap<String, Vec<u8>>;
-pub type Ciphers = HashMap<String, Cipher>;
-
-#[derive(Serialize, Deserialize)]
-pub struct AnnotationPacket {
-    // Key ID to manage multiple keys
-    pub kid: String,
-    // Encrypted key to unwrap (base64-encoded)
-    pub wrapped_data: String,
-    // Initialisation vector (base64-encoded)
-    pub iv: String,
-    // Wrap type to specify encryption algorithm and mode
-    pub wrap_type: String,
-}
-
-pub fn ciphers() -> Ciphers {
-    // The sample KBC uses aes-gcm (Rust implementation). The offline file system KBC uses OpenSSL
-    // instead to get access to hardware acceleration on more platforms (e.g. s390x). As opposed
-    // to aes-gcm, OpenSSL will only allow GCM when using AEAD. Because authentication is not
-    // handled here, AEAD cannot be used, therefore, CTR is used instead.
-    [(String::from("aes_256_ctr"), Cipher::aes_256_ctr())]
-        .iter()
-        .cloned()
-        .collect()
-}
 
 pub fn load_keys(keyfile_name: &str) -> Result<Keys> {
     let keys_json = fs::read_to_string(keyfile_name)?;

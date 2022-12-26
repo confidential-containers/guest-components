@@ -22,9 +22,14 @@ LIBC ?= gnu
 KBC ?=
 DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
+OPENSSL ?=
 
 ifdef KBC
     feature := --no-default-features --features
+    FEATURES := $(KBC)
+else
+    feature := --features
+    FEATURES := default
 endif
 
 ifeq ($(LIBC), musl)
@@ -92,8 +97,14 @@ ifneq ($(RUSTFLAGS_ARGS),)
     RUST_FLAGS := RUSTFLAGS="$(RUSTFLAGS_ARGS)"
 endif
 
+ifdef OPENSSL
+    FEATURES := $(FEATURES),openssl
+else
+    FEATURES := $(FEATURES),rust-crypto
+endif
+
 build:
-	cd app && $(RUST_FLAGS) cargo build $(release) $(feature) $(KBC) $(LIBC_FLAG)
+	cd app && $(RUST_FLAGS) cargo build $(release) $(feature) $(FEATURES) $(LIBC_FLAG)
 
 TARGET := app/$(TARGET_DIR)/$(BIN_NAME)
 
@@ -108,5 +119,5 @@ clean:
 
 help:
 	@echo "==========================Help========================================="
-	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x)] [KBC=xxx_kbc]"
+	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x)] [KBC=xxx_kbc] [OPENSSL=1]"
 	@echo "install: make install [DESTDIR=/path/to/target] [LIBC=(musl)]"
