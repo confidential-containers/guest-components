@@ -318,7 +318,15 @@ mod tests {
 
         assert!(process_recipient_keys(invalid_recipients1).is_err());
         assert!(process_recipient_keys(invalid_recipients2).is_err());
-        assert!(process_recipient_keys(valid_recipients).is_ok());
+
+        let [gpg_recipients, pubkeys, x509s, pkcs11_pubkeys, pkcs11_yamls, key_providers] =
+            process_recipient_keys(valid_recipients).unwrap();
+        assert_eq!(gpg_recipients.len(), 1);
+        assert_eq!(pubkeys.len(), 1);
+        assert_eq!(x509s.len(), 1);
+        assert_eq!(pkcs11_pubkeys.len(), 1);
+        assert_eq!(pkcs11_yamls.len(), 1);
+        assert_eq!(key_providers.len(), 1);
     }
 
     #[test]
@@ -326,7 +334,7 @@ mod tests {
         let path = load_data_path();
         let cert_keys = format!("{}/{}", path, "private_key.pem");
 
-        assert!(process_x509_certs(&vec![cert_keys]).is_ok());
+        assert!(process_x509_certs(&[cert_keys]).is_ok());
     }
 
     #[test]
@@ -352,33 +360,75 @@ mod tests {
         let pwd_file = format!("file={}/{}", path, "passwordfile");
         let keyfiles_and_pwds = format!("{private_keys}:{pwd_file}");
 
-        assert!(process_private_keyfiles(&vec![private_keys]).is_ok());
-        assert!(process_private_keyfiles(&vec![keyfiles_and_pwds]).is_ok());
-        assert!(process_private_keyfiles(&vec!["provider:cmd/grpc".to_string()]).is_ok());
+        let [_, _, priv_keys, priv_keys_passwords, _, key_providers] =
+            process_private_keyfiles(&[private_keys]).unwrap();
+        assert_eq!(priv_keys.len(), 1);
+        assert_eq!(priv_keys_passwords.len(), 1);
+        assert!(priv_keys_passwords[0].is_empty());
+        assert_eq!(key_providers.len(), 0);
+
+        let [_, _, priv_keys, priv_keys_passwords, _, key_providers] =
+            process_private_keyfiles(&[keyfiles_and_pwds]).unwrap();
+        assert_eq!(priv_keys.len(), 1);
+        assert_eq!(priv_keys_passwords.len(), 1);
+        assert!(!priv_keys_passwords[0].is_empty());
+        assert_eq!(key_providers.len(), 0);
+
+        let [_, _, _, _, _, key_providers] =
+            process_private_keyfiles(&["provider:cmd/grpc".to_string()]).unwrap();
+        assert_eq!(key_providers.len(), 1);
     }
 
     #[test]
     fn test_create_decrypt_config() {
         let path = load_data_path();
-
         let private_keys = format!("{}/{}", path, "private_key.pem");
         let jwe_dec_recipient = format!("jwe:{}/{}", path, "private_key.pem");
         let pkcs7_dec_recipient = format!("pkcs7:{}/{}", path, "public_certificate.pem");
 
-        assert!(create_decrypt_config(vec![], vec![jwe_dec_recipient]).is_ok());
-        assert!(create_decrypt_config(vec![], vec![pkcs7_dec_recipient.clone()]).is_ok());
-        assert!(create_decrypt_config(vec![private_keys], vec![pkcs7_dec_recipient]).is_ok());
+        let cc = create_decrypt_config(vec![private_keys.clone()], vec![]).unwrap();
+        assert!(cc.encrypt_config.is_none());
+        let dc = cc.decrypt_config.as_ref().unwrap();
+        assert_eq!(dc.param.get("privkeys").unwrap().len(), 1);
+
+        let cc = create_decrypt_config(vec![], vec![jwe_dec_recipient]).unwrap();
+        assert!(cc.encrypt_config.is_none());
+        let dc = cc.decrypt_config.as_ref().unwrap();
+        assert!(dc.param.is_empty());
+
+        let cc = create_decrypt_config(vec![], vec![pkcs7_dec_recipient.clone()]).unwrap();
+        assert!(cc.encrypt_config.is_none());
+        let dc = cc.decrypt_config.as_ref().unwrap();
+        assert_eq!(dc.param.get("x509s").unwrap().len(), 1);
+
+        let cc = create_decrypt_config(vec![private_keys], vec![pkcs7_dec_recipient]).unwrap();
+        assert!(cc.encrypt_config.is_none());
+        let dc = cc.decrypt_config.as_ref().unwrap();
+        assert_eq!(dc.param.get("privkeys").unwrap().len(), 1);
+        assert_eq!(dc.param.get("x509s").unwrap().len(), 2);
     }
 
     #[test]
     fn test_create_encrypt_config() {
         let path = load_data_path();
 
+        let private_keys = format!("{}/{}", path, "private_key.pem");
         let jwe_recipient = format!("jwe:{}/{}", path, "public_key.pem");
         let pgp_recipient = "pgp:testkey@key.org".to_string();
         let pkcs7_recipient = format!("pkcs7:{}/{}", path, "public_certificate.pem");
 
-        assert!(create_encrypt_config(vec![jwe_recipient], vec![]).is_ok());
+        let cc = create_encrypt_config(vec![jwe_recipient.clone()], vec![]).unwrap();
+        assert!(cc.decrypt_config.is_none());
+        let ec = cc.encrypt_config.as_ref().unwrap();
+        assert_eq!(ec.param.get("pubkeys").unwrap().len(), 1);
+
+        let cc = create_encrypt_config(vec![jwe_recipient], vec![private_keys]).unwrap();
+        assert!(cc.decrypt_config.is_none());
+        let ec = cc.encrypt_config.as_ref().unwrap();
+        assert_eq!(ec.param.get("pubkeys").unwrap().len(), 1);
+        let dc = ec.decrypt_config.as_ref().unwrap();
+        assert_eq!(dc.param.get("privkeys").unwrap().len(), 1);
+
         assert!(create_encrypt_config(vec![pgp_recipient], vec![]).is_ok());
         assert!(create_encrypt_config(vec![pkcs7_recipient], vec![]).is_ok());
     }

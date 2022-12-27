@@ -8,6 +8,9 @@
     },
     "keyprovider2": {
       "grpc": "localhost:32223"
+    },
+    "keyprovider3": {
+      "native": "attestation_agent"
     }
   }
 }

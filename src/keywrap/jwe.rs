@@ -157,8 +157,8 @@ mod tests {
         assert!(jwe_key_wrapper.private_keys(&dc.param).is_none());
 
         let mut pubkeys = vec![];
-        for key_file in pub_key_files {
-            let contents = fs::read(&key_file).unwrap();
+        for key_file in pub_key_files.iter() {
+            let contents = fs::read(key_file).unwrap();
             pubkeys.push(contents);
         }
 
@@ -178,8 +178,8 @@ mod tests {
 
         let mut privkeys = vec![];
         let mut privkey_passwords: Vec<Vec<u8>> = vec![];
-        for key_file in priv_key_files {
-            let contents = fs::read(&key_file).unwrap();
+        for key_file in priv_key_files.iter() {
+            let contents = fs::read(key_file).unwrap();
             privkeys.push(contents);
             privkey_passwords.push(vec![]);
         }

@@ -232,13 +232,11 @@ impl<R: tokio::io::AsyncRead> tokio::io::AsyncRead for AESCTRBlockCipher<R> {
                     )
                 })?;
             }
+        } else if !buf_filled.is_empty() {
+            cipher.apply_keystream(buf_filled);
+            hmac.update(buf_filled);
         } else {
-            if !buf_filled.is_empty() {
-                cipher.apply_keystream(buf_filled);
-                hmac.update(buf_filled);
-            } else {
-                *exp_hmac = hmac.clone().finalize().into_bytes().to_vec();
-            }
+            *exp_hmac = hmac.clone().finalize().into_bytes().to_vec();
         }
 
         Poll::Ready(Ok(()))

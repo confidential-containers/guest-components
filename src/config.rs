@@ -315,7 +315,9 @@ mod tests {
             b"key_p1".to_vec(),
             b"key_p2:abc".to_vec(),
             b"key_p3:abc:abc".to_vec(),
+            b"key_p3:def".to_vec(),
             b":abc".to_vec(),
+            b":def".to_vec(),
         ];
 
         let mut dc = DecryptConfig::default();
@@ -330,6 +332,18 @@ mod tests {
         assert!(dc.decrypt_with_gpg(priv_keys1, priv_keys2).is_ok());
         assert!(dc.decrypt_with_pkcs11(pkcs11_config, pkcs11_yaml).is_ok());
         assert!(dc.decrypt_with_key_provider(key_providers).is_ok());
+
+        assert_eq!(dc.param.get("privkeys-passwords").unwrap().len(), 1);
+        assert_eq!(dc.param.get("privkeys").unwrap().len(), 1);
+        assert_eq!(dc.param.get("pkcs11-config").unwrap().len(), 1);
+        assert_eq!(dc.param.get("key_p1").unwrap().len(), 1);
+        assert_eq!(dc.param.get("key_p2").unwrap().len(), 1);
+        assert_eq!(dc.param.get("key_p3").unwrap().len(), 2);
+        assert_eq!(dc.param.get("").unwrap().len(), 2);
+        assert_eq!(dc.param.get("gpg-privatekeys").unwrap().len(), 1);
+        assert_eq!(dc.param.get("gpg-privatekeys-passwords").unwrap().len(), 1);
+        assert_eq!(dc.param.get("pkcs11-yamls").unwrap().len(), 1);
+
         println!("final decrypt config is: {dc:?}");
     }
 
@@ -381,6 +395,9 @@ mod tests {
         let ec = EncryptConfig::default();
         let mut cc = CryptoConfig::default();
 
+        assert!(dc.param.is_empty());
+        assert!(ec.param.is_empty());
+        assert!(ec.decrypt_config.is_none());
         assert!(cc.encrypt_config.is_none());
         assert!(cc.decrypt_config.is_none());
         cc.encrypt_config = Some(ec);
@@ -408,19 +425,16 @@ mod tests {
         };
         provider.insert(String::from("keyprovider1"), attrs);
 
-        assert!(OcicryptConfig::from_env(OCICRYPT_ENVVARNAME).is_ok());
         let provider_unmarshalled = OcicryptConfig::from_env(OCICRYPT_ENVVARNAME)
-            .expect("Unable to read ocicrypt config file");
+            .expect("Unable to read ocicrypt config file")
+            .unwrap();
+        let p1 = provider_unmarshalled
+            .key_providers
+            .get("keyprovider1")
+            .unwrap();
+        let cmd = p1.cmd.as_ref().unwrap();
         assert_eq!(
-            provider_unmarshalled
-                .unwrap()
-                .key_providers
-                .get("keyprovider1")
-                .unwrap()
-                .cmd
-                .as_ref()
-                .unwrap()
-                .path,
+            cmd.path,
             provider
                 .get("keyprovider1")
                 .unwrap()
@@ -428,6 +442,25 @@ mod tests {
                 .as_ref()
                 .unwrap()
                 .path
-        )
+        );
+        assert_eq!(cmd.args.as_ref().unwrap().len(), 0);
+        assert!(p1.grpc.is_none());
+        assert!(p1.native.is_none());
+
+        let p2 = provider_unmarshalled
+            .key_providers
+            .get("keyprovider2")
+            .unwrap();
+        assert!(p2.cmd.is_none());
+        assert!(p2.grpc.is_some());
+        assert!(p2.native.is_none());
+
+        let p3 = provider_unmarshalled
+            .key_providers
+            .get("keyprovider3")
+            .unwrap();
+        assert!(p3.cmd.is_none());
+        assert!(p3.grpc.is_none());
+        assert!(p3.native.is_some());
     }
 }
