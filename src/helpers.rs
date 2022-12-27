@@ -73,15 +73,17 @@ fn process_recipient_keys(recipients: Vec<String>) -> Result<[Vec<Vec<u8>>; 6]> 
 }
 
 // process_x509_certs processes x509 certificate files
-fn process_x509_certs(keys: Vec<String>) -> Result<Vec<Vec<u8>>> {
+fn process_x509_certs(keys: &[String]) -> Result<Vec<Vec<u8>>> {
     let mut x509s = vec![];
 
     for key in keys {
-        let name = key.split(':').next().unwrap();
-        if !Path::new(name).exists() {
+        if key.contains(':') {
             continue;
         }
-        let contents = fs::read(name)?;
+        if !Path::new(&key).exists() {
+            continue;
+        }
+        let contents = fs::read(key)?;
         // TODO: Check valid certificate
 
         x509s.push(contents);
@@ -95,13 +97,14 @@ fn process_x509_certs(keys: Vec<String>) -> Result<Vec<Vec<u8>>> {
 // - pass=<password>
 // - fd=<filedescriptor>
 // - <password>
-fn process_pwd_string(pwd_string: String) -> Result<Vec<u8>> {
+fn process_pwd_string(pwd_string: &str) -> Result<Vec<u8>> {
     if let Some(pwd) = pwd_string.strip_prefix("file=") {
         let contents = fs::read(pwd)?;
         return Ok(contents);
     } else if let Some(pwd) = pwd_string.strip_prefix("pass=") {
         return Ok(pwd.as_bytes().to_vec());
     } else if let Some(pwd) = pwd_string.strip_prefix("fd=") {
+        // TODO: it's a little dangerous
         let fd = pwd.parse::<i32>().unwrap();
         let mut fd_file = unsafe { File::from_raw_fd(fd) };
         let mut contents = String::new();
@@ -122,7 +125,7 @@ fn process_pwd_string(pwd_string: String) -> Result<Vec<u8>> {
 // - <filename>:fd=<filedescriptor>
 // - <filename>:<password>
 // - provider:<...>
-fn process_private_keyfiles(keyfiles_and_pwds: Vec<String>) -> Result<[Vec<Vec<u8>>; 6]> {
+fn process_private_keyfiles(keyfiles_and_pwds: &[String]) -> Result<[Vec<Vec<u8>>; 6]> {
     let mut gpg_secret_key_ring_files = vec![];
     let mut gpg_secret_key_passwords = vec![];
     let mut priv_keys = vec![];
@@ -141,7 +144,7 @@ fn process_private_keyfiles(keyfiles_and_pwds: Vec<String>) -> Result<[Vec<Vec<u
             let mut password: Vec<u8> = Vec::new();
 
             if index > 0 {
-                password = process_pwd_string(keyfile_and_pwd[index + 1..].to_string())?;
+                password = process_pwd_string(&keyfile_and_pwd[index + 1..])?;
             }
 
             let contents = fs::read(&keyfile_and_pwd[..index])?;
@@ -201,11 +204,11 @@ pub fn create_decrypt_config(
     let [_, _, mut x509s, _, _, _] = process_recipient_keys(dec_recipients)?;
 
     // x509 certs can also be passed in via keys
-    let x509_from_keys = process_x509_certs(keys.clone())?;
+    let x509_from_keys = process_x509_certs(&keys)?;
     x509s.extend(x509_from_keys);
 
     let [gpg_secret_key_ring_files, gpg_secret_key_passwords, priv_keys, priv_keys_passwords, pkcs11_yamls, key_providers] =
-        process_private_keyfiles(keys)?;
+        process_private_keyfiles(&keys)?;
 
     if !gpg_secret_key_ring_files.is_empty() {
         dc.decrypt_with_gpg(gpg_secret_key_ring_files, gpg_secret_key_passwords)?;
@@ -321,7 +324,7 @@ mod tests {
         let path = load_data_path();
         let cert_keys = format!("{}/{}", path, "private_key.pem");
 
-        assert!(process_x509_certs(vec![cert_keys]).is_ok());
+        assert!(process_x509_certs(&vec![cert_keys]).is_ok());
     }
 
     #[test]
@@ -330,13 +333,13 @@ mod tests {
         let path = load_data_path();
 
         let pwd_file = format!("file={}/{}", path, "passwordfile");
-        assert_eq!(process_pwd_string(pwd_file).unwrap(), password);
+        assert_eq!(process_pwd_string(&pwd_file).unwrap(), password);
 
         let mut pwd_string = "pass=123456".to_string();
-        assert_eq!(process_pwd_string(pwd_string).unwrap(), password);
+        assert_eq!(process_pwd_string(&pwd_string).unwrap(), password);
 
         pwd_string = "123456".to_string();
-        assert_eq!(process_pwd_string(pwd_string).unwrap(), password);
+        assert_eq!(process_pwd_string(&pwd_string).unwrap(), password);
     }
 
     #[test]
@@ -347,9 +350,9 @@ mod tests {
         let pwd_file = format!("file={}/{}", path, "passwordfile");
         let keyfiles_and_pwds = format!("{private_keys}:{pwd_file}");
 
-        assert!(process_private_keyfiles(vec![private_keys]).is_ok());
-        assert!(process_private_keyfiles(vec![keyfiles_and_pwds]).is_ok());
-        assert!(process_private_keyfiles(vec!["provider:cmd/grpc".to_string()]).is_ok());
+        assert!(process_private_keyfiles(&vec![private_keys]).is_ok());
+        assert!(process_private_keyfiles(&vec![keyfiles_and_pwds]).is_ok());
+        assert!(process_private_keyfiles(&vec!["provider:cmd/grpc".to_string()]).is_ok());
     }
 
     #[test]
