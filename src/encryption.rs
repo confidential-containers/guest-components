@@ -23,17 +23,19 @@ lazy_static! {
         #[allow(unused_mut)]
         let mut m = HashMap::new();
 
-        #[cfg(feature = "keywrap-jwe")] {
+        #[cfg(feature = "keywrap-jwe")]
+        {
             m.insert(
                 "jwe".to_string(),
                 Box::new(JweKeyWrapper {}) as Box<dyn KeyWrapper>,
             );
         }
 
-        #[cfg(feature = "keywrap-keyprovider")] {
-            // TODO: The error over here needs to be logged to be in consistent with golang version.
-            let ocicrypt_config = crate::config::OcicryptConfig::from_env(crate::config::OCICRYPT_ENVVARNAME)
-                .expect("Unable to read ocicrypt config file");
+        #[cfg(feature = "keywrap-keyprovider")]
+        {
+            let ocicrypt_config =
+                crate::config::OcicryptConfig::from_env(crate::config::OCICRYPT_ENVVARNAME)
+                    .expect("Unable to read ocicrypt config file");
             if let Some(ocicrypt_config) = ocicrypt_config {
                 let key_providers = ocicrypt_config.key_providers;
                 for (provider_name, attrs) in key_providers.iter() {
@@ -65,7 +67,8 @@ pub struct EncLayerFinalizer {
 }
 
 impl EncLayerFinalizer {
-    pub fn finalized_annotations(
+    /// Generate annotations for image decryption.
+    pub fn finalize_annotations(
         &mut self,
         ec: &EncryptConfig,
         desc: &OciDescriptor,
@@ -212,14 +215,15 @@ fn get_layer_key_opts(
     annotations_id: &str,
     annotations: &HashMap<String, String>,
 ) -> Option<String> {
-    if annotations_id
-        .strip_prefix("org.opencontainers.image.enc.keys.provider")
+    // TODO: what happens if there are multiple key-providers?
+    let value = if annotations_id
+        .strip_prefix("org.opencontainers.image.enc.keys.provider.")
         .is_some()
     {
         annotations.iter().find_map(|(k, v)| {
             // During decryption, ignore keyprovider name in annotations and use the
             // keyprovider defined in OCICRYPT_KEYPROVIDER_CONFIG.
-            if k.strip_prefix("org.opencontainers.image.enc.keys.provider")
+            if k.strip_prefix("org.opencontainers.image.enc.keys.provider.")
                 .is_some()
             {
                 Some(v)
@@ -229,8 +233,8 @@ fn get_layer_key_opts(
         })
     } else {
         annotations.get(annotations_id)
-    }
-    .cloned()
+    };
+    value.cloned()
 }
 
 /// Unwrap layer decryption key from OCI descriptor annotations.
@@ -403,7 +407,7 @@ mod tests {
         assert!(encryptor.read_to_end(&mut encrypted_data).is_ok());
         assert!(encryptor.finalized_lbco(&mut elf.lbco).is_ok());
 
-        if let Ok(new_annotations) = elf.finalized_annotations(&ec, &desc, Some(&mut encryptor)) {
+        if let Ok(new_annotations) = elf.finalize_annotations(&ec, &desc, Some(&mut encryptor)) {
             let new_desc = OciDescriptor {
                 annotations: Some(new_annotations),
                 ..Default::default()
@@ -452,7 +456,7 @@ mod tests {
         assert!(encryptor.read_to_end(&mut encrypted_data).is_ok());
         assert!(encryptor.finalized_lbco(&mut elf.lbco).is_ok());
 
-        if let Ok(new_annotations) = elf.finalized_annotations(&ec, &desc, Some(&mut encryptor)) {
+        if let Ok(new_annotations) = elf.finalize_annotations(&ec, &desc, Some(&mut encryptor)) {
             let new_desc = OciDescriptor {
                 annotations: Some(new_annotations),
                 ..Default::default()
