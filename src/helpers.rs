@@ -140,37 +140,39 @@ fn process_private_keyfiles(keyfiles_and_pwds: &[String]) -> Result<[Vec<Vec<u8>
             continue;
         }
 
-        if let Some(index) = keyfile_and_pwd.find(':') {
-            let mut password: Vec<u8> = Vec::new();
-
-            if index > 0 {
-                password = process_pwd_string(&keyfile_and_pwd[index + 1..])?;
+        let (content, password) = match keyfile_and_pwd.split_once(':') {
+            Some((file, pass)) => {
+                let contents = fs::read(file)?;
+                let password = process_pwd_string(pass)?;
+                (contents, password)
             }
+            None => {
+                let contents = fs::read(keyfile_and_pwd)?;
+                (contents, Vec::new())
+            }
+        };
 
-            let contents = fs::read(&keyfile_and_pwd[..index])?;
-
-            // TODO: Check valid pkcs11 public key or normal public key
-            pkcs11_yamls.push(contents.clone());
-            priv_keys.push(contents.clone());
-            priv_keys_passwords.push(password.clone());
+        // TODO: Check valid pkcs11 public key or normal public key
+        pkcs11_yamls.push(content.clone());
+        priv_keys.push(content.clone());
+        priv_keys_passwords.push(password.clone());
+        gpg_secret_key_ring_files.push(content);
+        gpg_secret_key_passwords.push(password);
+        /*
+        if true {
+            pkcs11_yamls.push(contents);
+        } else if false {
+            priv_keys.push(contents);
+            priv_keys_passwords.push(password);
+        } else if false {
             gpg_secret_key_ring_files.push(contents);
             gpg_secret_key_passwords.push(password);
-            /*
-            if true {
-                pkcs11_yamls.push(contents);
-            } else if false {
-                priv_keys.push(contents);
-                priv_keys_passwords.push(password);
-            } else if false {
-                gpg_secret_key_ring_files.push(contents);
-                gpg_secret_key_passwords.push(password);
-            } else {
-                // ignore if file is not recognized, so as not to error if additional
-                // metadata/cert files exists
-                continue;
-            }
-            */
+        } else {
+            // ignore if file is not recognized, so as not to error if additional
+            // metadata/cert files exists
+            continue;
         }
+        */
     }
 
     Ok([
