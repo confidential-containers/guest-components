@@ -73,20 +73,15 @@ impl EncLayerFinalizer {
     ) -> Result<HashMap<String, String>> {
         let mut priv_opts = vec![];
         let mut pub_opts = vec![];
-
-        if finalizer.is_some() {
-            finalizer.unwrap().finalized_lbco(&mut self.lbco)?;
-
+        if let Some(finalizer) = finalizer {
+            finalizer.finalized_lbco(&mut self.lbco)?;
             priv_opts = serde_json::to_vec(&self.lbco.private)?;
             pub_opts = serde_json::to_vec(&self.lbco.public)?;
         }
 
         let mut new_annotations = HashMap::new();
-
         let mut keys_wrapped = false;
         for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
-            let key_wrapper = get_key_wrapper(scheme)?;
-
             let mut b64_annotations = String::new();
             if let Some(annotations) = desc.annotations.as_ref() {
                 if let Some(key_annotations) = annotations.get(annotations_id) {
@@ -94,6 +89,7 @@ impl EncLayerFinalizer {
                 }
             }
 
+            let key_wrapper = get_key_wrapper(scheme)?;
             b64_annotations = pre_wrap_key(key_wrapper, ec, b64_annotations, &priv_opts)?;
             if !b64_annotations.is_empty() {
                 keys_wrapped = true;
@@ -130,10 +126,11 @@ pub fn get_key_wrapper(scheme: &str) -> Result<&Box<dyn KeyWrapper>> {
 /// as values and the encryption scheme(s) as the key(s)
 pub fn get_wrapped_keys_map(desc: OciDescriptor) -> HashMap<String, String> {
     let mut wrapped_keys_map = HashMap::new();
-    for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
-        if let Some(annotations) = desc.annotations.as_ref() {
-            if let Some(anno_id) = annotations.get(annotations_id) {
-                wrapped_keys_map.insert(scheme.clone(), anno_id.clone());
+
+    if let Some(annotations) = desc.annotations.as_ref() {
+        for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
+            if let Some(value) = annotations.get(annotations_id) {
+                wrapped_keys_map.insert(scheme.clone(), value.clone());
             }
         }
     }
@@ -240,8 +237,8 @@ fn get_layer_key_opts(
 pub fn decrypt_layer_key_opts_data(dc: &DecryptConfig, desc: &OciDescriptor) -> Result<Vec<u8>> {
     let mut priv_key_given = false;
 
-    for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
-        if let Some(annotations) = desc.annotations.as_ref() {
+    if let Some(annotations) = desc.annotations.as_ref() {
+        for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
             if let Some(b64_annotation) = get_layer_key_opts(annotations_id, annotations) {
                 let keywrapper = get_key_wrapper(scheme)?;
                 if !keywrapper.probe(&dc.param) {
@@ -281,8 +278,8 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
     EncLayerFinalizer,
 )> {
     let mut encrypted = false;
-    for (annotations_id, _scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
-        if let Some(annotations) = desc.annotations.as_ref() {
+    if let Some(annotations) = desc.annotations.as_ref() {
+        for (annotations_id, _scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
             if annotations.contains_key(annotations_id) {
                 if let Some(decrypt_config) = ec.decrypt_config.as_ref() {
                     decrypt_layer_key_opts_data(decrypt_config, desc)?;
@@ -291,7 +288,9 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
                     // already encrypted!
                     encrypted = true;
                 } else {
-                    return Err(anyhow!("EncryptConfig must not be None"));
+                    return Err(anyhow!(
+                        "EncryptConfig::decrypt_config must not be None for encrypted layers"
+                    ));
                 }
             }
         }
@@ -328,14 +327,12 @@ pub fn decrypt_layer<R: Read>(
     }
 
     let priv_opts: PrivateLayerBlockCipherOptions = serde_json::from_slice(&priv_opts_data)?;
-    let mut lbch = LayerBlockCipherHandler::new()?;
-
     let pub_opts: PublicLayerBlockCipherOptions = serde_json::from_slice(&pub_opts_data)?;
-
     let mut opts = LayerBlockCipherOptions {
         public: pub_opts,
         private: priv_opts,
     };
+    let mut lbch = LayerBlockCipherHandler::new()?;
 
     lbch.decrypt(layer_reader, &mut opts)?;
 
@@ -352,16 +349,13 @@ pub fn async_decrypt_layer<R: tokio::io::AsyncRead>(
     priv_opts_data: &[u8],
 ) -> Result<(impl tokio::io::AsyncRead, String)> {
     let pub_opts_data = get_layer_pub_opts(desc)?;
-
-    let priv_opts: PrivateLayerBlockCipherOptions = serde_json::from_slice(priv_opts_data)?;
-    let mut lbch = LayerBlockCipherHandler::new()?;
-
     let pub_opts: PublicLayerBlockCipherOptions = serde_json::from_slice(&pub_opts_data)?;
-
+    let priv_opts: PrivateLayerBlockCipherOptions = serde_json::from_slice(priv_opts_data)?;
     let mut opts = LayerBlockCipherOptions {
         public: pub_opts,
         private: priv_opts,
     };
+    let mut lbch = LayerBlockCipherHandler::new()?;
 
     lbch.decrypt(layer_reader, &mut opts)?;
 

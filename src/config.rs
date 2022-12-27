@@ -13,18 +13,6 @@ use serde::{de, Deserializer, Serialize, Serializer};
 /// <https://github.com/containers/ocicrypt/blob/main/docs/keyprovider.md>
 pub const OCICRYPT_ENVVARNAME: &str = "OCICRYPT_KEYPROVIDER_CONFIG";
 
-/// DecryptConfig wraps the Parameters map that holds the decryption key
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct DecryptConfig {
-    /// map holding 'privkeys', 'x509s', 'gpg-privatekeys'
-    #[serde(
-        rename = "Parameters",
-        serialize_with = "base64_hashmap_s",
-        deserialize_with = "base64_hashmap_d"
-    )]
-    pub param: HashMap<String, Vec<Vec<u8>>>,
-}
-
 fn base64_enc(val: &[Vec<u8>]) -> Vec<String> {
     let mut res_vec = vec![];
     for x in val {
@@ -87,13 +75,16 @@ pub struct KeyProviderAttrs {
     pub native: Option<String>,
 }
 
-/// OcicryptConfig represents the format of an ocicrypt_provider.conf config file.
-/// Detail ocicrypt keyprovider protocol and config file format is defined at:
-/// <https://github.com/containers/ocicrypt/blob/main/docs/keyprovider.md>
-#[derive(Deserialize)]
-pub struct OcicryptConfig {
-    #[serde(rename = "key-providers")]
-    pub key_providers: HashMap<String, KeyProviderAttrs>,
+/// DecryptConfig wraps the Parameters map that holds the decryption key
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct DecryptConfig {
+    /// map holding 'privkeys', 'x509s', 'gpg-privatekeys'
+    #[serde(
+        rename = "Parameters",
+        serialize_with = "base64_hashmap_s",
+        deserialize_with = "base64_hashmap_d"
+    )]
+    pub param: HashMap<String, Vec<Vec<u8>>>,
 }
 
 impl DecryptConfig {
@@ -274,6 +265,15 @@ impl EncryptConfig {
 pub struct CryptoConfig {
     pub encrypt_config: Option<EncryptConfig>,
     pub decrypt_config: Option<DecryptConfig>,
+}
+
+/// OcicryptConfig represents the format of an ocicrypt_provider.conf config file.
+/// Detail ocicrypt keyprovider protocol and config file format is defined at:
+/// <https://github.com/containers/ocicrypt/blob/main/docs/keyprovider.md>
+#[derive(Deserialize)]
+pub struct OcicryptConfig {
+    #[serde(rename = "key-providers")]
+    pub key_providers: HashMap<String, KeyProviderAttrs>,
 }
 
 impl OcicryptConfig {

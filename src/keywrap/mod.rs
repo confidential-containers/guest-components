@@ -43,7 +43,7 @@ pub trait KeyWrapper: Send + Sync {
     }
 
     /// recipients (optional) gets a list of recipients. It is optional due to the validity of
-    /// recipients in a particular encryptiong scheme
+    /// recipients in a particular encryption scheme
     /// If not implemented, return `None`.
     fn recipients(&self, recipients: String) -> Option<Vec<String>> {
         None

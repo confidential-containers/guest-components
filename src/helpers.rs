@@ -189,7 +189,7 @@ fn process_private_keyfiles(keyfiles_and_pwds: Vec<String>) -> Result<[Vec<Vec<u
 ///           - \<filename>:pass=\<password> \
 ///           - \<filename>:fd=\<filedescriptor> \
 ///           - \<filename>:\<password> \
-///           - provider:<cmd/gprc>
+///           - provider:<cmd/gprc/native>
 /// * `dec_recipients` - contains x509 cert for PKCS7 decryption.
 pub fn create_decrypt_config(
     keys: Vec<String>,
@@ -242,7 +242,7 @@ pub fn create_decrypt_config(
 ///           - pkcs7:\<keyfile> \
 ///           - pkcs11:\<keyfile> \
 ///           - pgp: \<address> \
-///           - provider:<cmd/grpc>
+///           - provider:<cmd/grpc/native>
 /// * `keys` - private keys potential needs for encryption.
 pub fn create_encrypt_config(recipients: Vec<String>, keys: Vec<String>) -> Result<CryptoConfig> {
     let mut ec = EncryptConfig::default();

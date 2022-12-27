@@ -1,10 +1,12 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::utils::CommandExecuter;
-use anyhow::{anyhow, Result};
 use std::io::Write;
 use std::process::{Command, Stdio};
+
+use anyhow::{anyhow, Result};
+
+use crate::utils::CommandExecuter;
 
 #[derive(Debug)]
 pub struct Runner {}

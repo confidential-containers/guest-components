@@ -1,11 +1,13 @@
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KeyProviderKeyWrapProtocolInput {
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub key_provider_key_wrap_protocol_input: ::prost::alloc::vec::Vec<u8>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KeyProviderKeyWrapProtocolOutput {
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub key_provider_key_wrap_protocol_output: ::prost::alloc::vec::Vec<u8>,
 }
 /// Generated client implementations.
@@ -127,7 +129,7 @@ pub mod key_provider_service_client {
 pub mod key_provider_service_server {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
-    ///Generated trait containing gRPC methods that should be implemented for use with KeyProviderServiceServer.
+    /// Generated trait containing gRPC methods that should be implemented for use with KeyProviderServiceServer.
     #[async_trait]
     pub trait KeyProviderService: Send + Sync + 'static {
         async fn wrap_key(

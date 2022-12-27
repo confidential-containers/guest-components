@@ -40,14 +40,14 @@ impl fmt::Display for OpKey {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 struct KeyWrapParams {
-    pub ec: Option<EncryptConfig>,
+    ec: Option<EncryptConfig>,
     #[serde(rename = "optsdata")]
     opts_data: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 struct KeyUnwrapParams {
-    pub dc: Option<DecryptConfig>,
+    dc: Option<DecryptConfig>,
     annotation: Option<String>,
 }
 

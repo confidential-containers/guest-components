@@ -54,7 +54,7 @@ impl<R> AESCTRBlockCipher<R> {
         let symmetric_key = &opts.private.symmetric_key;
         if symmetric_key.len() != AES256_KEY_SIZE {
             return Err(anyhow!(
-                "invalid key length of {} bytes; need {} bytes",
+                "invalid key length of {} bytes; expect {} bytes",
                 symmetric_key.len(),
                 AES256_KEY_SIZE
             ));
@@ -152,9 +152,9 @@ impl<R: Read> Read for AESCTRBlockCipher<R> {
         if !self.encrypt {
             if read_len > 0 {
                 state.hmac.update(&buf[0..read_len]);
-            }
-            // If we done encrypting, let the HMAC comparison provide a verdict
-            if state.done {
+                state.cipher.apply_keystream(&mut buf[0..read_len]);
+            } else {
+                // If we done encrypting, let the HMAC comparison provide a verdict
                 state
                     .hmac
                     .clone()
@@ -170,17 +170,11 @@ impl<R: Read> Read for AESCTRBlockCipher<R> {
                         )
                     })?;
             }
-            if read_len > 0 {
-                state.cipher.apply_keystream(&mut buf[0..read_len]);
-            }
+        } else if read_len > 0 {
+            state.cipher.apply_keystream(&mut buf[0..read_len]);
+            state.hmac.update(&buf[0..read_len]);
         } else {
-            if read_len > 0 {
-                state.cipher.apply_keystream(&mut buf[0..read_len]);
-                state.hmac.update(&buf[0..read_len]);
-            }
-            if state.done {
-                state.exp_hmac = state.hmac.clone().finalize().into_bytes().to_vec();
-            }
+            state.exp_hmac = state.hmac.clone().finalize().into_bytes().to_vec();
         }
 
         Ok(read_len)
@@ -224,9 +218,9 @@ impl<R: tokio::io::AsyncRead> tokio::io::AsyncRead for AESCTRBlockCipher<R> {
         if !encrypt {
             if !buf_filled.is_empty() {
                 hmac.update(buf_filled);
-            }
-            // If we done encrypting, let the HMAC comparison provide a verdict
-            if *done {
+                cipher.apply_keystream(buf_filled);
+            } else {
+                // If we done encrypting, let the HMAC comparison provide a verdict
                 hmac.clone().verify_slice(exp_hmac).map_err(|_| {
                     std::io::Error::new(
                         std::io::ErrorKind::Other,
@@ -238,15 +232,11 @@ impl<R: tokio::io::AsyncRead> tokio::io::AsyncRead for AESCTRBlockCipher<R> {
                     )
                 })?;
             }
-            if !buf_filled.is_empty() {
-                cipher.apply_keystream(buf_filled);
-            }
         } else {
             if !buf_filled.is_empty() {
                 cipher.apply_keystream(buf_filled);
                 hmac.update(buf_filled);
-            }
-            if *done {
+            } else {
                 *exp_hmac = hmac.clone().finalize().into_bytes().to_vec();
             }
         }

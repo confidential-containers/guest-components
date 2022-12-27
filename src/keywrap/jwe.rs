@@ -123,7 +123,6 @@ impl KeyWrapper for JweKeyWrapper {
     }
 
     fn probe(&self, dc_param: &HashMap<String, Vec<Vec<u8>>>) -> bool {
-        // FIXME: is this detection method reliable?
         dc_param.get("privkeys").is_some()
     }
 
