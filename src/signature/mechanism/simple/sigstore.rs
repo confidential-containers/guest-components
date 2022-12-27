@@ -70,10 +70,10 @@ impl SigstoreConfig {
             if let Some(docker_config_map) = config.docker_namespace_config {
                 for (ns_name, ns_config) in docker_config_map.iter() {
                     if merged_config.contains_namespace(ns_name) {
-                        return Err(anyhow!(format!(
+                        return Err(anyhow!(
                             "Error parsing sigstore config: {} defined repeatedly.",
                             &ns_name
-                        )));
+                        ));
                     }
 
                     merged_config.insert(ns_name, ns_config);
