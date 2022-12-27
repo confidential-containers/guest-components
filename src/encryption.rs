@@ -34,16 +34,16 @@ lazy_static! {
             // TODO: The error over here needs to be logged to be in consistent with golang version.
             let ocicrypt_config = crate::config::OcicryptConfig::from_env(crate::config::OCICRYPT_ENVVARNAME)
                 .expect("Unable to read ocicrypt config file");
-            let key_providers = ocicrypt_config.key_providers;
-            for (provider_name, attrs) in key_providers.iter() {
-                m.insert(
-                    "provider.".to_owned() + provider_name,
-                    Box::new(keyprovider::KeyProviderKeyWrapper::new(
+            if let Some(ocicrypt_config) = ocicrypt_config {
+                let key_providers = ocicrypt_config.key_providers;
+                for (provider_name, attrs) in key_providers.iter() {
+                    let key_wrapper = Box::new(keyprovider::KeyProviderKeyWrapper::new(
                         provider_name.to_string(),
                         attrs.clone(),
                         None,
-                    )) as Box<dyn KeyWrapper>,
-                );
+                    )) as Box<dyn KeyWrapper>;
+                    m.insert("provider.".to_owned() + provider_name, key_wrapper);
+                }
             }
         }
 
