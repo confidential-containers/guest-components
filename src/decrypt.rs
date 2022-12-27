@@ -14,7 +14,7 @@ use ocicrypt_rs::spec::{
 use oci_distribution::manifest;
 use oci_distribution::manifest::OciDescriptor;
 
-use std::io::Read;
+use std::io;
 
 #[derive(Default, Clone, Debug)]
 pub struct Decryptor {
@@ -63,12 +63,16 @@ impl Decryptor {
     ///           - \<filename>:fd=\<filedescriptor> \
     ///           - \<filename>:\<password> \
     ///           - provider:<cmd/gprc>
-    pub async fn get_plaintext_layer(
+    pub async fn get_plaintext_layer<
+        R: io::Read + Send + 'static,
+        W: io::Write + Send + 'static,
+    >(
         &self,
         descriptor: &OciDescriptor,
-        encrypted_layer: Vec<u8>,
+        encrypted_layer: R,
         decrypt_config: &str,
-    ) -> Result<Vec<u8>> {
+        plaintext_layer: W,
+    ) -> Result<()> {
         if !self.is_encrypted() {
             return Err(anyhow!(
                 "{}: {}",
@@ -88,31 +92,31 @@ impl Decryptor {
         // attestation agent, to avoid startup a runtime within a runtime, we
         // spawn a new thread here.
         let handler = tokio::task::spawn_blocking(move || {
-            decrypt_layer_data(&encrypted_layer, &descript, &cc)
+            decrypt_layer_data(encrypted_layer, &descript, &cc, plaintext_layer)
         });
 
-        if let Ok(decrypted_data) = handler.await? {
-            Ok(decrypted_data)
+        if let Ok(()) = handler.await? {
+            Ok(())
         } else {
             Err(anyhow!("decrypt failed!"))
         }
     }
 }
 
-fn decrypt_layer_data(
-    encrypted_layer: &[u8],
+fn decrypt_layer_data<R: io::Read + Send + 'static, W: io::Write + Send + 'static>(
+    encrypted_layer: R,
     descriptor: &OciDescriptor,
     crypto_config: &CryptoConfig,
-) -> Result<Vec<u8>> {
+    mut plaintext_layer: W,
+) -> Result<()> {
     if let Some(decrypt_config) = &crypto_config.decrypt_config {
         let (layer_decryptor, _dec_digest) =
             decrypt_layer(decrypt_config, encrypted_layer, descriptor, false)?;
-        let mut plaintext_data: Vec<u8> = Vec::new();
         let mut decryptor = layer_decryptor.ok_or_else(|| anyhow!("missing layer decryptor"))?;
 
-        decryptor.read_to_end(&mut plaintext_data)?;
+        std::io::copy(&mut decryptor, &mut plaintext_layer)?;
 
-        Ok(plaintext_data)
+        Ok(())
     } else {
         Err(anyhow!("no decrypt config available"))
     }

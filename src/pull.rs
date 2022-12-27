@@ -77,19 +77,30 @@ impl<'a> PullClient<'a> {
         decrypt_config: &Option<&str>,
         meta_store: Arc<Mutex<MetaStore>>,
     ) -> Result<Vec<LayerMeta>> {
+        fs::create_dir_all(&self.data_dir)?;
         let layer_metas = layer_descs.into_iter().enumerate().map(|(i, layer)| {
             let client = &self.client;
             let reference = &self.reference;
             let ms = meta_store.clone();
 
+            // Create a path for the file into which the layers blob will be pulled.
+            // data_dir is expected to reside in secure storage.
+            let layer_digest_hex = layer.digest.split(':').last().unwrap();
+            let blob_path = self.data_dir.join(layer_digest_hex);
+
             async move {
-                let mut layer_data: Vec<u8> = Vec::new();
+                // Use a separate scope so that the file is completely written to by
+                // the end of the scope.
+                {
+                    // pull_blob requires an object that implements the AsyncWrite trait.
+                    // Hence, use tokio's async File.
+                    let mut blob_file = tokio::fs::File::create(blob_path.clone()).await?;
+                    client
+                        .pull_blob(reference, &layer.digest, &mut blob_file)
+                        .await?;
+                }
 
-                client
-                    .pull_blob(reference, &layer.digest, &mut layer_data)
-                    .await?;
-
-                self.handle_layer(layer, diff_ids[i].clone(), decrypt_config, layer_data, ms)
+                self.handle_layer(layer, diff_ids[i].clone(), decrypt_config, &blob_path, ms)
                     .await
             }
         });
@@ -108,11 +119,10 @@ impl<'a> PullClient<'a> {
         layer: OciDescriptor,
         diff_id: String,
         decrypt_config: &Option<&str>,
-        layer_data: Vec<u8>,
+        blob_path: &PathBuf,
         ms: Arc<Mutex<MetaStore>>,
     ) -> Result<LayerMeta> {
-        let mut out: Vec<u8> = Vec::new();
-        let plaintext_layer: Vec<u8>;
+        let mut plaintext_blob_path: PathBuf;
 
         let mut layer_meta = LayerMeta::default();
         let mut media_type_str: &str = layer.media_type.as_str();
@@ -121,16 +131,25 @@ impl<'a> PullClient<'a> {
 
         if decryptor.is_encrypted() {
             if let Some(dc) = decrypt_config {
-                plaintext_layer = decryptor
-                    .get_plaintext_layer(&layer, layer_data, dc)
+                plaintext_blob_path = blob_path.clone();
+                plaintext_blob_path.set_extension("plain");
+
+                // Open files for passing along to decryptor.
+                let blob_file = std::fs::File::open(blob_path)?;
+                let plain_blob_file = std::fs::File::create(&plaintext_blob_path)?;
+                decryptor
+                    .get_plaintext_layer(&layer, blob_file, dc, plain_blob_file)
                     .await?;
                 media_type_str = decryptor.media_type.as_str();
                 layer_meta.encrypted = true;
+
+                // Delete the encrypted blob.
+                fs::remove_file(blob_path)?;
             } else {
                 return Err(anyhow!(ERR_NO_DECRYPT_CFG));
             }
         } else {
-            plaintext_layer = layer_data;
+            plaintext_blob_path = blob_path.clone();
         }
 
         let layer_db = &ms.lock().await.layer_db;
@@ -141,37 +160,48 @@ impl<'a> PullClient<'a> {
 
         layer_meta.decoder = Compression::try_from(media_type_str)?;
 
+        let mut plaintext_blob_file = std::fs::File::open(&plaintext_blob_path)?;
+        let mut layer_blob_path: PathBuf;
         if layer_meta.decoder == Compression::Uncompressed {
             let digest = if diff_id.starts_with(DIGEST_SHA256) {
-                format!(
-                    "{}:{:x}",
-                    DIGEST_SHA256,
-                    sha2::Sha256::digest(plaintext_layer.as_slice())
-                )
+                let mut hasher = sha2::Sha256::new();
+                let _ = std::io::copy(&mut plaintext_blob_file, &mut hasher)?;
+                format!("{}:{:x}", DIGEST_SHA256, hasher.finalize())
             } else if diff_id.starts_with(DIGEST_SHA512) {
-                format!(
-                    "{}:{:x}",
-                    DIGEST_SHA512,
-                    sha2::Sha512::digest(plaintext_layer.as_slice())
-                )
+                let mut hasher = sha2::Sha512::new();
+                let _ = std::io::copy(&mut plaintext_blob_file, &mut hasher)?;
+                format!("{}:{:x}", DIGEST_SHA512, hasher.finalize())
             } else {
                 return Err(anyhow!("{}: {:?}", ERR_BAD_UNCOMPRESSED_DIGEST, diff_id));
             };
 
             layer_meta.uncompressed_digest = digest.clone();
             layer_meta.compressed_digest = digest;
+            layer_blob_path = plaintext_blob_path;
         } else {
-            layer_meta.compressed_digest = layer.digest.clone();
+            // Create path for uncompressed layer in secure storage.
+            layer_blob_path = blob_path.clone();
+            layer_blob_path.set_extension("uncompressed");
+
+            // Decompress the layer.
+            let mut layer_blob_file = std::fs::File::create(&layer_blob_path)?;
             layer_meta
                 .decoder
-                .decompress(plaintext_layer.as_slice(), &mut out)?;
+                .decompress(&mut plaintext_blob_file, &mut layer_blob_file)?;
+            // Delete the compressed blob.
+            fs::remove_file(&plaintext_blob_path)?;
 
+            layer_meta.compressed_digest = layer.digest.clone();
+            // Open layer file for digest computation.
+            let mut layer_blob_file = std::fs::File::open(&layer_blob_path)?;
             if diff_id.starts_with(DIGEST_SHA256) {
-                layer_meta.uncompressed_digest =
-                    format!("{DIGEST_SHA256}:{:x}", sha2::Sha256::digest(&out));
+                let mut hasher = sha2::Sha256::new();
+                let _ = std::io::copy(&mut layer_blob_file, &mut hasher)?;
+                layer_meta.uncompressed_digest = format!("{DIGEST_SHA256}:{:x}", hasher.finalize());
             } else if diff_id.starts_with(DIGEST_SHA512) {
-                layer_meta.uncompressed_digest =
-                    format!("{DIGEST_SHA512}:{:x}", sha2::Sha512::digest(&out));
+                let mut hasher = sha2::Sha512::new();
+                let _ = std::io::copy(&mut layer_blob_file, &mut hasher)?;
+                layer_meta.uncompressed_digest = format!("{DIGEST_SHA512}:{:x}", hasher.finalize());
             } else {
                 return Err(anyhow!("{}: {:?}", ERR_BAD_COMPRESSED_DIGEST, diff_id));
             }
@@ -193,8 +223,9 @@ impl<'a> PullClient<'a> {
         );
 
         let destination = Path::new(&store_path);
+        let mut layer_file = std::fs::File::open(&layer_blob_path)?;
 
-        if let Err(e) = unpack(out, destination) {
+        if let Err(e) = unpack(&mut layer_file, destination) {
             fs::remove_dir_all(destination)?;
             return Err(e);
         }
@@ -354,15 +385,22 @@ mod tests {
             },
         ];
 
+        let data_dir = tempfile::tempdir().unwrap();
         for (i, d) in tests.iter().enumerate() {
             let msg = format!("test[{}]: {:?}", i, d);
+
+            let file_path = data_dir.path().join(format!("{}-data", i));
+            {
+                let mut file = fs::File::create(&file_path).unwrap();
+                file.write_all(&d.layer_data).unwrap();
+            }
 
             let result = client
                 .handle_layer(
                     d.layer.clone(),
                     d.diff_id.to_string(),
                     &d.decrypt_config,
-                    d.layer_data.clone(),
+                    &file_path,
                     ms.clone(),
                 )
                 .await;
