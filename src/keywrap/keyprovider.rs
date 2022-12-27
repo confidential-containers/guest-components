@@ -197,7 +197,7 @@ impl KeyProviderKeyWrapper {
     ) -> Self {
         if let Some(grpc) = &attrs.grpc {
             if !grpc.starts_with("http://") && !grpc.starts_with("tcp://") {
-                attrs.grpc = Some(format!("http://{}", grpc));
+                attrs.grpc = Some(format!("http://{grpc}"));
             }
         }
 
@@ -705,7 +705,7 @@ mod tests {
 
             tokio::spawn(async move {
                 if let Err(e) = serve.await {
-                    eprintln!("Error = {:?}", e);
+                    eprintln!("Error = {e:?}");
                 }
 
                 tx.send(()).unwrap();

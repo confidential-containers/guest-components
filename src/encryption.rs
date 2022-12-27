@@ -236,7 +236,8 @@ fn get_layer_key_opts(
     .cloned()
 }
 
-fn decrypt_layer_key_opts_data(dc: &DecryptConfig, desc: &OciDescriptor) -> Result<Vec<u8>> {
+/// Unwrap layer decryption key from OCI descriptor annotations.
+pub fn decrypt_layer_key_opts_data(dc: &DecryptConfig, desc: &OciDescriptor) -> Result<Vec<u8>> {
     let mut priv_key_given = false;
 
     for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
@@ -341,6 +342,32 @@ pub fn decrypt_layer<R: Read>(
     Ok((Some(lbch), opts.private.digest))
 }
 
+/// This is a streaming version of [`decrypt_layer`].
+///
+/// priv_opts_data can get from [`decrypt_layer_key_opts_data`]
+#[cfg(feature = "async-io")]
+pub fn async_decrypt_layer<R: tokio::io::AsyncRead>(
+    layer_reader: R,
+    desc: &OciDescriptor,
+    priv_opts_data: &[u8],
+) -> Result<(impl tokio::io::AsyncRead, String)> {
+    let pub_opts_data = get_layer_pub_opts(desc)?;
+
+    let priv_opts: PrivateLayerBlockCipherOptions = serde_json::from_slice(priv_opts_data)?;
+    let mut lbch = LayerBlockCipherHandler::new()?;
+
+    let pub_opts: PublicLayerBlockCipherOptions = serde_json::from_slice(&pub_opts_data)?;
+
+    let mut opts = LayerBlockCipherOptions {
+        public: pub_opts,
+        private: priv_opts,
+    };
+
+    lbch.decrypt(layer_reader, &mut opts)?;
+
+    Ok((lbch, opts.private.digest))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -353,13 +380,13 @@ mod tests {
     fn test_encrypt_decrypt_layer() {
         let path = load_data_path();
         let test_conf_path = format!("{}/{}", path, "ocicrypt_config.json");
-        env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", &test_conf_path);
+        env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", test_conf_path);
 
         let pub_key_file = format!("{}/{}", path, "public_key.pem");
-        let pub_key = fs::read(&pub_key_file).unwrap();
+        let pub_key = fs::read(pub_key_file).unwrap();
 
         let priv_key_file = format!("{}/{}", path, "private_key.pem");
-        let priv_key = fs::read(&priv_key_file).unwrap();
+        let priv_key = fs::read(priv_key_file).unwrap();
 
         let mut ec = EncryptConfig::default();
         assert!(ec.encrypt_with_jwe(vec![pub_key.clone()]).is_ok());
@@ -393,6 +420,59 @@ mod tests {
             let mut decryptor = layer_decryptor.unwrap();
 
             assert!(decryptor.read_to_end(&mut plaintxt_data).is_ok());
+            assert_eq!(layer_data, plaintxt_data);
+            assert_eq!(digest, dec_digest);
+        }
+    }
+
+    #[cfg(feature = "async-io")]
+    #[tokio::test]
+    async fn test_async_decrypt_layer() {
+        let path = load_data_path();
+        let test_conf_path = format!("{}/{}", path, "ocicrypt_config.json");
+        env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", &test_conf_path);
+
+        let pub_key_file = format!("{}/{}", path, "public_key.pem");
+        let pub_key = fs::read(&pub_key_file).unwrap();
+
+        let priv_key_file = format!("{}/{}", path, "private_key.pem");
+        let priv_key = fs::read(&priv_key_file).unwrap();
+
+        let mut ec = EncryptConfig::default();
+        assert!(ec.encrypt_with_jwe(vec![pub_key]).is_ok());
+
+        let mut dc = DecryptConfig::default();
+        assert!(dc
+            .decrypt_with_priv_keys(vec![priv_key.to_vec()], vec![vec![]])
+            .is_ok());
+
+        let layer_data: Vec<u8> = b"This is some text!".to_vec();
+        let mut desc = OciDescriptor::default();
+        let digest = format!("sha256:{:x}", Sha256::digest(&layer_data));
+        desc.digest = digest.clone();
+
+        let (layer_encryptor, mut elf) = encrypt_layer(&ec, layer_data.as_slice(), &desc).unwrap();
+
+        let mut encrypted_data: Vec<u8> = Vec::new();
+        let mut encryptor = layer_encryptor.unwrap();
+        assert!(encryptor.read_to_end(&mut encrypted_data).is_ok());
+        assert!(encryptor.finalized_lbco(&mut elf.lbco).is_ok());
+
+        if let Ok(new_annotations) = elf.finalized_annotations(&ec, &desc, Some(&mut encryptor)) {
+            let new_desc = OciDescriptor {
+                annotations: Some(new_annotations),
+                ..Default::default()
+            };
+            let key_opts = decrypt_layer_key_opts_data(&dc, &new_desc).unwrap();
+
+            let (mut async_reader, dec_digest) =
+                async_decrypt_layer(encrypted_data.as_slice(), &new_desc, &key_opts).unwrap();
+
+            let mut plaintxt_data: Vec<u8> = Vec::new();
+            tokio::io::AsyncReadExt::read_to_end(&mut async_reader, &mut plaintxt_data)
+                .await
+                .unwrap();
+
             assert_eq!(layer_data, plaintxt_data);
             assert_eq!(digest, dec_digest);
         }

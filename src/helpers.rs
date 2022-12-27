@@ -345,7 +345,7 @@ mod tests {
 
         let private_keys = format!("{}/{}", path, "private_key.pem");
         let pwd_file = format!("file={}/{}", path, "passwordfile");
-        let keyfiles_and_pwds = format!("{}:{}", private_keys, pwd_file);
+        let keyfiles_and_pwds = format!("{private_keys}:{pwd_file}");
 
         assert!(process_private_keyfiles(vec![private_keys]).is_ok());
         assert!(process_private_keyfiles(vec![keyfiles_and_pwds]).is_ok());
