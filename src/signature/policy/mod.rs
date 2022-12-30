@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use oci_distribution::secrets::RegistryAuth;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -65,9 +65,7 @@ impl Policy {
         // Get the policy set that matches the image.
         let reqs = self.requirements_for_image(&image);
         if reqs.is_empty() {
-            return Err(anyhow!(
-                "List of verification policy requirements must not be empty"
-            ));
+            bail!("List of verification policy requirements must not be empty");
         }
 
         // The image must meet the requirements of each policy in the policy set.

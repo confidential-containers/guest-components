@@ -119,15 +119,15 @@ impl SignScheme for SimpleParameters {
         //
         // refer to https://github.com/confidential-containers/image-rs/issues/14
         if self.key_type != KeyType::Gpg.to_string() {
-            return Err(anyhow!(
+            bail!(
                 "Unknown key type in policy config: only support {} now.",
                 KeyType::Gpg.to_string()
-            ));
+            );
         }
 
         let pubkey_ring = match (&self.key_path, &self.key_data) {
-            (None, None) => return Err(anyhow!("Neither keyPath or keyData specified.")),
-            (Some(_), Some(_)) => return Err(anyhow!("Both keyPath and keyData specified.")),
+            (None, None) => bail!("Neither keyPath or keyData specified."),
+            (Some(_), Some(_)) => bail!("Both keyPath and keyData specified."),
             (None, Some(key_data)) => base64::decode(key_data)?,
             (Some(key_path), None) => fs::read(key_path).await.map_err(|e| {
                 anyhow!("Read SignedBy keyPath failed: {:?}, path: {}", e, key_path)
@@ -204,7 +204,7 @@ pub async fn get_signatures(image: &mut Image) -> Result<Vec<Vec<u8>>> {
     } else if let Some(d) = image.reference.digest() {
         Digest::try_from(d)?
     } else {
-        return Err(anyhow!("Missing image digest"));
+        bail!("Missing image digest");
     };
 
     // Format the sigstore name: `image-repository@digest-algorithm=digest-value`.

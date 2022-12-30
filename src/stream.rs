@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::unpack::unpack;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use sha2::Digest;
 use std::fs;
 use std::io::{Cursor, Read};
@@ -106,7 +106,7 @@ pub async fn stream_processing(
             .await
             .map_err(|e| anyhow!("hasher {} : {:?}", DIGEST_SHA512, e))?
     } else {
-        return Err(anyhow!("{}: {:?}", ERR_BAD_UNCOMPRESSED_DIGEST, diff_id));
+        bail!("{}: {:?}", ERR_BAD_UNCOMPRESSED_DIGEST, diff_id);
     };
 
     Ok(digest_str)

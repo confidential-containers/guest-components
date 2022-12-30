@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
+use anyhow::{bail, Result};
 use libc::timeval;
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -16,10 +16,7 @@ pub fn unpack<R: io::Read>(input: R, destination: &Path) -> Result<()> {
     let mut archive = Archive::new(input);
 
     if destination.exists() {
-        return Err(anyhow!(
-            "unpack destination {:?} already exists",
-            destination
-        ));
+        bail!("unpack destination {:?} already exists", destination);
     }
 
     fs::create_dir_all(destination)?;
@@ -52,11 +49,11 @@ pub fn unpack<R: io::Read>(input: R, destination: &Path) -> Result<()> {
             } else {
                 let ret = unsafe { libc::lutimes(path.as_ptr(), times.as_ptr()) };
                 if ret != 0 {
-                    return Err(anyhow!(
+                    bail!(
                         "change symlink file: {:?} utime error: {:?}",
                         path,
                         io::Error::last_os_error()
-                    ));
+                    );
                 }
             }
         }
@@ -66,11 +63,11 @@ pub fn unpack<R: io::Read>(input: R, destination: &Path) -> Result<()> {
     for (k, v) in dirs.iter() {
         let ret = unsafe { libc::utimes(k.as_ptr(), v.as_ptr()) };
         if ret != 0 {
-            return Err(anyhow!(
+            bail!(
                 "change directory: {:?} utime error: {:?}",
                 k,
                 io::Error::last_os_error()
-            ));
+            );
         }
     }
 

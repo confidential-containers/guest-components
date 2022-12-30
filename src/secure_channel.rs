@@ -100,11 +100,11 @@ impl SecureChannel {
         // unzip here is unstable
         if let Some((kbc_name, kbs_uri)) = aa_kbc_params.split_once("::") {
             if kbc_name.is_empty() {
-                return Err(anyhow!("aa_kbc_params: missing KBC name"));
+                bail!("aa_kbc_params: missing KBC name");
             }
 
             if kbs_uri.is_empty() {
-                return Err(anyhow!("aa_kbc_params: missing KBS URI"));
+                bail!("aa_kbc_params: missing KBS URI");
             }
 
             Ok(Self {

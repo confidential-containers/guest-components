@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use futures_util::future;
 use oci_distribution::manifest::{OciDescriptor, OciImageManifest};
 use oci_distribution::{secrets::RegistryAuth, Client, Reference};
@@ -128,7 +128,7 @@ impl<'a> PullClient<'a> {
                 media_type_str = decryptor.media_type.as_str();
                 layer_meta.encrypted = true;
             } else {
-                return Err(anyhow!(ERR_NO_DECRYPT_CFG));
+                bail!(ERR_NO_DECRYPT_CFG);
             }
         } else {
             plaintext_layer = layer_data;
@@ -156,7 +156,7 @@ impl<'a> PullClient<'a> {
                     sha2::Sha512::digest(plaintext_layer.as_slice())
                 )
             } else {
-                return Err(anyhow!("{}: {:?}", ERR_BAD_UNCOMPRESSED_DIGEST, diff_id));
+                bail!("{}: {:?}", ERR_BAD_UNCOMPRESSED_DIGEST, diff_id);
             };
 
             layer_meta.uncompressed_digest = digest.clone();
@@ -174,17 +174,17 @@ impl<'a> PullClient<'a> {
                 layer_meta.uncompressed_digest =
                     format!("{DIGEST_SHA512}:{:x}", sha2::Sha512::digest(&out));
             } else {
-                return Err(anyhow!("{}: {:?}", ERR_BAD_COMPRESSED_DIGEST, diff_id));
+                bail!("{}: {:?}", ERR_BAD_COMPRESSED_DIGEST, diff_id);
             }
         }
 
         // uncompressed digest should equal to the diff_ids in image_config.
         if layer_meta.uncompressed_digest != diff_id {
-            return Err(anyhow!(
+            bail!(
                 "unequal uncompressed digest {:?} config diff_id {:?}",
                 layer_meta.uncompressed_digest,
                 diff_id
-            ));
+            );
         }
 
         let store_path = format!(
@@ -293,7 +293,7 @@ impl<'a> PullClient<'a> {
                     )
                     .await?;
             } else {
-                return Err(anyhow!(ERR_NO_DECRYPT_CFG));
+                bail!(ERR_NO_DECRYPT_CFG);
             }
         } else {
             uncompressed_digest = self
@@ -310,11 +310,11 @@ impl<'a> PullClient<'a> {
                 "unequal uncompressed digest {:?} config diff_id {:?}",
                 layer_meta.uncompressed_digest, diff_id
             );
-            return Err(anyhow!(
+            bail!(
                 "unequal uncompressed digest {:?} config diff_id {:?}",
                 layer_meta.uncompressed_digest,
                 diff_id
-            ));
+            );
         }
 
         layer_meta.store_path = destination.display().to_string();

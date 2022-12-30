@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
+use anyhow::{bail, Result};
 use flate2;
 use oci_distribution::manifest;
 use oci_spec::image::MediaType;
@@ -114,7 +114,7 @@ impl TryFrom<&str> for Compression {
             MediaType::ImageLayerZstd | MediaType::ImageLayerNonDistributableZstd => {
                 Compression::Zstd
             }
-            _ => return Err(anyhow!("{}: {}", ERR_BAD_MEDIA_TYPE, media_type)),
+            _ => bail!("{}: {}", ERR_BAD_MEDIA_TYPE, media_type),
         };
 
         Ok(decoder)
@@ -124,6 +124,7 @@ impl TryFrom<&str> for Compression {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::anyhow;
     use flate2::write::GzEncoder;
     use std::io::Write;
 

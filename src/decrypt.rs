@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use ocicrypt_rs::config::CryptoConfig;
 use ocicrypt_rs::encryption::{async_decrypt_layer, decrypt_layer, decrypt_layer_key_opts_data};
 use ocicrypt_rs::helpers::create_decrypt_config;
@@ -71,15 +71,11 @@ impl Decryptor {
         decrypt_config: &str,
     ) -> Result<Vec<u8>> {
         if !self.is_encrypted() {
-            return Err(anyhow!(
-                "{}: {}",
-                Self::ERR_UNENCRYPTED_MEDIA_TYPE,
-                self.media_type
-            ));
+            bail!("{}: {}", Self::ERR_UNENCRYPTED_MEDIA_TYPE, self.media_type);
         }
 
         if decrypt_config.is_empty() {
-            return Err(anyhow!(Self::ERR_EMPTY_CFG));
+            bail!(Self::ERR_EMPTY_CFG);
         }
 
         let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
@@ -105,11 +101,11 @@ impl Decryptor {
         decrypt_config: &str,
     ) -> Result<Vec<u8>> {
         if !self.is_encrypted() {
-            return Err(anyhow!("unencrypted media type: {}", self.media_type));
+            bail!("unencrypted media type: {}", self.media_type);
         }
 
         if decrypt_config.is_empty() {
-            return Err(anyhow!("decrypt_config is empty"));
+            bail!("decrypt_config is empty");
         }
 
         let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
@@ -281,7 +277,7 @@ mod tests {
                 media_type: "",
                 descriptor: OciDescriptor::default(),
                 encrypted_layer: Vec::<u8>::new(),
-                decrypt_config: "foo",
+                decrypt_config: "provider:grpc",
                 result: Err(anyhow!(ERR_OCICRYPT_RS_DECRYPT_FAIL)),
             },
             TestData {
@@ -289,7 +285,7 @@ mod tests {
                 media_type: MEDIA_TYPE_LAYER_ENC,
                 descriptor: OciDescriptor::default(),
                 encrypted_layer: Vec::<u8>::new(),
-                decrypt_config: "foo",
+                decrypt_config: "provider:grpc",
                 result: Err(anyhow!(ERR_OCICRYPT_RS_DECRYPT_FAIL)),
             },
         ];

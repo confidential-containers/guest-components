@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use oci_distribution::Reference;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -59,9 +59,7 @@ impl SigstoreConfig {
             // The "default-docker" only allowed to be defined in one config file.
             if config.default_config.is_some() {
                 if merged_config.default_config.is_some() {
-                    return Err(anyhow!(
-                        "Error parsing sigstore config: \"default-docker\" defined repeatedly."
-                    ));
+                    bail!("Error parsing sigstore config: \"default-docker\" defined repeatedly.");
                 }
                 merged_config.default_config = config.default_config;
             }
@@ -70,10 +68,10 @@ impl SigstoreConfig {
             if let Some(docker_config_map) = config.docker_namespace_config {
                 for (ns_name, ns_config) in docker_config_map.iter() {
                     if merged_config.contains_namespace(ns_name) {
-                        return Err(anyhow!(
+                        bail!(
                             "Error parsing sigstore config: {} defined repeatedly.",
                             &ns_name
-                        ));
+                        );
                     }
 
                     merged_config.insert(ns_name, ns_config);
@@ -167,9 +165,7 @@ pub async fn get_sigs_from_specific_sigstore(sigstore_uri: url::Url) -> Result<V
         //
         // issue: https://github.com/confidential-containers/image-rs/issues/9
         _ => {
-            return Err(anyhow!(
-                "HTTP support for signature stores is not implemented."
-            ));
+            bail!("HTTP support for signature stores is not implemented.");
         }
     }
 
