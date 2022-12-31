@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use ocicrypt_rs::config::CryptoConfig;
-use ocicrypt_rs::encryption::decrypt_layer;
+use ocicrypt_rs::encryption::{async_decrypt_layer, decrypt_layer, decrypt_layer_key_opts_data};
 use ocicrypt_rs::helpers::create_decrypt_config;
 use ocicrypt_rs::spec::{
     MEDIA_TYPE_LAYER_ENC, MEDIA_TYPE_LAYER_GZIP_ENC, MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_ENC,
@@ -15,6 +15,7 @@ use oci_distribution::manifest;
 use oci_distribution::manifest::OciDescriptor;
 
 use std::io::Read;
+use tokio::io::AsyncRead;
 
 #[derive(Default, Clone, Debug)]
 pub struct Decryptor {
@@ -70,15 +71,11 @@ impl Decryptor {
         decrypt_config: &str,
     ) -> Result<Vec<u8>> {
         if !self.is_encrypted() {
-            return Err(anyhow!(
-                "{}: {}",
-                Self::ERR_UNENCRYPTED_MEDIA_TYPE,
-                self.media_type
-            ));
+            bail!("{}: {}", Self::ERR_UNENCRYPTED_MEDIA_TYPE, self.media_type);
         }
 
         if decrypt_config.is_empty() {
-            return Err(anyhow!(Self::ERR_EMPTY_CFG));
+            bail!(Self::ERR_EMPTY_CFG);
         }
 
         let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
@@ -96,6 +93,52 @@ impl Decryptor {
         } else {
             Err(anyhow!("decrypt failed!"))
         }
+    }
+
+    pub async fn get_decrypt_key(
+        &self,
+        descriptor: &OciDescriptor,
+        decrypt_config: &str,
+    ) -> Result<Vec<u8>> {
+        if !self.is_encrypted() {
+            bail!("unencrypted media type: {}", self.media_type);
+        }
+
+        if decrypt_config.is_empty() {
+            bail!("decrypt_config is empty");
+        }
+
+        let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
+        let descript = descriptor.clone();
+
+        // ocicrypt-rs keyprovider module will create a new runtime to talk with
+        // attestation agent, to avoid startup a runtime within a runtime, we
+        // spawn a new thread here.
+        let handler = tokio::task::spawn_blocking(move || {
+            if let Some(decrypt_config) = cc.decrypt_config {
+                decrypt_layer_key_opts_data(&decrypt_config, &descript)
+            } else {
+                Err(anyhow!("no decrypt config available"))
+            }
+        });
+
+        if let Ok(priv_opts_data) = handler.await? {
+            Ok(priv_opts_data)
+        } else {
+            Err(anyhow!("failed to retrive decrypt key!"))
+        }
+    }
+
+    pub fn async_get_plaintext_layer(
+        &self,
+        encrypted_layer: impl AsyncRead,
+        descriptor: &OciDescriptor,
+        priv_opts_data: &[u8],
+    ) -> Result<impl tokio::io::AsyncRead> {
+        let (layer_decryptor, _dec_digest) =
+            async_decrypt_layer(encrypted_layer, descriptor, priv_opts_data)
+                .map_err(|e| anyhow!("failed to async decrypt layer {}", e.to_string()))?;
+        Ok(layer_decryptor)
     }
 }
 
@@ -234,7 +277,7 @@ mod tests {
                 media_type: "",
                 descriptor: OciDescriptor::default(),
                 encrypted_layer: Vec::<u8>::new(),
-                decrypt_config: "foo",
+                decrypt_config: "provider:grpc",
                 result: Err(anyhow!(ERR_OCICRYPT_RS_DECRYPT_FAIL)),
             },
             TestData {
@@ -242,7 +285,7 @@ mod tests {
                 media_type: MEDIA_TYPE_LAYER_ENC,
                 descriptor: OciDescriptor::default(),
                 encrypted_layer: Vec::<u8>::new(),
-                decrypt_config: "foo",
+                decrypt_config: "provider:grpc",
                 result: Err(anyhow!(ERR_OCICRYPT_RS_DECRYPT_FAIL)),
             },
         ];

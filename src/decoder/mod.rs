@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
+use anyhow::{bail, Result};
 use flate2;
 use oci_distribution::manifest;
 use oci_spec::image::MediaType;
@@ -10,6 +10,7 @@ use serde::Deserialize;
 use std::convert::TryFrom;
 use std::fmt;
 use std::io;
+use tokio::io::{AsyncRead, BufReader};
 use zstd;
 
 pub const ERR_BAD_MEDIA_TYPE: &str = "unhandled media type";
@@ -58,6 +59,14 @@ impl Compression {
             )),
         }
     }
+
+    pub fn async_gzip_decompress(&self, input: (impl AsyncRead + Unpin)) -> impl AsyncRead + Unpin {
+        async_compression::tokio::bufread::GzipDecoder::new(BufReader::new(input))
+    }
+
+    pub fn async_zstd_decompress(&self, input: (impl AsyncRead + Unpin)) -> impl AsyncRead + Unpin {
+        async_compression::tokio::bufread::ZstdDecoder::new(BufReader::new(input))
+    }
 }
 
 // Decompress a gzip encoded data with flate2 crate.
@@ -105,7 +114,7 @@ impl TryFrom<&str> for Compression {
             MediaType::ImageLayerZstd | MediaType::ImageLayerNonDistributableZstd => {
                 Compression::Zstd
             }
-            _ => return Err(anyhow!("{}: {}", ERR_BAD_MEDIA_TYPE, media_type)),
+            _ => bail!("{}: {}", ERR_BAD_MEDIA_TYPE, media_type),
         };
 
         Ok(decoder)
@@ -115,6 +124,7 @@ impl TryFrom<&str> for Compression {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::anyhow;
     use flate2::write::GzEncoder;
     use std::io::Write;
 
@@ -164,6 +174,45 @@ mod tests {
         assert!(compression
             .decompress(bytes.as_slice(), &mut output)
             .is_ok());
+        assert_eq!(data, output);
+    }
+
+    #[tokio::test]
+    async fn test_async_gzip_decode() {
+        let data: Vec<u8> = b"This is some text!".to_vec();
+
+        let mut encoder = GzEncoder::new(Vec::new(), flate2::Compression::default());
+        encoder.write_all(&data).unwrap();
+        let bytes = encoder.finish().unwrap();
+
+        let mut output = Vec::new();
+
+        let compression = Compression::default();
+        let mut reader = compression.async_gzip_decompress(bytes.as_slice());
+        assert!(
+            tokio::io::AsyncReadExt::read_to_end(&mut reader, &mut output)
+                .await
+                .is_ok()
+        );
+        assert_eq!(data, output);
+    }
+
+    #[tokio::test]
+    async fn test_async_zstd_decode() {
+        let data: Vec<u8> = b"This is some text!".to_vec();
+        let level = 1;
+
+        let bytes = zstd::encode_all(&data[..], level).unwrap();
+
+        let mut output = Vec::new();
+        let compression = Compression::Zstd;
+        let mut reader = compression.async_zstd_decompress(bytes.as_slice());
+        assert!(
+            tokio::io::AsyncReadExt::read_to_end(&mut reader, &mut output)
+                .await
+                .is_ok()
+        );
+
         assert_eq!(data, output);
     }
 

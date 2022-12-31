@@ -16,4 +16,5 @@ pub mod pull;
 pub mod secure_channel;
 pub mod signature;
 pub mod snapshots;
+pub mod stream;
 pub mod unpack;

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, Result};
+use anyhow::{bail, Result};
 use oci_distribution::Reference;
 use serde::*;
 use std::convert::TryFrom;
@@ -71,17 +71,15 @@ impl PolicyReqMatchType {
         match self {
             PolicyReqMatchType::MatchExact => {
                 if origin.digest().is_some() {
-                    return Err(anyhow!(
-                        "Can not reference the image with the digest in matchExact policy.",
-                    ));
+                    bail!("Can not reference the image with the digest in matchExact policy.",);
                 }
                 if origin.whole() != *signed_image_ref {
-                    return Err(anyhow!(ErrorInfo::MatchReference.to_string()));
+                    bail!(ErrorInfo::MatchReference.to_string());
                 }
             }
             PolicyReqMatchType::MatchRepoDigestOrExact => {
                 if origin.tag().is_some() && origin.whole() != *signed_image_ref {
-                    return Err(anyhow!(ErrorInfo::MatchReference.to_string()));
+                    bail!(ErrorInfo::MatchReference.to_string());
                 }
                 if origin.digest().is_some()
                     && image::get_image_repository_full_name(origin)
@@ -89,7 +87,7 @@ impl PolicyReqMatchType {
                             signed_image_ref,
                         )?)
                 {
-                    return Err(anyhow!(ErrorInfo::MatchReference.to_string()));
+                    bail!(ErrorInfo::MatchReference.to_string());
                 }
             }
             PolicyReqMatchType::MatchRepository => {
@@ -98,19 +96,19 @@ impl PolicyReqMatchType {
                         signed_image_ref,
                     )?)
                 {
-                    return Err(anyhow!(ErrorInfo::MatchReference.to_string()));
+                    bail!(ErrorInfo::MatchReference.to_string());
                 }
             }
             PolicyReqMatchType::ExactReference { docker_reference } => {
                 if signed_image_ref != docker_reference {
-                    return Err(anyhow!(ErrorInfo::MatchReference.to_string()));
+                    bail!(ErrorInfo::MatchReference.to_string());
                 }
             }
             PolicyReqMatchType::ExactRepository { docker_repository } => {
                 if image::get_image_repository_full_name(&Reference::try_from(signed_image_ref)?)
                     != *docker_repository
                 {
-                    return Err(anyhow!(ErrorInfo::MatchReference.to_string()));
+                    bail!(ErrorInfo::MatchReference.to_string());
                 }
             }
             PolicyReqMatchType::RemapIdentity {
@@ -126,7 +124,7 @@ impl PolicyReqMatchType {
                 let new_origin_ref = Reference::try_from(origin_ref_string.as_str())?;
 
                 if new_origin_ref.tag().is_some() && new_origin_ref.whole() != *signed_image_ref {
-                    return Err(anyhow!(ErrorInfo::MatchReference.to_string()));
+                    bail!(ErrorInfo::MatchReference.to_string());
                 }
                 if new_origin_ref.digest().is_some()
                     && image::get_image_repository_full_name(&new_origin_ref)
@@ -134,7 +132,7 @@ impl PolicyReqMatchType {
                             signed_image_ref,
                         )?)
                 {
-                    return Err(anyhow!(ErrorInfo::MatchReference.to_string()));
+                    bail!(ErrorInfo::MatchReference.to_string());
                 }
             }
         }

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use openpgp::parse::Parse;
 use openpgp::PacketPile;
 use sequoia_openpgp as openpgp;
@@ -25,10 +25,10 @@ struct SigKeyIDs {
 impl SigKeyIDs {
     pub fn validate(&self) -> Result<()> {
         if self.trusted_key_id.len() != GPG_KEY_ID_BYTES_LENGTH {
-            return Err(anyhow!("Wrong GPG key ID length in pubkey ring"));
+            bail!("Wrong GPG key ID length in pubkey ring");
         }
         if self.sig_info_key_id.len() != GPG_KEY_ID_SUFFIX_BYTES_LENGTH_IN_SIG {
-            return Err(anyhow!("Wrong GPG key ID length in signature payload"));
+            bail!("Wrong GPG key ID length in signature payload");
         }
 
         if self.sig_info_key_id
@@ -110,9 +110,7 @@ pub fn verify_sig_and_extract_payload(pubkey_ring: Vec<u8>, sig: Vec<u8>) -> Res
     }
 
     if validate_key_id.trusted_key_id.is_empty() {
-        return Err(anyhow!(
-            "signature verify failed! There is no pubkey can verify the signature!"
-        ));
+        bail!("signature verify failed! There is no pubkey can verify the signature!");
     }
 
     // Dump the signature payload.

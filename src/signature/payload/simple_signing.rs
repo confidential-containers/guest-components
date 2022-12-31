@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Result};
+use anyhow::{bail, Result};
 use oci_distribution::Reference;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -36,11 +36,11 @@ impl SigPayload {
     // is consistent with that of the container image.
     pub fn validate_signed_docker_manifest_digest(&self, ref_manifest_digest: &str) -> Result<()> {
         if self.manifest_digest() != ref_manifest_digest {
-            return Err(anyhow!(
+            bail!(
                 "SigPayload's manifest digest does not match, the input is {}, but in SigPayload it is {}",
                 &ref_manifest_digest,
                 &self.manifest_digest()
-            ));
+            );
         }
         Ok(())
     }

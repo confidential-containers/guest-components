@@ -7,7 +7,7 @@
 
 use std::{collections::HashMap, path::Path};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use oci_distribution::secrets::RegistryAuth;
 use serde::{Deserialize, Serialize};
@@ -133,10 +133,10 @@ impl CosignParameters {
     ) -> Result<Vec<SigPayload>> {
         // Get the pubkey
         let key = match (&self.key_data, &self.key_path) {
-            (None, None) => return Err(anyhow!("Neither keyPath nor keyData is specified.")),
+            (None, None) => bail!("Neither keyPath nor keyData is specified."),
             (None, Some(key_path)) => read_key_from(key_path).await?,
             (Some(key_data), None) => key_data.as_bytes().to_vec(),
-            (Some(_), Some(_)) => return Err(anyhow!("Both keyPath and keyData are specified.")),
+            (Some(_), Some(_)) => bail!("Both keyPath and keyData are specified."),
         };
 
         let mut client = sigstore_rs::cosign::ClientBuilder::default().build()?;

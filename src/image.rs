@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use log::warn;
 use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
@@ -174,7 +174,7 @@ impl ImageClient {
                 let auth = RegistryAuth::Basic(username.to_string(), password.to_string());
                 Some(auth)
             } else {
-                return Err(anyhow!("Invalid authentication info ({:?})", auth_info));
+                bail!("Invalid authentication info ({:?})", auth_info);
             }
         } else {
             None
@@ -203,7 +203,7 @@ impl ImageClient {
                         Arc::new(Mutex::new(SecureChannel::new(aa_kbc_params).await?));
                     Some(secure_channel)
                 } else {
-                    return Err(anyhow!("Secure channel creation needs aa_kbc_params."));
+                    bail!("Secure channel creation needs aa_kbc_params.");
                 }
             }
             false => None,
@@ -242,10 +242,10 @@ impl ImageClient {
         let snapshot = match self.snapshots.get_mut(&self.config.default_snapshot) {
             Some(s) => s,
             _ => {
-                return Err(anyhow!(
+                bail!(
                     "default snapshot {} not found",
                     &self.config.default_snapshot
-                ));
+                );
             }
         };
 
@@ -277,9 +277,7 @@ impl ImageClient {
 
         let diff_ids = image_data.image_config.rootfs().diff_ids();
         if diff_ids.len() != image_manifest.layers.len() {
-            return Err(anyhow!(
-                "Pulled number of layers mismatch with image config diff_ids"
-            ));
+            bail!("Pulled number of layers mismatch with image config diff_ids");
         }
 
         let mut unique_layers = Vec::new();
@@ -295,7 +293,7 @@ impl ImageClient {
 
         let unique_layers_len = unique_layers.len();
         let layer_metas = client
-            .pull_layers(
+            .async_pull_layers(
                 unique_layers,
                 diff_ids,
                 decrypt_config,
@@ -312,10 +310,10 @@ impl ImageClient {
 
         self.meta_store.lock().await.layer_db.extend(layer_db);
         if unique_layers_len != image_data.layer_metas.len() {
-            return Err(anyhow!(
+            bail!(
                 " {} layers failed to pull",
                 unique_layers_len - image_data.layer_metas.len()
-            ));
+            );
         }
 
         let image_id = create_bundle(&image_data, bundle_dir, snapshot)?;
@@ -346,7 +344,7 @@ fn create_bundle(
 
     let image_config = image_data.image_config.clone();
     if image_config.os() != &Os::Linux {
-        return Err(anyhow!("unsupport OS image {:?}", image_config.os()));
+        bail!("unsupport OS image {:?}", image_config.os());
     }
 
     create_runtime_config(&image_config, bundle_dir)?;
