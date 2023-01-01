@@ -27,8 +27,8 @@ pub struct Decryptor {
 }
 
 impl Decryptor {
-    const ERR_EMPTY_CFG: &str = "decrypt_config is empty";
-    const ERR_UNENCRYPTED_MEDIA_TYPE: &str = "unencrypted media type";
+    const ERR_EMPTY_CFG: &'static str = "decrypt_config is empty";
+    const ERR_UNENCRYPTED_MEDIA_TYPE: &'static str = "unencrypted media type";
 
     /// Construct Decryptor from media_type.
     pub fn from_media_type(media_type: &str) -> Self {
@@ -134,7 +134,7 @@ impl Decryptor {
         encrypted_layer: impl AsyncRead,
         descriptor: &OciDescriptor,
         priv_opts_data: &[u8],
-    ) -> Result<impl tokio::io::AsyncRead> {
+    ) -> Result<impl AsyncRead> {
         let (layer_decryptor, _dec_digest) =
             async_decrypt_layer(encrypted_layer, descriptor, priv_opts_data)
                 .map_err(|e| anyhow!("failed to async decrypt layer {}", e.to_string()))?;

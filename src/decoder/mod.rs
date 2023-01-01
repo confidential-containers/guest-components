@@ -2,17 +2,17 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Result};
-use flate2;
-use oci_distribution::manifest;
-use oci_spec::image::MediaType;
-use serde::Deserialize;
 use std::convert::TryFrom;
 use std::fmt;
 use std::io;
-use tokio::io::{AsyncRead, BufReader};
-use zstd;
 
+use anyhow::{bail, Result};
+use oci_distribution::manifest;
+use oci_spec::image::MediaType;
+use serde::Deserialize;
+use tokio::io::{AsyncRead, BufReader};
+
+/// Error message for unhandled media type.
 pub const ERR_BAD_MEDIA_TYPE: &str = "unhandled media type";
 
 /// Represents the layer compression algorithm type,
@@ -45,12 +45,12 @@ impl fmt::Display for Compression {
 impl Compression {
     /// Decompress input data from one `Read` and output data to one `Write`.
     /// Uncompressed data are not supported and an error will be returned.
-    pub fn decompress<R, W>(&self, input: R, output: &mut W) -> std::io::Result<()>
+    pub fn decompress<R, W>(&self, input: R, output: &mut W) -> io::Result<()>
     where
         R: io::Read,
         W: io::Write,
     {
-        match *self {
+        match self {
             Self::Gzip => gzip_decode(input, output),
             Self::Zstd => zstd_decode(input, output),
             Self::Uncompressed => Err(io::Error::new(
