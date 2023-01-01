@@ -209,7 +209,10 @@ impl<R: tokio::io::AsyncRead> tokio::io::AsyncRead for AESCTRBlockCipher<R> {
         }
 
         let start_pos = buf.filled().len();
-        futures::ready!(reader.poll_read(cx, buf))?;
+        match reader.poll_read(cx, buf) {
+            Poll::Pending => return Poll::Pending,
+            Poll::Ready(res) => res?,
+        }
         let buf_filled = &mut buf.filled_mut()[start_pos..];
         if buf_filled.is_empty() {
             *done = true;

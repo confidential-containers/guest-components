@@ -11,11 +11,9 @@ edition = "2018"
 [dependencies]
 anyhow = ">=1.0"
 aes = ">=0.8"
-aes-gcm = { version = "0.9.2", optional = true }
 base64 = "0.13"
 base64-serde = "0.6"
 ctr = ">=0.9"
-futures = { version = "0.3.21", optional = true }
 hmac = ">=0.12"
 josekit = { version = ">=0.7", optional = true }
 lazy_static = ">=1.4"
@@ -32,11 +30,15 @@ attestation_agent = { git = "https://github.com/confidential-containers/attestat
 [build-dependencies]
 tonic-build = {version = "0.8.0", optional = true }
 
+[dev-dependencies]
+aes-gcm = { version = "0.9.2" }
+
 [features]
-default = ["keywrap-jwe", "keywrap-keyprovider"]
-eaa_kbc = ["keywrap-jwe", "keywrap-keyprovider", "attestation_agent/eaa_kbc"]
-async-io = ["futures", "tokio"]
+default = ["keywrap-jwe", "keywrap-keyprovider-cmd", "keywrap-keyprovider-grpc", "keywrap-keyprovider-native"]
+eaa_kbc = ["default", "attestation_agent/eaa_kbc"]
+async-io = ["tokio"]
 keywrap-jwe = ["josekit"]
-keywrap-keyprovider = ["aes-gcm", "futures", "tokio", "tonic-build", "utils-runner", "utils-keyprovider", "attestation_agent"]
-utils-runner = []
-utils-keyprovider = ["prost", "tonic"]
+keywrap-keyprovider = []
+keywrap-keyprovider-cmd = ["keywrap-keyprovider"]
+keywrap-keyprovider-grpc = ["keywrap-keyprovider", "prost", "tonic", "tonic-build", "tokio/net"]
+keywrap-keyprovider-native = ["keywrap-keyprovider", "tokio/net", "tokio/sync", "attestation_agent"]
