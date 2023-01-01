@@ -122,9 +122,7 @@ impl<'a> PullClient<'a> {
 
         if decryptor.is_encrypted() {
             if let Some(dc) = decrypt_config {
-                plaintext_layer = decryptor
-                    .get_plaintext_layer(&layer, layer_data, dc)
-                    .await?;
+                plaintext_layer = decryptor.get_plaintext_layer(&layer, layer_data, dc)?;
                 media_type_str = decryptor.media_type.as_str();
                 layer_meta.encrypted = true;
             } else {
@@ -233,7 +231,7 @@ impl<'a> PullClient<'a> {
                     ms,
                 )
                 .await
-                .map_err(|e| anyhow!("failed to async handle layer: {:?}", e))
+                .map_err(|e| anyhow!("failed to handle layer: {:?}", e))
             }
         });
 
@@ -275,7 +273,6 @@ impl<'a> PullClient<'a> {
             if let Some(dc) = decrypt_config {
                 let decrypt_key = decryptor
                     .get_decrypt_key(&layer, dc)
-                    .await
                     .map_err(|e| anyhow!("failed to get decrypt key {}", e.to_string()))?;
 
                 let plaintext_layer = decryptor
@@ -331,9 +328,7 @@ impl<'a> PullClient<'a> {
     ) -> Result<String> {
         let decoder = Compression::try_from(media_type)?;
         let async_decoder = decoder.async_decompress(input_reader);
-        stream_processing(async_decoder, diff_id, destination)
-            .await
-            .map_err(|e| anyhow!("failed to decode layer with digest {}: {:?}", diff_id, e))
+        stream_processing(async_decoder, diff_id, destination).await
     }
 }
 
@@ -676,7 +671,7 @@ mod tests {
                 decrypt_config: None,
                 layer_data: Vec::<u8>::new(),
                 result: Err(anyhow!(
-                    "layer digest : {}: {:?}",
+                    "{}: {:?}",
                     ERR_BAD_UNCOMPRESSED_DIGEST,
                     empty_diff_id
                 )),
@@ -687,7 +682,7 @@ mod tests {
                 decrypt_config: None,
                 layer_data: gzip_compressed_bytes,
                 result: Err(anyhow!(
-                    "layer digest : {}: {:?}",
+                    "{}: {:?}",
                     ERR_BAD_UNCOMPRESSED_DIGEST,
                     empty_diff_id
                 )),
