@@ -1,17 +1,15 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-use futures::executor::block_on;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use std::sync::Arc;
 use std::sync::Mutex;
 
 use anyhow::{anyhow, Result};
-use attestation_agent::AttestationAPIs;
-use attestation_agent::AttestationAgent;
+use attestation_agent::{AttestationAPIs, AttestationAgent};
 use serde::Serialize;
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder, Runtime};
 use tonic::codegen::http::Uri;
 
 use crate::config::{Command, DecryptConfig, EncryptConfig, KeyProviderAttrs};
@@ -102,17 +100,19 @@ impl KeyProviderKeyWrapProtocolOutput {
         };
         let request = tonic::Request::new(msg);
         let grpc_output = match operation {
-            OpKey::Wrap => client.wrap_key(request).await.map_err(|_| {
+            OpKey::Wrap => client.wrap_key(request).await.map_err(|e| {
                 anyhow!(
-                    "keyprovider: error from grpc server for {:?} operation",
-                    OpKey::Wrap.to_string()
+                    "keyprovider: error from grpc server for {} operation, {}",
+                    OpKey::Wrap,
+                    e
                 )
             })?,
 
-            OpKey::Unwrap => client.un_wrap_key(request).await.map_err(|_| {
+            OpKey::Unwrap => client.un_wrap_key(request).await.map_err(|e| {
                 anyhow!(
-                    "keyprovider: error from grpc server for {:?} operation",
-                    OpKey::Unwrap.to_string()
+                    "keyprovider: error from grpc server for {} operation, {}",
+                    OpKey::Unwrap,
+                    e
                 )
             })?,
         };
@@ -147,13 +147,6 @@ impl KeyProviderKeyWrapProtocolOutput {
     }
 
     fn from_native(annotation: &str, dc_config: &DecryptConfig) -> Result<Self> {
-        let attestation_agent_mutex_clone = Arc::clone(&ATTESTATION_AGENT);
-        let mut attestation_agent = attestation_agent_mutex_clone.lock().map_err(|e| {
-            anyhow!(
-                "keyprovider: failed to retrieve the native attestation agent: {:?}",
-                e
-            )
-        })?;
         let kbc_kbs_pair = if let Some(list) = dc_config.param.get("attestation-agent") {
             list.get(0)
                 .ok_or_else(|| anyhow!("keyprovider: empty kbc::kbs pair"))?
@@ -164,19 +157,29 @@ impl KeyProviderKeyWrapProtocolOutput {
         let (kbc, kbs) = pair_str
             .split_once("::")
             .ok_or_else(|| anyhow!("keyprovider: invalid kbc::kbs pair"))?;
+        let kbc = kbc.to_string();
+        let kbs = kbs.to_string();
+        let annotation = annotation.to_string();
 
-        let decrypted_optsdata = block_on(attestation_agent.decrypt_image_layer_annotation(
-            kbc.to_string(),
-            kbs.to_string(),
-            annotation.to_string(),
-        ))
-        .map_err(|e| anyhow!("keyprovider: retrieve opts_data failed: {:?}", e))?;
-        Ok(KeyProviderKeyWrapProtocolOutput {
-            key_unwrap_results: Some(KeyUnwrapResults {
-                opts_data: decrypted_optsdata,
+        let handler = std::thread::spawn(move || {
+            create_async_runtime()?.block_on(async {
+                ATTESTATION_AGENT
+                    .lock()
+                    .unwrap()
+                    .decrypt_image_layer_annotation(kbc, kbs, annotation)
+                    .await
+                    .map_err(|e| format!("{}", e))
+            })
+        });
+
+        match handler.join() {
+            Ok(Ok(v)) => Ok(KeyProviderKeyWrapProtocolOutput {
+                key_unwrap_results: Some(KeyUnwrapResults { opts_data: v }),
+                ..Default::default()
             }),
-            ..Default::default()
-        })
+            Ok(Err(e)) => Err(anyhow!("keyprovider: retrieve opts_data failed: {}", e)),
+            Err(e) => Err(anyhow!("keyprovider: retrieve opts_data failed: {:?}", e)),
+        }
     }
 }
 
@@ -218,7 +221,7 @@ impl KeyWrapper for KeyProviderKeyWrapper {
             return Err(anyhow!(
                 "keyprovider: unknown provider {} for operation {}",
                 &self.provider,
-                OpKey::Wrap.to_string()
+                OpKey::Wrap
             ));
         }
 
@@ -236,7 +239,7 @@ impl KeyWrapper for KeyProviderKeyWrapper {
         let serialized_input = serde_json::to_vec(&input).map_err(|_| {
             anyhow!(
                 "keyprovider: error while serializing input parameters for {} operation",
-                OpKey::Wrap.to_string()
+                OpKey::Wrap
             )
         })?;
 
@@ -246,7 +249,7 @@ impl KeyWrapper for KeyProviderKeyWrapper {
                     .map_err(|e| {
                         anyhow!(
                             "keyprovider: error from binary provider for {} operation: {:?}",
-                            OpKey::Wrap.to_string(),
+                            OpKey::Wrap,
                             e
                         )
                     })?
@@ -254,20 +257,35 @@ impl KeyWrapper for KeyProviderKeyWrapper {
                 return Err(anyhow!("keyprovider: runner for binary provider is NULL"));
             }
         } else if let Some(grpc) = self.attrs.grpc.as_ref() {
-            Runtime::new()
-                .map_err(|e| anyhow!("keyprovider: failed to create async runtime, {}", e))?
-                .block_on(KeyProviderKeyWrapProtocolOutput::from_grpc(
-                    serialized_input,
-                    grpc,
-                    OpKey::Wrap,
-                ))
-                .map_err(|e| {
-                    anyhow!(
-                        "keyprovider: grpc provider failed to execute {} operation: {:?}",
-                        OpKey::Wrap.to_string(),
-                        e
+            let grpc = grpc.to_string();
+            let handler = std::thread::spawn(move || {
+                create_async_runtime()?.block_on(async {
+                    KeyProviderKeyWrapProtocolOutput::from_grpc(
+                        serialized_input,
+                        &grpc,
+                        OpKey::Wrap,
                     )
-                })?
+                    .await
+                    .map_err(|e| format!("{}", e))
+                })
+            });
+            match handler.join() {
+                Ok(Ok(v)) => v,
+                Ok(Err(e)) => {
+                    return Err(anyhow!(
+                        "keyprovider: grpc provider failed to execute {} operation: {}",
+                        OpKey::Wrap,
+                        e
+                    ));
+                }
+                Err(e) => {
+                    return Err(anyhow!(
+                        "keyprovider: grpc provider failed to execute {} operation: {:?}",
+                        OpKey::Wrap,
+                        e
+                    ));
+                }
+            }
         } else {
             return Err(anyhow!(
                 "keyprovider: invalid configuration, both grpc and runner are NULL"
@@ -317,20 +335,29 @@ impl KeyWrapper for KeyProviderKeyWrapper {
                 return Err(anyhow!("keyprovider: runner for binary provider is NULL"));
             }
         } else if let Some(grpc) = self.attrs.grpc.as_ref() {
-            Runtime::new()
-                .map_err(|e| anyhow!("keyprovider: failed to create async runtime, {}", e))?
-                .block_on(KeyProviderKeyWrapProtocolOutput::from_grpc(
-                    serialized_input,
-                    grpc,
-                    OpKey::Unwrap,
-                ))
-                .map_err(|e| {
-                    anyhow!(
-                        "keyprovider: grpc provider failed to execute {} operation: {:?}",
-                        OpKey::Wrap.to_string(),
-                        e
+            let grpc = grpc.to_string();
+            let handler = std::thread::spawn(move || {
+                create_async_runtime()?.block_on(async {
+                    KeyProviderKeyWrapProtocolOutput::from_grpc(
+                        serialized_input,
+                        &grpc,
+                        OpKey::Unwrap,
                     )
-                })?
+                    .await
+                    .map_err(|e| {
+                        format!(
+                            "keyprovider: grpc provider failed to execute {} operation: {:?}",
+                            OpKey::Wrap,
+                            e
+                        )
+                    })
+                })
+            });
+            match handler.join() {
+                Ok(Ok(v)) => v,
+                Ok(Err(e)) => return Err(anyhow!("failed to unwrap key by gRPC, {}", e)),
+                Err(e) => return Err(anyhow!("failed to unwrap key by gRPC, {:?}", e)),
+            }
         } else if let Some(_native) = self.attrs.native.as_ref() {
             KeyProviderKeyWrapProtocolOutput::from_native(
                 &String::from_utf8(json_string.to_vec())?,
@@ -365,6 +392,16 @@ impl KeyWrapper for KeyProviderKeyWrapper {
 
     fn probe(&self, _dc_param: &HashMap<String, Vec<Vec<u8>>>) -> bool {
         true
+    }
+}
+
+fn create_async_runtime() -> std::result::Result<Runtime, String> {
+    match Builder::new_current_thread().enable_io().build() {
+        Err(e) => Err(format!(
+            "keyprovider: failed to create async runtime, {}",
+            e
+        )),
+        Ok(rt) => Ok(rt),
     }
 }
 
