@@ -6,6 +6,7 @@ use anyhow::{bail, Result};
 use oci_distribution::manifest::{self, OciDescriptor};
 use tokio::io::AsyncRead;
 
+/// Image layer encryption type information and associated methods to decrypt image layers.
 #[derive(Default, Clone, Debug)]
 pub struct Decryptor {
     /// The layer original media type before encryption.
@@ -59,9 +60,9 @@ mod encryption {
             }
         }
 
-        /// get_plaintext_layer descrypts encrypted_layer data and return the
-        /// plaintext_layer data. descriptor and decrypt_config are required for
-        /// layer data decryption process.
+        /// get_plaintext_layer decrypts encrypted_layer data and return the plaintext_layer data.
+        ///
+        /// `descriptor` and `decrypt_config` are required for layer data decryption process.
         ///
         /// * `decrypt_config` - decryption key info in following format:\
         ///           - \<filename> \
@@ -79,28 +80,28 @@ mod encryption {
             if !self.is_encrypted() {
                 bail!("{}: {}", Self::ERR_UNENCRYPTED_MEDIA_TYPE, self.media_type);
             }
-
             if decrypt_config.is_empty() {
                 bail!(Self::ERR_EMPTY_CFG);
             }
 
             let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
-            let descript = descriptor.clone();
+            let descriptor = descriptor.clone();
 
             // ocicrypt-rs keyprovider module will create a new runtime to talk with
             // attestation agent, to avoid startup a runtime within a runtime, we
             // spawn a new thread here.
             let handler = tokio::task::spawn_blocking(move || {
-                decrypt_layer_data(&encrypted_layer, &descript, &cc)
+                decrypt_layer_data(&encrypted_layer, &descriptor, &cc)
             });
 
-            if let Ok(decrypted_data) = handler.await? {
+            if let Ok((decrypted_data, _)) = handler.await? {
                 Ok(decrypted_data)
             } else {
                 Err(anyhow!("decrypt failed!"))
             }
         }
 
+        /// Get decryption key to decrypt an encrypted image layer.
         pub async fn get_decrypt_key(
             &self,
             descriptor: &OciDescriptor,
@@ -109,27 +110,26 @@ mod encryption {
             if !self.is_encrypted() {
                 bail!("unencrypted media type: {}", self.media_type);
             }
-
             if decrypt_config.is_empty() {
                 bail!("decrypt_config is empty");
             }
 
             let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
-            let descript = descriptor.clone();
+            let descriptor = descriptor.clone();
 
             // ocicrypt-rs keyprovider module will create a new runtime to talk with
             // attestation agent, to avoid startup a runtime within a runtime, we
             // spawn a new thread here.
             let handler = tokio::task::spawn_blocking(move || {
                 if let Some(decrypt_config) = cc.decrypt_config {
-                    decrypt_layer_key_opts_data(&decrypt_config, descript.annotations.as_ref())
+                    decrypt_layer_key_opts_data(&decrypt_config, descriptor.annotations.as_ref())
                 } else {
-                    Err(anyhow!("no decrypt config available"))
+                    Err(anyhow!("failed to retrive decrypt key!"))
                 }
             });
 
-            if let Ok(priv_opts_data) = handler.await? {
-                Ok(priv_opts_data)
+            if let Ok(decrypted_data) = handler.await? {
+                Ok(decrypted_data)
             } else {
                 Err(anyhow!("failed to retrieve decrypt key!"))
             }
@@ -155,9 +155,9 @@ mod encryption {
         encrypted_layer: &[u8],
         descriptor: &OciDescriptor,
         crypto_config: &CryptoConfig,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<(Vec<u8>, String)> {
         if let Some(decrypt_config) = &crypto_config.decrypt_config {
-            let (layer_decryptor, _dec_digest) = decrypt_layer(
+            let (layer_decryptor, dec_digest) = decrypt_layer(
                 decrypt_config,
                 encrypted_layer,
                 descriptor.annotations.as_ref(),
@@ -169,7 +169,7 @@ mod encryption {
 
             decryptor.read_to_end(&mut plaintext_data)?;
 
-            Ok(plaintext_data)
+            Ok((plaintext_data, dec_digest))
         } else {
             Err(anyhow!("no decrypt config available"))
         }
