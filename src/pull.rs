@@ -330,25 +330,10 @@ impl<'a> PullClient<'a> {
         destination: &Path,
     ) -> Result<String> {
         let decoder = Compression::try_from(media_type)?;
-        let uncompressed_digest = match decoder {
-            Compression::Gzip => {
-                let uncompressed_reader = decoder.async_gzip_decompress(input_reader);
-                stream_processing(uncompressed_reader, diff_id, destination)
-                    .await
-                    .map_err(|e| anyhow!("layer digest {}: {:?}", diff_id, e))?
-            }
-            Compression::Zstd => {
-                let uncompressed_reader = decoder.async_zstd_decompress(input_reader);
-                stream_processing(uncompressed_reader, diff_id, destination)
-                    .await
-                    .map_err(|e| anyhow!("layer digest {}: {:?}", diff_id, e))?
-            }
-            Compression::Uncompressed => stream_processing(input_reader, diff_id, destination)
-                .await
-                .map_err(|e| anyhow!("layer digest {}: {:?}", diff_id, e))?,
-        };
-
-        Ok(uncompressed_digest)
+        let async_decoder = decoder.async_decompress(input_reader);
+        stream_processing(async_decoder, diff_id, destination)
+            .await
+            .map_err(|e| anyhow!("failed to decode layer with digest {}: {:?}", diff_id, e))
     }
 }
 
