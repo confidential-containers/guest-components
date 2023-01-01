@@ -71,7 +71,7 @@ mod encryption {
         ///           - \<filename>:fd=\<filedescriptor> \
         ///           - \<filename>:\<password> \
         ///           - provider:<cmd/gprc>
-        pub async fn get_plaintext_layer(
+        pub fn get_plaintext_layer(
             &self,
             descriptor: &OciDescriptor,
             encrypted_layer: Vec<u8>,
@@ -85,24 +85,12 @@ mod encryption {
             }
 
             let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
-            let descriptor = descriptor.clone();
-
-            // ocicrypt-rs keyprovider module will create a new runtime to talk with
-            // attestation agent, to avoid startup a runtime within a runtime, we
-            // spawn a new thread here.
-            let handler = tokio::task::spawn_blocking(move || {
-                decrypt_layer_data(&encrypted_layer, &descriptor, &cc)
-            });
-
-            if let Ok((decrypted_data, _)) = handler.await? {
-                Ok(decrypted_data)
-            } else {
-                Err(anyhow!("decrypt failed!"))
-            }
+            decrypt_layer_data(&encrypted_layer, descriptor, &cc)
+                .map(|(decrypted_data, _)| decrypted_data)
         }
 
         /// Get decryption key to decrypt an encrypted image layer.
-        pub async fn get_decrypt_key(
+        pub fn get_decrypt_key(
             &self,
             descriptor: &OciDescriptor,
             decrypt_config: &str,
@@ -115,21 +103,8 @@ mod encryption {
             }
 
             let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
-            let descriptor = descriptor.clone();
-
-            // ocicrypt-rs keyprovider module will create a new runtime to talk with
-            // attestation agent, to avoid startup a runtime within a runtime, we
-            // spawn a new thread here.
-            let handler = tokio::task::spawn_blocking(move || {
-                if let Some(decrypt_config) = cc.decrypt_config {
-                    decrypt_layer_key_opts_data(&decrypt_config, descriptor.annotations.as_ref())
-                } else {
-                    Err(anyhow!("failed to retrive decrypt key!"))
-                }
-            });
-
-            if let Ok(decrypted_data) = handler.await? {
-                Ok(decrypted_data)
+            if let Some(decrypt_config) = cc.decrypt_config {
+                decrypt_layer_key_opts_data(&decrypt_config, descriptor.annotations.as_ref())
             } else {
                 Err(anyhow!("failed to retrieve decrypt key!"))
             }
@@ -178,8 +153,6 @@ mod encryption {
     #[cfg(test)]
     mod tests {
         use super::*;
-
-        const ERR_OCICRYPT_RS_DECRYPT_FAIL: &str = "decrypt failed!";
 
         #[tokio::test]
         async fn test_from_media_type() {
@@ -290,7 +263,7 @@ mod encryption {
                     descriptor: OciDescriptor::default(),
                     encrypted_layer: Vec::<u8>::new(),
                     decrypt_config: "provider:grpc",
-                    result: Err(anyhow!(ERR_OCICRYPT_RS_DECRYPT_FAIL)),
+                    result: Err(anyhow!("missing private key needed for decryption")),
                 },
                 TestData {
                     encrypted: true,
@@ -298,7 +271,7 @@ mod encryption {
                     descriptor: OciDescriptor::default(),
                     encrypted_layer: Vec::<u8>::new(),
                     decrypt_config: "provider:grpc",
-                    result: Err(anyhow!(ERR_OCICRYPT_RS_DECRYPT_FAIL)),
+                    result: Err(anyhow!("missing private key needed for decryption")),
                 },
             ];
 
@@ -336,13 +309,11 @@ mod encryption {
                     encrypted: d.encrypted,
                 };
 
-                let plaintext_layer = decryptor.get_plaintext_layer(
+                let result = decryptor.get_plaintext_layer(
                     &d.descriptor,
                     d.encrypted_layer.clone(),
                     d.decrypt_config,
                 );
-                let result = plaintext_layer.await;
-
                 let msg = format!("{}: result: {:?}", msg, result);
 
                 test_utils::assert_result!(d.result, result, msg);
@@ -373,7 +344,7 @@ impl Decryptor {
         }
     }
 
-    pub async fn get_plaintext_layer(
+    pub fn get_plaintext_layer(
         &self,
         _descriptor: &OciDescriptor,
         _encrypted_layer: Vec<u8>,
@@ -385,7 +356,7 @@ impl Decryptor {
         );
     }
 
-    pub async fn get_decrypt_key(
+    pub fn get_decrypt_key(
         &self,
         _descriptor: &OciDescriptor,
         _decrypt_config: &str,
