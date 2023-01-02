@@ -34,8 +34,8 @@ tonic-build = {version = "0.8.0", optional = true }
 aes-gcm = { version = "0.9.2" }
 
 [features]
-default = ["keywrap-jwe", "keywrap-keyprovider-cmd", "keywrap-keyprovider-grpc", "keywrap-keyprovider-native"]
-eaa_kbc = ["default", "attestation_agent/eaa_kbc"]
+default = ["keywrap-jwe", "keywrap-keyprovider-cmd"]
+eaa_kbc = ["keywrap-keyprovider-native", "attestation_agent/eaa_kbc"]
 async-io = ["tokio"]
 keywrap-jwe = ["josekit"]
 keywrap-keyprovider = []
