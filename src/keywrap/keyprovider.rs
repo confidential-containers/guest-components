@@ -214,6 +214,150 @@ impl KeyProviderKeyWrapper {
             runner,
         }
     }
+
+    fn wrap_key_cmd(&self, _input: Vec<u8>, _cmd: &crate::config::Command) -> Result<Vec<u8>> {
+        if let Some(_runner) = self.runner.as_ref() {
+            #[cfg(not(feature = "keywrap-keyprovider-cmd"))]
+            {
+                Err(anyhow!("keyprovider: no support of keyprovider-grpc"))
+            }
+            #[cfg(feature = "keywrap-keyprovider-cmd")]
+            {
+                let protocol_output = KeyProviderKeyWrapProtocolOutput::from_command(
+                    _input, _cmd, _runner,
+                )
+                .map_err(|e| {
+                    anyhow!(
+                        "keyprovider: error from binary provider for {} operation: {e}",
+                        OpKey::Wrap,
+                    )
+                })?;
+                if let Some(result) = protocol_output.key_wrap_results {
+                    Ok(result.annotation)
+                } else {
+                    Err(anyhow!("keyprovider: get NULL reply from provider"))
+                }
+            }
+        } else {
+            Err(anyhow!("keyprovider: runner for binary provider is NULL"))
+        }
+    }
+
+    fn wrap_key_grpc(&self, _input: Vec<u8>, grpc: &str) -> Result<Vec<u8>> {
+        #[cfg(not(feature = "keywrap-keyprovider-grpc"))]
+        {
+            Err(anyhow!(
+                "keyprovider: no support of keyprovider-grpc, {}",
+                grpc
+            ))
+        }
+        #[cfg(feature = "keywrap-keyprovider-grpc")]
+        {
+            let grpc = grpc.to_string();
+            let handler = std::thread::spawn(move || {
+                create_async_runtime()?.block_on(async {
+                    KeyProviderKeyWrapProtocolOutput::from_grpc(_input, &grpc, OpKey::Wrap)
+                        .await
+                        .map_err(|e| format!("{e}"))
+                })
+            });
+            let protocol_output = match handler.join() {
+                Ok(Ok(v)) => v,
+                Ok(Err(e)) => {
+                    return Err(anyhow!(
+                        "keyprovider: grpc provider failed to execute {} operation: {}",
+                        OpKey::Wrap,
+                        e
+                    ));
+                }
+                Err(e) => {
+                    return Err(anyhow!(
+                        "keyprovider: grpc provider failed to execute {} operation: {e:?}",
+                        OpKey::Wrap,
+                    ));
+                }
+            };
+            if let Some(result) = protocol_output.key_wrap_results {
+                Ok(result.annotation)
+            } else {
+                Err(anyhow!("keyprovider: get NULL reply from provider"))
+            }
+        }
+    }
+
+    fn unwrap_key_cmd(
+        &self,
+        _input: Vec<u8>,
+        _cmd: &crate::config::Command,
+    ) -> Result<KeyProviderKeyWrapProtocolOutput> {
+        if let Some(_runner) = self.runner.as_ref() {
+            #[cfg(not(feature = "keywrap-keyprovider-cmd"))]
+            return Err(anyhow!("keyprovider: no support of keyprovider-grpc"));
+            #[cfg(feature = "keywrap-keyprovider-cmd")]
+            {
+                KeyProviderKeyWrapProtocolOutput::from_command(_input, _cmd, _runner).map_err(|e| {
+                    anyhow!(
+                        "keyprovider: error from binary provider for {} operation: {e}",
+                        OpKey::Unwrap,
+                    )
+                })
+            }
+        } else {
+            return Err(anyhow!("keyprovider: runner for binary provider is NULL"));
+        }
+    }
+
+    fn unwrap_key_grpc(
+        &self,
+        _input: Vec<u8>,
+        grpc: &str,
+    ) -> Result<KeyProviderKeyWrapProtocolOutput> {
+        #[cfg(not(feature = "keywrap-keyprovider-grpc"))]
+        return Err(anyhow!(
+            "keyprovider: no support of keyprovider-grpc, {}",
+            grpc
+        ));
+        #[cfg(feature = "keywrap-keyprovider-grpc")]
+        {
+            let grpc = grpc.to_string();
+            let handler = std::thread::spawn(move || {
+                create_async_runtime()?.block_on(async {
+                    KeyProviderKeyWrapProtocolOutput::from_grpc(_input, &grpc, OpKey::Unwrap)
+                        .await
+                        .map_err(|e| {
+                            format!(
+                                "keyprovider: grpc provider failed to execute {} operation: {e}",
+                                OpKey::Wrap,
+                            )
+                        })
+                })
+            });
+            match handler.join() {
+                Ok(Ok(v)) => Ok(v),
+                Ok(Err(e)) => return Err(anyhow!("failed to unwrap key by gRPC, {e}")),
+                Err(e) => return Err(anyhow!("failed to unwrap key by gRPC, {e:?}")),
+            }
+        }
+    }
+
+    fn unwrap_key_native(
+        &self,
+        _dc_config: &DecryptConfig,
+        _json_string: &[u8],
+    ) -> Result<KeyProviderKeyWrapProtocolOutput> {
+        #[cfg(not(feature = "keywrap-keyprovider-native"))]
+        return Err(anyhow!("keyprovider: no support of keyprovider-native"));
+        #[cfg(feature = "keywrap-keyprovider-native")]
+        {
+            let content = String::from_utf8(_json_string.to_vec())?;
+            KeyProviderKeyWrapProtocolOutput::from_native(&content, _dc_config).map_err(|e| {
+                anyhow!(
+                    "keyprovider: error from crate provider for {} operation: {e}",
+                    OpKey::Unwrap,
+                )
+            })
+        }
+    }
 }
 
 impl KeyWrapper for KeyProviderKeyWrapper {
@@ -248,77 +392,9 @@ impl KeyWrapper for KeyProviderKeyWrapper {
         })?;
 
         if let Some(_cmd) = &self.attrs.cmd {
-            if let Some(_runner) = self.runner.as_ref() {
-                #[cfg(not(feature = "keywrap-keyprovider-cmd"))]
-                {
-                    Err(anyhow!("keyprovider: no support of keyprovider-grpc"))
-                }
-                #[cfg(feature = "keywrap-keyprovider-cmd")]
-                {
-                    let protocol_output = KeyProviderKeyWrapProtocolOutput::from_command(
-                        _serialized_input,
-                        _cmd,
-                        _runner,
-                    )
-                    .map_err(|e| {
-                        anyhow!(
-                            "keyprovider: error from binary provider for {} operation: {e}",
-                            OpKey::Wrap,
-                        )
-                    })?;
-                    if let Some(result) = protocol_output.key_wrap_results {
-                        Ok(result.annotation)
-                    } else {
-                        Err(anyhow!("keyprovider: get NULL reply from provider"))
-                    }
-                }
-            } else {
-                Err(anyhow!("keyprovider: runner for binary provider is NULL"))
-            }
+            self.wrap_key_cmd(_serialized_input, _cmd)
         } else if let Some(grpc) = self.attrs.grpc.as_ref() {
-            #[cfg(not(feature = "keywrap-keyprovider-grpc"))]
-            {
-                Err(anyhow!(
-                    "keyprovider: no support of keyprovider-grpc, {}",
-                    grpc
-                ))
-            }
-            #[cfg(feature = "keywrap-keyprovider-grpc")]
-            {
-                let grpc = grpc.to_string();
-                let handler = std::thread::spawn(move || {
-                    create_async_runtime()?.block_on(async {
-                        KeyProviderKeyWrapProtocolOutput::from_grpc(
-                            _serialized_input,
-                            &grpc,
-                            OpKey::Wrap,
-                        )
-                        .await
-                        .map_err(|e| format!("{e}"))
-                    })
-                });
-                let protocol_output = match handler.join() {
-                    Ok(Ok(v)) => v,
-                    Ok(Err(e)) => {
-                        return Err(anyhow!(
-                            "keyprovider: grpc provider failed to execute {} operation: {}",
-                            OpKey::Wrap,
-                            e
-                        ));
-                    }
-                    Err(e) => {
-                        return Err(anyhow!(
-                            "keyprovider: grpc provider failed to execute {} operation: {e:?}",
-                            OpKey::Wrap,
-                        ));
-                    }
-                };
-                if let Some(result) = protocol_output.key_wrap_results {
-                    Ok(result.annotation)
-                } else {
-                    Err(anyhow!("keyprovider: get NULL reply from provider"))
-                }
-            }
+            self.wrap_key_grpc(_serialized_input, grpc)
         } else {
             Err(anyhow!(
                 "keyprovider: invalid configuration, both grpc and runner are NULL"
@@ -344,76 +420,16 @@ impl KeyWrapper for KeyProviderKeyWrapper {
         let _serialized_input = serde_json::to_vec(&input).map_err(|_| {
             anyhow!(
                 "keyprovider: error while serializing input parameters for {} operation",
-                OpKey::Unwrap.to_string()
+                OpKey::Unwrap
             )
         })?;
 
-        let _protocol_output: KeyProviderKeyWrapProtocolOutput = if let Some(_cmd) =
-            self.attrs.cmd.as_ref()
-        {
-            if let Some(_runner) = self.runner.as_ref() {
-                #[cfg(not(feature = "keywrap-keyprovider-cmd"))]
-                return Err(anyhow!("keyprovider: no support of keyprovider-grpc"));
-                #[cfg(feature = "keywrap-keyprovider-cmd")]
-                {
-                    KeyProviderKeyWrapProtocolOutput::from_command(_serialized_input, _cmd, _runner)
-                        .map_err(|e| {
-                            anyhow!(
-                                "keyprovider: error from binary provider for {} operation: {e}",
-                                OpKey::Unwrap.to_string(),
-                            )
-                        })?
-                }
-            } else {
-                return Err(anyhow!("keyprovider: runner for binary provider is NULL"));
-            }
+        let _protocol_output = if let Some(cmd) = self.attrs.cmd.as_ref() {
+            self.unwrap_key_cmd(_serialized_input, cmd)?
         } else if let Some(grpc) = self.attrs.grpc.as_ref() {
-            #[cfg(not(feature = "keywrap-keyprovider-grpc"))]
-            return Err(anyhow!(
-                "keyprovider: no support of keyprovider-grpc, {}",
-                grpc
-            ));
-            #[cfg(feature = "keywrap-keyprovider-grpc")]
-            {
-                let grpc = grpc.to_string();
-                let handler = std::thread::spawn(move || {
-                    create_async_runtime()?.block_on(async {
-                        KeyProviderKeyWrapProtocolOutput::from_grpc(
-                            _serialized_input,
-                            &grpc,
-                            OpKey::Unwrap,
-                        )
-                        .await
-                        .map_err(|e| {
-                            format!(
-                                "keyprovider: grpc provider failed to execute {} operation: {e}",
-                                OpKey::Wrap,
-                            )
-                        })
-                    })
-                });
-                match handler.join() {
-                    Ok(Ok(v)) => v,
-                    Ok(Err(e)) => return Err(anyhow!("failed to unwrap key by gRPC, {e}")),
-                    Err(e) => return Err(anyhow!("failed to unwrap key by gRPC, {e:?}")),
-                }
-            }
+            self.unwrap_key_grpc(_serialized_input, grpc)?
         } else if let Some(_native) = self.attrs.native.as_ref() {
-            #[cfg(not(feature = "keywrap-keyprovider-native"))]
-            return Err(anyhow!("keyprovider: no support of keyprovider-native"));
-            #[cfg(feature = "keywrap-keyprovider-native")]
-            {
-                KeyProviderKeyWrapProtocolOutput::from_native(
-                    &String::from_utf8(json_string.to_vec())?,
-                    dc_config,
-                )
-                .map_err(|e| {
-                    anyhow!(
-                        "keyprovider: error from crate provider for {} operation: {e}",
-                        OpKey::Unwrap.to_string(),
-                    )
-                })?
-            }
+            self.unwrap_key_native(dc_config, json_string)?
         } else {
             return Err(anyhow!(
                 "keyprovider: invalid configuration, both grpc and runner are NULL"
