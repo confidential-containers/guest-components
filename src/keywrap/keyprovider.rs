@@ -480,7 +480,8 @@ mod tests {
         feature = "keywrap-keyprovider-grpc"
     ))]
     mod cmd_grpc {
-        use aes_gcm::aead::{Aead, NewAead};
+        use aes::{Aes256Dec, Aes256Enc};
+        use aes_gcm::aead::{Aead, KeyInit};
         use aes_gcm::{Aes256Gcm, Key, Nonce};
         use anyhow::{anyhow, Result};
 
@@ -488,7 +489,7 @@ mod tests {
         pub static mut DEC_KEY: &[u8; 32] = b"passphrasewhichneedstobe32bytes!";
 
         pub fn encrypt_key(plain_text: &[u8], encrypting_key: &[u8; 32]) -> Result<Vec<u8>> {
-            let encrypting_key = Key::from_slice(encrypting_key);
+            let encrypting_key = Key::<Aes256Enc>::from_slice(encrypting_key);
             let cipher = Aes256Gcm::new(encrypting_key);
             let nonce = Nonce::from_slice(b"unique nonce");
 
@@ -498,7 +499,7 @@ mod tests {
         }
 
         pub fn decrypt_key(cipher_text: &[u8], decrypting_key: &[u8; 32]) -> Result<Vec<u8>> {
-            let decrypting_key = Key::from_slice(decrypting_key);
+            let decrypting_key = Key::<Aes256Dec>::from_slice(decrypting_key);
             let cipher = Aes256Gcm::new(decrypting_key);
             let nonce = Nonce::from_slice(b"unique nonce");
 
