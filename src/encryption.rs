@@ -5,7 +5,6 @@ use std::collections::HashMap;
 use std::io::Read;
 
 use anyhow::{anyhow, Result};
-use oci_distribution::manifest::OciDescriptor;
 
 use crate::blockcipher::{
     EncryptionFinalizer, LayerBlockCipherHandler, LayerBlockCipherOptions,
@@ -71,7 +70,7 @@ impl EncLayerFinalizer {
     pub fn finalize_annotations(
         &mut self,
         ec: &EncryptConfig,
-        desc: &OciDescriptor,
+        annotations: &HashMap<String, String>,
         finalizer: Option<&mut impl EncryptionFinalizer>,
     ) -> Result<HashMap<String, String>> {
         let mut priv_opts = vec![];
@@ -86,10 +85,8 @@ impl EncLayerFinalizer {
         let mut keys_wrapped = false;
         for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
             let mut b64_annotations = String::new();
-            if let Some(annotations) = desc.annotations.as_ref() {
-                if let Some(key_annotations) = annotations.get(annotations_id) {
-                    b64_annotations = key_annotations.clone();
-                }
+            if let Some(key_annotations) = annotations.get(annotations_id) {
+                b64_annotations = key_annotations.clone();
             }
 
             let key_wrapper = get_key_wrapper(scheme)?;
@@ -127,14 +124,12 @@ pub fn get_key_wrapper(scheme: &str) -> Result<&Box<dyn KeyWrapper>> {
 
 /// get_wrapped_keys_map returns a option contains map of wrapped_keys
 /// as values and the encryption scheme(s) as the key(s)
-pub fn get_wrapped_keys_map(desc: OciDescriptor) -> HashMap<String, String> {
+pub fn get_wrapped_keys_map(annotations: &HashMap<String, String>) -> HashMap<String, String> {
     let mut wrapped_keys_map = HashMap::new();
 
-    if let Some(annotations) = desc.annotations.as_ref() {
-        for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
-            if let Some(value) = annotations.get(annotations_id) {
-                wrapped_keys_map.insert(scheme.clone(), value.clone());
-            }
+    for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
+        if let Some(value) = annotations.get(annotations_id) {
+            wrapped_keys_map.insert(scheme.clone(), value.clone());
         }
     }
 
@@ -197,11 +192,9 @@ fn pre_unwrap_key(
     ))
 }
 
-fn get_layer_pub_opts(desc: &OciDescriptor) -> Result<Vec<u8>> {
-    if let Some(annotations) = desc.annotations.as_ref() {
-        if let Some(pub_opts) = annotations.get("org.opencontainers.image.enc.pubopts") {
-            return Ok(base64::decode(pub_opts)?);
-        }
+fn get_layer_pub_opts(annotations: &HashMap<String, String>) -> Result<Vec<u8>> {
+    if let Some(pub_opts) = annotations.get("org.opencontainers.image.enc.pubopts") {
+        return Ok(base64::decode(pub_opts)?);
     }
 
     Ok(
@@ -238,28 +231,29 @@ fn get_layer_key_opts(
 }
 
 /// Unwrap layer decryption key from OCI descriptor annotations.
-pub fn decrypt_layer_key_opts_data(dc: &DecryptConfig, desc: &OciDescriptor) -> Result<Vec<u8>> {
+pub fn decrypt_layer_key_opts_data(
+    dc: &DecryptConfig,
+    annotations: &HashMap<String, String>,
+) -> Result<Vec<u8>> {
     let mut priv_key_given = false;
 
-    if let Some(annotations) = desc.annotations.as_ref() {
-        for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
-            if let Some(b64_annotation) = get_layer_key_opts(annotations_id, annotations) {
-                let keywrapper = get_key_wrapper(scheme)?;
-                if !keywrapper.probe(&dc.param) {
-                    continue;
-                }
-
-                if keywrapper.private_keys(&dc.param).is_some() {
-                    priv_key_given = true;
-                }
-
-                if let Ok(opts_data) = pre_unwrap_key(keywrapper, dc, &b64_annotation) {
-                    if !opts_data.is_empty() {
-                        return Ok(opts_data);
-                    }
-                }
-                // try next keywrapper
+    for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
+        if let Some(b64_annotation) = get_layer_key_opts(annotations_id, annotations) {
+            let keywrapper = get_key_wrapper(scheme)?;
+            if !keywrapper.probe(&dc.param) {
+                continue;
             }
+
+            if keywrapper.private_keys(&dc.param).is_some() {
+                priv_key_given = true;
+            }
+
+            if let Ok(opts_data) = pre_unwrap_key(keywrapper, dc, &b64_annotation) {
+                if !opts_data.is_empty() {
+                    return Ok(opts_data);
+                }
+            }
+            // try next keywrapper
         }
     }
 
@@ -276,26 +270,25 @@ pub fn decrypt_layer_key_opts_data(dc: &DecryptConfig, desc: &OciDescriptor) -> 
 pub fn encrypt_layer<'a, R: 'a + Read>(
     ec: &EncryptConfig,
     layer_reader: R,
-    desc: &OciDescriptor,
+    annotations: &HashMap<String, String>,
+    digest: &str,
 ) -> Result<(
     Option<impl Read + EncryptionFinalizer + 'a>,
     EncLayerFinalizer,
 )> {
     let mut encrypted = false;
-    if let Some(annotations) = desc.annotations.as_ref() {
-        for (annotations_id, _scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
-            if annotations.contains_key(annotations_id) {
-                if let Some(decrypt_config) = ec.decrypt_config.as_ref() {
-                    decrypt_layer_key_opts_data(decrypt_config, desc)?;
-                    get_layer_pub_opts(desc)?;
+    for (annotations_id, _scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
+        if annotations.contains_key(annotations_id) {
+            if let Some(decrypt_config) = ec.decrypt_config.as_ref() {
+                decrypt_layer_key_opts_data(decrypt_config, annotations)?;
+                get_layer_pub_opts(annotations)?;
 
-                    // already encrypted!
-                    encrypted = true;
-                } else {
-                    return Err(anyhow!(
-                        "EncryptConfig::decrypt_config must not be None for encrypted layers"
-                    ));
-                }
+                // already encrypted!
+                encrypted = true;
+            } else {
+                return Err(anyhow!(
+                    "EncryptConfig::decrypt_config must not be None for encrypted layers"
+                ));
             }
         }
     }
@@ -305,7 +298,7 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
         let mut lbco = LayerBlockCipherOptions::default();
 
         lbch.encrypt(layer_reader, AES256CTR, &mut lbco)?;
-        lbco.private.digest = desc.digest.clone();
+        lbco.private.digest = digest.to_string();
         let enc_layer_finalizer = EncLayerFinalizer { lbco };
 
         Ok((Some(lbch), enc_layer_finalizer))
@@ -320,11 +313,11 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
 pub fn decrypt_layer<R: Read>(
     dc: &DecryptConfig,
     layer_reader: R,
-    desc: &OciDescriptor,
+    annotations: &HashMap<String, String>,
     unwrap_only: bool,
 ) -> Result<(Option<impl Read>, String)> {
-    let priv_opts_data = decrypt_layer_key_opts_data(dc, desc)?;
-    let pub_opts_data = get_layer_pub_opts(desc)?;
+    let priv_opts_data = decrypt_layer_key_opts_data(dc, annotations)?;
+    let pub_opts_data = get_layer_pub_opts(annotations)?;
 
     if unwrap_only {
         return Ok((None, "".to_string()));
@@ -349,10 +342,10 @@ pub fn decrypt_layer<R: Read>(
 #[cfg(feature = "async-io")]
 pub fn async_decrypt_layer<R: tokio::io::AsyncRead>(
     layer_reader: R,
-    desc: &OciDescriptor,
+    annotations: &HashMap<String, String>,
     priv_opts_data: &[u8],
 ) -> Result<(impl tokio::io::AsyncRead, String)> {
-    let pub_opts_data = get_layer_pub_opts(desc)?;
+    let pub_opts_data = get_layer_pub_opts(annotations)?;
     let pub_opts: PublicLayerBlockCipherOptions = serde_json::from_slice(&pub_opts_data)?;
     let priv_opts: PrivateLayerBlockCipherOptions = serde_json::from_slice(priv_opts_data)?;
     let mut opts = LayerBlockCipherOptions {
@@ -396,24 +389,22 @@ mod tests {
             .is_ok());
 
         let layer_data: Vec<u8> = b"This is some text!".to_vec();
-        let mut desc = OciDescriptor::default();
+        let annotations: HashMap<String, String> = HashMap::new();
         let digest = format!("sha256:{:x}", Sha256::digest(&layer_data));
-        desc.digest = digest.clone();
 
-        let (layer_encryptor, mut elf) = encrypt_layer(&ec, layer_data.as_slice(), &desc).unwrap();
+        let (layer_encryptor, mut elf) =
+            encrypt_layer(&ec, layer_data.as_slice(), &annotations, &digest).unwrap();
 
         let mut encrypted_data: Vec<u8> = Vec::new();
         let mut encryptor = layer_encryptor.unwrap();
         assert!(encryptor.read_to_end(&mut encrypted_data).is_ok());
         assert!(encryptor.finalized_lbco(&mut elf.lbco).is_ok());
 
-        if let Ok(new_annotations) = elf.finalize_annotations(&ec, &desc, Some(&mut encryptor)) {
-            let new_desc = OciDescriptor {
-                annotations: Some(new_annotations),
-                ..Default::default()
-            };
+        if let Ok(new_annotations) =
+            elf.finalize_annotations(&ec, &annotations, Some(&mut encryptor))
+        {
             let (layer_decryptor, dec_digest) =
-                decrypt_layer(&dc, encrypted_data.as_slice(), &new_desc, false).unwrap();
+                decrypt_layer(&dc, encrypted_data.as_slice(), &new_annotations, false).unwrap();
             let mut plaintxt_data: Vec<u8> = Vec::new();
             let mut decryptor = layer_decryptor.unwrap();
 
@@ -445,26 +436,25 @@ mod tests {
             .is_ok());
 
         let layer_data: Vec<u8> = b"This is some text!".to_vec();
-        let mut desc = OciDescriptor::default();
+        let annotations: HashMap<String, String> = HashMap::new();
         let digest = format!("sha256:{:x}", Sha256::digest(&layer_data));
-        desc.digest = digest.clone();
 
-        let (layer_encryptor, mut elf) = encrypt_layer(&ec, layer_data.as_slice(), &desc).unwrap();
+        let (layer_encryptor, mut elf) =
+            encrypt_layer(&ec, layer_data.as_slice(), &annotations, &digest).unwrap();
 
         let mut encrypted_data: Vec<u8> = Vec::new();
         let mut encryptor = layer_encryptor.unwrap();
         assert!(encryptor.read_to_end(&mut encrypted_data).is_ok());
         assert!(encryptor.finalized_lbco(&mut elf.lbco).is_ok());
 
-        if let Ok(new_annotations) = elf.finalize_annotations(&ec, &desc, Some(&mut encryptor)) {
-            let new_desc = OciDescriptor {
-                annotations: Some(new_annotations),
-                ..Default::default()
-            };
-            let key_opts = decrypt_layer_key_opts_data(&dc, &new_desc).unwrap();
+        if let Ok(new_annotations) =
+            elf.finalize_annotations(&ec, &annotations, Some(&mut encryptor))
+        {
+            let key_opts = decrypt_layer_key_opts_data(&dc, &new_annotations).unwrap();
 
             let (mut async_reader, dec_digest) =
-                async_decrypt_layer(encrypted_data.as_slice(), &new_desc, &key_opts).unwrap();
+                async_decrypt_layer(encrypted_data.as_slice(), &new_annotations, &key_opts)
+                    .unwrap();
 
             let mut plaintxt_data: Vec<u8> = Vec::new();
             tokio::io::AsyncReadExt::read_to_end(&mut async_reader, &mut plaintxt_data)
