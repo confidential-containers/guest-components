@@ -37,9 +37,21 @@ jobs:
           command: build
           args: --features default
 
-      - name: Run cargo test with root privilege
+      - name: Run cargo test - default
         run: |
           sudo -E PATH=$PATH -s cargo test --all --features default
+
+      - name: Run cargo test - no-default-features
+        run: |
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features
+
+      - name: Run cargo test - kata-cc
+        run: |
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=kata-cc
+
+      - name: Run cargo test - encryption
+        run: |
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=encryption
 
       - name: Run cargo fmt check
         uses: actions-rs/cargo@v1

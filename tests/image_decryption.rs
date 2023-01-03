@@ -13,6 +13,7 @@ mod common;
 
 /// The image to be decrypted using offline-fs-kbc
 const ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS: &str = "docker.io/xynnn007/busybox:encrypted";
+const UNENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS: &str = "docker.io/arronwang/busybox_zstd";
 
 /// Ocicrypt-rs config
 const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider.conf";
@@ -42,15 +43,34 @@ async fn test_decrypt_layers() {
         .await
         .expect("Delete configs failed.");
     let mut image_client = ImageClient::default();
-    assert!(image_client
-        .pull_image(
-            ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS,
-            bundle_dir.path(),
-            &None,
-            &Some(common::AA_PARAMETER)
-        )
-        .await
-        .is_ok());
+    let image_name = if cfg!(all(feature = "encryption", feature = "keywrap-grpc")) {
+        ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS
+    } else {
+        UNENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS
+    };
+    if cfg!(feature = "snapshot-overlayfs") {
+        if let Err(e) = image_client
+            .pull_image(
+                image_name,
+                bundle_dir.path(),
+                &None,
+                &Some(common::AA_PARAMETER),
+            )
+            .await
+        {
+            panic!("test_decrypt_layers() failed to download image, {}", e);
+        }
+    } else {
+        image_client
+            .pull_image(
+                image_name,
+                bundle_dir.path(),
+                &None,
+                &Some(common::AA_PARAMETER),
+            )
+            .await
+            .unwrap_err();
+    }
 
     // kill AA when the test is finished
     aa.kill().await.expect("Failed to stop attestation agent!");

@@ -72,21 +72,21 @@ impl Client {
     /// Retrieves confidential resource
     async fn get_resource(
         &mut self,
-        kbc_name: String,
-        kbs_uri: String,
+        kbc_name: &str,
+        kbs_uri: &str,
         resource_description: String,
     ) -> Result<Vec<u8>> {
         match self {
             Self::ServiceGPRC(client) => {
                 let req = tonic::Request::new(GetResourceRequest {
-                    kbc_name,
-                    kbs_uri,
+                    kbc_name: kbc_name.to_string(),
+                    kbs_uri: kbs_uri.to_string(),
                     resource_description,
                 });
                 Ok(client.get_resource(req).await?.into_inner().resource)
             }
             Self::NativeAA(aa) => {
-                aa.download_confidential_resource(kbc_name, kbs_uri, resource_description)
+                aa.download_confidential_resource(kbc_name, kbs_uri, &resource_description)
                     .await
             }
         }
@@ -137,11 +137,7 @@ impl SecureChannel {
             serde_json::to_string(&ResourceDescription::new(resource_name, optional))?;
         let res = self
             .client
-            .get_resource(
-                self.kbc_name.clone(),
-                self.kbs_uri.clone(),
-                resource_description,
-            )
+            .get_resource(&self.kbc_name, &self.kbs_uri, resource_description)
             .await?;
         fs::write(path, res).await?;
         Ok(())

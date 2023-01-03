@@ -18,8 +18,8 @@ libc = "0.2"
 nix = "0.23.0"
 oci-distribution = "0.9.4"
 oci-spec = { git = "https://github.com/containers/oci-spec-rs" }
-ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", rev = "6c84dde", features = ["default", "async-io"], optional = true }
-attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent", rev = "cbdd744", optional = true }
+ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", rev = "52c9a3c", default-features = false, features = ["keywrap-jwe", "async-io"], optional = false }
+attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent", rev = "b45b0f8", optional = false }
 serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
 serde_yaml = "0.8"
@@ -42,6 +42,9 @@ strum_macros = "0.24"
 sigstore_rs = { git = "https://github.com/sigstore/sigstore-rs", rev = "6dd3281c25270f0d82550368abfb399ed3da7b41", package = "sigstore",  optional = true}
 url = "2.2.2"
 
+[build-dependencies]
+tonic-build = "0.8"
+
 [dev-dependencies]
 filetime = "0.2"
 tempfile = "3.2"
@@ -57,12 +60,26 @@ members = ["libs/test-utils"]
 exclude = ["scripts/attestation_agent/app"]
 
 [features]
-default = ["overlay_feature", "ocicrypt-rs", "attestation_agent/default", "ocicrypt-rs/default", "cosign"]
-default_s390x = ["overlay_feature", "ocicrypt-rs", "attestation_agent/default", "ocicrypt-rs/default"]
-cosign = ["dep:sigstore_rs"]
-overlay_feature = []
-occlum_feature = ["eaa_kbc"]
+kata-cc = ["encryption", "keywrap-grpc", "snapshot-overlayfs", "signature-cosign"]
+kata-cc-s390x = ["encryption", "keywrap-grpc", "snapshot-overlayfs"]
+enclave-cc = ["encryption", "keywrap-native", "eaa_kbc", "snapshot-unionfs"]
+
+encryption = ["ocicrypt-rs/block-cipher"]
+keywrap-cmd = ["ocicrypt-rs/keywrap-keyprovider-cmd"]
+keywrap-grpc = ["ocicrypt-rs/keywrap-keyprovider-grpc"]
+keywrap-native = ["ocicrypt-rs/keywrap-keyprovider-native"]
+
 eaa_kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]
 
-[build-dependencies]
-tonic-build = "0.5"
+signature-simple = []
+signature-cosign = ["cosign"]
+
+snapshot-overlayfs = ["overlay_feature"]
+snapshot-unionfs = ["occlum_feature"]
+
+# TODO: clean up following features
+default = ["overlay_feature", "cosign", "encryption"]
+default_s390x = ["overlay_feature", "encryption"]
+cosign = ["sigstore_rs"]
+overlay_feature = []
+occlum_feature = ["eaa_kbc"]

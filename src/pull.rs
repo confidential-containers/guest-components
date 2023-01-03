@@ -359,7 +359,6 @@ mod tests {
     use flate2::write::GzEncoder;
     use oci_distribution::manifest::IMAGE_CONFIG_MEDIA_TYPE;
     use oci_spec::image::{ImageConfiguration, MediaType};
-    use ocicrypt_rs::spec::MEDIA_TYPE_LAYER_ENC;
     use std::io::Write;
     use tempfile;
 
@@ -370,8 +369,35 @@ mod tests {
         let oci_images = vec![
             "docker.io/arronwang/busybox_gzip",
             "docker.io/arronwang/busybox_zstd",
-            "docker.io/arronwang/busybox_encrypted",
         ];
+
+        for image_url in oci_images.iter() {
+            let tempdir = tempfile::tempdir().unwrap();
+            let image = Reference::try_from(image_url.clone()).expect("create reference failed");
+            let mut client =
+                PullClient::new(image, tempdir.path(), &RegistryAuth::Anonymous).unwrap();
+            let (image_manifest, _image_digest, image_config) =
+                client.pull_manifest().await.unwrap();
+
+            let image_config = ImageConfiguration::from_reader(image_config.as_bytes()).unwrap();
+            let diff_ids = image_config.rootfs().diff_ids();
+
+            client
+                .pull_layers(
+                    image_manifest.layers.clone(),
+                    diff_ids,
+                    &None,
+                    Arc::new(Mutex::new(MetaStore::default())),
+                )
+                .await
+                .unwrap();
+        }
+    }
+
+    #[cfg(all(feature = "encryption", feature = "keywrap-grpc"))]
+    #[tokio::test]
+    async fn test_pull_client_encrypted() {
+        let oci_images = vec!["docker.io/arronwang/busybox_encrypted"];
 
         for image_url in oci_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
@@ -410,8 +436,35 @@ mod tests {
         let oci_images = vec![
             "docker.io/arronwang/busybox_gzip",
             "docker.io/arronwang/busybox_zstd",
-            "docker.io/arronwang/busybox_encrypted",
         ];
+
+        for image_url in oci_images.iter() {
+            let tempdir = tempfile::tempdir().unwrap();
+            let image = Reference::try_from(image_url.clone()).expect("create reference failed");
+            let mut client =
+                PullClient::new(image, tempdir.path(), &RegistryAuth::Anonymous).unwrap();
+            let (image_manifest, _image_digest, image_config) =
+                client.pull_manifest().await.unwrap();
+
+            let image_config = ImageConfiguration::from_reader(image_config.as_bytes()).unwrap();
+            let diff_ids = image_config.rootfs().diff_ids();
+
+            assert!(client
+                .async_pull_layers(
+                    image_manifest.layers.clone(),
+                    diff_ids,
+                    &None,
+                    Arc::new(Mutex::new(MetaStore::default()))
+                )
+                .await
+                .is_ok());
+        }
+    }
+
+    #[cfg(all(feature = "encryption", feature = "keywrap-grpc"))]
+    #[tokio::test]
+    async fn test_async_pull_client_encrypted() {
+        let oci_images = vec!["docker.io/arronwang/busybox_encrypted"];
 
         for image_url in oci_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
@@ -433,15 +486,17 @@ mod tests {
 
             std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
 
-            assert!(client
+            if let Err(e) = client
                 .async_pull_layers(
                     image_manifest.layers.clone(),
                     diff_ids,
                     &Some(decrypt_config.to_str().unwrap()),
-                    Arc::new(Mutex::new(MetaStore::default()))
+                    Arc::new(Mutex::new(MetaStore::default())),
                 )
                 .await
-                .is_ok());
+            {
+                panic!("failed to download encrypted image, {}", e);
+            }
         }
     }
 
@@ -455,11 +510,6 @@ mod tests {
         let empty_diff_id = "";
 
         let default_layer = OciDescriptor::default();
-
-        let encrypted_layer = OciDescriptor {
-            media_type: MEDIA_TYPE_LAYER_ENC.to_string(),
-            ..Default::default()
-        };
 
         let uncompressed_layer = OciDescriptor {
             media_type: MediaType::ImageLayer.to_string(),
@@ -510,8 +560,12 @@ mod tests {
                 layer_data: Vec::<u8>::new(),
                 result: Err(anyhow!(bad_media_err.clone())),
             },
+            #[cfg(all(feature = "encryption", feature = "keywrap-grpc"))]
             TestData {
-                layer: encrypted_layer,
+                layer: OciDescriptor {
+                    media_type: ocicrypt_rs::spec::MEDIA_TYPE_LAYER_ENC.to_string(),
+                    ..Default::default()
+                },
                 diff_id: empty_diff_id,
                 decrypt_config: None,
                 layer_data: Vec::<u8>::new(),
@@ -571,11 +625,6 @@ mod tests {
 
         let default_layer = OciDescriptor::default();
 
-        let encrypted_layer = OciDescriptor {
-            media_type: MEDIA_TYPE_LAYER_ENC.to_string(),
-            ..Default::default()
-        };
-
         let uncompressed_layer = OciDescriptor {
             media_type: MediaType::ImageLayer.to_string(),
             ..Default::default()
@@ -625,8 +674,12 @@ mod tests {
                 layer_data: Vec::<u8>::new(),
                 result: Err(anyhow!(bad_media_err.clone())),
             },
+            #[cfg(all(feature = "encryption", feature = "keywrap-grpc"))]
             TestData {
-                layer: encrypted_layer,
+                layer: OciDescriptor {
+                    media_type: ocicrypt_rs::spec::MEDIA_TYPE_LAYER_ENC.to_string(),
+                    ..Default::default()
+                },
                 diff_id: empty_diff_id,
                 decrypt_config: None,
                 layer_data: Vec::<u8>::new(),

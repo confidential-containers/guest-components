@@ -46,7 +46,11 @@ async fn test_use_credential(#[case] image_ref: &str) {
     let res = image_client
         .pull_image(image_ref, bundle_dir.path(), &None, &Some(&aa_parameters))
         .await;
-    assert!(res.is_ok(), "{:?}", res);
+    if cfg!(feature = "snapshot-overlayfs") {
+        assert!(res.is_ok(), "{:?}", res);
+    } else {
+        assert!(res.is_err());
+    }
 
     // kill AA when the test is finished
     aa.kill().await.expect("Failed to stop attestation agent!");
