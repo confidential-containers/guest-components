@@ -15,7 +15,7 @@ pub mod tdx;
 /// - Sample: A dummy TEE that used to test/demo the KBC functionalities.
 #[derive(Debug, EnumString, Display)]
 #[strum(ascii_case_insensitive, serialize_all = "lowercase")]
-pub enum TEE {
+pub enum Tee {
     Tdx,
     Sgx,
     Sevsnp,
@@ -23,16 +23,12 @@ pub enum TEE {
     Unknown,
 }
 
-impl TEE {
+impl Tee {
     pub fn to_attester(&self) -> Result<Box<dyn Attester + Send + Sync>> {
         match self {
-            TEE::Sample => {
-                Ok(Box::new(sample::SampleAttester::default()) as Box<dyn Attester + Send + Sync>)
-            }
-            TEE::Tdx => {
-                Ok(Box::new(tdx::TdxAttester::default()) as Box<dyn Attester + Send + Sync>)
-            }
-            _ => Err(anyhow!("TEE is not supported!")),
+            Tee::Sample => Ok(Box::<sample::SampleAttester>::default()),
+            Tee::Tdx => Ok(Box::<tdx::TdxAttester>::default()),
+            _ => bail!("TEE is not supported!"),
         }
     }
 }
@@ -42,12 +38,12 @@ pub trait Attester {
 }
 
 // Detect which TEE platform the KBC running environment is.
-pub fn detect_tee_type() -> TEE {
+pub fn detect_tee_type() -> Tee {
     if sample::detect_platform() {
-        TEE::Sample
+        Tee::Sample
     } else if tdx::detect_platform() {
-        TEE::Tdx
+        Tee::Tdx
     } else {
-        TEE::Unknown
+        Tee::Unknown
     }
 }
