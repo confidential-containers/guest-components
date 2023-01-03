@@ -35,7 +35,7 @@ tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimit
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
-tonic-build = "0.8.0"
+tonic-build = { version = "0.8.0", optional = true }
 
 [features]
 default = ["sample_kbc"]
@@ -44,4 +44,4 @@ cc_kbc = ["tdx-attest-rs"]
 eaa_kbc = []
 offline_fs_kbc = ["openssl"]
 offline_sev_kbc = ["openssl"]
-online_sev_kbc = ["openssl", "tonic", "prost", "uuid", "bincode", "tokio"]
+online_sev_kbc = ["openssl", "tonic", "tonic-build", "prost", "uuid", "bincode", "tokio"]
