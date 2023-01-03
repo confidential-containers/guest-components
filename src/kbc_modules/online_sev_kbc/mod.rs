@@ -19,12 +19,11 @@ use std::str::FromStr;
 use tonic::codegen::http::Uri;
 use uuid::Uuid;
 
-use getsecret::key_broker_service_client::KeyBrokerServiceClient;
-use getsecret::{OnlineSecretRequest, RequestDetails};
+use keybroker::key_broker_service_client::KeyBrokerServiceClient;
+use keybroker::{OnlineSecretRequest, RequestDetails};
 
-mod getsecret {
-    tonic::include_proto!("keybroker");
-}
+#[rustfmt::skip]
+mod keybroker;
 
 const KEYS_PATH: &str = "/sys/kernel/security/secrets/coco/1ee27366-0c87-43a6-af48-28543eaf7cb0";
 

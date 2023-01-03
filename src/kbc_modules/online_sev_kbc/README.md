@@ -23,3 +23,10 @@ To run:
 make KBC=online_sev_kbc && make install
 attestation-agent --keyprovider_sock 127.0.0.1:47777 --getresource_sock 127.0.0.1:48888
 ```
+
+To regenerate protobuf file:
+```
+cargo build --features=online_sev_kbc,gen-proto
+git add src/kbc_modules/online_sev_kbc/keybroker.rs
+git commit
+```

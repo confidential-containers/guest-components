@@ -10,9 +10,12 @@ fn main() -> std::io::Result<()> {
         println!("cargo:rustc-link-lib=dylib=rats_tls");
     }
 
-    #[cfg(feature = "online_sev_kbc")]
+    #[cfg(feature = "gen-proto")]
     {
-        tonic_build::compile_protos("src/kbc_modules/online_sev_kbc/getsecret.proto")?;
+        tonic_build::configure()
+            .build_server(true)
+            .out_dir("src/kbc_modules/online_sev_kbc/")
+            .compile(&["src/kbc_modules/online_sev_kbc/getsecret.proto"], &[""])?;
     }
 
     Ok(())
