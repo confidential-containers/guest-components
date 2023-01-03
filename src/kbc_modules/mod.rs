@@ -3,6 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::collections::HashMap;
+
+use anyhow::*;
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 // Add your specific kbc declaration here.
@@ -26,34 +30,39 @@ pub mod online_sev_kbc;
 #[cfg(feature = "sample_kbc")]
 pub mod sample_kbc;
 
-use anyhow::*;
-use async_trait::async_trait;
-use std::collections::HashMap;
-
 // KbcInterface is a standard interface that all KBC modules need to implement.
 #[async_trait]
 pub trait KbcInterface: Send {
+    /// Get information about KBC plugin.
     fn check(&self) -> Result<KbcCheckInfo>;
+
+    /// Decrypt module specific encrypted payload into plaintext in asynchronous mode.
     async fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>>;
-    async fn get_resource(&mut self, _description: String) -> Result<Vec<u8>> {
+
+    /// Get resources managed by the attestation agent in asynchronous mode.
+    async fn get_resource(&mut self, _description: &str) -> Result<Vec<u8>> {
         Err(anyhow!("Get Resource API of this KBC is unimplement!"))
     }
 }
 
+/// A container type for [KbcInterface] trait objects.
 pub type KbcInstance = Box<dyn KbcInterface + Sync + Send>;
-type KbcInstantiateFunc = Box<dyn Fn(String) -> KbcInstance + Send + Sync>;
 
-// KbcCheckInfo is used by KBC module instances to report their internal status to AA.
+/// Status information about KBC modules.
 pub struct KbcCheckInfo {
     pub kbs_info: HashMap<String, String>,
     // In the future, more KBC status fields will be expanded here.
 }
 
+type KbcInstantiateFunc = Box<dyn Fn(String) -> KbcInstance + Send + Sync>;
+
+/// A container type to host all registered KBC modules.
 pub struct KbcModuleList {
     mod_list: HashMap<String, KbcInstantiateFunc>,
 }
 
 impl KbcModuleList {
+    /// Create a new [KbcModuleList] and register all known KBC modules.
     pub fn new() -> KbcModuleList {
         let mut mod_list = HashMap::new();
 
@@ -107,6 +116,7 @@ impl KbcModuleList {
         KbcModuleList { mod_list }
     }
 
+    /// Get initialization function for a KBC module.
     pub fn get_func(&self, kbc_name: &str) -> Result<&KbcInstantiateFunc> {
         let instantiate_func: &KbcInstantiateFunc =
             self.mod_list.get(kbc_name).ok_or_else(|| {
@@ -119,7 +129,8 @@ impl KbcModuleList {
     }
 }
 
-#[derive(EnumString, Display, Debug, PartialEq)]
+/// Type of resources supported by the attestation agent.
+#[derive(EnumString, Display, Debug, PartialEq, Eq)]
 pub enum ResourceName {
     #[strum(serialize = "Policy")]
     Policy,
@@ -135,6 +146,7 @@ pub enum ResourceName {
     ClientId,
 }
 
+/// Descriptor for resources managed by attestation agent.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResourceDescription {
     name: String,

@@ -57,9 +57,8 @@ impl KbcInterface for OfflineFsKbc {
         decrypt(*cipher, key, Some(&iv), &wrapped_data).map_err(|_| anyhow!("Failed to decrypt"))
     }
 
-    async fn get_resource(&mut self, description: String) -> Result<Vec<u8>> {
-        let desc: ResourceDescription =
-            serde_json::from_str::<ResourceDescription>(description.as_str())?;
+    async fn get_resource(&mut self, description: &str) -> Result<Vec<u8>> {
+        let desc: ResourceDescription = serde_json::from_str::<ResourceDescription>(description)?;
         let resources = self.resources.as_ref().map_err(|e| anyhow!("{}", e))?;
         let resource = resources
             .get(desc.name.as_str())

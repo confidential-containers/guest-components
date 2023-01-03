@@ -7,10 +7,11 @@
 #[macro_use]
 extern crate strum;
 
-use crate::kbc_modules::{KbcCheckInfo, KbcInstance, KbcModuleList};
-use anyhow::*;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use std::collections::HashMap;
+
+use crate::kbc_modules::{KbcCheckInfo, KbcInstance, KbcModuleList};
 
 pub mod common;
 mod kbc_modules;
@@ -30,9 +31,9 @@ mod kbc_modules;
 /// let mut aa = AttestationAgent::new();
 ///
 /// let key_result = aa.decrypt_image_layer_annotation(
-///     "sample_kbc".to_string(),
-///     "https://xxxxx".to_string(),
-///     "example_annotation".to_string()
+///     "sample_kbc",
+///     "https://xxxxx",
+///     "example_annotation"
 /// );
 /// ```
 
@@ -43,29 +44,32 @@ mod kbc_modules;
 /// attestation agent which KBC module it should use and `kbs_uri` specifies the KBS address.
 #[async_trait]
 pub trait AttestationAPIs {
-    /// `decrypt_image_layer_annotation`is used to decrypt the encrypted information in `annotation`.
+    /// Decrypt the encrypted information in `annotation`.
+    ///
     /// The specific format of `annotation` is defined by different KBC and corresponding KBS.
     /// The decryption method may be to obtain the key from KBS for decryption, or
     /// directly send the `annotation` to KBS for decryption, which depends on the
     /// specific implementation of each KBC module.
     async fn decrypt_image_layer_annotation(
         &mut self,
-        kbc_name: String,
-        kbs_uri: String,
-        annotation: String,
+        kbc_name: &str,
+        kbs_uri: &str,
+        annotation: &str,
     ) -> Result<Vec<u8>>;
 
-    /// `download_confidential_resource` is used to request KBS to obtain confidential resources, including
-    /// confidential data or files. The specific format of `resource_description` is defined by
-    /// different KBC and corresponding KBS.
+    /// Request KBS to obtain confidential resources, including confidential data or files.
+    ///
+    /// The specific format of `resource_description` is defined by different KBC and corresponding
+    /// KBS.
     async fn download_confidential_resource(
         &mut self,
-        kbc_name: String,
-        kbs_uri: String,
-        resource_description: String,
+        kbc_name: &str,
+        kbs_uri: &str,
+        resource_description: &str,
     ) -> Result<Vec<u8>>;
 }
 
+/// Attestation agent to provide attestation service.
 pub struct AttestationAgent {
     kbc_module_list: KbcModuleList,
     kbc_instance_map: HashMap<String, KbcInstance>,
@@ -78,12 +82,11 @@ impl Default for AttestationAgent {
 }
 
 impl AttestationAgent {
+    /// Create a new instance of [AttestationAgent].
     pub fn new() -> Self {
-        let kbc_module_list = KbcModuleList::new();
-        let kbc_instance_map = HashMap::new();
         AttestationAgent {
-            kbc_module_list,
-            kbc_instance_map,
+            kbc_module_list: KbcModuleList::new(),
+            kbc_instance_map: HashMap::new(),
         }
     }
 
@@ -91,21 +94,19 @@ impl AttestationAgent {
         self.kbc_instance_map.insert(kbc_name, kbc_instance);
     }
 
-    fn instantiate_kbc(&mut self, kbc_name: String, kbs_uri: String) -> Result<()> {
-        let instantiate_func = self.kbc_module_list.get_func(&kbc_name)?;
-        let kbc_instance = (instantiate_func)(kbs_uri);
-        self.register_instance(kbc_name, kbc_instance);
+    fn instantiate_kbc(&mut self, kbc_name: &str, kbs_uri: &str) -> Result<()> {
+        let instantiate_func = self.kbc_module_list.get_func(kbc_name)?;
+        let kbc_instance = (instantiate_func)(kbs_uri.to_string());
+        self.register_instance(kbc_name.to_string(), kbc_instance);
         Ok(())
     }
 
     #[allow(dead_code)]
     fn check(&self, kbc_name: String) -> Result<KbcCheckInfo> {
-        let kbc_instance = self
-            .kbc_instance_map
+        self.kbc_instance_map
             .get(&kbc_name)
-            .ok_or_else(|| anyhow!("The KBC instance does not existing!"))?;
-        let check_info: KbcCheckInfo = kbc_instance.check()?;
-        Ok(check_info)
+            .ok_or_else(|| anyhow!("The KBC instance does not exist!"))?
+            .check()
     }
 }
 
@@ -113,35 +114,33 @@ impl AttestationAgent {
 impl AttestationAPIs for AttestationAgent {
     async fn decrypt_image_layer_annotation(
         &mut self,
-        kbc_name: String,
-        kbs_uri: String,
-        annotation: String,
+        kbc_name: &str,
+        kbs_uri: &str,
+        annotation: &str,
     ) -> Result<Vec<u8>> {
-        if self.kbc_instance_map.get_mut(&kbc_name).is_none() {
-            self.instantiate_kbc(kbc_name.clone(), kbs_uri)?;
+        if !self.kbc_instance_map.contains_key(kbc_name) {
+            self.instantiate_kbc(kbc_name, kbs_uri)?;
         }
-        let kbc_instance = self
-            .kbc_instance_map
-            .get_mut(&kbc_name)
-            .ok_or_else(|| anyhow!("The KBC instance does not existing!"))?;
-        let plain_payload = kbc_instance.decrypt_payload(&annotation).await?;
-        Ok(plain_payload)
+        self.kbc_instance_map
+            .get_mut(kbc_name)
+            .ok_or_else(|| anyhow!("The KBC instance does not existing!"))?
+            .decrypt_payload(annotation)
+            .await
     }
 
     async fn download_confidential_resource(
         &mut self,
-        kbc_name: String,
-        kbs_uri: String,
-        resource_description: String,
+        kbc_name: &str,
+        kbs_uri: &str,
+        resource_description: &str,
     ) -> Result<Vec<u8>> {
-        if self.kbc_instance_map.get_mut(&kbc_name).is_none() {
-            self.instantiate_kbc(kbc_name.clone(), kbs_uri)?;
+        if !self.kbc_instance_map.contains_key(kbc_name) {
+            self.instantiate_kbc(kbc_name, kbs_uri)?;
         }
-        let kbc_instance = self
-            .kbc_instance_map
-            .get_mut(&kbc_name)
-            .ok_or_else(|| anyhow!("The KBC instance does not existing!"))?;
-        let resource = kbc_instance.get_resource(resource_description).await?;
-        Ok(resource)
+        self.kbc_instance_map
+            .get_mut(kbc_name)
+            .ok_or_else(|| anyhow!("The KBC instance does not existing!"))?
+            .get_resource(resource_description)
+            .await
     }
 }

@@ -73,7 +73,7 @@ impl KbcInterface for EAAKbc {
         Ok(decrypted_payload)
     }
 
-    async fn get_resource(&mut self, description: String) -> Result<Vec<u8>> {
+    async fn get_resource(&mut self, description: &str) -> Result<Vec<u8>> {
         if self.tcp_stream.is_none() {
             debug!("First request, connecting KBS...");
             self.establish_new_kbs_connection()?;
@@ -181,9 +181,8 @@ impl EAAKbc {
         }
     }
 
-    fn kbs_get_resource(&mut self, description: String) -> Result<Vec<u8>> {
-        let desc: ResourceDescription =
-            serde_json::from_str::<ResourceDescription>(description.as_str())?;
+    fn kbs_get_resource(&mut self, description: &str) -> Result<Vec<u8>> {
+        let desc: ResourceDescription = serde_json::from_str::<ResourceDescription>(description)?;
 
         let command = format!("Get {}", desc.name.as_str());
         let request = GetResourceRequest::new(&command, desc.optional.clone());

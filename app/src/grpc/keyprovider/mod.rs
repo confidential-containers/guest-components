@@ -73,9 +73,9 @@ impl KeyProviderService for KeyProvider {
 
         let decrypted_optsdata = attestation_agent
             .decrypt_image_layer_annotation(
-                input_payload.kbc_name,
-                input_payload.kbs_uri,
-                input_payload.annotation,
+                &input_payload.kbc_name,
+                &input_payload.kbs_uri,
+                &input_payload.annotation,
             )
             .await
             .map_err(|e| {

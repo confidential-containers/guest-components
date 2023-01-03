@@ -77,8 +77,8 @@ impl KbcInterface for OnlineSevKbc {
         })
     }
 
-    async fn get_resource(&mut self, description: String) -> Result<Vec<u8>> {
-        let desc = serde_json::from_str::<ResourceDescription>(description.as_str())?;
+    async fn get_resource(&mut self, description: &str) -> Result<Vec<u8>> {
+        let desc = serde_json::from_str::<ResourceDescription>(description)?;
         match ResourceName::from_str(desc.name.as_str()) {
             Result::Ok(ResourceName::ClientId) => {
                 let connection = self

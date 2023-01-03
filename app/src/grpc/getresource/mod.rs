@@ -37,9 +37,9 @@ impl GetResourceService for GetResource {
 
         let target_resource = attestation_agent
             .download_confidential_resource(
-                request.kbc_name,
-                request.kbs_uri,
-                request.resource_description,
+                &request.kbc_name,
+                &request.kbs_uri,
+                &request.resource_description,
             )
             .await
             .map_err(|e| {
