@@ -72,6 +72,7 @@ mod tests {
         let config = ImageConfig::default();
         let work_dir = PathBuf::from(DEFAULT_WORK_DIR);
 
+        std::env::remove_var(CC_IMAGE_WORK_DIR);
         assert_eq!(config.work_dir, work_dir);
         assert_eq!(config.default_snapshot, SnapshotType::Overlay);
 

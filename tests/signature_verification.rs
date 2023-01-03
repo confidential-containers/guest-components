@@ -115,14 +115,18 @@ async fn signature_verification() {
                 &Some(common::AA_PARAMETER),
             )
             .await;
-        assert_eq!(
-            res.is_ok(),
-            test.allow,
-            "Test: {}, Signing scheme: {}, {:?}",
-            test.description,
-            test.signing_scheme.to_string(),
-            res
-        );
+        if cfg!(feature = "snapshot-overlayfs") {
+            assert_eq!(
+                res.is_ok(),
+                test.allow,
+                "Test: {}, Signing scheme: {}, {:?}",
+                test.description,
+                test.signing_scheme.to_string(),
+                res
+            );
+        } else {
+            assert!(res.is_err());
+        }
     }
 
     // kill AA when the test is finished

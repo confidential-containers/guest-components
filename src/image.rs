@@ -11,7 +11,6 @@ use serde::Deserialize;
 use std::collections::{BTreeSet, HashMap};
 use std::convert::TryFrom;
 use std::path::Path;
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::sync::Mutex;
@@ -25,7 +24,7 @@ use crate::pull::PullClient;
 
 use crate::secure_channel::SecureChannel;
 use crate::signature;
-#[cfg(feature = "overlay_feature")]
+#[cfg(feature = "snapshot-overlayfs")]
 use crate::snapshots::overlay::OverLay;
 
 #[cfg(feature = "occlum_feature")]
@@ -102,9 +101,10 @@ impl Default for ImageClient {
         let config = ImageConfig::default();
         let meta_store = MetaStore::try_from(Path::new(METAFILE)).unwrap_or_default();
 
+        #[allow(unused_mut)]
         let mut snapshots = HashMap::new();
 
-        #[cfg(feature = "overlay_feature")]
+        #[cfg(feature = "snapshot-overlayfs")]
         {
             let overlay_index = meta_store
                 .snapshot_db
@@ -112,7 +112,7 @@ impl Default for ImageClient {
                 .unwrap_or(&0);
             let overlay = OverLay {
                 data_dir: config.work_dir.join(SnapshotType::Overlay.to_string()),
-                index: AtomicUsize::new(*overlay_index),
+                index: std::sync::atomic::AtomicUsize::new(*overlay_index),
             };
             snapshots.insert(
                 SnapshotType::Overlay,
@@ -130,7 +130,7 @@ impl Default for ImageClient {
                 data_dir: config
                     .work_dir
                     .join(SnapshotType::OcclumUnionfs.to_string()),
-                index: AtomicUsize::new(*occlum_unionfs_index),
+                index: std::sync::atomic::AtomicUsize::new(*occlum_unionfs_index),
             };
             snapshots.insert(
                 SnapshotType::OcclumUnionfs,
@@ -352,6 +352,7 @@ fn create_bundle(
     Ok(image_id)
 }
 
+#[cfg(feature = "snapshot-overlayfs")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -384,10 +385,12 @@ mod tests {
         for image in oci_images.iter() {
             let bundle_dir = tempfile::tempdir().unwrap();
 
-            assert!(image_client
+            if let Err(e) = image_client
                 .pull_image(image, bundle_dir.path(), &None, &None)
                 .await
-                .is_ok());
+            {
+                panic!("failed to download image: {}", e);
+            }
         }
 
         assert_eq!(image_client.meta_store.lock().await.image_db.len(), 5);
@@ -403,17 +406,21 @@ mod tests {
         let mut image_client = ImageClient::default();
 
         let bundle1_dir = tempfile::tempdir().unwrap();
-        assert!(image_client
+        if let Err(e) = image_client
             .pull_image(image, bundle1_dir.path(), &None, &None)
             .await
-            .is_ok());
+        {
+            panic!("failed to download image: {}", e);
+        }
 
         // Pull image again.
         let bundle2_dir = tempfile::tempdir().unwrap();
-        assert!(image_client
+        if let Err(e) = image_client
             .pull_image(image, bundle2_dir.path(), &None, &None)
             .await
-            .is_ok());
+        {
+            panic!("failed to download image: {}", e);
+        }
 
         // Assert that config is written out.
         assert!(bundle1_dir.path().join("config.json").exists());
