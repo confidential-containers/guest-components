@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-fn main() -> shadow_rs::SdResult<()> {
+fn main() -> std::io::Result<()> {
     #[cfg(feature = "eaa_kbc")]
     {
         println!("cargo:rustc-link-search=native=/usr/local/lib/rats-tls");
@@ -15,5 +15,5 @@ fn main() -> shadow_rs::SdResult<()> {
         tonic_build::compile_protos("src/kbc_modules/online_sev_kbc/getsecret.proto")?;
     }
 
-    shadow_rs::new()
+    Ok(())
 }
