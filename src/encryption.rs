@@ -57,6 +57,7 @@ lazy_static! {
         }
         m
     };
+    static ref DEFAULT_ANNOTATION_MAP: HashMap<String, String> = HashMap::new();
 }
 
 // EncryptLayerFinalizer can get the annotations to set for the encrypted layer
@@ -70,7 +71,7 @@ impl EncLayerFinalizer {
     pub fn finalize_annotations(
         &mut self,
         ec: &EncryptConfig,
-        annotations: &HashMap<String, String>,
+        annotations: Option<&HashMap<String, String>>,
         finalizer: Option<&mut impl EncryptionFinalizer>,
     ) -> Result<HashMap<String, String>> {
         let mut priv_opts = vec![];
@@ -85,7 +86,8 @@ impl EncLayerFinalizer {
         let mut keys_wrapped = false;
         for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
             let mut b64_annotations = String::new();
-            if let Some(key_annotations) = annotations.get(annotations_id) {
+            let anno = annotations.unwrap_or_else(|| &DEFAULT_ANNOTATION_MAP);
+            if let Some(key_annotations) = anno.get(annotations_id) {
                 b64_annotations = key_annotations.clone();
             }
 
@@ -233,9 +235,10 @@ fn get_layer_key_opts(
 /// Unwrap layer decryption key from OCI descriptor annotations.
 pub fn decrypt_layer_key_opts_data(
     dc: &DecryptConfig,
-    annotations: &HashMap<String, String>,
+    annotations: Option<&HashMap<String, String>>,
 ) -> Result<Vec<u8>> {
     let mut priv_key_given = false;
+    let annotations = annotations.unwrap_or_else(|| &DEFAULT_ANNOTATION_MAP);
 
     for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
         if let Some(b64_annotation) = get_layer_key_opts(annotations_id, annotations) {
@@ -270,7 +273,7 @@ pub fn decrypt_layer_key_opts_data(
 pub fn encrypt_layer<'a, R: 'a + Read>(
     ec: &EncryptConfig,
     layer_reader: R,
-    annotations: &HashMap<String, String>,
+    annotations: Option<&HashMap<String, String>>,
     digest: &str,
 ) -> Result<(
     Option<impl Read + EncryptionFinalizer + 'a>,
@@ -278,10 +281,11 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
 )> {
     let mut encrypted = false;
     for (annotations_id, _scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
-        if annotations.contains_key(annotations_id) {
+        let anno = annotations.unwrap_or_else(|| &DEFAULT_ANNOTATION_MAP);
+        if anno.contains_key(annotations_id) {
             if let Some(decrypt_config) = ec.decrypt_config.as_ref() {
                 decrypt_layer_key_opts_data(decrypt_config, annotations)?;
-                get_layer_pub_opts(annotations)?;
+                get_layer_pub_opts(anno)?;
 
                 // already encrypted!
                 encrypted = true;
@@ -313,10 +317,11 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
 pub fn decrypt_layer<R: Read>(
     dc: &DecryptConfig,
     layer_reader: R,
-    annotations: &HashMap<String, String>,
+    annotations: Option<&HashMap<String, String>>,
     unwrap_only: bool,
 ) -> Result<(Option<impl Read>, String)> {
     let priv_opts_data = decrypt_layer_key_opts_data(dc, annotations)?;
+    let annotations = annotations.unwrap_or_else(|| &DEFAULT_ANNOTATION_MAP);
     let pub_opts_data = get_layer_pub_opts(annotations)?;
 
     if unwrap_only {
@@ -342,9 +347,10 @@ pub fn decrypt_layer<R: Read>(
 #[cfg(feature = "async-io")]
 pub fn async_decrypt_layer<R: tokio::io::AsyncRead>(
     layer_reader: R,
-    annotations: &HashMap<String, String>,
+    annotations: Option<&HashMap<String, String>>,
     priv_opts_data: &[u8],
 ) -> Result<(impl tokio::io::AsyncRead, String)> {
+    let annotations = annotations.unwrap_or_else(&DEFAULT_ANNOTATION_MAP);
     let pub_opts_data = get_layer_pub_opts(annotations)?;
     let pub_opts: PublicLayerBlockCipherOptions = serde_json::from_slice(&pub_opts_data)?;
     let priv_opts: PrivateLayerBlockCipherOptions = serde_json::from_slice(priv_opts_data)?;
@@ -389,22 +395,24 @@ mod tests {
             .is_ok());
 
         let layer_data: Vec<u8> = b"This is some text!".to_vec();
-        let annotations: HashMap<String, String> = HashMap::new();
         let digest = format!("sha256:{:x}", Sha256::digest(&layer_data));
 
         let (layer_encryptor, mut elf) =
-            encrypt_layer(&ec, layer_data.as_slice(), &annotations, &digest).unwrap();
+            encrypt_layer(&ec, layer_data.as_slice(), None, &digest).unwrap();
 
         let mut encrypted_data: Vec<u8> = Vec::new();
         let mut encryptor = layer_encryptor.unwrap();
         assert!(encryptor.read_to_end(&mut encrypted_data).is_ok());
         assert!(encryptor.finalized_lbco(&mut elf.lbco).is_ok());
 
-        if let Ok(new_annotations) =
-            elf.finalize_annotations(&ec, &annotations, Some(&mut encryptor))
-        {
-            let (layer_decryptor, dec_digest) =
-                decrypt_layer(&dc, encrypted_data.as_slice(), &new_annotations, false).unwrap();
+        if let Ok(new_annotations) = elf.finalize_annotations(&ec, None, Some(&mut encryptor)) {
+            let (layer_decryptor, dec_digest) = decrypt_layer(
+                &dc,
+                encrypted_data.as_slice(),
+                Some(&new_annotations),
+                false,
+            )
+            .unwrap();
             let mut plaintxt_data: Vec<u8> = Vec::new();
             let mut decryptor = layer_decryptor.unwrap();
 
@@ -436,24 +444,21 @@ mod tests {
             .is_ok());
 
         let layer_data: Vec<u8> = b"This is some text!".to_vec();
-        let annotations: HashMap<String, String> = HashMap::new();
         let digest = format!("sha256:{:x}", Sha256::digest(&layer_data));
 
         let (layer_encryptor, mut elf) =
-            encrypt_layer(&ec, layer_data.as_slice(), &annotations, &digest).unwrap();
+            encrypt_layer(&ec, layer_data.as_slice(), None, &digest).unwrap();
 
         let mut encrypted_data: Vec<u8> = Vec::new();
         let mut encryptor = layer_encryptor.unwrap();
         assert!(encryptor.read_to_end(&mut encrypted_data).is_ok());
         assert!(encryptor.finalized_lbco(&mut elf.lbco).is_ok());
 
-        if let Ok(new_annotations) =
-            elf.finalize_annotations(&ec, &annotations, Some(&mut encryptor))
-        {
-            let key_opts = decrypt_layer_key_opts_data(&dc, &new_annotations).unwrap();
+        if let Ok(new_annotations) = elf.finalize_annotations(&ec, None, Some(&mut encryptor)) {
+            let key_opts = decrypt_layer_key_opts_data(&dc, Some(&new_annotations)).unwrap();
 
             let (mut async_reader, dec_digest) =
-                async_decrypt_layer(encrypted_data.as_slice(), &new_annotations, &key_opts)
+                async_decrypt_layer(encrypted_data.as_slice(), Some(&new_annotations), &key_opts)
                     .unwrap();
 
             let mut plaintxt_data: Vec<u8> = Vec::new();
