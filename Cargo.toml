@@ -66,4 +66,3 @@ eaa_kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]
 
 [build-dependencies]
 tonic-build = "0.5"
-shadow-rs = "0.17.1"
