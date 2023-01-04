@@ -86,7 +86,7 @@ impl EncLayerFinalizer {
         let mut keys_wrapped = false;
         for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
             let mut b64_annotations = String::new();
-            let anno = annotations.unwrap_or_else(|| &DEFAULT_ANNOTATION_MAP);
+            let anno = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);
             if let Some(key_annotations) = anno.get(annotations_id) {
                 b64_annotations = key_annotations.clone();
             }
@@ -238,7 +238,7 @@ pub fn decrypt_layer_key_opts_data(
     annotations: Option<&HashMap<String, String>>,
 ) -> Result<Vec<u8>> {
     let mut priv_key_given = false;
-    let annotations = annotations.unwrap_or_else(|| &DEFAULT_ANNOTATION_MAP);
+    let annotations = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);
 
     for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
         if let Some(b64_annotation) = get_layer_key_opts(annotations_id, annotations) {
@@ -281,7 +281,7 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
 )> {
     let mut encrypted = false;
     for (annotations_id, _scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
-        let anno = annotations.unwrap_or_else(|| &DEFAULT_ANNOTATION_MAP);
+        let anno = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);
         if anno.contains_key(annotations_id) {
             if let Some(decrypt_config) = ec.decrypt_config.as_ref() {
                 decrypt_layer_key_opts_data(decrypt_config, annotations)?;
@@ -321,7 +321,7 @@ pub fn decrypt_layer<R: Read>(
     unwrap_only: bool,
 ) -> Result<(Option<impl Read>, String)> {
     let priv_opts_data = decrypt_layer_key_opts_data(dc, annotations)?;
-    let annotations = annotations.unwrap_or_else(|| &DEFAULT_ANNOTATION_MAP);
+    let annotations = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);
     let pub_opts_data = get_layer_pub_opts(annotations)?;
 
     if unwrap_only {
@@ -350,7 +350,7 @@ pub fn async_decrypt_layer<R: tokio::io::AsyncRead>(
     annotations: Option<&HashMap<String, String>>,
     priv_opts_data: &[u8],
 ) -> Result<(impl tokio::io::AsyncRead, String)> {
-    let annotations = annotations.unwrap_or_else(&DEFAULT_ANNOTATION_MAP);
+    let annotations = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);
     let pub_opts_data = get_layer_pub_opts(annotations)?;
     let pub_opts: PublicLayerBlockCipherOptions = serde_json::from_slice(&pub_opts_data)?;
     let priv_opts: PrivateLayerBlockCipherOptions = serde_json::from_slice(priv_opts_data)?;

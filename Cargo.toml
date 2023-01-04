@@ -25,7 +25,7 @@ serde_json = ">=1.0"
 sha2 = ">=0.10"
 tokio = { version = "1.17.0", features = ["rt-multi-thread"], optional = true }
 tonic = { version = ">=0.8.0", optional = true }
-attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent", rev = "cbdd744", optional = true  }
+attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent", rev = "b45b0f8", optional = true  }
 
 [build-dependencies]
 tonic-build = {version = "0.8.0", optional = true }

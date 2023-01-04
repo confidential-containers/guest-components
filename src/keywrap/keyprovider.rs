@@ -170,7 +170,7 @@ impl KeyProviderKeyWrapProtocolOutput {
                 ATTESTATION_AGENT
                     .lock()
                     .await
-                    .decrypt_image_layer_annotation(kbc, kbs, annotation)
+                    .decrypt_image_layer_annotation(&kbc, &kbs, &annotation)
                     .await
                     .map_err(|e| format!("{e}"))
             })
