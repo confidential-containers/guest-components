@@ -59,6 +59,12 @@ jobs:
           command: build
           args: --no-default-features
 
+      - name: Run cargo build - block cipher
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --no-default-features --features=block-cipher
+
       - name: Run cargo build - keywrap-jwe
         uses: actions-rs/cargo@v1
         with:

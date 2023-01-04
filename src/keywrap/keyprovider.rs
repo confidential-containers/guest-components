@@ -496,8 +496,8 @@ mod tests {
         feature = "keywrap-keyprovider-grpc"
     ))]
     mod cmd_grpc {
-        use aes::{Aes256Dec, Aes256Enc};
         use aes_gcm::aead::{Aead, KeyInit};
+        use aes_gcm::aes::{Aes256Dec, Aes256Enc};
         use aes_gcm::{Aes256Gcm, Key, Nonce};
         use anyhow::{anyhow, Result};
 

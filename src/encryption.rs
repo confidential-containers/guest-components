@@ -11,52 +11,10 @@ use crate::blockcipher::{
     PrivateLayerBlockCipherOptions, PublicLayerBlockCipherOptions, AES256CTR,
 };
 use crate::config::{DecryptConfig, EncryptConfig};
-#[cfg(feature = "keywrap-jwe")]
-use crate::keywrap::jwe::JweKeyWrapper;
-#[cfg(feature = "keywrap-keyprovider")]
-use crate::keywrap::keyprovider;
 use crate::keywrap::KeyWrapper;
+use crate::{get_key_wrapper, KEY_WRAPPERS_ANNOTATIONS};
 
 lazy_static! {
-    static ref KEY_WRAPPERS: HashMap<String, Box<dyn KeyWrapper>> = {
-        #[allow(unused_mut)]
-        let mut m = HashMap::new();
-
-        #[cfg(feature = "keywrap-jwe")]
-        {
-            m.insert(
-                "jwe".to_string(),
-                Box::new(JweKeyWrapper {}) as Box<dyn KeyWrapper>,
-            );
-        }
-
-        #[cfg(feature = "keywrap-keyprovider")]
-        {
-            let ocicrypt_config =
-                crate::config::OcicryptConfig::from_env(crate::config::OCICRYPT_ENVVARNAME)
-                    .expect("Unable to read ocicrypt config file");
-            if let Some(ocicrypt_config) = ocicrypt_config {
-                let key_providers = ocicrypt_config.key_providers;
-                for (provider_name, attrs) in key_providers.iter() {
-                    let key_wrapper = Box::new(keyprovider::KeyProviderKeyWrapper::new(
-                        provider_name.to_string(),
-                        attrs.clone(),
-                        None,
-                    )) as Box<dyn KeyWrapper>;
-                    m.insert("provider.".to_owned() + provider_name, key_wrapper);
-                }
-            }
-        }
-
-        m
-    };
-    static ref KEY_WRAPPERS_ANNOTATIONS: HashMap<String, String> = {
-        let mut m = HashMap::new();
-        for (scheme, key_wrapper) in KEY_WRAPPERS.iter() {
-            m.insert(key_wrapper.annotation_id().to_string(), scheme.clone());
-        }
-        m
-    };
     static ref DEFAULT_ANNOTATION_MAP: HashMap<String, String> = HashMap::new();
 }
 
@@ -114,28 +72,6 @@ impl EncLayerFinalizer {
 
         Ok(new_annotations)
     }
-}
-
-/// get_key_wrapper looks up the encryptor interface given an encryption scheme (gpg, jwe)
-#[allow(clippy::borrowed_box)]
-pub fn get_key_wrapper(scheme: &str) -> Result<&Box<dyn KeyWrapper>> {
-    KEY_WRAPPERS
-        .get(scheme)
-        .ok_or_else(|| anyhow!("key wrapper not supported!"))
-}
-
-/// get_wrapped_keys_map returns a option contains map of wrapped_keys
-/// as values and the encryption scheme(s) as the key(s)
-pub fn get_wrapped_keys_map(annotations: &HashMap<String, String>) -> HashMap<String, String> {
-    let mut wrapped_keys_map = HashMap::new();
-
-    for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
-        if let Some(value) = annotations.get(annotations_id) {
-            wrapped_keys_map.insert(scheme.clone(), value.clone());
-        }
-    }
-
-    wrapped_keys_map
 }
 
 // pre_wrap_keys calls wrap_keys and handles the base64 encoding and
