@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tdx_attest_rs;
 
-const CCEL_PATH: &str = "/sys/firmware/acpi/tables/CCEL";
+const CCEL_PATH: &str = "/sys/firmware/acpi/tables/data/CCEL";
 
 pub fn detect_platform() -> bool {
     Path::new("/dev/tdx-attest").exists()
