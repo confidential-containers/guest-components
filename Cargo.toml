@@ -9,13 +9,14 @@ authors = ["The image-rs Authors"]
 edition = "2018"
 
 [dependencies]
-anyhow = ">=1.0"
+anyhow = "1"
 async-compression = { version = "0.3.15", features = ["futures-io", "tokio", "gzip", "zstd"] }
+
 flate2 = "1.0"
 flume = "0.10.14"
 futures-util = "0.3"
 libc = "0.2"
-nix = "0.23.0"
+nix = "0.26"
 oci-distribution = "0.9.4"
 oci-spec = { git = "https://github.com/containers/oci-spec-rs" }
 ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", rev = "52c9a3c", default-features = false, features = ["keywrap-jwe", "async-io"], optional = false }
@@ -26,18 +27,18 @@ serde_yaml = "0.8"
 sha2 = ">=0.10"
 tar = "0.4.37"
 tokio = {version = "1.0", features = ["full"]}
-zstd = "0.12.1"
+zstd = "0.11"
 fs_extra = "1.2.0"
 walkdir = "2"
 dircpy = "0.3.12"
-prost = "0.8"
+prost = "0.11"
 strum = { version = "0.24", features = ["derive"] }
 log = "0.4.14"
 hex = "0.4.3"
 base64 = "0.13.0"
 sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"] }
 async-trait = "0.1.56"
-tonic = "0.5"
+tonic = "0.8"
 strum_macros = "0.24"
 sigstore_rs = { git = "https://github.com/sigstore/sigstore-rs", rev = "6dd3281c25270f0d82550368abfb399ed3da7b41", package = "sigstore",  optional = true}
 url = "2.2.2"
