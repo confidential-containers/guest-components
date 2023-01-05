@@ -2,30 +2,28 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Context, Result};
 use futures_util::future;
 use oci_distribution::manifest::{OciDescriptor, OciImageManifest};
-use oci_distribution::{secrets::RegistryAuth, Client, Reference};
+use oci_distribution::{errors::OciDistributionError, secrets::RegistryAuth, Client, Reference};
 use sha2::Digest;
 use std::convert::TryFrom;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use thiserror::Error;
 use tokio::sync::Mutex;
 
 use crate::decoder::Compression;
+use crate::decrypt::DecryptError;
 use crate::decrypt::Decryptor;
 use crate::image::LayerMeta;
 use crate::meta_store::MetaStore;
 use crate::stream::stream_processing;
-use crate::unpack::unpack;
+use crate::stream::StreamError;
+use crate::unpack::{unpack, UnpackError};
 
 const DIGEST_SHA256: &str = "sha256";
 const DIGEST_SHA512: &str = "sha512";
-
-const ERR_NO_DECRYPT_CFG: &str = "decrypt_config is None";
-const ERR_BAD_UNCOMPRESSED_DIGEST: &str = "unsupported uncompressed digest format";
-const ERR_BAD_COMPRESSED_DIGEST: &str = "unsupported compressed digest format";
 
 /// The PullClient connects to remote OCI registry, pulls the container image,
 /// and save the image layers under data_dir and return the layer meta info.
@@ -42,6 +40,54 @@ pub struct PullClient<'a> {
     /// OCI image layer data store dir.
     pub data_dir: PathBuf,
 }
+
+#[derive(Error, Debug)]
+pub enum PullError {
+    #[error("decrypt config is empty")]
+    EmptyDecryptConfig,
+
+    #[error("failed to pull manifest: {0}")]
+    ManifestPullFailed(#[source] OciDistributionError),
+
+    #[error("failed to pull manifest: {0}")]
+    LayerPullFailed(#[source] OciDistributionError),
+
+    #[error("failed to pull blob asynchronously: {0}")]
+    AsyncPullFailed(#[source] OciDistributionError),
+
+    #[error("failed to get decrypt key: {0}")]
+    NoLayerDecryptKey(DecryptError),
+
+    #[error("failed to get plaintext layer: {0}")]
+    PlaintextLayerFail(DecryptError),
+
+    #[error("digest disparity: uncompressed: {0}, diff_id: {1}")]
+    UncompressedDigestDisparity(String, String),
+
+    #[error("unsupported uncompressed digest format: {0}")]
+    UnsupportedUncompressedDigest(String),
+
+    #[error("unsupported compressed digest format: {0}")]
+    UnsupportedCompressedDigest(String),
+
+    #[error("decoder error: {0}")]
+    DecoderError(#[from] std::io::Error),
+
+    // FIXME: unused
+    #[error("decompress error: {0}")]
+    DecompressError(#[from] anyhow::Error),
+
+    #[error("stream channel error: {0}")]
+    StreamError(StreamError),
+
+    #[error("unpack rollback directory removal failed: {0}")]
+    UnpackRollbackFail(std::io::Error),
+
+    #[error("unpack rollback failed: {0}")]
+    UnpackFail(UnpackError),
+}
+
+pub type Result<T> = std::result::Result<T, PullError>;
 
 impl<'a> PullClient<'a> {
     /// Constructs a new PullClient struct with provided image info,
@@ -66,7 +112,7 @@ impl<'a> PullClient<'a> {
         self.client
             .pull_manifest_and_config(&self.reference, self.auth)
             .await
-            .map_err(|e| anyhow!("failed to pull manifest {}", e.to_string()))
+            .map_err(|e| PullError::ManifestPullFailed(e))
     }
 
     /// pull_layers pulls an image layers and do ondemand decrypt/decompress.
@@ -88,7 +134,8 @@ impl<'a> PullClient<'a> {
 
                 client
                     .pull_blob(reference, &layer.digest, &mut layer_data)
-                    .await?;
+                    .await
+                    .map_err(|e| PullError::LayerPullFailed(e))?;
 
                 self.handle_layer(layer, diff_ids[i].clone(), decrypt_config, layer_data, ms)
                     .await
@@ -122,11 +169,13 @@ impl<'a> PullClient<'a> {
 
         if decryptor.is_encrypted() {
             if let Some(dc) = decrypt_config {
-                plaintext_layer = decryptor.get_plaintext_layer(&layer, layer_data, dc)?;
+                plaintext_layer = decryptor
+                    .get_plaintext_layer(&layer, layer_data, dc)
+                    .map_err(|e| PullError::PlaintextLayerFail(e))?;
                 media_type_str = decryptor.media_type.as_str();
                 layer_meta.encrypted = true;
             } else {
-                bail!(ERR_NO_DECRYPT_CFG);
+                return Err(PullError::EmptyDecryptConfig);
             }
         } else {
             plaintext_layer = layer_data;
@@ -154,7 +203,7 @@ impl<'a> PullClient<'a> {
                     sha2::Sha512::digest(plaintext_layer.as_slice())
                 )
             } else {
-                bail!("{}: {:?}", ERR_BAD_UNCOMPRESSED_DIGEST, diff_id);
+                return Err(PullError::UnsupportedUncompressedDigest(diff_id));
             };
 
             layer_meta.uncompressed_digest = digest.clone();
@@ -163,7 +212,8 @@ impl<'a> PullClient<'a> {
             layer_meta.compressed_digest = layer.digest.clone();
             layer_meta
                 .decoder
-                .decompress(plaintext_layer.as_slice(), &mut out)?;
+                .decompress(plaintext_layer.as_slice(), &mut out)
+                .map_err(|e| PullError::DecoderError(e))?;
 
             if diff_id.starts_with(DIGEST_SHA256) {
                 layer_meta.uncompressed_digest =
@@ -172,17 +222,16 @@ impl<'a> PullClient<'a> {
                 layer_meta.uncompressed_digest =
                     format!("{DIGEST_SHA512}:{:x}", sha2::Sha512::digest(&out));
             } else {
-                bail!("{}: {:?}", ERR_BAD_COMPRESSED_DIGEST, diff_id);
+                return Err(PullError::UnsupportedCompressedDigest(diff_id));
             }
         }
 
         // uncompressed digest should equal to the diff_ids in image_config.
         if layer_meta.uncompressed_digest != diff_id {
-            bail!(
-                "unequal uncompressed digest {:?} config diff_id {:?}",
+            return Err(PullError::UncompressedDigestDisparity(
                 layer_meta.uncompressed_digest,
-                diff_id
-            );
+                diff_id,
+            ));
         }
 
         let store_path = format!(
@@ -194,8 +243,9 @@ impl<'a> PullClient<'a> {
         let destination = Path::new(&store_path);
 
         if let Err(e) = unpack(out.as_slice(), destination) {
-            fs::remove_dir_all(destination).context("Failed to roll back when unpacking")?;
-            return Err(e);
+            fs::remove_dir_all(destination).map_err(|e| PullError::UnpackRollbackFail(e))?;
+
+            return Err(PullError::UnpackFail(e));
         }
 
         layer_meta.store_path = destination.display().to_string();
@@ -221,7 +271,7 @@ impl<'a> PullClient<'a> {
                 let layer_reader = client
                     .async_pull_blob(reference, &layer.digest)
                     .await
-                    .map_err(|e| anyhow!("failed to async pull blob {}", e.to_string()))?;
+                    .map_err(|e| PullError::AsyncPullFailed(e))?;
 
                 self.async_handle_layer(
                     layer,
@@ -231,7 +281,6 @@ impl<'a> PullClient<'a> {
                     ms,
                 )
                 .await
-                .map_err(|e| anyhow!("failed to handle layer: {:?}", e))
             }
         });
 
@@ -273,11 +322,11 @@ impl<'a> PullClient<'a> {
             if let Some(dc) = decrypt_config {
                 let decrypt_key = decryptor
                     .get_decrypt_key(&layer, dc)
-                    .map_err(|e| anyhow!("failed to get decrypt key {}", e.to_string()))?;
+                    .map_err(|e| PullError::NoLayerDecryptKey(e))?;
 
                 let plaintext_layer = decryptor
                     .async_get_plaintext_layer(layer_reader, &layer, &decrypt_key)
-                    .map_err(|e| anyhow!("failed to async_get_plaintext_layer: {:?}", e))?;
+                    .map_err(|e| PullError::PlaintextLayerFail(e))?;
 
                 layer_meta.encrypted = true;
                 media_type_str = decryptor.media_type.as_str();
@@ -290,7 +339,7 @@ impl<'a> PullClient<'a> {
                     )
                     .await?;
             } else {
-                bail!(ERR_NO_DECRYPT_CFG);
+                return Err(PullError::EmptyDecryptConfig);
             }
         } else {
             uncompressed_digest = self
@@ -307,11 +356,11 @@ impl<'a> PullClient<'a> {
                 "unequal uncompressed digest {:?} config diff_id {:?}",
                 layer_meta.uncompressed_digest, diff_id
             );
-            bail!(
-                "unequal uncompressed digest {:?} config diff_id {:?}",
+
+            return Err(PullError::UncompressedDigestDisparity(
                 layer_meta.uncompressed_digest,
-                diff_id
-            );
+                diff_id,
+            ));
         }
 
         layer_meta.store_path = destination.display().to_string();
@@ -328,7 +377,9 @@ impl<'a> PullClient<'a> {
     ) -> Result<String> {
         let decoder = Compression::try_from(media_type)?;
         let async_decoder = decoder.async_decompress(input_reader);
-        stream_processing(async_decoder, diff_id, destination).await
+        stream_processing(async_decoder, diff_id, destination)
+            .await
+            .map_err(|e| PullError::StreamError(e))
     }
 }
 

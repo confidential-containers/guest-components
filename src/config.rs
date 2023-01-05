@@ -2,16 +2,25 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
 use serde::Deserialize;
 use std::convert::TryFrom;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use thiserror::Error;
 
 use crate::snapshots::SnapshotType;
 use crate::CC_IMAGE_WORK_DIR;
 
 const DEFAULT_WORK_DIR: &str = "/var/lib/image-rs/";
+
+#[derive(Error, Debug)]
+pub enum ConfigError {
+    #[error("failed to open config file: {0}: {1}")]
+    MissingConfigFile(PathBuf, #[source] std::io::Error),
+
+    #[error("failed to parse config file: {0}: {1}")]
+    InvalidConfigFile(PathBuf, #[source] serde_json::Error),
+}
 
 /// `image-rs` configuration information.
 #[derive(Clone, Debug, Deserialize)]
@@ -50,13 +59,14 @@ impl TryFrom<&Path> for ImageConfig {
     ///        "work_dir": "/var/lib/image-rs/",
     ///        "default_snapshot": "overlay"
     ///    }
-    type Error = anyhow::Error;
+    type Error = ConfigError;
+
     fn try_from(config_path: &Path) -> Result<Self, Self::Error> {
         let file = File::open(config_path)
-            .map_err(|e| anyhow!("failed to open config file {}", e.to_string()))?;
+            .map_err(|e| ConfigError::MissingConfigFile(config_path.to_path_buf(), e))?;
 
         serde_json::from_reader::<File, ImageConfig>(file)
-            .map_err(|e| anyhow!("failed to parse config file {}", e.to_string()))
+            .map_err(|e| ConfigError::InvalidConfigFile(config_path.to_path_buf(), e))
     }
 }
 

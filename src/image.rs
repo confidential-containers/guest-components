@@ -2,27 +2,28 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Result};
 use log::warn;
 use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
 use oci_spec::image::{ImageConfiguration, Os};
+use oci_spec::OciSpecError;
 use serde::Deserialize;
 use std::collections::{BTreeSet, HashMap};
 use std::convert::TryFrom;
 use std::path::Path;
 use std::sync::Arc;
+use thiserror::Error;
 use tokio::fs;
 use tokio::sync::Mutex;
 
 use crate::auth::credential_for_reference;
-use crate::bundle::{create_runtime_config, BUNDLE_ROOTFS};
+use crate::bundle::{create_runtime_config, BundleError, BUNDLE_ROOTFS};
 use crate::config::ImageConfig;
 use crate::decoder::Compression;
 use crate::meta_store::{MetaStore, METAFILE};
-use crate::pull::PullClient;
+use crate::pull::{PullClient, PullError};
 
-use crate::secure_channel::SecureChannel;
+use crate::secure_channel::{SecureChannel, SecureChannelError};
 use crate::signature;
 #[cfg(feature = "snapshot-overlayfs")]
 use crate::snapshots::overlay::OverLay;
@@ -95,6 +96,53 @@ pub struct ImageClient {
     pub snapshots: HashMap<SnapshotType, Box<dyn Snapshotter>>,
 }
 
+#[derive(Error, Debug)]
+pub enum ImageError {
+    #[error("invalid authentication info: {0}")]
+    InvalidAuthInfo(String),
+
+    #[error("failed to create security runtime config directory {0}: {1}")]
+    SecurityRuntimeCfgDirFail(String, std::io::Error),
+
+    #[error("secure channel creation missing AA KBC parameters")]
+    MissingAAKBCParams,
+
+    #[error("URL {0} generated invalid reference: {1}")]
+    InvalidReference(String, oci_distribution::ParseError),
+
+    #[error("security validation failed: {0}")]
+    SecurityValidationFail(anyhow::Error),
+
+    #[error("default snapshot missing: {0}")]
+    DefaultSnapshotMissing(SnapshotType),
+
+    #[error("layer count mismatch: diff_ids: {0}, image manifest: {1}")]
+    LayerCountMismatch(usize, usize),
+
+    #[error("failed to pull {0} layers")]
+    LayerPullCountWrong(usize),
+
+    #[error("unsupported OS image: {0}")]
+    UnsupportedOSImage(String),
+
+    #[error("snapshot mount failed: {0}")]
+    SnapshotMountFail(anyhow::Error),
+
+    #[error("secure channel creation failed: {0}")]
+    SecureChannelFail(SecureChannelError),
+
+    #[error("pull client failed: {0}")]
+    PullClientFail(PullError),
+
+    #[error("OCI spec error: {0}")]
+    OciSpecFail(OciSpecError),
+
+    #[error("Bundle error: {0}")]
+    BundleFail(BundleError),
+}
+
+pub type Result<T> = std::result::Result<T, ImageError>;
+
 impl Default for ImageClient {
     // construct a default instance of `ImageClient`
     fn default() -> ImageClient {
@@ -166,7 +214,8 @@ impl ImageClient {
         auth_info: &Option<&str>,
         decrypt_config: &Option<&str>,
     ) -> Result<String> {
-        let reference = Reference::try_from(image_url)?;
+        let reference = Reference::try_from(image_url)
+            .map_err(|e| ImageError::InvalidReference(image_url.into(), e))?;
 
         // Try to get auth using input param.
         let auth = if let Some(auth_info) = auth_info {
@@ -174,23 +223,23 @@ impl ImageClient {
                 let auth = RegistryAuth::Basic(username.to_string(), password.to_string());
                 Some(auth)
             } else {
-                bail!("Invalid authentication info ({:?})", auth_info);
+                return Err(ImageError::InvalidAuthInfo(auth_info.to_string()));
             }
         } else {
             None
         };
+
+        let dir = IMAGE_SECURITY_CONFIG_DIR;
 
         // If one of self.config.auth and self.config.security_validate is enabled,
         // there will establish a secure channel between image-rs and Attestation-Agent
         let secure_channel = match self.config.auth || self.config.security_validate {
             true => {
                 // Both we need a [`IMAGE_SECURITY_CONFIG_DIR`] dir
-                if !Path::new(IMAGE_SECURITY_CONFIG_DIR).exists() {
-                    fs::create_dir_all(IMAGE_SECURITY_CONFIG_DIR)
+                if !Path::new(dir).exists() {
+                    fs::create_dir_all(dir)
                         .await
-                        .map_err(|e| {
-                            anyhow!("Create image security runtime config dir failed: {:?}", e)
-                        })?;
+                        .map_err(|e| ImageError::SecurityRuntimeCfgDirFail(dir.into(), e))?;
                 }
 
                 if let Some(wrapped_aa_kbc_params) = decrypt_config {
@@ -199,11 +248,14 @@ impl ImageClient {
                         wrapped_aa_kbc_params.trim_start_matches("provider:attestation-agent:");
 
                     // The secure channel to communicate with KBS.
-                    let secure_channel =
-                        Arc::new(Mutex::new(SecureChannel::new(aa_kbc_params).await?));
+                    let secure_channel = Arc::new(Mutex::new(
+                        SecureChannel::new(aa_kbc_params)
+                            .await
+                            .map_err(|e| ImageError::SecureChannelFail(e))?,
+                    ));
                     Some(secure_channel)
                 } else {
-                    bail!("Secure channel creation needs aa_kbc_params.");
+                    return Err(ImageError::MissingAAKBCParams);
                 }
             }
             false => None,
@@ -234,18 +286,21 @@ impl ImageClient {
             _ => auth.expect("unexpected uninitialized auth"),
         };
 
-        let mut client = PullClient::new(reference, &self.config.work_dir.join("layers"), &auth)?;
-        let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
+        let mut client = PullClient::new(reference, &self.config.work_dir.join("layers"), &auth)
+            .map_err(|e| ImageError::PullClientFail(e))?;
+        let (image_manifest, image_digest, image_config) = client
+            .pull_manifest()
+            .await
+            .map_err(|e| ImageError::PullClientFail(e))?;
 
         let id = image_manifest.config.digest.clone();
 
         let snapshot = match self.snapshots.get_mut(&self.config.default_snapshot) {
             Some(s) => s,
             _ => {
-                bail!(
-                    "default snapshot {} not found",
-                    &self.config.default_snapshot
-                );
+                return Err(ImageError::DefaultSnapshotMissing(
+                    self.config.default_snapshot,
+                ));
             }
         };
 
@@ -264,20 +319,24 @@ impl ImageClient {
                 .clone();
             signature::allows_image(image_url, &image_digest, secure_channel, &auth)
                 .await
-                .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
+                .map_err(|e| ImageError::SecurityValidationFail(e))?;
         }
 
         let mut image_data = ImageMeta {
             id,
             digest: image_digest,
             reference: image_url.to_string(),
-            image_config: ImageConfiguration::from_reader(image_config.as_bytes())?,
+            image_config: ImageConfiguration::from_reader(image_config.as_bytes())
+                .map_err(|e| ImageError::OciSpecFail(e))?,
             ..Default::default()
         };
 
         let diff_ids = image_data.image_config.rootfs().diff_ids();
         if diff_ids.len() != image_manifest.layers.len() {
-            bail!("Pulled number of layers mismatch with image config diff_ids");
+            return Err(ImageError::LayerCountMismatch(
+                diff_ids.len(),
+                image_manifest.layers.len(),
+            ));
         }
 
         let mut unique_layers = Vec::new();
@@ -299,7 +358,8 @@ impl ImageClient {
                 decrypt_config,
                 self.meta_store.clone(),
             )
-            .await?;
+            .await
+            .map_err(|e| ImageError::PullClientFail(e))?;
 
         image_data.layer_metas = layer_metas;
         let layer_db: HashMap<String, LayerMeta> = image_data
@@ -310,10 +370,9 @@ impl ImageClient {
 
         self.meta_store.lock().await.layer_db.extend(layer_db);
         if unique_layers_len != image_data.layer_metas.len() {
-            bail!(
-                " {} layers failed to pull",
-                unique_layers_len - image_data.layer_metas.len()
-            );
+            let missing = unique_layers_len - image_data.layer_metas.len();
+
+            return Err(ImageError::LayerPullCountWrong(missing));
         }
 
         let image_id = create_bundle(&image_data, bundle_dir, snapshot)?;
@@ -340,14 +399,18 @@ fn create_bundle(
         .map(|l| l.store_path.as_str())
         .collect::<Vec<&str>>();
 
-    snapshot.mount(&layer_path, &bundle_dir.join(BUNDLE_ROOTFS))?;
+    snapshot
+        .mount(&layer_path, &bundle_dir.join(BUNDLE_ROOTFS))
+        .map_err(|e| ImageError::SnapshotMountFail(e))?;
 
     let image_config = image_data.image_config.clone();
     if image_config.os() != &Os::Linux {
-        bail!("unsupport OS image {:?}", image_config.os());
+        return Err(ImageError::UnsupportedOSImage(
+            image_config.os().to_string(),
+        ));
     }
 
-    create_runtime_config(&image_config, bundle_dir)?;
+    create_runtime_config(&image_config, bundle_dir).map_err(|e| ImageError::BundleFail(e))?;
     let image_id = image_data.id.clone();
     Ok(image_id)
 }

@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Result};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use thiserror::Error;
 
 use oci_spec::image::ImageConfiguration;
 use oci_spec::runtime::{Mount, Process, Spec};
@@ -22,6 +22,16 @@ const ANNOTATION_AUTHOR: &str = "org.opencontainers.image.author";
 const ANNOTATION_CREATED: &str = "org.opencontainers.image.created";
 const ANNOTATION_STOP_SIGNAL: &str = "org.opencontainers.image.stopSignal";
 const ANNOTATION_EXPOSED_PORTS: &str = "org.opencontainers.image.exposedPorts";
+
+#[derive(Error, Debug)]
+pub enum BundleError {
+    #[error("OCI config file already exists: {0}")]
+    OCIConfigAlreadyExists(PathBuf),
+    #[error(transparent)]
+    OCISpecError(#[from] oci_spec::OciSpecError),
+}
+
+type Result<T> = std::result::Result<T, BundleError>;
 
 /// Convert an `application/vnd.oci.image.config.v1+json` object into an OCI runtime configuration
 /// blob and write to `config.json`.
@@ -207,7 +217,7 @@ pub fn create_runtime_config(
     let bundle_config = bundle_path.join(BUNDLE_CONFIG);
 
     if bundle_config.exists() {
-        bail!("OCI config file already exists: {:?}", bundle_config);
+        return Err(BundleError::OCIConfigAlreadyExists(bundle_config));
     }
 
     spec.save(&bundle_config)?;

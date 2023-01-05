@@ -42,6 +42,7 @@ tonic = "0.8"
 strum_macros = "0.24"
 sigstore_rs = { git = "https://github.com/sigstore/sigstore-rs", rev = "6dd3281c25270f0d82550368abfb399ed3da7b41", package = "sigstore",  optional = true}
 url = "2.2.2"
+thiserror = "1.0.38"
 
 [build-dependencies]
 tonic-build = "0.8"
