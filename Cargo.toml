@@ -24,7 +24,7 @@ libc = "0.2"
 log = "0.4.14"
 nix = { version = "0.26", optional = true }
 oci-distribution = "0.9.4"
-oci-spec = { git = "https://github.com/containers/oci-spec-rs" }
+oci-spec = "0.5.8"
 ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", rev = "52c9a3c", default-features = false, features = ["keywrap-jwe", "async-io"], optional = true }
 prost = { version = "0.11", optional = true }
 sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"], optional = true }
@@ -32,7 +32,8 @@ serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
 serde_yaml = { version = "0.8", optional = true }
 sha2 = ">=0.10"
-sigstore_rs = { git = "https://github.com/sigstore/sigstore-rs", rev = "6dd3281c25270f0d82550368abfb399ed3da7b41", package = "sigstore",  optional = true}
+# Latest version of sigstore conflicts with sequoia-openpgp, so stick to v0.3
+sigstore = { version = "0.3.0",  optional = true}
 strum = { version = "0.24", features = ["derive"] }
 strum_macros = "0.24"
 tar = "0.4.37"
@@ -46,11 +47,13 @@ tonic-build = "0.8"
 
 [dev-dependencies]
 filetime = "0.2"
+nix = "0.26"
 tempfile = "3.2"
 openssl = "0.10.44"
 serial_test = "0.9.0"
 rstest = "0.16.0"
 test-utils = { path = "libs/test-utils" }
+tokio = { version = "1", features = ["process"] }
 
 [workspace]
 members = ["libs/test-utils"]
@@ -71,7 +74,7 @@ eaa-kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]
 
 signature = ["hex"]
 signature-simple = ["signature", "sequoia-openpgp", "serde_yaml", "url"]
-signature-cosign = ["signature", "sigstore_rs"]
+signature-cosign = ["signature", "sigstore"]
 
 snapshot-overlayfs = ["nix", "overlay_feature"]
 snapshot-unionfs = ["nix", "occlum_feature", "dircpy", "fs_extra"]

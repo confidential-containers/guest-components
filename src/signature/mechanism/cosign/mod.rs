@@ -11,21 +11,17 @@ use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use oci_distribution::secrets::RegistryAuth;
 use serde::{Deserialize, Serialize};
-use sigstore_rs::{
-    cosign::{
-        verification_constraint::{PublicKeyVerifier, VerificationConstraintVec},
-        verify_constraints, CosignCapabilities,
-    },
-    crypto::SignatureDigestAlgorithm,
-    errors::SigstoreVerifyConstraintsError,
-};
+use sigstore::cosign::verification_constraint::{PublicKeyVerifier, VerificationConstraintVec};
+use sigstore::cosign::{verify_constraints, ClientBuilder, CosignCapabilities};
+use sigstore::crypto::SignatureDigestAlgorithm;
+use sigstore::errors::SigstoreVerifyConstraintsError;
+use sigstore::registry::Auth;
 use tokio::fs;
 
+use super::SignScheme;
 use crate::signature::{
     image::Image, payload::simple_signing::SigPayload, policy::ref_match::PolicyReqMatchType,
 };
-
-use super::SignScheme;
 
 /// Dir for storage of cosign verification keys.
 pub const COSIGN_KEY_DIR: &str = "/run/image-security/cosign";
@@ -139,9 +135,9 @@ impl CosignParameters {
             (Some(_), Some(_)) => bail!("Both keyPath and keyData are specified."),
         };
 
-        let mut client = sigstore_rs::cosign::ClientBuilder::default().build()?;
+        let mut client = ClientBuilder::default().build()?;
 
-        let auth = &sigstore_rs::registry::Auth::from(auth);
+        let auth = &Auth::from(auth);
         let image_ref = image.reference.whole();
 
         // Get the cosign signature "image"'s uri and the signed image's digest
@@ -186,11 +182,10 @@ async fn read_key_from(path: &str) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use super::CosignParameters;
+    use super::*;
     use crate::signature::{
         mechanism::SignScheme,
         policy::{policy_requirement::PolicyReqType, ref_match::PolicyReqMatchType},
-        Image,
     };
 
     use std::convert::TryFrom;

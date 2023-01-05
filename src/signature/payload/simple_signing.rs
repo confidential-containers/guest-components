@@ -55,8 +55,8 @@ impl SigPayload {
 }
 
 #[cfg(feature = "signature-cosign")]
-impl From<sigstore_rs::simple_signing::SimpleSigning> for SigPayload {
-    fn from(s: sigstore_rs::simple_signing::SimpleSigning) -> Self {
+impl From<sigstore::simple_signing::SimpleSigning> for SigPayload {
+    fn from(s: sigstore::simple_signing::SimpleSigning) -> Self {
         Self {
             critical: Critical {
                 type_name: s.critical.type_name,

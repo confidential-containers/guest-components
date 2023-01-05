@@ -18,8 +18,8 @@ use tokio::fs;
 mod sigstore;
 mod verify;
 
-pub use sigstore::SigstoreConfig;
-pub use sigstore::{format_sigstore_name, get_sigs_from_specific_sigstore};
+pub use self::sigstore::SigstoreConfig;
+pub use self::sigstore::{format_sigstore_name, get_sigs_from_specific_sigstore};
 pub use verify::verify_sig_and_extract_payload;
 
 use crate::signature::image::digest::Digest;

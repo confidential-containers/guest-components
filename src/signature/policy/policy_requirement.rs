@@ -13,8 +13,6 @@ use crate::signature::mechanism::cosign::CosignParameters;
 #[cfg(feature = "signature-simple")]
 use crate::signature::mechanism::simple::SimpleParameters;
 use crate::signature::mechanism::SignScheme;
-#[cfg(all(feature = "signature-cosign", feature = "signature-simple"))]
-compile_error!("both signature-cosign and signature-simple are enabled");
 
 /// Policy Requirement Types.
 /// * `Accept`: s.t. `insecureAcceptAnything`, skip signature verification, accept the image unconditionally.
@@ -78,10 +76,7 @@ impl PolicyReqType {
 
 #[cfg(test)]
 mod tests {
-    use crate::signature::{
-        mechanism::simple::SimpleParameters,
-        policy::{policy_requirement::PolicyReqType, ref_match::PolicyReqMatchType},
-    };
+    use super::PolicyReqType;
 
     #[test]
     fn deserialize_accept_policy() {
@@ -103,8 +98,12 @@ mod tests {
         assert_eq!(policy, policy_parsed);
     }
 
+    #[cfg(feature = "signature-simple")]
     #[test]
     fn deserialize_signed_by_policy() {
+        use crate::signature::mechanism::simple::SimpleParameters;
+        use crate::signature::policy::ref_match::PolicyReqMatchType;
+
         let jsons = [
             r#"{
                 "type": "signedBy",
