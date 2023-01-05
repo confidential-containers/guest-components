@@ -3,24 +3,22 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-//! Secure-Channel is a module used to connect KBS (Relying Party)
-//! for confidential resources
+//! Fetch confidential resources from KBS (Relying Party).
 
 use std::collections::HashMap;
-use std::result::Result::Ok;
 
-use anyhow::*;
+use anyhow::{anyhow, bail, Result};
+#[cfg(feature = "keywrap-native")]
 use attestation_agent::AttestationAPIs;
-use attestation_agent::AttestationAgent;
-use ocicrypt_rs::config::{OcicryptConfig, OCICRYPT_ENVVARNAME};
 use serde::{Deserialize, Serialize};
 use tokio::fs;
-use tonic::transport::Channel;
 
+#[cfg(feature = "keywrap-grpc")]
 use self::get_resource::{
     get_resource_service_client::GetResourceServiceClient, GetResourceRequest,
 };
 
+#[cfg(feature = "keywrap-grpc")]
 mod get_resource {
     #![allow(unknown_lints)]
     #![allow(clippy::derive_partial_eq_without_eq)]
@@ -52,45 +50,81 @@ impl ResourceDescription {
     }
 }
 
-/// SecureChannel to connect with KBS
-pub struct SecureChannel {
-    /// Get Resource Service client.
-    client: Client,
-    kbc_name: String,
-    kbs_uri: String,
-}
-
 /// Types of the Client underlying a SecureChannel
+#[allow(dead_code)]
 enum Client {
+    /// Fake client which just return errors.
+    None,
+    #[cfg(feature = "keywrap-grpc")]
     /// Get Resource Service gRPC client
-    ServiceGPRC(GetResourceServiceClient<Channel>),
+    ServiceGPRC(GetResourceServiceClient<tonic::transport::Channel>),
+    #[cfg(feature = "keywrap-native")]
     /// Get Rserouce native AA client
-    NativeAA(AttestationAgent),
+    NativeAA(attestation_agent::AttestationAgent),
 }
 
 impl Client {
     /// Retrieves confidential resource
     async fn get_resource(
         &mut self,
-        kbc_name: &str,
-        kbs_uri: &str,
-        resource_description: String,
+        _kbc_name: &str,
+        _kbs_uri: &str,
+        _resource_description: String,
     ) -> Result<Vec<u8>> {
         match self {
+            Self::None => Err(anyhow!("no mechanism to fetch resources")),
+            #[cfg(feature = "keywrap-grpc")]
             Self::ServiceGPRC(client) => {
                 let req = tonic::Request::new(GetResourceRequest {
-                    kbc_name: kbc_name.to_string(),
-                    kbs_uri: kbs_uri.to_string(),
-                    resource_description,
+                    kbc_name: _kbc_name.to_string(),
+                    kbs_uri: _kbs_uri.to_string(),
+                    resource_description: _resource_description,
                 });
                 Ok(client.get_resource(req).await?.into_inner().resource)
             }
+            #[cfg(feature = "keywrap-native")]
             Self::NativeAA(aa) => {
-                aa.download_confidential_resource(kbc_name, kbs_uri, &resource_description)
+                aa.download_confidential_resource(_kbc_name, _kbs_uri, &_resource_description)
                     .await
             }
         }
     }
+
+    fn new_native_client() -> Option<Self> {
+        #[cfg(feature = "keywrap-native")]
+        {
+            let ocicrypt_config = match ocicrypt_rs::config::OcicryptConfig::from_env(
+                ocicrypt_rs::config::OCICRYPT_ENVVARNAME,
+            ) {
+                Ok(oc) => oc,
+                Err(_) => return None,
+            };
+            if let Some(ocicrypt_config) = ocicrypt_config {
+                let key_providers = ocicrypt_config.key_providers;
+                for (provider_name, attrs) in key_providers.iter() {
+                    if provider_name == NATIVE_AA_NAME && attrs.native.is_some() {
+                        return Some(Client::NativeAA(attestation_agent::AttestationAgent::new()));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    #[cfg(feature = "keywrap-grpc")]
+    async fn new_grpc_client() -> Result<Self> {
+        Ok(Client::ServiceGPRC(
+            GetResourceServiceClient::connect(AA_GETRESOURCE_ADDR).await?,
+        ))
+    }
+}
+
+/// SecureChannel to connect with KBS
+pub struct SecureChannel {
+    /// Get Resource Service client.
+    client: Client,
+    kbc_name: String,
+    kbs_uri: String,
 }
 
 impl SecureChannel {
@@ -107,14 +141,16 @@ impl SecureChannel {
                 bail!("aa_kbc_params: missing KBS URI");
             }
 
+            let client = match Client::new_native_client() {
+                Some(v) => v,
+                #[cfg(feature = "keywrap-grpc")]
+                None => Client::new_grpc_client().await?,
+                #[cfg(not(feature = "keywrap-grpc"))]
+                None => Client::None,
+            };
+
             Ok(Self {
-                client: if is_native_aa() {
-                    Client::NativeAA(AttestationAgent::new())
-                } else {
-                    Client::ServiceGPRC(
-                        GetResourceServiceClient::connect(AA_GETRESOURCE_ADDR).await?,
-                    )
-                },
+                client,
                 kbc_name: kbc_name.into(),
                 kbs_uri: kbs_uri.into(),
             })
@@ -123,10 +159,11 @@ impl SecureChannel {
         }
     }
 
-    /// Get resource from using, using `resource_name` as `name` in a ResourceDescription.
+    /// Get resource from using, using `resource_name` as `name` in a ResourceDescription,
+    /// then save the gathered data into `path`
+    ///
     /// Please refer to https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md#get-resource-service
     /// for more information.
-    /// Then save the gathered data into `path`
     pub async fn get_resource(
         &mut self,
         resource_name: &str,
@@ -142,20 +179,4 @@ impl SecureChannel {
         fs::write(path, res).await?;
         Ok(())
     }
-}
-
-fn is_native_aa() -> bool {
-    let ocicrypt_config = match OcicryptConfig::from_env(OCICRYPT_ENVVARNAME) {
-        Ok(oc) => oc,
-        Err(_) => return false,
-    };
-    if let Some(ocicrypt_config) = ocicrypt_config {
-        let key_providers = ocicrypt_config.key_providers;
-        for (provider_name, attrs) in key_providers.iter() {
-            if provider_name == NATIVE_AA_NAME && attrs.native.is_some() {
-                return true;
-            }
-        }
-    }
-    false
 }
