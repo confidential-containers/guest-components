@@ -115,7 +115,10 @@ async fn signature_verification() {
                 &Some(common::AA_PARAMETER),
             )
             .await;
-        if cfg!(feature = "snapshot-overlayfs") {
+        if cfg!(all(
+            feature = "snapshot-overlayfs",
+            feature = "keywrap-grpc"
+        )) {
             assert_eq!(
                 res.is_ok(),
                 test.allow,
