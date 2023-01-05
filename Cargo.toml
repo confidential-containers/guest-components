@@ -11,37 +11,35 @@ edition = "2018"
 [dependencies]
 anyhow = "1"
 async-compression = { version = "0.3.15", features = ["futures-io", "tokio", "gzip", "zstd"] }
-prost = { version = "0.11", optional = true }
-tonic = { version = "0.8", optional = true }
-
+async-trait = "0.1.56"
+attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent", rev = "b45b0f8", optional = true }
+base64 = "0.13.0"
+dircpy = { version = "0.3.12", optional = true }
 flate2 = "1.0"
 flume = "0.10.14"
+fs_extra = { version = "1.2.0", optional = true }
 futures-util = "0.3"
+hex = { version = "0.4.3", optional = true }
 libc = "0.2"
-nix = "0.26"
+log = "0.4.14"
+nix = { version = "0.26", optional = true }
 oci-distribution = "0.9.4"
 oci-spec = { git = "https://github.com/containers/oci-spec-rs" }
-ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", rev = "52c9a3c", default-features = false, features = ["keywrap-jwe", "async-io"], optional = false }
-attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent", rev = "b45b0f8", optional = true }
+ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", rev = "52c9a3c", default-features = false, features = ["keywrap-jwe", "async-io"], optional = true }
+prost = { version = "0.11", optional = true }
+sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"], optional = true }
 serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
-serde_yaml = "0.8"
+serde_yaml = { version = "0.8", optional = true }
 sha2 = ">=0.10"
-tar = "0.4.37"
-tokio = {version = "1.0", features = ["full"]}
-zstd = "0.11"
-fs_extra = "1.2.0"
-walkdir = "2"
-dircpy = "0.3.12"
-strum = { version = "0.24", features = ["derive"] }
-log = "0.4.14"
-hex = "0.4.3"
-base64 = "0.13.0"
-sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"] }
-async-trait = "0.1.56"
-strum_macros = "0.24"
 sigstore_rs = { git = "https://github.com/sigstore/sigstore-rs", rev = "6dd3281c25270f0d82550368abfb399ed3da7b41", package = "sigstore",  optional = true}
-url = "2.2.2"
+strum = { version = "0.24", features = ["derive"] }
+strum_macros = "0.24"
+tar = "0.4.37"
+tokio = "1"
+tonic = { version = "0.8", optional = true }
+url = { version = "2.2.2", optional = true }
+zstd = "0.11"
 
 [build-dependencies]
 tonic-build = "0.8"
@@ -50,8 +48,6 @@ tonic-build = "0.8"
 filetime = "0.2"
 tempfile = "3.2"
 openssl = "0.10.44"
-strum = "0.24"
-strum_macros = "0.24"
 serial_test = "0.9.0"
 rstest = "0.16.0"
 test-utils = { path = "libs/test-utils" }
@@ -61,26 +57,25 @@ members = ["libs/test-utils"]
 exclude = ["scripts/attestation_agent/app"]
 
 [features]
+default = ["snapshot-overlayfs", "signature-cosign"]
 kata-cc = ["encryption", "keywrap-grpc", "snapshot-overlayfs", "signature-cosign"]
-kata-cc-s390x = ["encryption", "keywrap-grpc", "snapshot-overlayfs"]
-enclave-cc = ["encryption", "keywrap-native", "eaa_kbc", "snapshot-unionfs"]
+kata-cc-s390x = ["encryption", "keywrap-grpc", "snapshot-overlayfs", "signature-simple"]
+enclave-cc = ["encryption", "keywrap-native", "eaa-kbc", "snapshot-unionfs", "signature-simple"]
 
 encryption = ["ocicrypt-rs/block-cipher"]
 keywrap-cmd = ["ocicrypt-rs/keywrap-keyprovider-cmd"]
 keywrap-grpc = ["ocicrypt-rs/keywrap-keyprovider-grpc", "prost", "tonic"]
 keywrap-native = ["ocicrypt-rs/keywrap-keyprovider-native", "attestation_agent"]
 
-eaa_kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]
+eaa-kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]
 
-signature-simple = []
-signature-cosign = ["cosign"]
+signature = ["hex"]
+signature-simple = ["signature", "sequoia-openpgp", "serde_yaml", "url"]
+signature-cosign = ["signature", "sigstore_rs"]
 
-snapshot-overlayfs = ["overlay_feature"]
-snapshot-unionfs = ["occlum_feature"]
+snapshot-overlayfs = ["nix", "overlay_feature"]
+snapshot-unionfs = ["nix", "occlum_feature", "dircpy", "fs_extra"]
 
 # TODO: clean up following features
-default = ["overlay_feature", "cosign", "encryption"]
-default_s390x = ["overlay_feature", "encryption"]
-cosign = ["sigstore_rs"]
 overlay_feature = []
-occlum_feature = ["eaa_kbc"]
+occlum_feature = ["eaa-kbc"]

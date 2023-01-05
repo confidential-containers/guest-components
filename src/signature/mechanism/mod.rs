@@ -22,9 +22,10 @@ use oci_distribution::secrets::RegistryAuth;
 
 use super::image::Image;
 
+#[cfg(feature = "signature-simple")]
 pub mod simple;
 
-#[cfg(feature = "cosign")]
+#[cfg(feature = "signature-cosign")]
 pub mod cosign;
 
 /// The interface of a signing scheme
