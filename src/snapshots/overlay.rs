@@ -11,12 +11,19 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::snapshots::{MountPoint, SnapshotType, Snapshotter};
 
 #[derive(Debug)]
-pub struct OverLay {
-    pub data_dir: PathBuf,
-    pub index: AtomicUsize,
+pub struct OverlayFs {
+    data_dir: PathBuf,
+    index: AtomicUsize,
 }
 
-impl Snapshotter for OverLay {
+impl OverlayFs {
+    /// Create a new instance of [OverlayFs].
+    pub fn new(data_dir: PathBuf, index: AtomicUsize) -> Self {
+        OverlayFs { data_dir, index }
+    }
+}
+
+impl Snapshotter for OverlayFs {
     fn mount(&mut self, layer_path: &[&str], mount_path: &Path) -> Result<MountPoint> {
         let fs_type = SnapshotType::Overlay.to_string();
         let overlay_lowerdir = layer_path.join(":");
@@ -25,6 +32,7 @@ impl Snapshotter for OverLay {
         let overlay_upperdir = work_dir.join("upperdir");
         let overlay_workdir = work_dir.join("workdir");
 
+        // TODO: enhance safety by safe-path
         if !self.data_dir.exists() {
             fs::create_dir_all(&self.data_dir)?;
         }

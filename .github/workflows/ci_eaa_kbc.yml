@@ -57,7 +57,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --features occlum_feature
+          args: --features enclave-cc
 
       - name: Run cargo test - enclave-cc
         run: |

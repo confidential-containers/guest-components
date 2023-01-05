@@ -17,17 +17,12 @@ pub const ERR_BAD_MEDIA_TYPE: &str = "unhandled media type";
 
 /// Represents the layer compression algorithm type,
 /// and allows to decompress corresponding compressed data.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
 pub enum Compression {
     Uncompressed,
+    #[default]
     Gzip,
     Zstd,
-}
-
-impl Default for Compression {
-    fn default() -> Compression {
-        Compression::Gzip
-    }
 }
 
 impl fmt::Display for Compression {
