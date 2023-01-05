@@ -6,23 +6,29 @@ use anyhow::Result;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
-#[cfg(feature = "occlum_feature")]
+#[cfg(feature = "snapshot-unionfs")]
 pub mod occlum;
-#[cfg(feature = "overlay_feature")]
+#[cfg(feature = "snapshot-overlayfs")]
 pub mod overlay;
 
 /// Snapshot types.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum SnapshotType {
+    Unknown,
+    #[cfg(feature = "snapshot-overlayfs")]
     Overlay,
+    #[cfg(feature = "snapshot-unionfs")]
     OcclumUnionfs,
 }
 
 impl std::fmt::Display for SnapshotType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let out = match self {
+            Self::Unknown => "unknown",
+            #[cfg(feature = "snapshot-overlayfs")]
             Self::Overlay => "overlay",
+            #[cfg(feature = "snapshot-unionfs")]
             Self::OcclumUnionfs => "occlum_unionfs",
         };
 
@@ -43,6 +49,7 @@ pub struct MountPoint {
     pub work_dir: PathBuf,
 }
 
+/// Trait to mount/umount image snapshots.
 pub trait Snapshotter: Send + Sync {
     // mount the OCI image layers to destination mount path.
     fn mount(&mut self, layer_path: &[&str], mount_path: &Path) -> Result<MountPoint>;

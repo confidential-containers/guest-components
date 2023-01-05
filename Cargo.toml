@@ -76,9 +76,5 @@ signature = ["hex"]
 signature-simple = ["signature", "sequoia-openpgp", "serde_yaml", "url"]
 signature-cosign = ["signature", "sigstore"]
 
-snapshot-overlayfs = ["nix", "overlay_feature"]
-snapshot-unionfs = ["nix", "occlum_feature", "dircpy", "fs_extra"]
-
-# TODO: clean up following features
-overlay_feature = []
-occlum_feature = ["eaa-kbc"]
+snapshot-overlayfs = ["nix"]
+snapshot-unionfs = ["nix", "dircpy", "fs_extra"]

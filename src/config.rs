@@ -37,7 +37,10 @@ impl Default for ImageConfig {
         );
         ImageConfig {
             work_dir,
+            #[cfg(feature = "snapshot-overlayfs")]
             default_snapshot: SnapshotType::Overlay,
+            #[cfg(not(feature = "snapshot-overlayfs"))]
+            default_snapshot: SnapshotType::Unknown,
             security_validate: false,
             auth: false,
         }
@@ -60,6 +63,7 @@ impl TryFrom<&Path> for ImageConfig {
     }
 }
 
+#[cfg(feature = "snapshot-overlayfs")]
 #[cfg(test)]
 mod tests {
     use super::*;

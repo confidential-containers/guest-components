@@ -24,11 +24,11 @@ use crate::pull::PullClient;
 
 use crate::secure_channel::SecureChannel;
 use crate::signature;
-#[cfg(feature = "snapshot-overlayfs")]
-use crate::snapshots::overlay::OverLay;
 
-#[cfg(feature = "occlum_feature")]
+#[cfg(feature = "snapshot-unionfs")]
 use crate::snapshots::occlum::unionfs::Unionfs;
+#[cfg(feature = "snapshot-overlayfs")]
+use crate::snapshots::overlay::OverlayFs;
 
 use crate::snapshots::{SnapshotType, Snapshotter};
 
@@ -110,17 +110,18 @@ impl Default for ImageClient {
                 .snapshot_db
                 .get(&SnapshotType::Overlay.to_string())
                 .unwrap_or(&0);
-            let overlay = OverLay {
-                data_dir: config.work_dir.join(SnapshotType::Overlay.to_string()),
-                index: std::sync::atomic::AtomicUsize::new(*overlay_index),
-            };
+            let data_dir = config.work_dir.join(SnapshotType::Overlay.to_string());
+            let overlayfs = OverlayFs::new(
+                data_dir,
+                std::sync::atomic::AtomicUsize::new(*overlay_index),
+            );
             snapshots.insert(
                 SnapshotType::Overlay,
-                Box::new(overlay) as Box<dyn Snapshotter>,
+                Box::new(overlayfs) as Box<dyn Snapshotter>,
             );
         }
 
-        #[cfg(feature = "occlum_feature")]
+        #[cfg(feature = "snapshot-unionfs")]
         {
             let occlum_unionfs_index = meta_store
                 .snapshot_db
