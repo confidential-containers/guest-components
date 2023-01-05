@@ -3,23 +3,29 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-pub mod image;
-pub mod mechanism;
-pub mod payload;
-pub mod policy;
+#[cfg(feature = "signature")]
+use std::convert::TryFrom;
+use std::sync::Arc;
 
-use std::{collections::HashMap, convert::TryFrom, path::Path, sync::Arc};
-
-use anyhow::*;
-use oci_distribution::{secrets::RegistryAuth, Reference};
+use anyhow::Result;
+use oci_distribution::secrets::RegistryAuth;
 use tokio::sync::Mutex;
 
 use crate::secure_channel::SecureChannel;
 
-use self::{image::Image, policy::Policy};
+#[cfg(feature = "signature")]
+pub mod image;
+#[cfg(feature = "signature")]
+pub mod mechanism;
+#[cfg(feature = "signature")]
+pub mod payload;
+#[cfg(feature = "signature")]
+pub mod policy;
 
+/// Default policy file path.
 pub const POLICY_FILE_PATH: &str = "/run/image-security/security_policy.json";
 
+#[cfg(feature = "signature")]
 /// `allows_image` will check all the `PolicyRequirements` suitable for
 /// the given image. The `PolicyRequirements` is defined in
 /// [`POLICY_FILE_PATH`] and may include signature verification.
@@ -30,22 +36,21 @@ pub async fn allows_image(
     auth: &RegistryAuth,
 ) -> Result<()> {
     // if Policy config file does not exist, get if from KBS.
-    if !Path::new(POLICY_FILE_PATH).exists() {
+    if !std::path::Path::new(POLICY_FILE_PATH).exists() {
         secure_channel
             .lock()
             .await
-            .get_resource("Policy", HashMap::new(), POLICY_FILE_PATH)
+            .get_resource("Policy", std::collections::HashMap::new(), POLICY_FILE_PATH)
             .await?;
     }
 
-    let policy = Policy::from_file(POLICY_FILE_PATH).await?;
-
-    let reference = Reference::try_from(image_reference)?;
-    let mut image = Image::default_with_reference(reference);
+    let reference = oci_distribution::Reference::try_from(image_reference)?;
+    let mut image = self::image::Image::default_with_reference(reference);
     image.set_manifest_digest(image_digest)?;
 
     // Read the set of signature schemes that need to be verified
     // of the image from the policy configuration.
+    let policy = self::policy::Policy::from_file(POLICY_FILE_PATH).await?;
     let schemes = policy.signature_schemes(&image);
 
     // Get the necessary resources from KBS if needed.
@@ -56,7 +61,7 @@ pub async fn allows_image(
             secure_channel
                 .lock()
                 .await
-                .get_resource(resource_name, HashMap::new(), path)
+                .get_resource(resource_name, std::collections::HashMap::new(), path)
                 .await?;
         }
     }
@@ -64,5 +69,15 @@ pub async fn allows_image(
     policy
         .is_image_allowed(image, auth)
         .await
-        .map_err(|e| anyhow!("Validate image failed: {:?}", e))
+        .map_err(|e| anyhow::anyhow!("Validate image failed: {:?}", e))
+}
+
+#[cfg(not(feature = "signature"))]
+pub async fn allows_image(
+    _image_reference: &str,
+    _image_digest: &str,
+    _secure_channel: Arc<Mutex<SecureChannel>>,
+    _auth: &RegistryAuth,
+) -> Result<()> {
+    Ok(())
 }
