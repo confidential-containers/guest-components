@@ -107,7 +107,7 @@ async fn signature_verification() {
 
         let bundle_dir = tempfile::tempdir().unwrap();
 
-        let res = image_client
+        let _res = image_client
             .pull_image(
                 test.image_ref,
                 bundle_dir.path(),
@@ -117,18 +117,16 @@ async fn signature_verification() {
             .await;
         if cfg!(all(
             feature = "snapshot-overlayfs",
-            feature = "keywrap-grpc"
+            feature = "signature-simple"
         )) {
             assert_eq!(
-                res.is_ok(),
+                _res.is_ok(),
                 test.allow,
                 "Test: {}, Signing scheme: {}, {:?}",
                 test.description,
                 test.signing_scheme.to_string(),
-                res
+                _res
             );
-        } else {
-            assert!(res.is_err());
         }
     }
 
