@@ -58,3 +58,11 @@ jobs:
         with:
           command: build
           args: --features occlum_feature
+
+      - name: Run cargo test - enclave-cc
+        run: |
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=enclave-cc
+
+      - name: Run cargo test - snapshot-unionfs
+        run: |
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=snapshot-unionfs

@@ -53,6 +53,10 @@ jobs:
         run: |
           sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=encryption
 
+      - name: Run cargo test - snapshot-overlayfs
+        run: |
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=snapshot-overlayfs
+
       - name: Run cargo fmt check
         uses: actions-rs/cargo@v1
         with:
