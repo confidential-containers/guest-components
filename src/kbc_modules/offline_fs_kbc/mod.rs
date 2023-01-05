@@ -145,7 +145,7 @@ mod tests {
         })
         .unwrap();
         assert_eq!(
-            kbc.get_resource(policy_rd).await.unwrap(),
+            kbc.get_resource(&policy_rd).await.unwrap(),
             POLICYJSON.as_bytes()
         );
 
@@ -155,7 +155,7 @@ mod tests {
         })
         .unwrap();
         assert_eq!(
-            kbc.get_resource(sigstore_config_rd).await.unwrap(),
+            kbc.get_resource(&sigstore_config_rd).await.unwrap(),
             SIGSTORECONFIG.as_bytes()
         );
 
@@ -165,7 +165,7 @@ mod tests {
         })
         .unwrap();
         assert_eq!(
-            kbc.get_resource(public_key_rd).await.unwrap(),
+            kbc.get_resource(&public_key_rd).await.unwrap(),
             PUBKEY.as_bytes()
         );
 
@@ -175,7 +175,7 @@ mod tests {
         })
         .unwrap();
         assert_eq!(
-            kbc.get_resource(cosign_key_rd).await.unwrap(),
+            kbc.get_resource(&cosign_key_rd).await.unwrap(),
             COSIGNKEY.as_bytes()
         );
 
@@ -185,12 +185,12 @@ mod tests {
         })
         .unwrap();
         assert_eq!(
-            kbc.get_resource(credential_rd).await.unwrap(),
+            kbc.get_resource(&credential_rd).await.unwrap(),
             CREDENTIAL.as_bytes()
         );
 
         // Case 2. Error while get bad resource name from a good kbc instance
-        assert!(kbc.get_resource("bad".to_string()).await.is_err());
+        assert!(kbc.get_resource("bad").await.is_err());
 
         // Case 3. Error while get good resource name from bad kbc instance
         let mut resources_load_failure_kbc = OfflineFsKbc {
@@ -205,7 +205,7 @@ mod tests {
         .unwrap();
 
         assert!(resources_load_failure_kbc
-            .get_resource(good_policy_rd)
+            .get_resource(&good_policy_rd)
             .await
             .is_err());
     }
