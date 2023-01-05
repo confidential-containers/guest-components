@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use ocicrypt_rs::config::CryptoConfig;
 use ocicrypt_rs::encryption::{async_decrypt_layer, decrypt_layer, decrypt_layer_key_opts_data};
 use ocicrypt_rs::helpers::create_decrypt_config;
@@ -29,6 +29,7 @@ pub struct Decryptor {
 impl Decryptor {
     const ERR_EMPTY_CFG: &str = "decrypt_config is empty";
     const ERR_UNENCRYPTED_MEDIA_TYPE: &str = "unencrypted media type";
+    const ERR_DECRYPT_FAIL: &str = "decrypt failed";
 
     /// Construct Decryptor from media_type.
     pub fn from_media_type(media_type: &str) -> Self {
@@ -88,11 +89,12 @@ impl Decryptor {
             decrypt_layer_data(&encrypted_layer, &descript, &cc)
         });
 
-        if let Ok(decrypted_data) = handler.await? {
-            Ok(decrypted_data)
-        } else {
-            Err(anyhow!("decrypt failed!"))
-        }
+        let decrypted_data = handler
+            .await?
+            .map_err(|e| anyhow!(e))
+            .context(Decryptor::ERR_DECRYPT_FAIL)?;
+
+        Ok(decrypted_data)
     }
 
     pub async fn get_decrypt_key(
@@ -164,12 +166,22 @@ fn decrypt_layer_data(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use regex::Regex;
     use std::fs::File;
     use std::io::Write;
     use tempfile;
     use test_utils::assert_result;
 
-    const ERR_OCICRYPT_RS_DECRYPT_FAIL: &str = "decrypt failed!";
+    // Use a regex for the error type to handle multi-line error with context.
+    pub type TestResult<T> = std::result::Result<T, Regex>;
+
+    const ERR_NO_PRIV_KEY: &str = "missing private key needed for decryption";
+
+    // Text added to an automatically generated anyhow error that includes
+    // context. This is potentially fragile, but it's a small price to pay
+    // to ensure we test errors as fully as possible. Plus, if anyhow changes
+    // this text, we'll know about it as these tests will fail ;)
+    const ERR_ANYHOW_TEXT: &str = "Caused by:";
 
     #[tokio::test]
     async fn test_from_media_type() {
@@ -252,7 +264,7 @@ mod tests {
             descriptor: OciDescriptor,
             encrypted_layer: Vec<u8>,
             decrypt_config: &'a str,
-            result: Result<Vec<u8>>,
+            result: TestResult<Vec<u8>>,
         }
 
         let tests = &[
@@ -262,7 +274,12 @@ mod tests {
                 descriptor: OciDescriptor::default(),
                 encrypted_layer: Vec::<u8>::new(),
                 decrypt_config: "",
-                result: Err(anyhow!("{}: {}", Decryptor::ERR_UNENCRYPTED_MEDIA_TYPE, "")),
+                result: Err(Regex::new(&format!(
+                    "{}: {}",
+                    Decryptor::ERR_UNENCRYPTED_MEDIA_TYPE,
+                    ""
+                ))
+                .unwrap()),
             },
             TestData {
                 encrypted: false,
@@ -270,7 +287,12 @@ mod tests {
                 descriptor: OciDescriptor::default(),
                 encrypted_layer: Vec::<u8>::new(),
                 decrypt_config: "foo",
-                result: Err(anyhow!("{}: {}", Decryptor::ERR_UNENCRYPTED_MEDIA_TYPE, "")),
+                result: Err(Regex::new(&format!(
+                    "{}: {}",
+                    Decryptor::ERR_UNENCRYPTED_MEDIA_TYPE,
+                    ""
+                ))
+                .unwrap()),
             },
             TestData {
                 encrypted: true,
@@ -278,7 +300,13 @@ mod tests {
                 descriptor: OciDescriptor::default(),
                 encrypted_layer: Vec::<u8>::new(),
                 decrypt_config: "provider:grpc",
-                result: Err(anyhow!(ERR_OCICRYPT_RS_DECRYPT_FAIL)),
+                result: Err(Regex::new(&format!(
+                    "(?s){}.*{}.*{}",
+                    Decryptor::ERR_DECRYPT_FAIL,
+                    ERR_ANYHOW_TEXT,
+                    ERR_NO_PRIV_KEY
+                ))
+                .unwrap()),
             },
             TestData {
                 encrypted: true,
@@ -286,7 +314,21 @@ mod tests {
                 descriptor: OciDescriptor::default(),
                 encrypted_layer: Vec::<u8>::new(),
                 decrypt_config: "provider:grpc",
-                result: Err(anyhow!(ERR_OCICRYPT_RS_DECRYPT_FAIL)),
+                result: Err(Regex::new(&format!(
+                    "(?s){}.*{}.*{}",
+                    Decryptor::ERR_DECRYPT_FAIL,
+                    ERR_ANYHOW_TEXT,
+                    ERR_NO_PRIV_KEY
+                ))
+                .unwrap()),
+            },
+            TestData {
+                encrypted: true,
+                media_type: MEDIA_TYPE_LAYER_ENC,
+                descriptor: OciDescriptor::default(),
+                encrypted_layer: Vec::<u8>::new(),
+                decrypt_config: "",
+                result: Err(Regex::new(&format!("{}", Decryptor::ERR_EMPTY_CFG)).unwrap()),
             },
         ];
 
@@ -332,7 +374,17 @@ mod tests {
 
             let msg = format!("{}: result: {:?}", msg, result);
 
-            assert_result!(d.result, result, msg);
+            if d.result.is_ok() {
+                assert_result!(d.result, result, msg);
+            } else {
+                let result_text = format!("{:?}", result.err().unwrap());
+
+                let found = d.result.as_ref().err().unwrap().is_match(&result_text);
+
+                let msg = format!("{}: found: {:?}", msg, found);
+
+                assert!(found, "{}", msg);
+            }
         }
     }
 }
