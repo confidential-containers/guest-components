@@ -44,7 +44,7 @@ pub struct Attestation {
     // The public key of TEE.
     // Its hash is included in `tee-evidence`.
     #[serde(rename = "tee-pubkey")]
-    pub tee_pubkey: String,
+    pub tee_pubkey: TeePubKey,
 
     // TEE quote, different TEE type has different format of the content.
     #[serde(rename = "tee-evidence")]

@@ -17,9 +17,7 @@ pub fn detect_platform() -> bool {
 // A simple example of TEE evidence.
 #[derive(Serialize, Deserialize, Debug)]
 struct SampleQuote {
-    is_debuggable: bool,
-    cpusvn: u64,
-    svn: u64,
+    svn: String,
     report_data: String,
 }
 
@@ -29,9 +27,7 @@ pub struct SampleAttester {}
 impl Attester for SampleAttester {
     fn get_evidence(&self, report_data: String) -> Result<String> {
         let evidence = SampleQuote {
-            is_debuggable: false,
-            cpusvn: 1,
-            svn: 1,
+            svn: "1".to_string(),
             report_data,
         };
 

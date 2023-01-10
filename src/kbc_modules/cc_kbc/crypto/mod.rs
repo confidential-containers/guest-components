@@ -12,8 +12,8 @@ use rsa::{PaddingScheme, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha384};
 
-const RSA_KEY_TYPE: &str = "RSA1_5";
-const RSA_ALGORITHM: &str = "rsa-pkcs1v15";
+const RSA_KEY_TYPE: &str = "RSA";
+const RSA_ALGORITHM: &str = "RSA1_5";
 const RSA_PUBKEY_LENGTH: usize = 2048;
 const NEW_PADDING: fn() -> PaddingScheme = PaddingScheme::new_pkcs1v15_encrypt;
 
@@ -31,7 +31,7 @@ pub struct TeeKey {
 pub struct TeePubKey {
     kty: String,
     alg: String,
-    k: String,
+    pub k: String,
 }
 
 impl TeeKey {
