@@ -2,9 +2,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Result};
 use oci_distribution::manifest::{self, OciDescriptor};
+use thiserror::Error;
 use tokio::io::AsyncRead;
+
+type Result<T> = std::result::Result<T, DecryptError>;
 
 /// Image layer encryption type information and associated methods to decrypt image layers.
 #[derive(Default, Clone, Debug)]
@@ -14,6 +16,39 @@ pub struct Decryptor {
 
     /// Whether layer is encrypted.
     encrypted: bool,
+}
+
+#[derive(Error, Debug)]
+pub enum DecryptError {
+    #[error("cannot handle media type {0} as no encryption support")]
+    NoEncryptSupport(String),
+
+    #[error("decrypt config is empty")]
+    EmptyConfig,
+
+    #[error("unencrypted media type: {0}")]
+    UnencryptedMediaType(String),
+
+    #[error("failed to create crypto config: {0}")]
+    CryptoConfigCreateFailed(#[source] anyhow::Error),
+
+    #[error("async layer decrypt failed: {0}")]
+    AsyncDecryptLayerFailed(#[source] anyhow::Error),
+
+    #[error("failed to retrieve decrypt key")]
+    NoDecryptKey,
+
+    #[error("layer decryption key error: {0}")]
+    LayerDecryptKeyError(#[source] anyhow::Error),
+
+    #[error("failed to decrypt layer: {0}")]
+    LayerDecryptFail(#[source] anyhow::Error),
+
+    #[error("layer decryptor missing")]
+    LayerDecryptorMissing,
+
+    #[error("decryptor read error: {0}")]
+    LayerDecryptorReadFail(std::io::Error),
 }
 
 impl Decryptor {
@@ -26,7 +61,6 @@ impl Decryptor {
 #[cfg(feature = "encryption")]
 mod encryption {
     use super::*;
-    use anyhow::anyhow;
     use ocicrypt_rs::config::CryptoConfig;
     use ocicrypt_rs::encryption::{
         async_decrypt_layer, decrypt_layer, decrypt_layer_key_opts_data,
@@ -39,9 +73,6 @@ mod encryption {
     use std::io::Read;
 
     impl Decryptor {
-        const ERR_EMPTY_CFG: &'static str = "decrypt_config is empty";
-        const ERR_UNENCRYPTED_MEDIA_TYPE: &'static str = "unencrypted media type";
-
         /// Construct Decryptor from media_type.
         pub fn from_media_type(media_type: &str) -> Self {
             let (media_type, encrypted) = match media_type {
@@ -78,13 +109,16 @@ mod encryption {
             decrypt_config: &str,
         ) -> Result<Vec<u8>> {
             if !self.is_encrypted() {
-                bail!("{}: {}", Self::ERR_UNENCRYPTED_MEDIA_TYPE, self.media_type);
-            }
-            if decrypt_config.is_empty() {
-                bail!(Self::ERR_EMPTY_CFG);
+                return Err(DecryptError::UnencryptedMediaType(self.media_type.clone()));
             }
 
-            let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
+            if decrypt_config.is_empty() {
+                return Err(DecryptError::EmptyConfig);
+            }
+
+            let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])
+                .map_err(|e| DecryptError::CryptoConfigCreateFailed(e))?;
+
             decrypt_layer_data(&encrypted_layer, descriptor, &cc)
                 .map(|(decrypted_data, _)| decrypted_data)
         }
@@ -96,17 +130,21 @@ mod encryption {
             decrypt_config: &str,
         ) -> Result<Vec<u8>> {
             if !self.is_encrypted() {
-                bail!("unencrypted media type: {}", self.media_type);
-            }
-            if decrypt_config.is_empty() {
-                bail!("decrypt_config is empty");
+                return Err(DecryptError::UnencryptedMediaType(self.media_type.clone()));
             }
 
-            let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
+            if decrypt_config.is_empty() {
+                return Err(DecryptError::EmptyConfig);
+            }
+
+            let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])
+                .map_err(|e| DecryptError::CryptoConfigCreateFailed(e))?;
+
             if let Some(decrypt_config) = cc.decrypt_config {
                 decrypt_layer_key_opts_data(&decrypt_config, descriptor.annotations.as_ref())
+                    .map_err(|e| DecryptError::LayerDecryptKeyError(e))
             } else {
-                Err(anyhow!("failed to retrieve decrypt key!"))
+                Err(DecryptError::NoDecryptKey)
             }
         }
 
@@ -121,7 +159,8 @@ mod encryption {
                 descriptor.annotations.as_ref(),
                 priv_opts_data,
             )
-            .map_err(|e| anyhow!("failed to async decrypt layer {}", e.to_string()))?;
+            .map_err(|e| DecryptError::AsyncDecryptLayerFailed(e))?;
+
             Ok(layer_decryptor)
         }
     }
@@ -137,16 +176,19 @@ mod encryption {
                 encrypted_layer,
                 descriptor.annotations.as_ref(),
                 false,
-            )?;
+            )
+            .map_err(|e| DecryptError::LayerDecryptFail(e))?;
             let mut plaintext_data: Vec<u8> = Vec::new();
             let mut decryptor =
-                layer_decryptor.ok_or_else(|| anyhow!("missing layer decryptor"))?;
+                layer_decryptor.ok_or_else(|| DecryptError::LayerDecryptorMissing)?;
 
-            decryptor.read_to_end(&mut plaintext_data)?;
+            decryptor
+                .read_to_end(&mut plaintext_data)
+                .map_err(|e| DecryptError::LayerDecryptorReadFail(e))?;
 
             Ok((plaintext_data, dec_digest))
         } else {
-            Err(anyhow!("no decrypt config available"))
+            Err(DecryptError::EmptyConfig)
         }
     }
 
@@ -350,10 +392,7 @@ impl Decryptor {
         _encrypted_layer: Vec<u8>,
         _decrypt_config: &str,
     ) -> Result<Vec<u8>> {
-        bail!(
-            "no support of encryption, can't handle '{}'",
-            self.media_type
-        );
+        return Err(DecryptError::NoEncryptSupport(self.media_type));
     }
 
     pub fn get_decrypt_key(
@@ -361,10 +400,7 @@ impl Decryptor {
         _descriptor: &OciDescriptor,
         _decrypt_config: &str,
     ) -> Result<Vec<u8>> {
-        bail!(
-            "no support of encryption, can't handle '{}'",
-            self.media_type
-        );
+        return Err(DecryptError::NoEncryptSupport(self.media_type));
     }
 
     pub fn async_get_plaintext_layer(
@@ -374,10 +410,7 @@ impl Decryptor {
         _priv_opts_data: &[u8],
     ) -> Result<impl AsyncRead> {
         if self.is_encrypted() {
-            bail!(
-                "no support of encryption, can't handle '{}'",
-                self.media_type
-            );
+            return Err(DecryptError::NoEncryptSupport(self.media_type));
         } else {
             Ok(encrypted_layer)
         }

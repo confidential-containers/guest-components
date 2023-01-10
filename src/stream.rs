@@ -3,18 +3,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::unpack::unpack;
-use anyhow::{anyhow, bail, Context, Result};
+use crate::unpack::UnpackError;
 use sha2::Digest;
 use std::fs;
 use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
+use thiserror::Error;
 use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::task::JoinError;
 
 const CAPACITY: usize = 32768;
 const DIGEST_SHA256: &str = "sha256";
 const DIGEST_SHA512: &str = "sha512";
-
-const ERR_BAD_UNCOMPRESSED_DIGEST: &str = "unsupported uncompressed digest format";
 
 pub trait DigestHasher {
     fn digest_update(&mut self, buf: &[u8]);
@@ -26,6 +26,29 @@ pub enum LayerDigestHasher {
     Sha256(sha2::Sha256),
     Sha512(sha2::Sha512),
 }
+
+#[derive(Error, Debug)]
+pub enum StreamError {
+    #[error("unsupported uncompressed digest format: {0}")]
+    UnsupportedDigestFormat(String),
+
+    #[error("failed to read from channel: {0}")]
+    ChannelReadFailed(std::io::Error),
+
+    #[error("failed to send to channel: {0}")]
+    ChannelSendFailed(String),
+
+    #[error("failed to roll back when unpacking: {0}")]
+    UnpackRollbackFailed(UnpackError),
+
+    #[error("unpack failed: {0}")]
+    UnpackFailed(UnpackError),
+
+    #[error("task join failed: {0}")]
+    JoinFailed(JoinError),
+}
+
+type Result<T> = std::result::Result<T, StreamError>;
 
 impl DigestHasher for LayerDigestHasher {
     fn digest_update(&mut self, buf: &[u8]) {
@@ -93,21 +116,16 @@ pub async fn stream_processing(
     destination: &Path,
 ) -> Result<String> {
     let dest = destination.to_path_buf();
-    let digest_str = if diff_id.starts_with(DIGEST_SHA256) {
-        let hasher = LayerDigestHasher::Sha256(sha2::Sha256::new());
 
-        channel_processing(layer_reader, hasher, dest)
-            .await
-            .map_err(|e| anyhow!("hasher {} : {:?}", DIGEST_SHA256, e))?
+    let hasher = if diff_id.starts_with(DIGEST_SHA256) {
+        LayerDigestHasher::Sha256(sha2::Sha256::new())
     } else if diff_id.starts_with(DIGEST_SHA512) {
-        let hasher = LayerDigestHasher::Sha512(sha2::Sha512::new());
-
-        channel_processing(layer_reader, hasher, dest)
-            .await
-            .map_err(|e| anyhow!("hasher {} : {:?}", DIGEST_SHA512, e))?
+        LayerDigestHasher::Sha512(sha2::Sha512::new())
     } else {
-        bail!("{}: {:?}", ERR_BAD_UNCOMPRESSED_DIGEST, diff_id);
+        return Err(StreamError::UnsupportedDigestFormat(diff_id.into()));
     };
+
+    let digest_str = channel_processing(layer_reader, hasher, dest).await?;
 
     Ok(digest_str)
 }
@@ -118,16 +136,17 @@ async fn channel_processing(
     destination: PathBuf,
 ) -> Result<String> {
     let (tx, rx) = flume::unbounded();
-    let unpack_thread = std::thread::spawn(move || {
+    let unpack_thread = std::thread::spawn(move || -> std::result::Result<(), UnpackError> {
         let mut input = ChannelRead::new(rx);
 
         if let Err(e) = unpack(&mut input, destination.as_path()) {
             fs::remove_dir_all(destination.as_path())
-                .context("Failed to roll back when unpacking")?;
+                .map_err(|e| UnpackError::UnpackDirRemoveFailed(e))?;
+
             return Err(e);
         }
 
-        Result::<()>::Ok(())
+        Ok(())
     });
 
     let mut buffer = [0; CAPACITY];
@@ -135,7 +154,7 @@ async fn channel_processing(
         let n = layer_reader
             .read(&mut buffer)
             .await
-            .map_err(|e| anyhow!("channel: read failed {:?}", e))?;
+            .map_err(|e| StreamError::ChannelReadFailed(e))?;
         if n == 0 {
             break;
         }
@@ -143,16 +162,16 @@ async fn channel_processing(
         hasher.digest_update(&buffer[..n]);
         tx.send_async(buffer[..n].to_vec())
             .await
-            .map_err(|e| anyhow!("channel: send failed {:?}", e))?;
+            .map_err(|e| StreamError::ChannelSendFailed(e.to_string()))?;
     }
 
     // Close the channel to signal EOF.
     drop(tx);
 
-    tokio::task::spawn_blocking(|| unpack_thread.join())
-        .await?
-        .map_err(|e| anyhow!("channel: unpack thread failed {:?}", e))
-        .unwrap()?;
+    tokio::task::spawn_blocking(|| unpack_thread.join().unwrap())
+        .await
+        .map_err(|e| StreamError::JoinFailed(e))?
+        .map_err(|e| StreamError::UnpackFailed(e))?;
 
     Ok(hasher.digest_finalize())
 }
