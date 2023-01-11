@@ -246,7 +246,7 @@ pub struct KeyUnwrapResults {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grpc::AGENT_NAME;
+    use crate::rpc::AGENT_NAME;
     use base64::encode;
 
     #[test]

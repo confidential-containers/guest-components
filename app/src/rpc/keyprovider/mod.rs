@@ -8,21 +8,13 @@ use attestation_agent::AttestationAPIs;
 use log::*;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
-use std::net::SocketAddr;
 use std::str;
 use std::sync::Arc;
-use tonic::{transport::Server, Request, Response, Status};
 
-use crate::grpc::AGENT_NAME;
-use crate::ATTESTATION_AGENT;
-use key_provider::key_provider_service_server::{KeyProviderService, KeyProviderServiceServer};
-use key_provider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput};
+use crate::rpc::AGENT_NAME;
 use message::*;
 
 pub mod message;
-pub mod key_provider {
-    tonic::include_proto!("keyprovider");
-}
 
 const ERR_ANNOTATION_NOT_BASE64: &str = "annotation is not base64 encoded";
 const ERR_DC_EMPTY: &str = "missing Dc value";
@@ -47,18 +39,30 @@ impl TryFrom<Vec<u8>> for InputPayload {
     }
 }
 
-#[tonic::async_trait]
-impl KeyProviderService for KeyProvider {
-    async fn un_wrap_key(
-        &self,
-        request: Request<KeyProviderKeyWrapProtocolInput>,
-    ) -> Result<Response<KeyProviderKeyWrapProtocolOutput>, Status> {
-        debug!("The UnWrapKey API is called...");
+#[cfg(feature = "grpc")]
+pub mod grpc {
+    use super::*;
+    use crate::grpc::ASYNC_ATTESTATION_AGENT;
+    use key_provider::key_provider_service_server::{KeyProviderService, KeyProviderServiceServer};
+    use key_provider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput};
+    use std::net::SocketAddr;
+    use tonic::{transport::Server, Request, Response, Status};
+    mod key_provider {
+        tonic::include_proto!("keyprovider");
+    }
 
-        // Deserialize and parse the gRPC input to get KBC name, KBS URI and annotation.
-        let input_payload =
-            InputPayload::try_from(request.into_inner().key_provider_key_wrap_protocol_input)
-                .map_err(|e| {
+    #[tonic::async_trait]
+    impl KeyProviderService for KeyProvider {
+        async fn un_wrap_key(
+            &self,
+            request: Request<KeyProviderKeyWrapProtocolInput>,
+        ) -> Result<Response<KeyProviderKeyWrapProtocolOutput>, Status> {
+            debug!("The UnWrapKey API is called...");
+
+            // Deserialize and parse the gRPC input to get KBC name, KBS URI and annotation.
+            let input_payload =
+                InputPayload::try_from(request.into_inner().key_provider_key_wrap_protocol_input)
+                    .map_err(|e| {
                     error!("Parse request failed: {}", e);
                     Status::internal(format!(
                         "[ERROR:{}] Parse request failed: {}",
@@ -66,63 +70,178 @@ impl KeyProviderService for KeyProvider {
                     ))
                 })?;
 
-        let attestation_agent_mutex_clone = Arc::clone(&ATTESTATION_AGENT);
-        let mut attestation_agent = attestation_agent_mutex_clone.lock().await;
+            let attestation_agent_mutex_clone = Arc::clone(&ASYNC_ATTESTATION_AGENT);
+            let mut attestation_agent = attestation_agent_mutex_clone.lock().await;
 
-        debug!("Call AA-KBC to decrypt...");
+            debug!("Call AA-KBC to decrypt...");
 
-        let decrypted_optsdata = attestation_agent
-            .decrypt_image_layer_annotation(
+            let decrypted_optsdata = attestation_agent
+                .decrypt_image_layer_annotation(
+                    &input_payload.kbc_name,
+                    &input_payload.kbs_uri,
+                    &input_payload.annotation,
+                )
+                .await
+                .map_err(|e| {
+                    error!("Call AA-KBC to provide key failed: {}", e);
+                    Status::internal(format!(
+                        "[ERROR:{}] AA-KBC key provider failed: {}",
+                        AGENT_NAME, e
+                    ))
+                })?;
+
+            debug!("Provide key successfully, get the plain PLBCO");
+
+            // Construct output structure and serialize it as the return value of gRPC
+            let output_struct = KeyUnwrapOutput {
+                keyunwrapresults: KeyUnwrapResults {
+                    optsdata: decrypted_optsdata,
+                },
+            };
+
+            let output = serde_json::to_string(&output_struct)
+                .unwrap()
+                .as_bytes()
+                .to_vec();
+
+            debug!(
+                "UnWrapKey API output: {}",
+                serde_json::to_string(&output_struct).unwrap()
+            );
+
+            let reply = KeyProviderKeyWrapProtocolOutput {
+                key_provider_key_wrap_protocol_output: output,
+            };
+            debug!("Reply successfully!");
+
+            Result::Ok(Response::new(reply))
+        }
+
+        async fn wrap_key(
+            &self,
+            _request: Request<KeyProviderKeyWrapProtocolInput>,
+        ) -> Result<Response<KeyProviderKeyWrapProtocolOutput>, Status> {
+            debug!("The WrapKey API is called...");
+            debug!("WrapKey API is unimplemented!");
+            Err(Status::unimplemented(format!(
+                "WrapKey API of {} is unimplemented!",
+                AGENT_NAME,
+            )))
+        }
+    }
+
+    pub async fn start_grpc_service(socket: SocketAddr) -> Result<()> {
+        let service = KeyProvider::default();
+        let _server = Server::builder()
+            .add_service(KeyProviderServiceServer::new(service))
+            .serve(socket)
+            .await?;
+        Ok(())
+    }
+}
+
+#[cfg(feature = "ttrpc")]
+pub mod ttrpc {
+    use super::*;
+    use crate::rpc::ttrpc_protocol::{keyprovider, keyprovider_ttrpc};
+    use crate::rpc::TtrpcService;
+    use crate::ttrpc::SYNC_ATTESTATION_AGENT;
+    use futures::executor::block_on;
+    use ::ttrpc::proto::Code;
+    impl keyprovider_ttrpc::KeyProviderService for KeyProvider {
+        fn un_wrap_key(
+            &self,
+            _ctx: &::ttrpc::TtrpcContext,
+            req: keyprovider::KeyProviderKeyWrapProtocolInput,
+        ) -> ::ttrpc::Result<keyprovider::KeyProviderKeyWrapProtocolOutput> {
+            debug!("The UnWrapKey API is called...");
+
+            // Deserialize and parse the gRPC input to get KBC name, KBS URI and annotation.
+            let input_payload = InputPayload::try_from(req.KeyProviderKeyWrapProtocolInput)
+                .map_err(|e| {
+                    error!("Parse request failed: {}", e);
+                    let mut error_status = ::ttrpc::proto::Status::new();
+                    error_status.set_code(Code::INTERNAL);
+                    error_status.set_message(format!(
+                        "[ERROR:{}] Parse request failed: {}",
+                        AGENT_NAME, e
+                    ));
+                    ::ttrpc::Error::RpcStatus(error_status)
+                })?;
+
+            let attestation_agent_mutex_clone = Arc::clone(&SYNC_ATTESTATION_AGENT);
+            let mut attestation_agent = attestation_agent_mutex_clone.lock().map_err(|e| {
+                let mut error_status = ::ttrpc::proto::Status::new();
+                error_status.set_code(Code::INTERNAL);
+                error_status.set_message(format!(
+                    "[ERROR:{}] AA-KBC get mutex lock: {}",
+                    AGENT_NAME, e
+                ));
+                ::ttrpc::Error::RpcStatus(error_status)
+            })?;
+
+            debug!("Call AA-KBC to decrypt...");
+
+            let decrypted_optsdata = block_on(attestation_agent.decrypt_image_layer_annotation(
                 &input_payload.kbc_name,
                 &input_payload.kbs_uri,
                 &input_payload.annotation,
-            )
-            .await
+            ))
             .map_err(|e| {
                 error!("Call AA-KBC to provide key failed: {}", e);
-                Status::internal(format!(
+                let mut error_status = ::ttrpc::proto::Status::new();
+                error_status.set_code(Code::INTERNAL);
+                error_status.set_message(format!(
                     "[ERROR:{}] AA-KBC key provider failed: {}",
                     AGENT_NAME, e
-                ))
+                ));
+                ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
-        debug!("Provide key successfully, get the plain PLBCO");
+            debug!("Provide key successfully, get the plain PLBCO");
 
-        // Construct output structure and serialize it as the return value of gRPC
-        let output_struct = KeyUnwrapOutput {
-            keyunwrapresults: KeyUnwrapResults {
-                optsdata: decrypted_optsdata,
-            },
-        };
+            // Construct output structure and serialize it as the return value of gRPC
+            let output_struct = KeyUnwrapOutput {
+                keyunwrapresults: KeyUnwrapResults {
+                    optsdata: decrypted_optsdata,
+                },
+            };
 
-        let output = serde_json::to_string(&output_struct)
-            .unwrap()
-            .as_bytes()
-            .to_vec();
+            let output = serde_json::to_string(&output_struct)
+                .unwrap()
+                .as_bytes()
+                .to_vec();
 
-        debug!(
-            "UnWrapKey API output: {}",
-            serde_json::to_string(&output_struct).unwrap()
-        );
+            debug!(
+                "UnWrapKey API output: {}",
+                serde_json::to_string(&output_struct).unwrap()
+            );
 
-        let reply = KeyProviderKeyWrapProtocolOutput {
-            key_provider_key_wrap_protocol_output: output,
-        };
-        debug!("Reply successfully!");
+            let mut reply = keyprovider::KeyProviderKeyWrapProtocolOutput::new();
+            reply.KeyProviderKeyWrapProtocolOutput = output;
 
-        Result::Ok(Response::new(reply))
+            debug!("Reply successfully!");
+
+            ::ttrpc::Result::Ok(reply)
+        }
+
+        fn wrap_key(
+            &self,
+            _ctx: &::ttrpc::TtrpcContext,
+            _req: keyprovider::KeyProviderKeyWrapProtocolInput,
+        ) -> ::ttrpc::Result<keyprovider::KeyProviderKeyWrapProtocolOutput> {
+            debug!("The WrapKey API is called...");
+            debug!("WrapKey API is unimplemented!");
+            let mut error_status = ::ttrpc::proto::Status::new();
+            error_status.set_code(Code::UNIMPLEMENTED);
+            error_status.set_message(format!("WrapKey API of {} is unimplemented!", AGENT_NAME,));
+            ::ttrpc::Result::Err(::ttrpc::Error::RpcStatus(error_status))
+        }
     }
 
-    async fn wrap_key(
-        &self,
-        _request: Request<KeyProviderKeyWrapProtocolInput>,
-    ) -> Result<Response<KeyProviderKeyWrapProtocolOutput>, Status> {
-        debug!("The WrapKey API is called...");
-        debug!("WrapKey API is unimplemented!");
-        Err(Status::unimplemented(format!(
-            "WrapKey API of {} is unimplemented!",
-            AGENT_NAME,
-        )))
+    pub fn ttrpc_service() -> TtrpcService {
+        keyprovider_ttrpc::create_key_provider_service(Arc::new(Box::new(KeyProvider {})
+            as Box<dyn keyprovider_ttrpc::KeyProviderService + Send + Sync>))
     }
 }
 
@@ -221,19 +340,10 @@ fn str_to_kbc_kbs(value: &str) -> Result<(String, String)> {
     }
 }
 
-pub async fn start_service(socket: SocketAddr) -> Result<()> {
-    let service = KeyProvider::default();
-    let _server = Server::builder()
-        .add_service(KeyProviderServiceServer::new(service))
-        .serve(socket)
-        .await?;
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grpc::keyprovider::message::{
+    use crate::rpc::keyprovider::message::{
         ERR_INVALID_OP, ERR_MISSING_OP, ERR_UNSUPPORTED_OP, ERR_UNWRAP_PARAMS_NO_DC,
     };
     use base64::encode;

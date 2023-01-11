@@ -6,9 +6,11 @@ publish = false
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.0", features = ["full"] }
-tonic = "0.7.2"
-prost = "0.10.4"
+tokio = { version = "1.0", default-features = false, features = ["rt-multi-thread"], optional = true }
+tonic = { version = "0.7.2", optional = true }
+prost = { version = "0.10.4", optional = true }
+ttrpc = { version = "0.7.1", optional = true }
+protobuf = { version = "3.1.0", optional = true }
 futures = "0.3.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -22,11 +24,13 @@ attestation_agent = { path = "../", default-features = false }
 async-trait = "0.1.56"
 
 [build-dependencies]
-tonic-build = "0.7.2"
-shadow-rs = "0.11.0"
+tonic-build = { version = "0.7.2", optional = true }
+ttrpc-codegen = { version = "0.4.1", optional = true }
 
 [features]
-default = ["sample_kbc"]
+default = ["sample_kbc", "grpc", "ttrpc"]
+grpc = ["tokio", "tonic", "prost", "tonic-build"]
+ttrpc = ["dep:ttrpc", "ttrpc-codegen", "protobuf"]
 sample_kbc = ["attestation_agent/sample_kbc"]
 cc_kbc = ["attestation_agent/cc_kbc"]
 eaa_kbc = ["attestation_agent/eaa_kbc"]
