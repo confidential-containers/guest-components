@@ -20,7 +20,7 @@ nix = "0.26"
 oci-distribution = "0.9.4"
 oci-spec = { git = "https://github.com/containers/oci-spec-rs" }
 ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", rev = "52c9a3c", default-features = false, features = ["keywrap-jwe", "async-io"], optional = false }
-attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent", rev = "b45b0f8", optional = false }
+attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent", rev = "017d534", optional = false }
 serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
 serde_yaml = "0.8"
