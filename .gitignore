@@ -4,3 +4,7 @@ Cargo.lock
 .DS_Store
 
 scripts/attestation-agent
+
+# ttrpc generated
+src/secure_channel/ttrpc_proto/getresource.rs
+src/secure_channel/ttrpc_proto/getresource_ttrpc.rs
