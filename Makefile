@@ -20,14 +20,27 @@ ARCH ?= $(shell uname -m)
 DEBUG ?=
 LIBC ?= gnu
 KBC ?=
+ttrpc ?=
+grpc ?=
 DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
+features ?=
 OPENSSL ?=
 
 ifdef KBC
-    FEATURES := $(KBC)
+    features += $(KBC)
 else
-    FEATURES := sample_kbc
+    features += sample_kbc
+endif
+
+ifeq ($(ttrpc), true)
+    features += ttrpc
+else
+ifeq ($(grpc), true)
+    features += grpc
+else
+    features += grpc ttrpc
+endif
 endif
 
 ifeq ($(LIBC), musl)
@@ -96,13 +109,13 @@ ifneq ($(RUSTFLAGS_ARGS),)
 endif
 
 ifdef OPENSSL
-    FEATURES := $(FEATURES),openssl
+    features := $(features),openssl
 else
-    FEATURES := $(FEATURES),rust-crypto
+    features := $(features),rust-crypto
 endif
 
 build:
-	cd app && $(RUST_FLAGS) cargo build $(release) --no-default-features --features $(FEATURES) $(LIBC_FLAG)
+	cd app && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features)" $(LIBC_FLAG)
 
 TARGET := app/$(TARGET_DIR)/$(BIN_NAME)
 
