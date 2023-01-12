@@ -89,6 +89,19 @@ If you want to see the runtime log:
 RUST_LOG=attestation_agent attestation-agent --keyprovider_sock 127.0.0.1:50000 --getresource_sock 127.0.0.1:50001
 ```
 
+### ttRPC
+
+To build and install ttRPC Attestation Agent, just run:
+```shell
+make ttrpc=true && make install
+```
+
+ttRPC AA now only support Unix Socket, for example:
+
+```shell
+attestation-agent --keyprovider_sock unix:///tmp/keyprovider.sock --getresource_sock unix:///tmp/getresource.sock
+```
+
 ## Supported KBC modules
 
 AA provides a flexible KBC module mechanism to support different KBS protocols required to make the communication between KBC and KBS. If the KBC modules currently supported by AA cannot meet your use requirement (e.g, need to use a new KBS protocol), you can write a new KBC module complying with the KBC development [GUIDE](docs/kbc_module_development_guide.md). Welcome to contribute new KBC module to this project!
