@@ -281,11 +281,11 @@ pub fn decrypt_layer<R: Read>(
 ///
 /// priv_opts_data can get from [`decrypt_layer_key_opts_data`]
 #[cfg(feature = "async-io")]
-pub fn async_decrypt_layer<R: tokio::io::AsyncRead>(
+pub fn async_decrypt_layer<R: tokio::io::AsyncRead + Send>(
     layer_reader: R,
     annotations: Option<&HashMap<String, String>>,
     priv_opts_data: &[u8],
-) -> Result<(impl tokio::io::AsyncRead, String)> {
+) -> Result<(impl tokio::io::AsyncRead + Send, String)> {
     let annotations = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);
     let pub_opts_data = get_layer_pub_opts(annotations)?;
     let pub_opts: PublicLayerBlockCipherOptions = serde_json::from_slice(&pub_opts_data)?;
