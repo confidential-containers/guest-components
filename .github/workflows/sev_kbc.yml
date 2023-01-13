@@ -40,15 +40,15 @@ jobs:
           override: true
           components: rustfmt
 
-      - name: Build and install with ${{ matrix.kbc } feature
+      - name: Build and install with ${{ matrix.kbc }} feature
         run: |
-          make KBC=${{ matrix.kbc } && make install
+          make KBC=${{ matrix.kbc }} && make install
 
-      - name: Musl build with ${{ matrix.kbc } feature
+      - name: Musl build with ${{ matrix.kbc }} feature
         run: |
-          make LIBC=musl KBC=${{ matrix.kbc }
+          make LIBC=musl KBC=${{ matrix.kbc }}
 
-      - name: Run cargo test with ${{ matrix.kbc } feature
+      - name: Run cargo test with ${{ matrix.kbc }} feature
         uses: actions-rs/cargo@v1
         with:
           command: test
