@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use serde::Serialize;
 
 use crate::config::{DecryptConfig, EncryptConfig, KeyProviderAttrs};
@@ -303,7 +303,7 @@ impl KeyProviderKeyWrapper {
                 })
             }
         } else {
-            return Err(anyhow!("keyprovider: runner for binary provider is NULL"));
+            bail!("keyprovider: runner for binary provider is NULL");
         }
     }
 
@@ -334,8 +334,8 @@ impl KeyProviderKeyWrapper {
             });
             match handler.join() {
                 Ok(Ok(v)) => Ok(v),
-                Ok(Err(e)) => return Err(anyhow!("failed to unwrap key by gRPC, {e}")),
-                Err(e) => return Err(anyhow!("failed to unwrap key by gRPC, {e:?}")),
+                Ok(Err(e)) => bail!("failed to unwrap key by gRPC, {e}"),
+                Err(e) => bail!("failed to unwrap key by gRPC, {e:?}"),
             }
         }
     }
