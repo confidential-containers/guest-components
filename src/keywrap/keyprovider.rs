@@ -94,10 +94,10 @@ impl KeyProviderKeyWrapProtocolOutput {
             .map_err(|e| anyhow!("keyprovider: error while creating channel: {e}"))?;
 
         let mut client =
-            crate::utils::keyprovider::key_provider_service_client::KeyProviderServiceClient::new(
+            crate::utils::grpc::keyprovider::key_provider_service_client::KeyProviderServiceClient::new(
                 channel,
             );
-        let msg = crate::utils::keyprovider::KeyProviderKeyWrapProtocolInput {
+        let msg = crate::utils::grpc::keyprovider::KeyProviderKeyWrapProtocolInput {
             key_provider_key_wrap_protocol_input: input,
         };
         let request = tonic::Request::new(msg);
@@ -529,9 +529,9 @@ mod tests {
     mod grpc {
         use super::cmd_grpc::{decrypt_key, encrypt_key, DEC_KEY, ENC_KEY};
         use super::*;
-        use crate::utils::keyprovider::key_provider_service_server::KeyProviderService;
-        use crate::utils::keyprovider::key_provider_service_server::KeyProviderServiceServer;
-        use crate::utils::keyprovider::{
+        use crate::utils::grpc::keyprovider::key_provider_service_server::KeyProviderService;
+        use crate::utils::grpc::keyprovider::key_provider_service_server::KeyProviderServiceServer;
+        use crate::utils::grpc::keyprovider::{
             KeyProviderKeyWrapProtocolInput as grpc_input,
             KeyProviderKeyWrapProtocolOutput as grpc_output,
         };

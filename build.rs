@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    #[cfg(all(feature = "gen-proto", feature = "keywrap-keyprovider-grpc"))]
+    #[cfg(feature = "gen-proto-grpc")]
     tonic_build::configure()
         .build_server(true)
-        .out_dir("src/utils/")
+        .out_dir("src/utils/grpc/")
         .compile(&["src/utils/proto/keyprovider.proto"], &["src/utils"])?;
     Ok(())
 }

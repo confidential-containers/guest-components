@@ -9,8 +9,7 @@ use anyhow::Result;
 pub mod runner;
 
 #[cfg(feature = "keywrap-keyprovider-grpc")]
-#[rustfmt::skip]
-pub mod keyprovider;
+pub mod grpc;
 
 /// CommandExecuter trait which requires implementation for command exec, first argument is the command name, like /usr/bin/<command-name>,
 /// the second is the list of args to pass to it
