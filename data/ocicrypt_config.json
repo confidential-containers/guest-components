@@ -11,6 +11,9 @@
     },
     "keyprovider3": {
       "native": "attestation_agent"
+    },
+    "keyprovider4": {
+      "ttrpc": "unix:///tmp/keyprovider.sock"
     }
   }
 }

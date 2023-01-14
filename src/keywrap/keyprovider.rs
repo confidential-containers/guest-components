@@ -132,6 +132,45 @@ impl KeyProviderKeyWrapProtocolOutput {
         })
     }
 
+    #[cfg(feature = "keywrap-keyprovider-ttrpc")]
+    async fn from_ttrpc(input: Vec<u8>, conn: &str, operation: OpKey) -> Result<Self> {
+        let c = ttrpc::r#async::Client::connect(conn)?;
+
+        let kc = crate::utils::ttrpc::keyprovider_ttrpc::KeyProviderServiceClient::new(c);
+        let kc1 = kc.clone();
+        let mut req = crate::utils::ttrpc::keyprovider::KeyProviderKeyWrapProtocolInput::new();
+        req.KeyProviderKeyWrapProtocolInput = input;
+
+        let ttrpc_output = match operation {
+            OpKey::Wrap => kc1
+                .wrap_key(ttrpc::context::with_timeout(20 * 1000 * 1000), &req)
+                .await
+                .map_err(|_| {
+                    anyhow!(
+                        "keyprovider: Error from ttrpc server for {:?} operation",
+                        OpKey::Wrap.to_string()
+                    )
+                })?,
+
+            OpKey::Unwrap => kc1
+                .un_wrap_key(ttrpc::context::with_timeout(20 * 1000 * 1000), &req)
+                .await
+                .map_err(|_| {
+                    anyhow!(
+                        "keyprovider: Error from ttrpc server for {:?} operation",
+                        OpKey::Unwrap.to_string()
+                    )
+                })?,
+        };
+
+        serde_json::from_slice(&ttrpc_output.KeyProviderKeyWrapProtocolOutput).map_err(|_| {
+            anyhow!(
+                "Error while deserializing ttrpc output on {:?} operation",
+                OpKey::Unwrap.to_string()
+            )
+        })
+    }
+
     #[cfg(feature = "keywrap-keyprovider-cmd")]
     fn from_command(
         input: Vec<u8>,
@@ -285,6 +324,48 @@ impl KeyProviderKeyWrapper {
         }
     }
 
+    fn wrap_key_ttrpc(&self, _input: Vec<u8>, ttrpc: &str) -> Result<Vec<u8>> {
+        #[cfg(not(feature = "keywrap-keyprovider-ttrpc"))]
+        {
+            Err(anyhow!(
+                "keyprovider: no support of keyprovider-ttrpc, {}",
+                ttrpc
+            ))
+        }
+        #[cfg(feature = "keywrap-keyprovider-ttrpc")]
+        {
+            let ttrpc = ttrpc.to_string();
+            let handler = std::thread::spawn(move || {
+                create_async_runtime()?.block_on(async {
+                    KeyProviderKeyWrapProtocolOutput::from_ttrpc(_input, &ttrpc, OpKey::Wrap)
+                        .await
+                        .map_err(|e| format!("{e}"))
+                })
+            });
+            let protocol_output = match handler.join() {
+                Ok(Ok(v)) => v,
+                Ok(Err(e)) => {
+                    return Err(anyhow!(
+                        "keyprovider: ttrpc provider failed to execute {} operation: {}",
+                        OpKey::Wrap,
+                        e
+                    ));
+                }
+                Err(e) => {
+                    return Err(anyhow!(
+                        "keyprovider: ttrpc provider failed to execute {} operation: {e:?}",
+                        OpKey::Wrap,
+                    ));
+                }
+            };
+            if let Some(result) = protocol_output.key_wrap_results {
+                Ok(result.annotation)
+            } else {
+                Err(anyhow!("keyprovider: get NULL reply from provider"))
+            }
+        }
+    }
+
     fn unwrap_key_cmd(
         &self,
         _input: Vec<u8>,
@@ -327,6 +408,39 @@ impl KeyProviderKeyWrapper {
                         .map_err(|e| {
                             format!(
                                 "keyprovider: grpc provider failed to execute {} operation: {e}",
+                                OpKey::Wrap,
+                            )
+                        })
+                })
+            });
+            match handler.join() {
+                Ok(Ok(v)) => Ok(v),
+                Ok(Err(e)) => bail!("failed to unwrap key by gRPC, {e}"),
+                Err(e) => bail!("failed to unwrap key by gRPC, {e:?}"),
+            }
+        }
+    }
+
+    fn unwrap_key_ttrpc(
+        &self,
+        _input: Vec<u8>,
+        ttrpc: &str,
+    ) -> Result<KeyProviderKeyWrapProtocolOutput> {
+        #[cfg(not(feature = "keywrap-keyprovider-ttrpc"))]
+        return Err(anyhow!(
+            "keyprovider: no support of keyprovider-ttrpc, {}",
+            ttrpc
+        ));
+        #[cfg(feature = "keywrap-keyprovider-ttrpc")]
+        {
+            let ttrpc = ttrpc.to_string();
+            let handler = std::thread::spawn(move || {
+                create_async_runtime()?.block_on(async {
+                    KeyProviderKeyWrapProtocolOutput::from_ttrpc(_input, &ttrpc, OpKey::Unwrap)
+                        .await
+                        .map_err(|e| {
+                            format!(
+                                "keyprovider: ttrpc provider failed to execute {} operation: {e}",
                                 OpKey::Wrap,
                             )
                         })
@@ -395,6 +509,8 @@ impl KeyWrapper for KeyProviderKeyWrapper {
             self.wrap_key_cmd(_serialized_input, _cmd)
         } else if let Some(grpc) = self.attrs.grpc.as_ref() {
             self.wrap_key_grpc(_serialized_input, grpc)
+        } else if let Some(ttrpc) = self.attrs.ttrpc.as_ref() {
+            self.wrap_key_ttrpc(_serialized_input, ttrpc)
         } else {
             Err(anyhow!(
                 "keyprovider: invalid configuration, both grpc and runner are NULL"
@@ -428,6 +544,8 @@ impl KeyWrapper for KeyProviderKeyWrapper {
             self.unwrap_key_cmd(_serialized_input, cmd)?
         } else if let Some(grpc) = self.attrs.grpc.as_ref() {
             self.unwrap_key_grpc(_serialized_input, grpc)?
+        } else if let Some(ttrpc) = self.attrs.ttrpc.as_ref() {
+            self.unwrap_key_ttrpc(_serialized_input, ttrpc)?
         } else if let Some(_native) = self.attrs.native.as_ref() {
             self.unwrap_key_native(dc_config, json_string)?
         } else {
@@ -457,11 +575,13 @@ impl KeyWrapper for KeyProviderKeyWrapper {
 
 #[cfg(any(
     feature = "keywrap-keyprovider-grpc",
+    feature = "keywrap-keyprovider-ttrpc",
     feature = "keywrap-keyprovider-native"
 ))]
 fn create_async_runtime() -> std::result::Result<tokio::runtime::Runtime, String> {
     match tokio::runtime::Builder::new_current_thread()
         .enable_io()
+        .enable_time()
         .build()
     {
         Err(e) => Err(format!("keyprovider: failed to create async runtime, {e}")),
@@ -493,7 +613,8 @@ mod tests {
 
     #[cfg(any(
         feature = "keywrap-keyprovider-cmd",
-        feature = "keywrap-keyprovider-grpc"
+        feature = "keywrap-keyprovider-grpc",
+        feature = "keywrap-keyprovider-ttrpc"
     ))]
     mod cmd_grpc {
         use aes_gcm::aead::{Aead, KeyInit};
@@ -632,6 +753,129 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "keywrap-keyprovider-ttrpc")]
+    mod ttrpc_test {
+        use super::cmd_grpc::{decrypt_key, encrypt_key, DEC_KEY, ENC_KEY};
+        use super::*;
+        use crate::utils::ttrpc::keyprovider::{
+            KeyProviderKeyWrapProtocolInput as ttrpc_input,
+            KeyProviderKeyWrapProtocolOutput as ttrpc_output,
+        };
+        use crate::utils::ttrpc::keyprovider_ttrpc;
+        use async_trait::async_trait;
+        use std::fs;
+        use std::path::Path;
+        use tokio::signal::unix::{signal, SignalKind};
+        pub const SOCK_ADDR: &str = "unix:///tmp/ttrpc-test";
+
+        #[async_trait]
+        impl keyprovider_ttrpc::KeyProviderService for TestServer {
+            async fn wrap_key(
+                &self,
+                _ctx: &::ttrpc::r#async::TtrpcContext,
+                req: ttrpc_input,
+            ) -> ::ttrpc::Result<ttrpc_output> {
+                let key_wrap_input: super::super::KeyProviderKeyWrapProtocolInput =
+                    serde_json::from_slice(&req.KeyProviderKeyWrapProtocolInput).unwrap();
+                let plain_optsdata = key_wrap_input.key_wrap_params.opts_data.unwrap();
+                if let Ok(wrapped_key_result) =
+                    encrypt_key(&base64::decode(plain_optsdata).unwrap(), unsafe { ENC_KEY })
+                {
+                    let ap = AnnotationPacket {
+                        key_url: "https://key-provider/key-uuid".to_string(),
+                        wrapped_key: wrapped_key_result,
+                        wrap_type: "AES".to_string(),
+                    };
+                    let serialized_ap = serde_json::to_vec(&ap).unwrap();
+                    let key_wrap_output = KeyProviderKeyWrapProtocolOutput {
+                        key_wrap_results: Some(KeyWrapResults {
+                            annotation: serialized_ap,
+                        }),
+                        key_unwrap_results: None,
+                    };
+                    let serialized_key_wrap_output = serde_json::to_vec(&key_wrap_output).unwrap();
+                    let mut key_ttrpc_result = ttrpc_output::new();
+                    key_ttrpc_result.KeyProviderKeyWrapProtocolOutput = serialized_key_wrap_output;
+                    Ok(key_ttrpc_result)
+                } else {
+                    let mut status = ttrpc::Status::new();
+                    status.set_code(ttrpc::Code::NOT_FOUND);
+                    Err(ttrpc::error::Error::RpcStatus(status))
+                }
+            }
+
+            async fn un_wrap_key(
+                &self,
+                _ctx: &::ttrpc::r#async::TtrpcContext,
+                req: ttrpc_input,
+            ) -> ::ttrpc::Result<ttrpc_output> {
+                let key_wrap_input: super::super::KeyProviderKeyWrapProtocolInput =
+                    serde_json::from_slice(&req.KeyProviderKeyWrapProtocolInput).unwrap();
+
+                let base64_annotation = key_wrap_input.key_unwrap_params.annotation.unwrap();
+                let vec_annotation = base64::decode(base64_annotation).unwrap();
+                let str_annotation: &str = std::str::from_utf8(&vec_annotation).unwrap();
+                let annotation_packet: AnnotationPacket =
+                    serde_json::from_str(str_annotation).unwrap();
+                let wrapped_key = annotation_packet.wrapped_key;
+                if let Ok(unwrapped_key_result) = decrypt_key(&wrapped_key, unsafe { DEC_KEY }) {
+                    let key_wrap_output = KeyProviderKeyWrapProtocolOutput {
+                        key_wrap_results: None,
+                        key_unwrap_results: Some(KeyUnwrapResults {
+                            opts_data: unwrapped_key_result,
+                        }),
+                    };
+                    let serialized_key_wrap_output = serde_json::to_vec(&key_wrap_output).unwrap();
+                    let mut key_ttrpc_result = ttrpc_output::new();
+                    key_ttrpc_result.KeyProviderKeyWrapProtocolOutput = serialized_key_wrap_output;
+                    Ok(key_ttrpc_result)
+                } else {
+                    let mut status = ttrpc::Status::new();
+                    status.set_code(ttrpc::Code::NOT_FOUND);
+                    Err(ttrpc::error::Error::RpcStatus(status))
+                }
+            }
+        }
+
+        fn remove_if_sock_exist(sock_addr: &str) -> std::io::Result<()> {
+            let path = sock_addr
+                .strip_prefix("unix://")
+                .expect("socket address is not expected");
+
+            if Path::new(path).exists() {
+                fs::remove_file(path)?;
+            }
+
+            Ok(())
+        }
+
+        // Run a mock ttrpc server
+        pub fn start_ttrpc_server() {
+            tokio::spawn(async move {
+                let k = Box::<crate::keywrap::keyprovider::tests::TestServer>::default()
+                    as Box<dyn keyprovider_ttrpc::KeyProviderService + Send + Sync>;
+                let kp_service = keyprovider_ttrpc::create_key_provider_service(k.into());
+
+                remove_if_sock_exist(SOCK_ADDR).unwrap();
+
+                let mut server = ttrpc::asynchronous::Server::new()
+                    .bind(SOCK_ADDR)
+                    .unwrap()
+                    .register_service(kp_service);
+
+                let mut interrupt = signal(SignalKind::interrupt()).unwrap();
+                server.start().await.unwrap();
+                tokio::select! {
+                    _ = interrupt.recv() => {
+                        // test graceful shutdown
+                        println!("graceful shutdown");
+                        server.shutdown().await.unwrap();
+                    }
+                };
+            });
+        }
+    }
+
     #[cfg(feature = "keywrap-keyprovider-cmd")]
     mod cmd {
         use super::super::{
@@ -710,6 +954,7 @@ mod tests {
                 args: None,
             }),
             grpc: None,
+            ttrpc: None,
             native: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
@@ -747,6 +992,7 @@ mod tests {
                 args: None,
             }),
             grpc: None,
+            ttrpc: None,
             native: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
@@ -777,6 +1023,7 @@ mod tests {
                 args: None,
             }),
             grpc: None,
+            ttrpc: None,
             native: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
@@ -808,6 +1055,7 @@ mod tests {
                 args: None,
             }),
             grpc: None,
+            ttrpc: None,
             native: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
@@ -859,6 +1107,7 @@ mod tests {
         let attrs = crate::config::KeyProviderAttrs {
             cmd: None,
             grpc: Some("tcp://127.0.0.1:8990".to_string()),
+            ttrpc: None,
             native: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
@@ -907,6 +1156,7 @@ mod tests {
         let attrs = crate::config::KeyProviderAttrs {
             cmd: None,
             grpc: Some("http://127.0.0.1:8991".to_string()),
+            ttrpc: None,
             native: None,
         };
         provider.insert(String::from("provider"), attrs.clone());
@@ -938,6 +1188,54 @@ mod tests {
         rt.shutdown_background();
     }
 
+    #[cfg(feature = "keywrap-keyprovider-ttrpc")]
+    #[test]
+    fn test_key_provider_ttrpc_success() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let _guard = rt.enter();
+        self::ttrpc_test::start_ttrpc_server();
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        unsafe {
+            self::cmd_grpc::ENC_KEY = b"passphrasewhichneedstobe32bytes!";
+            self::cmd_grpc::DEC_KEY = b"passphrasewhichneedstobe32bytes!";
+        }
+
+        let mut provider = HashMap::new();
+        let mut dc_params = vec![];
+        let attrs = crate::config::KeyProviderAttrs {
+            cmd: None,
+            grpc: None,
+            ttrpc: Some(self::ttrpc_test::SOCK_ADDR.to_string()),
+            native: None,
+        };
+        provider.insert(String::from("provider"), attrs.clone());
+        let keyprovider_key_wrapper =
+            KeyProviderKeyWrapper::new("keyprovider".to_string(), attrs, None);
+
+        // Prepare encryption config params
+        let opts_data = b"symmetric_key";
+        let b64_opts_data = base64::encode(opts_data).into_bytes();
+        let mut ec = EncryptConfig::default();
+        let mut dc = DecryptConfig::default();
+        let mut ec_params = vec![];
+        let param = "keyprovider".to_string().into_bytes();
+        ec_params.push(param.clone());
+        assert!(ec.encrypt_with_key_provider(ec_params).is_ok());
+        let key_wrap_output_result = keyprovider_key_wrapper.wrap_keys(&ec, &b64_opts_data);
+
+        // Perform decryption-config params
+        dc_params.push(param);
+        assert!(dc.decrypt_with_key_provider(dc_params).is_ok());
+        let json_string = key_wrap_output_result.unwrap();
+
+        // Perform unwrapkey operation
+        let key_wrap_output_result = keyprovider_key_wrapper.unwrap_keys(&dc, &json_string);
+        let unwrapped_key = key_wrap_output_result.unwrap();
+        assert_eq!(opts_data.to_vec(), unwrapped_key);
+        // runtime shutdown for stopping ttrpc server
+        rt.shutdown_background();
+    }
+
     #[cfg(feature = "keywrap-keyprovider-native")]
     #[test]
     fn test_key_provider_native_fail() {
@@ -946,6 +1244,7 @@ mod tests {
         let attrs = crate::config::KeyProviderAttrs {
             cmd: None,
             grpc: None,
+            ttrpc: None,
             native: Some("attestation-agent".to_string()),
         };
         provider.insert(String::from("provider"), attrs.clone());
@@ -989,6 +1288,7 @@ mod tests {
         let attrs = crate::config::KeyProviderAttrs {
             cmd: None,
             grpc: None,
+            ttrpc: None,
             native: Some("attestation-agent".to_string()),
         };
         provider.insert(String::from("provider"), attrs.clone());

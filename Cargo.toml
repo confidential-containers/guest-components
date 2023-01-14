@@ -36,6 +36,7 @@ ttrpc-codegen = { version = "0.4.1", optional = true }
 
 [dev-dependencies]
 aes-gcm = { version = "0.10" }
+tokio = { version = "1.17.0", features = ["time", "signal"] }
 
 [features]
 default = ["block-cipher", "keywrap-jwe", "keywrap-keyprovider-cmd"]
@@ -46,7 +47,7 @@ keywrap-jwe = ["josekit"]
 keywrap-keyprovider = []
 keywrap-keyprovider-cmd = ["keywrap-keyprovider"]
 keywrap-keyprovider-grpc = ["keywrap-keyprovider", "prost", "tonic", "tokio/net"]
-keywrap-keyprovider-ttrpc = ["keywrap-keyprovider", "protobuf", "async-trait", "ttrpc"]
+keywrap-keyprovider-ttrpc = ["keywrap-keyprovider", "protobuf", "async-trait", "ttrpc", "tokio"]
 keywrap-keyprovider-native = ["keywrap-keyprovider", "tokio/net", "tokio/sync", "attestation_agent"]
 gen-proto-grpc = ["tonic-build"]
 gen-proto-ttrpc = ["ttrpc-codegen"]
