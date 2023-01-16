@@ -2,7 +2,7 @@ name: image-rs eaa_kbc build
 on:
   pull_request:
     paths:
-      - 'signature/**'
+      - 'src/signature/**'
 
 jobs:
   ci:
@@ -61,8 +61,8 @@ jobs:
 
       - name: Run cargo test - enclave-cc
         run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=enclave-cc
+          cargo test --all --no-default-features --features=enclave-cc
 
       - name: Run cargo test - snapshot-unionfs
         run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=snapshot-unionfs
+          cargo test --all --no-default-features --features=snapshot-unionfs
