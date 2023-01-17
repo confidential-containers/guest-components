@@ -45,6 +45,7 @@ jobs:
           apt-get install -y libcurl4-openssl-dev
           git clone https://github.com/inclavare-containers/rats-tls
           cd rats-tls
+          git reset --hard 8fbfdb6
           cmake -DBUILD_SAMPLES=on -H. -Bbuild
           make -C build install
       - name: Run cargo build
