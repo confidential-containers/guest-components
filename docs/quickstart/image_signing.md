@@ -101,8 +101,8 @@ Firstly edit an `policy.json` like
                     "type": "sigstoreSigned",
                     "keyPath": "/run/image-security/cosign/cosign.pub"
                 }
-            ],
-        },
+            ]
+        }
     }
 }
 ```
