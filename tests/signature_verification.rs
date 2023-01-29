@@ -79,6 +79,7 @@ const TESTS: [TestItem; 6] = [
 /// image-rs built without support for cosign image signing cannot use a policy that includes a type that
 /// uses cosign (type: sigstoreSigned), even if the image being pulled is not signed using cosign.
 /// https://github.com/confidential-containers/attestation-agent/blob/main/src/kbc_modules/sample_kbc/policy.json
+#[cfg(feature = "getresource")]
 #[tokio::test]
 #[serial]
 async fn signature_verification() {

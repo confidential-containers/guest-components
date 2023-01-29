@@ -63,12 +63,12 @@ impl PolicyReqType {
 
     /// Return the `SignScheme` trait object if it is some signing scheme,
     /// or None if not.
-    pub fn try_into_sign_scheme(&self) -> Option<&dyn SignScheme> {
+    pub fn try_into_sign_scheme(&mut self) -> Option<&mut dyn SignScheme> {
         match self {
             #[cfg(feature = "signature-simple")]
-            PolicyReqType::SimpleSigning(scheme) => Some(scheme as &dyn SignScheme),
+            PolicyReqType::SimpleSigning(scheme) => Some(scheme as &mut dyn SignScheme),
             #[cfg(feature = "signature-cosign")]
-            PolicyReqType::Cosign(scheme) => Some(scheme as &dyn SignScheme),
+            PolicyReqType::Cosign(scheme) => Some(scheme as &mut dyn SignScheme),
             _ => None,
         }
     }
@@ -149,18 +149,27 @@ mod tests {
                 key_path: Some("/keys/public-gpg-keyring".into()),
                 key_data: None,
                 signed_identity: None,
+                sig_store_config_dir: "".into(),
+                default_sig_store_config_file: "".into(),
+                gpg_key_ring: "".into(),
             }),
             PolicyReqType::SimpleSigning(SimpleParameters {
                 key_type: "GPGKeys".into(),
                 key_path: None,
                 key_data: Some("bm9uc2Vuc2U=".into()),
                 signed_identity: None,
+                sig_store_config_dir: "".into(),
+                default_sig_store_config_file: "".into(),
+                gpg_key_ring: "".into(),
             }),
             PolicyReqType::SimpleSigning(SimpleParameters {
                 key_type: "GPGKeys".into(),
                 key_path: Some("/keys/public-gpg-keyring".into()),
                 key_data: None,
                 signed_identity: Some(PolicyReqMatchType::MatchExact),
+                sig_store_config_dir: "".into(),
+                default_sig_store_config_file: "".into(),
+                gpg_key_ring: "".into(),
             }),
             PolicyReqType::SimpleSigning(SimpleParameters {
                 key_type: "GPGKeys".into(),
@@ -169,6 +178,9 @@ mod tests {
                 signed_identity: Some(PolicyReqMatchType::ExactReference {
                     docker_reference: "docker.io/example/busybox:latest".into(),
                 }),
+                sig_store_config_dir: "".into(),
+                default_sig_store_config_file: "".into(),
+                gpg_key_ring: "".into(),
             }),
             PolicyReqType::SimpleSigning(SimpleParameters {
                 key_type: "GPGKeys".into(),
@@ -178,6 +190,9 @@ mod tests {
                     prefix: "example".into(),
                     signed_prefix: "example".into(),
                 }),
+                sig_store_config_dir: "".into(),
+                default_sig_store_config_file: "".into(),
+                gpg_key_ring: "".into(),
             }),
         ];
 

@@ -21,8 +21,6 @@ use crate::decoder::Compression;
 use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
 
-use crate::signature;
-
 #[cfg(feature = "snapshot-unionfs")]
 use crate::snapshots::occlum::unionfs::Unionfs;
 #[cfg(feature = "snapshot-overlayfs")]
@@ -221,7 +219,13 @@ impl ImageClient {
                     .as_ref()
                     .expect("unexpected uninitialized secure channel")
                     .clone();
-                match crate::auth::credential_for_reference(&reference, secure_channel).await {
+                match crate::auth::credential_for_reference(
+                    &reference,
+                    secure_channel,
+                    &self.config.file_paths.auth_file,
+                )
+                .await
+                {
                     Ok(cred) => cred,
                     Err(e) => {
                         warn!(
@@ -238,7 +242,12 @@ impl ImageClient {
 
         #[cfg(not(feature = "getresource"))]
         let auth = match (self.config.auth, auth.is_none()) {
-            (true, true) => match crate::auth::credential_for_reference_local(&reference).await {
+            (true, true) => match crate::auth::credential_for_reference_local(
+                &reference,
+                &self.config.file_paths.auth_file,
+            )
+            .await
+            {
                 Ok(cred) => cred,
                 Err(e) => {
                     warn!(
@@ -281,16 +290,27 @@ impl ImageClient {
                 .as_ref()
                 .expect("unexpected uninitialized secure channel")
                 .clone();
-            signature::allows_image(image_url, &image_digest, secure_channel, &auth)
-                .await
-                .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
+            crate::signature::allows_image(
+                image_url,
+                &image_digest,
+                secure_channel,
+                &auth,
+                &self.config.file_paths,
+            )
+            .await
+            .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
         }
 
         #[cfg(all(not(feature = "getresource"), feature = "signature"))]
         if self.config.security_validate {
-            signature::allows_image(image_url, &image_digest, &auth)
-                .await
-                .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
+            crate::signature::allows_image(
+                image_url,
+                &image_digest,
+                &auth,
+                &self.config.file_paths,
+            )
+            .await
+            .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
         }
 
         let mut image_data = ImageMeta {

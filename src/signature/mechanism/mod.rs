@@ -20,6 +20,8 @@ use anyhow::*;
 use async_trait::async_trait;
 use oci_distribution::secrets::RegistryAuth;
 
+use crate::config::Paths;
+
 use super::image::Image;
 
 #[cfg(feature = "signature-simple")]
@@ -34,7 +36,7 @@ pub trait SignScheme: Send + Sync {
     /// Do initialization jobs for this scheme. This may include the following
     /// * preparing runtime directories for storing signatures, configurations, etc.
     /// * gathering necessary files.
-    async fn init(&self) -> Result<()>;
+    async fn init(&mut self, config: &Paths) -> Result<()>;
 
     /// Reture a HashMap including a resource's name => file path in fs.
     ///

@@ -9,6 +9,7 @@ use serial_test::serial;
 
 mod common;
 
+#[cfg(feature = "getresource")]
 #[rstest]
 #[case("liudalibj/private-busy-box")]
 #[case("quay.io/liudalibj/private-busy-box")]

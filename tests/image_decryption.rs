@@ -18,6 +18,7 @@ const UNENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS: &str = "docker.io/arronwang/bu
 /// Ocicrypt-rs config
 const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider.conf";
 
+#[cfg(feature = "getresource")]
 #[tokio::test]
 #[serial]
 async fn test_decrypt_layers() {
