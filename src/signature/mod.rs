@@ -8,9 +8,6 @@ pub mod mechanism;
 pub mod payload;
 pub mod policy;
 
-/// Default policy file path.
-pub const POLICY_FILE_PATH: &str = "/run/image-security/security_policy.json";
-
 #[cfg(feature = "getresource")]
 pub use getresource::allows_image;
 
@@ -19,11 +16,11 @@ pub use no_getresource::allows_image;
 
 #[cfg(feature = "getresource")]
 pub mod getresource {
+    use crate::config::Paths;
     use crate::secure_channel::SecureChannel;
     use crate::signature::policy::Policy;
 
     use super::image::Image;
-    use super::POLICY_FILE_PATH;
 
     use std::convert::TryFrom;
     use std::sync::Arc;
@@ -34,21 +31,25 @@ pub mod getresource {
 
     /// `allows_image` will check all the `PolicyRequirements` suitable for
     /// the given image. The `PolicyRequirements` is defined in
-    /// [`POLICY_FILE_PATH`] and may include signature verification.
+    /// [`policy_path`] and may include signature verification.
     #[cfg(all(feature = "getresource", feature = "signature"))]
     pub async fn allows_image(
         image_reference: &str,
         image_digest: &str,
         secure_channel: Arc<Mutex<SecureChannel>>,
         auth: &RegistryAuth,
+        paths: &Paths,
     ) -> Result<()> {
         // if Policy config file does not exist, get if from KBS.
-
-        if !std::path::Path::new(POLICY_FILE_PATH).exists() {
+        if !std::path::Path::new(&paths.policy_path).exists() {
             secure_channel
                 .lock()
                 .await
-                .get_resource("Policy", std::collections::HashMap::new(), POLICY_FILE_PATH)
+                .get_resource(
+                    "Policy",
+                    std::collections::HashMap::new(),
+                    &paths.policy_path,
+                )
                 .await?;
         }
 
@@ -58,12 +59,12 @@ pub mod getresource {
 
         // Read the set of signature schemes that need to be verified
         // of the image from the policy configuration.
-        let policy = Policy::from_file(POLICY_FILE_PATH).await?;
+        let mut policy = Policy::from_file(&paths.policy_path).await?;
         let schemes = policy.signature_schemes(&image);
 
         // Get the necessary resources from KBS if needed.
         for scheme in schemes {
-            scheme.init().await?;
+            scheme.init(paths).await?;
             let resource_manifest = scheme.resource_manifest();
             for (resource_name, path) in resource_manifest {
                 secure_channel
@@ -89,17 +90,22 @@ pub mod no_getresource {
     use log::warn;
     use oci_distribution::secrets::RegistryAuth;
 
-    use crate::signature::{image::Image, policy::Policy, POLICY_FILE_PATH};
+    use crate::{
+        config::Paths,
+        signature::{image::Image, policy::Policy},
+    };
 
     pub async fn allows_image(
         image_reference: &str,
         image_digest: &str,
         auth: &RegistryAuth,
+        paths: &Paths,
     ) -> Result<()> {
         // if Policy config file does not exist, get if from KBS.
+        let policy_path = &paths.policy_path;
 
-        if !std::path::Path::new(POLICY_FILE_PATH).exists() {
-            warn!("Non {POLICY_FILE_PATH} found, pass validation.");
+        if !std::path::Path::new(policy_path).exists() {
+            warn!("Non {policy_path} found, pass validation.");
             return Ok(());
         }
 
@@ -109,12 +115,12 @@ pub mod no_getresource {
 
         // Read the set of signature schemes that need to be verified
         // of the image from the policy configuration.
-        let policy = Policy::from_file(POLICY_FILE_PATH).await?;
+        let mut policy = Policy::from_file(policy_path).await?;
         let schemes = policy.signature_schemes(&image);
 
         // Get the necessary resources from KBS if needed.
         for scheme in schemes {
-            scheme.init().await?;
+            scheme.init(paths).await?;
         }
 
         policy

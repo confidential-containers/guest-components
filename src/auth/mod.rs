@@ -11,11 +11,6 @@ use anyhow::*;
 use oci_distribution::{secrets::RegistryAuth, Reference};
 use serde::{Deserialize, Serialize};
 
-/// The reason for using the `/run` directory here is that in general HW-TEE,
-/// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
-/// [`AUTH_FILE_PATH`] shows the path to the `auth.json` file.
-pub const AUTH_FILE_PATH: &str = "/run/image-security/auth.json";
-
 /// Hard-coded ResourceDescription of `auth.json`.
 pub const RESOURCE_DESCRIPTION: &str = "Credential";
 
@@ -41,17 +36,18 @@ pub struct DockerAuthConfig {
 pub async fn credential_for_reference(
     reference: &Reference,
     secure_channel: std::sync::Arc<tokio::sync::Mutex<crate::secure_channel::SecureChannel>>,
+    auth_file_path: &str,
 ) -> Result<RegistryAuth> {
     // if Policy config file does not exist, get if from KBS.
-    if !Path::new(AUTH_FILE_PATH).exists() {
+    if !Path::new(auth_file_path).exists() {
         secure_channel
             .lock()
             .await
-            .get_resource(RESOURCE_DESCRIPTION, HashMap::new(), AUTH_FILE_PATH)
+            .get_resource(RESOURCE_DESCRIPTION, HashMap::new(), auth_file_path)
             .await?;
     }
 
-    let reader = File::open(AUTH_FILE_PATH)?;
+    let reader = File::open(auth_file_path)?;
     let buf_reader = BufReader::new(reader);
     let config: DockerConfigFile = serde_json::from_reader(buf_reader)?;
 
@@ -65,13 +61,16 @@ pub async fn credential_for_reference(
 /// directly return [`RegistryAuth::Anonymous`].
 /// Or, it will use the `auth.json` to find
 /// a credential of the given image reference.
-pub async fn credential_for_reference_local(reference: &Reference) -> Result<RegistryAuth> {
+pub async fn credential_for_reference_local(
+    reference: &Reference,
+    auth_file_path: &str,
+) -> Result<RegistryAuth> {
     // if Policy config file does not exist, get if from KBS.
-    if !Path::new(AUTH_FILE_PATH).exists() {
+    if !Path::new(auth_file_path).exists() {
         return Ok(RegistryAuth::Anonymous);
     }
 
-    let reader = File::open(AUTH_FILE_PATH)?;
+    let reader = File::open(auth_file_path)?;
     let buf_reader = BufReader::new(reader);
     let config: DockerConfigFile = serde_json::from_reader(buf_reader)?;
 

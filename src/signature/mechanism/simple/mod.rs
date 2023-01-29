@@ -22,22 +22,12 @@ pub use self::sigstore::SigstoreConfig;
 pub use self::sigstore::{format_sigstore_name, get_sigs_from_specific_sigstore};
 pub use verify::verify_sig_and_extract_payload;
 
+use crate::config::Paths;
 use crate::signature::image::digest::Digest;
 use crate::signature::image::Image;
 use crate::signature::policy::ref_match::PolicyReqMatchType;
 
 use super::SignScheme;
-
-/// Dir of Sigstore Config file.
-/// The reason for using the `/run` directory here is that in general HW-TEE,
-/// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
-pub const SIG_STORE_CONFIG_DIR: &str = "/run/image-security/simple_signing/sigstore_config";
-
-pub const SIG_STORE_CONFIG_DEFAULT_FILE: &str =
-    "/run/image-security/simple_signing/sigstore_config/default.yaml";
-
-/// Path to the gpg pubkey ring of the signature
-pub const GPG_KEY_RING: &str = "/run/image-security/simple_signing/pubkey.gpg";
 
 /// The name of resource to request sigstore config from kbs
 pub const SIG_STORE_CONFIG_KBS: &str = "Sigstore Config";
@@ -70,14 +60,26 @@ pub struct SimpleParameters {
     // This field is optional.
     #[serde(default, rename = "signedIdentity")]
     pub signed_identity: Option<PolicyReqMatchType>,
+
+    /// Dir of `Sigstore Config file`
+    #[serde(skip)]
+    pub sig_store_config_dir: String,
+
+    /// Default sigstore config file
+    #[serde(skip)]
+    pub default_sig_store_config_file: String,
+
+    /// Path to the gpg pubkey ring of the signature
+    #[serde(skip)]
+    pub gpg_key_ring: String,
 }
 
 /// Prepare directories for configs and sigstore configs.
 /// It will create (if not) the following dirs:
 /// * [`SIG_STORE_CONFIG_DIR`]
-async fn prepare_runtime_dirs() -> Result<()> {
-    if !Path::new(SIG_STORE_CONFIG_DIR).exists() {
-        fs::create_dir_all(SIG_STORE_CONFIG_DIR)
+async fn prepare_runtime_dirs(sig_store_config_dir: &str) -> Result<()> {
+    if !Path::new(sig_store_config_dir).exists() {
+        fs::create_dir_all(sig_store_config_dir)
             .await
             .map_err(|e| anyhow!("Create Simple Signing sigstore-config dir failed: {:?}", e))?;
     }
@@ -87,8 +89,11 @@ async fn prepare_runtime_dirs() -> Result<()> {
 #[async_trait]
 impl SignScheme for SimpleParameters {
     /// Init simple scheme signing
-    async fn init(&self) -> Result<()> {
-        prepare_runtime_dirs().await?;
+    async fn init(&mut self, config: &Paths) -> Result<()> {
+        self.sig_store_config_dir = config.sig_store_config_dir.clone();
+        self.default_sig_store_config_file = config.default_sig_store_config_file.clone();
+        self.gpg_key_ring = config.gpg_key_ring.clone();
+        prepare_runtime_dirs(&self.sig_store_config_dir).await?;
 
         Ok(())
     }
@@ -98,17 +103,17 @@ impl SignScheme for SimpleParameters {
         let mut res = HashMap::<&str, &str>::new();
 
         // Sigstore Config
-        if PathBuf::from(SIG_STORE_CONFIG_DIR)
+        if PathBuf::from(&self.sig_store_config_dir)
             .read_dir()
             .map(|mut i| i.next().is_none())
             .unwrap_or(false)
         {
-            res.insert(SIG_STORE_CONFIG_KBS, SIG_STORE_CONFIG_DEFAULT_FILE);
+            res.insert(SIG_STORE_CONFIG_KBS, &self.default_sig_store_config_file);
         }
 
         // gpg key ring
-        if !Path::new(GPG_KEY_RING).exists() {
-            res.insert(GPG_KEY_RING_KBS, GPG_KEY_RING);
+        if !Path::new(&self.gpg_key_ring).exists() {
+            res.insert(GPG_KEY_RING_KBS, &self.gpg_key_ring);
         }
 
         res
@@ -218,7 +223,8 @@ pub async fn get_signatures(image: &mut Image) -> Result<Vec<Vec<u8>>> {
     // TODO: Add get signatures from registry X-R-S-S API extension.
     //
     // issue: https://github.com/confidential-containers/image-rs/issues/12
-    let sigstore_config = sigstore::SigstoreConfig::new_from_configs(SIG_STORE_CONFIG_DIR).await?;
+    let sigstore_config =
+        sigstore::SigstoreConfig::new_from_configs(crate::config::SIG_STORE_CONFIG_DIR).await?;
 
     let sigstore_base_url = sigstore_config
         .base_url(&image.reference)?

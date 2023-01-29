@@ -19,12 +19,10 @@ use sigstore::registry::Auth;
 use tokio::fs;
 
 use super::SignScheme;
+use crate::config::Paths;
 use crate::signature::{
     image::Image, payload::simple_signing::SigPayload, policy::ref_match::PolicyReqMatchType,
 };
-
-/// Dir for storage of cosign verification keys.
-pub const COSIGN_KEY_DIR: &str = "/run/image-security/cosign";
 
 /// The name of resource to request cosign verification key from kbs
 pub const COSIGN_KEY_KBS: &str = "Cosign Key";
@@ -50,17 +48,24 @@ pub struct CosignParameters {
     // This field is optional.
     #[serde(default, rename = "signedIdentity")]
     pub signed_identity: Option<PolicyReqMatchType>,
+
+    /// Dir for storage of cosign verification keys
+    #[serde(skip)]
+    pub cosign_key_dir: String,
 }
 
 #[async_trait]
 impl SignScheme for CosignParameters {
     /// This initialization will:
     /// * Create [`COSIGN_KEY_DIR`] if not exist.
-    async fn init(&self) -> Result<()> {
-        if !Path::new(COSIGN_KEY_DIR).exists() {
-            fs::create_dir_all(COSIGN_KEY_DIR).await.map_err(|e| {
-                anyhow!("Create Simple Signing sigstore-config dir failed: {:?}", e)
-            })?;
+    async fn init(&mut self, config: &Paths) -> Result<()> {
+        self.cosign_key_dir = config.cosign_key_dir.clone();
+        if !Path::new(&self.cosign_key_dir).exists() {
+            fs::create_dir_all(&self.cosign_key_dir)
+                .await
+                .map_err(|e| {
+                    anyhow!("Create Simple Signing sigstore-config dir failed: {:?}", e)
+                })?;
         }
 
         Ok(())
@@ -205,6 +210,7 @@ mod tests {
             key_path: Some("test_data/signature/cosign/cosign1.pub".into()),
             key_data: None,
             signed_identity: None,
+            cosign_key_dir: crate::config::COSIGN_KEY_DIR.into(),
         },
         "registry.cn-hangzhou.aliyuncs.com/xynnn/cosign:latest",
     )]
@@ -213,6 +219,7 @@ mod tests {
             key_path: Some("test_data/signature/cosign/cosign1.pub".into()),
             key_data: None,
             signed_identity: None,
+            cosign_key_dir: crate::config::COSIGN_KEY_DIR.into(),
         },
         "registry-1.docker.io/xynnn007/cosign:latest",
     )]
@@ -221,6 +228,7 @@ mod tests {
             key_path: Some("test_data/signature/cosign/cosign1.pub".into()),
             key_data: None,
             signed_identity: None,
+            cosign_key_dir: crate::config::COSIGN_KEY_DIR.into(),
         },
         "quay.io/kata-containers/confidential-containers:cosign-signed",
     )]
@@ -265,6 +273,7 @@ mod tests {
             key_path: None,
             key_data: None,
             signed_identity: Some(policy_match),
+            cosign_key_dir: crate::config::COSIGN_KEY_DIR.into(),
         };
         assert_eq!(parameter.check_reference_rule_types().is_ok(), pass);
     }

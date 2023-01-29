@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use std::convert::TryFrom;
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -12,6 +12,28 @@ use crate::snapshots::SnapshotType;
 use crate::CC_IMAGE_WORK_DIR;
 
 const DEFAULT_WORK_DIR: &str = "/var/lib/image-rs/";
+
+/// Default policy file path.
+pub const POLICY_FILE_PATH: &str = "/run/image-security/security_policy.json";
+
+/// Dir of Sigstore Config file.
+/// The reason for using the `/run` directory here is that in general HW-TEE,
+/// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
+pub const SIG_STORE_CONFIG_DIR: &str = "/run/image-security/simple_signing/sigstore_config";
+
+pub const SIG_STORE_CONFIG_DEFAULT_FILE: &str =
+    "/run/image-security/simple_signing/sigstore_config/default.yaml";
+
+/// Path to the gpg pubkey ring of the signature
+pub const GPG_KEY_RING: &str = "/run/image-security/simple_signing/pubkey.gpg";
+
+/// Dir for storage of cosign verification keys.
+pub const COSIGN_KEY_DIR: &str = "/run/image-security/cosign";
+
+/// The reason for using the `/run` directory here is that in general HW-TEE,
+/// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
+/// [`AUTH_FILE_PATH`] shows the path to the `auth.json` file.
+pub const AUTH_FILE_PATH: &str = "/run/image-security/auth.json";
 
 /// `image-rs` configuration information.
 #[derive(Clone, Debug, Deserialize)]
@@ -27,6 +49,25 @@ pub struct ImageConfig {
 
     /// Use `auth.json` control
     pub auth: bool,
+
+    /// Records different configurable paths
+    #[serde(
+        default = "Paths::default",
+        deserialize_with = "deserialize_null_default"
+    )]
+    pub file_paths: Paths,
+}
+
+/// This function used to parse from string. When it is an
+/// empty string, return the default value of the parsed
+/// struct.
+fn deserialize_null_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    T: Default + Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    let opt = Option::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
 }
 
 impl Default for ImageConfig {
@@ -35,6 +76,7 @@ impl Default for ImageConfig {
         let work_dir = PathBuf::from(
             std::env::var(CC_IMAGE_WORK_DIR).unwrap_or_else(|_| DEFAULT_WORK_DIR.to_string()),
         );
+
         ImageConfig {
             work_dir,
             #[cfg(feature = "snapshot-overlayfs")]
@@ -43,6 +85,7 @@ impl Default for ImageConfig {
             default_snapshot: SnapshotType::Unknown,
             security_validate: false,
             auth: false,
+            file_paths: Paths::default(),
         }
     }
 }
@@ -60,6 +103,40 @@ impl TryFrom<&Path> for ImageConfig {
 
         serde_json::from_reader::<File, ImageConfig>(file)
             .map_err(|e| anyhow!("failed to parse config file {}", e.to_string()))
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct Paths {
+    /// Path to `Policy.json`
+    pub policy_path: String,
+
+    /// Dir of `Sigstore Config file`, used by simple signing
+    pub sig_store_config_dir: String,
+
+    /// Default sigstore config file, used by simple signing
+    pub default_sig_store_config_file: String,
+
+    /// Path to the gpg pubkey ring of the signature
+    pub gpg_key_ring: String,
+
+    /// Dir for storage of cosign verification keys
+    pub cosign_key_dir: String,
+
+    /// Path to the auth file
+    pub auth_file: String,
+}
+
+impl Default for Paths {
+    fn default() -> Self {
+        Self {
+            policy_path: POLICY_FILE_PATH.into(),
+            sig_store_config_dir: SIG_STORE_CONFIG_DIR.into(),
+            default_sig_store_config_file: SIG_STORE_CONFIG_DEFAULT_FILE.into(),
+            gpg_key_ring: GPG_KEY_RING.into(),
+            cosign_key_dir: COSIGN_KEY_DIR.into(),
+            auth_file: AUTH_FILE_PATH.into(),
+        }
     }
 }
 

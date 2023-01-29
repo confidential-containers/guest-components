@@ -58,7 +58,7 @@ impl Policy {
     // WARNING: This validates signatures and the manifest, but does not download or validate the
     // layers. Users must validate that the layers match their expected digests.
     pub async fn is_image_allowed(
-        &self,
+        &mut self,
         mut image: image::Image,
         auth: &RegistryAuth,
     ) -> Result<()> {
@@ -77,38 +77,40 @@ impl Policy {
     }
 
     // Get the set of signature schemes that need to be verified of the image.
-    pub fn signature_schemes(&self, image: &image::Image) -> Vec<&dyn SignScheme> {
+    pub fn signature_schemes(&mut self, image: &image::Image) -> Vec<&mut dyn SignScheme> {
         self.requirements_for_image(image)
-            .iter()
+            .iter_mut()
             .filter_map(|req| req.try_into_sign_scheme())
             .collect()
     }
 
     // selects the appropriate requirements for the image from Policy.
-    fn requirements_for_image(&self, image: &image::Image) -> &Vec<PolicyReqType> {
+    fn requirements_for_image(&mut self, image: &image::Image) -> &mut Vec<PolicyReqType> {
         // Get transport name of the image
         let transport_name = image.transport_name();
 
-        if let Some(transport_scopes) = self.transports.get(&transport_name) {
+        if let Some(transport_scopes) = self.transports.get_mut(&transport_name) {
             // Look for a full match.
             let identity = image.reference.whole();
-            if let Some(reqs) = transport_scopes.get(&identity) {
-                return reqs;
+            if transport_scopes.contains_key(&identity) {
+                return transport_scopes
+                    .get_mut(&identity)
+                    .expect("Unexpected contains");
             }
 
             // Look for a match of the possible parent namespaces.
             for name in image::get_image_namespaces(&image.reference).iter() {
-                if let Some(reqs) = transport_scopes.get(name) {
-                    return reqs;
+                if transport_scopes.contains_key(name) {
+                    return transport_scopes.get_mut(name).expect("Unexpected contains");
                 }
             }
 
             // Look for a default match for the transport.
-            if let Some(reqs) = transport_scopes.get("") {
+            if let Some(reqs) = transport_scopes.get_mut("") {
                 return reqs;
             }
         }
 
-        &self.default
+        &mut self.default
     }
 }
