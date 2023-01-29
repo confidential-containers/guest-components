@@ -69,9 +69,9 @@ exclude = ["scripts/attestation_agent/app"]
 
 [features]
 default = ["snapshot-overlayfs", "signature-cosign", "keywrap-grpc"]
-kata-cc = ["encryption", "keywrap-grpc", "snapshot-overlayfs", "signature-cosign"]
-kata-cc-s390x = ["encryption", "keywrap-grpc", "snapshot-overlayfs", "signature-simple"]
-enclave-cc = ["encryption", "keywrap-native", "eaa-kbc", "snapshot-unionfs", "signature-simple"]
+kata-cc = ["encryption", "keywrap-grpc", "snapshot-overlayfs", "signature-cosign", "getresource"]
+kata-cc-s390x = ["encryption", "keywrap-grpc", "snapshot-overlayfs", "signature-simple", "getresource"]
+enclave-cc = ["encryption", "keywrap-native", "eaa-kbc", "snapshot-unionfs", "signature-simple", "getresource"]
 
 encryption = ["ocicrypt-rs/block-cipher"]
 keywrap-cmd = ["ocicrypt-rs/keywrap-keyprovider-cmd"]
@@ -87,3 +87,5 @@ signature-cosign = ["signature", "sigstore"]
 
 snapshot-overlayfs = ["nix"]
 snapshot-unionfs = ["nix", "dircpy", "fs_extra"]
+
+getresource = []

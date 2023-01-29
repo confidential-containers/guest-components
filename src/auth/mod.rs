@@ -5,14 +5,11 @@
 
 pub mod auth_config;
 
-use std::{collections::HashMap, fs::File, io::BufReader, path::Path, sync::Arc};
+use std::{collections::HashMap, fs::File, io::BufReader, path::Path};
 
 use anyhow::*;
 use oci_distribution::{secrets::RegistryAuth, Reference};
 use serde::{Deserialize, Serialize};
-use tokio::sync::Mutex;
-
-use crate::secure_channel::SecureChannel;
 
 /// The reason for using the `/run` directory here is that in general HW-TEE,
 /// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
@@ -36,13 +33,14 @@ pub struct DockerAuthConfig {
 /// Get a credential (RegistryAuth) for the given Reference.
 /// First, it will try to find auth info in the local
 /// `auth.json`. If there is not one, it will
-/// ask one from the [`SecureChannel`], which connects
+/// ask one from the [`crate::secure_channel::SecureChannel`], which connects
 /// to the GetResource API of Attestation Agent.
 /// Then, it will use the `auth.json` to find
 /// a credential of the given image reference.
+#[cfg(feature = "getresource")]
 pub async fn credential_for_reference(
     reference: &Reference,
-    secure_channel: Arc<Mutex<SecureChannel>>,
+    secure_channel: std::sync::Arc<tokio::sync::Mutex<crate::secure_channel::SecureChannel>>,
 ) -> Result<RegistryAuth> {
     // if Policy config file does not exist, get if from KBS.
     if !Path::new(AUTH_FILE_PATH).exists() {
@@ -51,6 +49,26 @@ pub async fn credential_for_reference(
             .await
             .get_resource(RESOURCE_DESCRIPTION, HashMap::new(), AUTH_FILE_PATH)
             .await?;
+    }
+
+    let reader = File::open(AUTH_FILE_PATH)?;
+    let buf_reader = BufReader::new(reader);
+    let config: DockerConfigFile = serde_json::from_reader(buf_reader)?;
+
+    // TODO: support credential helpers
+    auth_config::credential_from_auth_config(reference, &config.auths)
+}
+
+/// Get a credential (RegistryAuth) for the given Reference.
+/// First, it will try to find auth info in the local
+/// `auth.json`. If there is not one, it will
+/// directly return [`RegistryAuth::Anonymous`].
+/// Or, it will use the `auth.json` to find
+/// a credential of the given image reference.
+pub async fn credential_for_reference_local(reference: &Reference) -> Result<RegistryAuth> {
+    // if Policy config file does not exist, get if from KBS.
+    if !Path::new(AUTH_FILE_PATH).exists() {
+        return Ok(RegistryAuth::Anonymous);
     }
 
     let reader = File::open(AUTH_FILE_PATH)?;

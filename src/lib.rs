@@ -13,7 +13,9 @@ pub mod decrypt;
 pub mod image;
 pub mod meta_store;
 pub mod pull;
+#[cfg(feature = "getresource")]
 pub mod secure_channel;
+#[cfg(feature = "signature")]
 pub mod signature;
 pub mod snapshots;
 pub mod stream;
