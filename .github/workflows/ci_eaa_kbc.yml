@@ -18,7 +18,7 @@ jobs:
           - nightly
     # Run all steps in the compilation testing containers
     container:
-      image: runetest/compilation-testing:ubuntu18.04
+      image: runetest/compilation-testing:ubuntu20.04
       env:
         LD_LIBRARY_PATH: /usr/local/lib/rats-tls
 
@@ -57,11 +57,11 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --features enclave-cc
+          args: --no-default-features --features enclave-cc,keywrap-native
 
-      - name: Run cargo test - enclave-cc
+      - name: Run cargo test - enclave-cc,keywrap-native
         run: |
-          cargo test --all --no-default-features --features=enclave-cc
+          cargo test --all --no-default-features --features=enclave-cc,keywrap-native
 
       - name: Run cargo test - snapshot-unionfs
         run: |
