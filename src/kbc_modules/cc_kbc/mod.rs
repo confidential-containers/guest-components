@@ -13,14 +13,14 @@ use anyhow::*;
 use async_trait::async_trait;
 use attester::{detect_tee_type, Attester};
 use core::time::Duration;
-use crypto::{hash_chunks, TeeKey};
+use crypto::{hash_chunks, AnnotationPacket, TeeKey};
 use kbs_protocol::message::*;
 use kbs_types::ErrorInformation;
 
 const KBS_REQ_TIMEOUT_SEC: u64 = 60;
 const KBS_GET_RESOURCE_MAX_ATTEMPT: u64 = 3;
 
-const KBS_URL_PREFIX: &str = "kbs/v0";
+pub const KBS_URL_PREFIX: &str = "kbs/v0";
 
 pub struct Kbc {
     tee: String,
@@ -39,8 +39,26 @@ impl KbcInterface for Kbc {
         Err(anyhow!("Check API of this KBC is unimplemented."))
     }
 
-    async fn decrypt_payload(&mut self, _annotation: &str) -> Result<Vec<u8>> {
-        Err(anyhow!("Decrypt Payload API of this KBC is unimplemented."))
+    async fn decrypt_payload(&mut self, annotation: &str) -> Result<Vec<u8>> {
+        let annotation_packet: AnnotationPacket = serde_json::from_str(annotation)
+            .map_err(|e| anyhow!("Failed to parse annotation: {}", e))?;
+
+        if annotation_packet.kbc_name() != "cc_kbc" {
+            bail!("Unmatch KBS name: {}", annotation_packet.kbc_name())
+        }
+
+        let key_url = annotation_packet.key_url()?;
+        if !key_url.starts_with(&self.kbs_uri) {
+            bail!(
+                "Multi-KBS resource is not supported, Unmatch KBS address: {}",
+                &key_url
+            )
+        }
+
+        let response = self.request_kbs_resource(key_url).await?;
+        let key = self.decrypt_response_output(response)?;
+
+        annotation_packet.decrypt(&key)
     }
 
     #[allow(unused_assignments)]
@@ -146,7 +164,7 @@ impl Kbc {
 
         let challenge = self
             .http_client()
-            .post(format!("{}/auth", kbs_uri))
+            .post(format!("{kbs_uri}/auth"))
             .header("Content-Type", "application/json")
             .json(&Request::new(self.tee().to_string()))
             .send()
@@ -157,7 +175,7 @@ impl Kbc {
 
         let attest_response = self
             .http_client()
-            .post(format!("{}/attest", kbs_uri))
+            .post(format!("{kbs_uri}/attest"))
             .header("Content-Type", "application/json")
             .json(&self.generate_evidence()?)
             .send()
