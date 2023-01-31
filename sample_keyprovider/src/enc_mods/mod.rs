@@ -11,3 +11,7 @@ pub use sample_enc::enc_optsdata_gen_anno;
 pub mod offline_fs_kbs;
 #[cfg(feature = "offline_fs_kbs")]
 pub use offline_fs_kbs::enc_optsdata_gen_anno;
+#[cfg(feature = "cc_kbc_enc")]
+pub mod cc_kbc_enc;
+#[cfg(feature = "cc_kbc_enc")]
+pub use cc_kbc_enc::enc_optsdata_gen_anno;

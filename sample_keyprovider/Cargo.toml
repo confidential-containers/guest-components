@@ -29,3 +29,4 @@ shadow-rs = "0.5.25"
 default = []
 sample_enc = []
 offline_fs_kbs = ["openssl"]
+cc_kbc_enc = []
