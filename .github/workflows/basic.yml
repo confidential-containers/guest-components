@@ -29,6 +29,13 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
+      - name: Install TDX dependencies
+        run: |
+          sudo curl -L https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
+          sudo echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+          sudo apt-get update
+          sudo apt-get install -y libtdx-attest-dev
+
       - name: Build and install with default features
         run: |
           make && make install
@@ -45,6 +52,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
+          args: --features rust-crypto
 
       - name: Run cargo fmt check
         uses: actions-rs/cargo@v1
@@ -57,4 +65,4 @@ jobs:
         with:
           command: clippy
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
-          args: --all-targets -- -D warnings -A clippy::derive_partial_eq_without_eq
+          args: --all-targets --features rust-crypto -- -D warnings -A clippy::derive_partial_eq_without_eq

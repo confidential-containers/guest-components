@@ -53,4 +53,4 @@ jobs:
         with:
           command: clippy
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
-          args: --all-targets --features cc_kbc -- -D warnings -A clippy::derive_partial_eq_without_eq
+          args: --all-targets --features cc_kbc,rust-crypto -- -D warnings -A clippy::derive_partial_eq_without_eq
