@@ -9,7 +9,7 @@ extern crate strum;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use kbc_modules::AnnotationPacket;
+use kbc_modules::{uri::ResourceUri, AnnotationPacket};
 use std::collections::HashMap;
 
 use crate::kbc_modules::{KbcCheckInfo, KbcInstance, KbcModuleList};
@@ -17,6 +17,8 @@ use crate::kbc_modules::{KbcCheckInfo, KbcInstance, KbcModuleList};
 pub mod common;
 
 mod kbc_modules;
+
+pub use kbc_modules::uri;
 
 /// Attestation Agent (AA for short) is a rust library crate for attestation procedure
 /// in confidential containers. It provides kinds of service APIs that need to make
@@ -139,6 +141,9 @@ impl AttestationAPIs for AttestationAgent {
         kbs_uri: &str,
         resource_description: &str,
     ) -> Result<Vec<u8>> {
+        let rid = ResourceUri::try_from(resource_uri)
+            .map_err(|e| anyhow!("download confidential resource: {e}"))?;
+
         if !self.kbc_instance_map.contains_key(kbc_name) {
             self.instantiate_kbc(kbc_name, kbs_uri)?;
         }

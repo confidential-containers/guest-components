@@ -44,6 +44,11 @@ impl KbcInterface for EAAKbc {
         Ok(KbcCheckInfo { kbs_info })
     }
 
+    /// Decrypt the payload inside annotation packet.
+    /// This function will **ignore** the kbs address the kid carries,
+    /// instead overwrite with the kbs_uri the [`Kbc`] carries.
+    /// Related issue:
+    /// compile_error!("Issue");
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
         debug!("EAA KBC decrypt_payload() is called");
 
@@ -54,9 +59,10 @@ impl KbcInterface for EAAKbc {
         }
 
         debug!("start decrypt...");
+
         let decrypted_payload = self.kbs_decrypt_payload(
             base64::decode(annotation_packet.wrapped_data)?,
-            annotation_packet.kid,
+            annotation_packet.kid.resource_path(),
             base64::decode(annotation_packet.iv)?,
         )?;
         debug!("decrypted success");

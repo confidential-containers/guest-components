@@ -22,7 +22,7 @@ use kbs_types::ErrorInformation;
 use std::str::FromStr;
 use zeroize::Zeroizing;
 
-use super::{AnnotationPacket, ResourceName};
+use super::{uri::ResourceId, AnnotationPacket};
 
 const KBS_REQ_TIMEOUT_SEC: u64 = 60;
 const KBS_GET_RESOURCE_MAX_ATTEMPT: u64 = 3;
@@ -40,18 +40,6 @@ pub struct Kbc {
     authenticated: bool,
 }
 
-pub fn key_url(kid: &str) -> Result<String> {
-    let kid_without_prefix = kid.split("://").collect::<Vec<&str>>()[1].to_string();
-    let (kbs_addr, key_path) = kid_without_prefix
-        .split_once('/')
-        .ok_or_else(|| anyhow!("Invalid KID in AnnotationPacket"))?;
-
-    // Now only support `http://` prefix.
-    Ok(format!(
-        "http://{kbs_addr}/{KBS_URL_PREFIX}/resource/{key_path}"
-    ))
-}
-
 #[async_trait]
 impl KbcInterface for Kbc {
     fn check(&self) -> Result<KbcCheckInfo> {
@@ -59,13 +47,7 @@ impl KbcInterface for Kbc {
     }
 
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
-        let key_url = key_url(&annotation_packet.kid)?;
-        if !key_url.starts_with(&self.kbs_uri) {
-            bail!(
-                "Multi-KBS resource is not supported, Unmatch KBS address: {}",
-                &key_url
-            )
-        }
+        let key_url = self.rid_to_web_addr(&annotation_packet.kid)?;
 
         let response = self.request_kbs_resource(key_url).await?;
         let key = Zeroizing::new(self.decrypt_response_output(response)?);
@@ -99,11 +81,14 @@ impl KbcInterface for Kbc {
         };
         if let Some(resource_repo) = desc.optional.get("repository") {
             resource_url = format!(
-                "{}/resource/{resource_repo}/{resource_type}/{resource_tag}",
+                "{}/{KBS_URL_PREFIX}/resource/{resource_repo}/{resource_type}/{resource_tag}",
                 self.kbs_uri
             );
         } else {
-            resource_url = format!("{}/resource/{resource_type}/{resource_tag}", self.kbs_uri);
+            resource_url = format!(
+                "{}/{KBS_URL_PREFIX}/resource/{resource_type}/{resource_tag}",
+                self.kbs_uri
+            );
         }
 
         let response = self.request_kbs_resource(resource_url).await?;
@@ -122,7 +107,7 @@ impl Kbc {
 
         Kbc {
             tee: tee_type.to_string(),
-            kbs_uri: format!("{kbs_uri}/{KBS_URL_PREFIX}"),
+            kbs_uri,
             token: None,
             nonce: String::default(),
             tee_key: TeeKey::new().ok(),
@@ -188,7 +173,7 @@ impl Kbc {
 
         let challenge = self
             .http_client()
-            .post(format!("{kbs_uri}/auth"))
+            .post(format!("{kbs_uri}/{KBS_URL_PREFIX}/auth"))
             .header("Content-Type", "application/json")
             .json(&Request::new(self.tee().to_string()))
             .send()
@@ -199,7 +184,7 @@ impl Kbc {
 
         let attest_response = self
             .http_client()
-            .post(format!("{kbs_uri}/attest"))
+            .post(format!("{kbs_uri}/{KBS_URL_PREFIX}/attest"))
             .header("Content-Type", "application/json")
             .json(&self.generate_evidence()?)
             .send()
@@ -255,6 +240,28 @@ impl Kbc {
         }
 
         bail!("Request KBS resource: Attested but KBS still return Unauthorized")
+    }
+
+    /// Convert a [`ResourceId`] to the address of kind cc-kbc.
+    /// This function will **ignore** the kbs address the kid carries,
+    /// instead overwrite with the kbs_uri the [`Kbc`] carries.
+    /// Related issue:
+    // compile_error!("Issue");
+    pub fn rid_to_web_addr(&self, kid: &ResourceId) -> Result<String> {
+        if self.kbs_uri != kid.kbs_addr {
+            bail!(
+                "Multi-KBS resource is not supported, Unmatch KBS address: {}",
+                kid.kbs_addr
+            )
+        }
+
+        let kbs_addr = &self.kbs_uri;
+        let repo = &kid.repository;
+        let r#type = &kid.r#type;
+        let tag = &kid.tag;
+        Ok(format!(
+            "http://{kbs_addr}/{KBS_URL_PREFIX}/resource/{repo}/{type}/{tag}"
+        ))
     }
 }
 

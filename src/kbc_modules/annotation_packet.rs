@@ -5,6 +5,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::uri::ResourceUri;
+
 /// `AnnotationPacket` is what a encrypted image layer's
 /// `org.opencontainers.image.enc.keys.provider.attestation-agent`
 /// annotation should contain when it is encrypted by CoCo's
@@ -13,7 +15,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct AnnotationPacket {
     // Key ID to manage multiple keys
-    pub kid: String,
+    pub kid: ResourceUri,
     // Encrypted key to unwrap (base64-encoded)
     pub wrapped_data: String,
     // Initialisation vector (base64-encoded)

@@ -35,7 +35,7 @@ impl KbcInterface for OfflineSevKbc {
     }
 
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
-        let key = self.get_key(&annotation_packet.kid).await?;
+        let key = self.get_key(&annotation_packet.kid.resource_path()).await?;
         let plain_payload = crypto::decrypt(
             key,
             base64::decode(annotation_packet.wrapped_data)?,
