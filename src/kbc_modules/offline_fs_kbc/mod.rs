@@ -5,7 +5,8 @@
 
 use crate::{
     common::crypto,
-    kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription},
+    kbc_modules::{KbcCheckInfo, KbcInterface},
+    uri::ResourceUri,
 };
 pub mod common;
 use common::*;
@@ -49,12 +50,12 @@ impl KbcInterface for OfflineFsKbc {
         Ok(plain_payload)
     }
 
-    async fn get_resource(&mut self, description: &str) -> Result<Vec<u8>> {
-        let desc: ResourceDescription = serde_json::from_str::<ResourceDescription>(description)?;
+    async fn get_resource(&mut self, rid: ResourceUri) -> Result<Vec<u8>> {
+        let resource_path = rid.resource_path();
         let resources = self.resources.as_ref().map_err(|e| anyhow!("{}", e))?;
         let resource = resources
-            .get(desc.name.as_str())
-            .ok_or_else(|| anyhow!("Received unknown resource name: {}", desc.name.as_str()))?;
+            .get(resource_path.as_str())
+            .ok_or_else(|| anyhow!("Received unknown resource name: {}", resource_path.as_str()))?;
         Ok(resource.to_vec())
     }
 }
@@ -84,8 +85,9 @@ impl OfflineFsKbc {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::kbc_modules::ResourceName;
+    use crate::{kbc_modules::tests::ResourcePath, resource_path};
+
+    use super::{common::tests::KBS_URI_PREFIX, *};
     use common::tests::{COSIGNKEY, CREDENTIAL, KEY, KID, POLICYJSON, PUBKEY, SIGSTORECONFIG};
 
     const WRONG_KEY: &str = "key";
@@ -102,111 +104,62 @@ mod tests {
         assert!(kbc.get_key(WRONG_KEY).await.is_err());
     }
 
-    #[tokio::test]
-    async fn test_get_resource() {
-        // Case 1. Get resources from good kbc instance correctly
-        let mut kbc = OfflineFsKbc {
+    fn kbc_instance() -> OfflineFsKbc {
+        OfflineFsKbc {
             kbs_info: HashMap::new(),
-            keys: Ok([(KID.to_string(), KEY.to_vec())].iter().cloned().collect()),
+            keys: Err(anyhow!("no keys")),
             resources: Ok([
                 (
-                    ResourceName::Policy.to_string(),
+                    resource_path!(ResourcePath::Policy),
                     POLICYJSON.as_bytes().to_vec(),
                 ),
                 (
-                    ResourceName::SigstoreConfig.to_string(),
+                    resource_path!(ResourcePath::SigstoreConfig),
                     SIGSTORECONFIG.as_bytes().to_vec(),
                 ),
                 (
-                    ResourceName::GPGPublicKey.to_string(),
+                    resource_path!(ResourcePath::GPGPublicKey),
                     PUBKEY.as_bytes().to_vec(),
                 ),
                 (
-                    ResourceName::CosignVerificationKey.to_string(),
+                    resource_path!(ResourcePath::CosignVerificationKey),
                     COSIGNKEY.as_bytes().to_vec(),
                 ),
                 (
-                    ResourceName::Credential.to_string(),
-                    CREDENTIAL.as_bytes().to_vec(),
-                ),
-                (
-                    ResourceName::Credential.to_string() + "." + "quay.io",
+                    resource_path!(ResourcePath::Credential),
                     CREDENTIAL.as_bytes().to_vec(),
                 ),
             ]
             .iter()
             .cloned()
             .collect()),
-        };
+        }
+    }
 
-        let policy_rd = serde_json::to_string(&ResourceDescription {
-            name: ResourceName::Policy.to_string(),
-            optional: HashMap::new(),
-        })
-        .unwrap();
-        assert_eq!(
-            kbc.get_resource(&policy_rd).await.unwrap(),
-            POLICYJSON.as_bytes()
-        );
+    #[rstest::rstest]
+    // Case 1. Get resources from good kbc instance correctly
+    #[case(true, ResourcePath::Policy.as_ref(), POLICYJSON)]
+    #[case(true, ResourcePath::SigstoreConfig.as_ref(), SIGSTORECONFIG)]
+    #[case(true, ResourcePath::GPGPublicKey.as_ref(), PUBKEY)]
+    #[case(true, ResourcePath::CosignVerificationKey.as_ref(), COSIGNKEY)]
+    #[case(true, ResourcePath::Credential.as_ref(), CREDENTIAL)]
+    // Case 2. Error while get bad resource name from a good kbc instance
+    #[case(false, "kbs://example.org/test-repo/credential/not-existed", "")]
+    #[tokio::test]
+    async fn test_get_resource(
+        #[case] success: bool,
+        #[case] resource_id: &str,
+        #[case] resource_content: &str,
+    ) {
+        let mut kbc = kbc_instance();
+        let rid = ResourceUri::try_from(resource_id).unwrap();
 
-        let sigstore_config_rd = serde_json::to_string(&ResourceDescription {
-            name: ResourceName::SigstoreConfig.to_string(),
-            optional: HashMap::new(),
-        })
-        .unwrap();
-        assert_eq!(
-            kbc.get_resource(&sigstore_config_rd).await.unwrap(),
-            SIGSTORECONFIG.as_bytes()
-        );
-
-        let public_key_rd = serde_json::to_string(&ResourceDescription {
-            name: ResourceName::GPGPublicKey.to_string(),
-            optional: HashMap::new(),
-        })
-        .unwrap();
-        assert_eq!(
-            kbc.get_resource(&public_key_rd).await.unwrap(),
-            PUBKEY.as_bytes()
-        );
-
-        let cosign_key_rd = serde_json::to_string(&ResourceDescription {
-            name: ResourceName::CosignVerificationKey.to_string(),
-            optional: HashMap::new(),
-        })
-        .unwrap();
-        assert_eq!(
-            kbc.get_resource(&cosign_key_rd).await.unwrap(),
-            COSIGNKEY.as_bytes()
-        );
-
-        let credential_rd = serde_json::to_string(&ResourceDescription {
-            name: ResourceName::Credential.to_string(),
-            optional: HashMap::new(),
-        })
-        .unwrap();
-        assert_eq!(
-            kbc.get_resource(&credential_rd).await.unwrap(),
-            CREDENTIAL.as_bytes()
-        );
-
-        // Case 2. Error while get bad resource name from a good kbc instance
-        assert!(kbc.get_resource("bad").await.is_err());
-
-        // Case 3. Error while get good resource name from bad kbc instance
-        let mut resources_load_failure_kbc = OfflineFsKbc {
-            kbs_info: HashMap::new(),
-            keys: Ok([(KID.to_string(), KEY.to_vec())].iter().cloned().collect()),
-            resources: Err(anyhow!("")),
-        };
-        let good_policy_rd = serde_json::to_string(&ResourceDescription {
-            name: ResourceName::Policy.to_string(),
-            optional: HashMap::new(),
-        })
-        .unwrap();
-
-        assert!(resources_load_failure_kbc
-            .get_resource(&good_policy_rd)
-            .await
-            .is_err());
+        let res = kbc.get_resource(rid).await;
+        if success {
+            assert!(res.is_ok());
+            assert_eq!(res.unwrap(), resource_content.as_bytes());
+        } else {
+            assert!(res.is_err());
+        }
     }
 }

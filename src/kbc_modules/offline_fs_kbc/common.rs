@@ -43,8 +43,9 @@ pub fn load_resources(resources_file_name: &str) -> Result<Resources> {
 }
 
 pub mod tests {
+    use crate::kbc_modules::tests::ResourcePath;
+
     pub use super::*;
-    use crate::kbc_modules::ResourceName;
     pub use base64;
     pub use std::env;
     pub use std::fs;
@@ -61,6 +62,19 @@ pub mod tests {
     pub const CREDENTIAL: &str = "base64-content-of-auth.json";
     #[allow(dead_code)]
     pub const RESOURCES_NAME: &str = "aa-offline_fs_kbc-resources.json";
+
+    pub const KBS_URI_PREFIX: &str = "kbs://example.org/";
+
+    #[macro_export]
+    macro_rules! resource_path {
+        ($resource: expr) => {
+            $resource
+                .as_ref()
+                .strip_prefix(KBS_URI_PREFIX)
+                .unwrap()
+                .to_owned()
+        };
+    }
 
     #[allow(dead_code)]
     pub fn create_keyfile(name: &str) -> PathBuf {
@@ -84,11 +98,11 @@ pub mod tests {
     #[allow(dead_code)]
     pub fn create_resources_file(resources_file_path: &Path) {
         let resources_file_content = serde_json::json!({
-          ResourceName::Policy.to_string(): base64::encode(POLICYJSON.as_bytes()),
-          ResourceName::SigstoreConfig.to_string(): base64::encode(SIGSTORECONFIG.as_bytes()),
-          ResourceName::GPGPublicKey.to_string(): base64::encode(PUBKEY.as_bytes()),
-          ResourceName::CosignVerificationKey.to_string(): base64::encode(COSIGNKEY.as_bytes()),
-          ResourceName::Credential.to_string(): base64::encode(CREDENTIAL.as_bytes()),
+            resource_path!(ResourcePath::Policy): base64::encode(POLICYJSON.as_bytes()),
+            resource_path!(ResourcePath::SigstoreConfig): base64::encode(SIGSTORECONFIG.as_bytes()),
+            resource_path!(ResourcePath::GPGPublicKey): base64::encode(PUBKEY.as_bytes()),
+            resource_path!(ResourcePath::CosignVerificationKey): base64::encode(COSIGNKEY.as_bytes()),
+            resource_path!(ResourcePath::Credential): base64::encode(CREDENTIAL.as_bytes()),
         });
 
         fs::write(
@@ -112,6 +126,7 @@ pub mod tests {
 
         fs::remove_file(keyfile_name).unwrap();
     }
+
     #[test]
     fn test_load_resources() {
         let temp_dir = env::temp_dir();
@@ -122,23 +137,23 @@ pub mod tests {
             load_resources(resources_file_name).unwrap(),
             [
                 (
-                    ResourceName::Policy.to_string(),
+                    resource_path!(ResourcePath::Policy),
                     POLICYJSON.as_bytes().to_vec()
                 ),
                 (
-                    ResourceName::SigstoreConfig.to_string(),
+                    resource_path!(ResourcePath::SigstoreConfig),
                     SIGSTORECONFIG.as_bytes().to_vec(),
                 ),
                 (
-                    ResourceName::GPGPublicKey.to_string(),
+                    resource_path!(ResourcePath::GPGPublicKey),
                     PUBKEY.as_bytes().to_vec()
                 ),
                 (
-                    ResourceName::CosignVerificationKey.to_string(),
+                    resource_path!(ResourcePath::CosignVerificationKey),
                     COSIGNKEY.as_bytes().to_vec()
                 ),
                 (
-                    ResourceName::Credential.to_string(),
+                    resource_path!(ResourcePath::Credential),
                     CREDENTIAL.as_bytes().to_vec()
                 ),
             ]
