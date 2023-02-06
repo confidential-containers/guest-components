@@ -48,8 +48,7 @@ impl KbcInterface for EAAKbc {
     /// Decrypt the payload inside annotation packet.
     /// This function will **ignore** the kbs address the kid carries,
     /// instead overwrite with the kbs_uri the [`Kbc`] carries.
-    /// Related issue:
-    /// compile_error!("Issue");
+    /// Related issue: <https://github.com/confidential-containers/attestation-agent/issues/130>
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
         debug!("EAA KBC decrypt_payload() is called");
 
