@@ -63,13 +63,11 @@ pub trait AttestationAPIs {
 
     /// Request KBS to obtain confidential resources, including confidential data or files.
     ///
-    /// The specific format of `resource_description` is defined by different KBC and corresponding
-    /// KBS.
+    /// `resource_uri` is a KBS URI pointing to a specific resource.
     async fn download_confidential_resource(
         &mut self,
         kbc_name: &str,
-        kbs_uri: &str,
-        resource_description: &str,
+        resource_uri: &str,
     ) -> Result<Vec<u8>>;
 }
 
@@ -138,20 +136,19 @@ impl AttestationAPIs for AttestationAgent {
     async fn download_confidential_resource(
         &mut self,
         kbc_name: &str,
-        kbs_uri: &str,
-        resource_description: &str,
+        resource_uri: &str,
     ) -> Result<Vec<u8>> {
         let rid = ResourceUri::try_from(resource_uri)
             .map_err(|e| anyhow!("download confidential resource: {e}"))?;
 
         if !self.kbc_instance_map.contains_key(kbc_name) {
-            self.instantiate_kbc(kbc_name, kbs_uri)?;
+            self.instantiate_kbc(kbc_name, &rid.kbs_addr)?;
         }
 
         self.kbc_instance_map
             .get_mut(kbc_name)
             .ok_or_else(|| anyhow!("The KBC instance does not existing!"))?
-            .get_resource(resource_description)
+            .get_resource(rid)
             .await
     }
 }

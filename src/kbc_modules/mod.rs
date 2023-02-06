@@ -138,26 +138,45 @@ impl KbcModuleList {
     }
 }
 
-/// Type of resources supported by the attestation agent.
-#[derive(EnumString, Display, Debug, PartialEq, Eq)]
-pub enum ResourceName {
-    #[strum(serialize = "Policy")]
-    Policy,
-    #[strum(serialize = "Sigstore Config")]
-    SigstoreConfig,
-    #[strum(serialize = "GPG Keyring")]
-    GPGPublicKey,
-    #[strum(serialize = "Cosign Key")]
-    CosignVerificationKey,
-    #[strum(serialize = "Credential")]
-    Credential,
-    #[strum(serialize = "Client Id")]
-    ClientId,
-}
-
 /// Descriptor for resources managed by attestation agent.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResourceDescription {
     name: String,
     optional: HashMap<String, String>,
+}
+
+pub mod tests {
+    /// Type of resources supported by the attestation agent.
+    /// The related serialize string is the resource uri for tests.
+    #[derive(AsRefStr, EnumString, Display, Debug, PartialEq, Eq)]
+    pub enum ResourcePath {
+        /// image security policy, used to define whether a specific
+        /// image can be pulled, or signature verification is needed
+        #[strum(serialize = "kbs://example.org/test-repo/security-policy/test")]
+        Policy,
+
+        /// used to configure the storage path of public keys used
+        /// by simple signing when doing iamge signature verification
+        #[strum(serialize = "kbs://example.org/test-repo/sigstore-config/test")]
+        SigstoreConfig,
+
+        /// gpg public key used to verify signature of images in
+        /// simple signing scheme.
+        #[strum(serialize = "kbs://example.org/test-repo/gpg-public-config/test")]
+        GPGPublicKey,
+
+        /// public key file used to verify signature of images in
+        /// cosign scheme.
+        #[strum(serialize = "kbs://example.org/test-repo/cosign-public-key/test")]
+        CosignVerificationKey,
+
+        /// container registry auth file, used to provide auth
+        /// when accessing a private registry / repository
+        #[strum(serialize = "kbs://example.org/test-repo/credential/test")]
+        Credential,
+
+        /// client ID used in online sev kbc
+        #[strum(serialize = "kbs://example.org/test-repo/client-id/test")]
+        ClientId,
+    }
 }
