@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription};
+use crate::kbc_modules::{KbcCheckInfo, KbcInterface};
+use crate::uri::ResourceUri;
 use anyhow::*;
 use async_trait::async_trait;
 use log::*;
@@ -69,14 +70,14 @@ impl KbcInterface for EAAKbc {
         Ok(decrypted_payload)
     }
 
-    async fn get_resource(&mut self, description: &str) -> Result<Vec<u8>> {
+    async fn get_resource(&mut self, rid: ResourceUri) -> Result<Vec<u8>> {
         if self.tcp_stream.is_none() {
             debug!("First request, connecting KBS...");
             self.establish_new_kbs_connection()?;
             debug!("connect success! TLS is established");
         }
 
-        self.kbs_get_resource(description)
+        self.kbs_get_resource(&rid)
     }
 }
 
@@ -177,12 +178,11 @@ impl EAAKbc {
         }
     }
 
-    fn kbs_get_resource(&mut self, description: &str) -> Result<Vec<u8>> {
-        let desc: ResourceDescription = serde_json::from_str::<ResourceDescription>(description)?;
-
-        let command = format!("Get {}", desc.name.as_str());
-        let request = GetResourceRequest::new(&command, desc.optional.clone());
-        let resource_info = self.kbs_get_resource_info(desc.name.as_str())?;
+    fn kbs_get_resource(&mut self, rid: &ResourceUri) -> Result<Vec<u8>> {
+        let resource_path = rid.resource_path();
+        let command = format!("Get {resource_path}");
+        let request = GetResourceRequest::new(&command, HashMap::new());
+        let resource_info = self.kbs_get_resource_info(resource_path.as_str())?;
 
         let trans_json = serde_json::to_string(&request)?;
         let trans_data: &[u8] = trans_json.as_bytes();
