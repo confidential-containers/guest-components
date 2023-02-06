@@ -5,7 +5,7 @@
 
 use crate::{
     common::crypto::decrypt,
-    kbc_modules::{KbcCheckInfo, KbcInterface, ResourceDescription},
+    kbc_modules::{KbcCheckInfo, KbcInterface},
 };
 
 mod attester;
@@ -19,10 +19,10 @@ use core::time::Duration;
 use crypto::{hash_chunks, TeeKey};
 use kbs_protocol::message::*;
 use kbs_types::ErrorInformation;
-use std::str::FromStr;
+use log::warn;
 use zeroize::Zeroizing;
 
-use super::{uri::ResourceId, AnnotationPacket};
+use super::{uri::ResourceUri, AnnotationPacket};
 
 const KBS_REQ_TIMEOUT_SEC: u64 = 60;
 const KBS_GET_RESOURCE_MAX_ATTEMPT: u64 = 3;
@@ -47,7 +47,7 @@ impl KbcInterface for Kbc {
     }
 
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
-        let key_url = self.rid_to_web_addr(&annotation_packet.kid)?;
+        let key_url = self.resource_web_addr(&annotation_packet.kid)?;
 
         let response = self.request_kbs_resource(key_url).await?;
         let key = Zeroizing::new(self.decrypt_response_output(response)?);
@@ -61,35 +61,8 @@ impl KbcInterface for Kbc {
     }
 
     #[allow(unused_assignments)]
-    async fn get_resource(&mut self, description: &str) -> Result<Vec<u8>> {
-        let desc: ResourceDescription = serde_json::from_str::<ResourceDescription>(description)?;
-        let mut resource_url = String::default();
-        let resource_type: String = match desc.optional.get("type") {
-            Some(t) => t.clone(),
-            None => match ResourceName::from_str(&desc.name) {
-                Result::Ok(ResourceName::Policy) => "image_policy".to_string(),
-                Result::Ok(ResourceName::SigstoreConfig) => "sigstore_config".to_string(),
-                Result::Ok(ResourceName::GPGPublicKey) => "gpg_pubkey".to_string(),
-                Result::Ok(ResourceName::CosignVerificationKey) => "cosign_key".to_string(),
-                Result::Ok(ResourceName::Credential) => "image_repo_credential".to_string(),
-                _ => bail!("Unsupported Resource Name"),
-            },
-        };
-        let resource_tag: String = match desc.optional.get("tag") {
-            Some(t) => t.clone(),
-            None => "latest".to_string(),
-        };
-        if let Some(resource_repo) = desc.optional.get("repository") {
-            resource_url = format!(
-                "{}/{KBS_URL_PREFIX}/resource/{resource_repo}/{resource_type}/{resource_tag}",
-                self.kbs_uri
-            );
-        } else {
-            resource_url = format!(
-                "{}/{KBS_URL_PREFIX}/resource/{resource_type}/{resource_tag}",
-                self.kbs_uri
-            );
-        }
+    async fn get_resource(&mut self, desc: ResourceUri) -> Result<Vec<u8>> {
+        let resource_url = self.resource_web_addr(&desc)?;
 
         let response = self.request_kbs_resource(resource_url).await?;
 
@@ -242,16 +215,14 @@ impl Kbc {
         bail!("Request KBS resource: Attested but KBS still return Unauthorized")
     }
 
-    /// Convert a [`ResourceId`] to the address of kind cc-kbc.
+    /// Convert a [`ResourceUri`] to the address of kind cc-kbc.
     /// This function will **ignore** the kbs address the kid carries,
     /// instead overwrite with the kbs_uri the [`Kbc`] carries.
-    /// Related issue:
-    // compile_error!("Issue");
-    pub fn rid_to_web_addr(&self, kid: &ResourceId) -> Result<String> {
+    /// Related issue: <https://github.com/confidential-containers/attestation-agent/issues/130>
+    pub fn resource_web_addr(&self, kid: &ResourceUri) -> Result<String> {
         if self.kbs_uri != kid.kbs_addr {
-            bail!(
-                "Multi-KBS resource is not supported, Unmatch KBS address: {}",
-                kid.kbs_addr
+            warn!(
+                "The KBS address contained in the URI is not the same as the KBC's, use the KBC's.",
             )
         }
 
