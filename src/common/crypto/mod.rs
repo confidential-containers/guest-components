@@ -16,9 +16,13 @@ mod aes256gcm;
 /// TODO: Support more kinds of en/decryption schemes.
 #[derive(EnumString, AsRefStr)]
 pub enum WrapType {
-    #[strum(serialize = "aes_256_gcm")]
+    /// The serialized name follows 5.2.6 section
+    /// <https://www.rfc-editor.org/rfc/inline-errata/rfc7518.html>
+    #[strum(serialize = "A256GCM")]
     Aes256Gcm,
-    #[strum(serialize = "aes_256_ctr")]
+
+    /// This type is not recommended as it is not AEAD.
+    #[strum(serialize = "A256CTR")]
     Aes256Ctr,
 }
 
