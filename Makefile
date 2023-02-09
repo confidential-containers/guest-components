@@ -25,11 +25,9 @@ RUSTFLAGS_ARGS ?=
 OPENSSL ?=
 
 ifdef KBC
-    feature := --no-default-features --features
     FEATURES := $(KBC)
 else
-    feature := --features
-    FEATURES := default
+    FEATURES := sample_kbc
 endif
 
 ifeq ($(LIBC), musl)
@@ -104,7 +102,7 @@ else
 endif
 
 build:
-	cd app && $(RUST_FLAGS) cargo build $(release) $(feature) $(FEATURES) $(LIBC_FLAG)
+	cd app && $(RUST_FLAGS) cargo build $(release) --no-default-features --features $(FEATURES) $(LIBC_FLAG)
 
 TARGET := app/$(TARGET_DIR)/$(BIN_NAME)
 

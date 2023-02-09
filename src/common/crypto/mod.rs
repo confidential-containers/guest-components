@@ -11,9 +11,6 @@ use zeroize::Zeroizing;
 mod aes256ctr;
 mod aes256gcm;
 
-#[cfg(all(not(feature = "openssl"), not(feature = "rust-crypto")))]
-compile_error!("One feature of `openssl` and ``rust-crypto` must be enabled.");
-
 /// Supported WrapType, s.t. encryption algorithm using to encrypt the
 /// [PLBCO](https://github.com/confidential-containers/attestation-agent/blob/main/docs/IMPLEMENTATION.md#encryption-and-decryption-of-container-image).
 /// TODO: Support more kinds of en/decryption schemes.

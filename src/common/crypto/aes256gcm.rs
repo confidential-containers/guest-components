@@ -7,10 +7,10 @@
 
 use anyhow::*;
 
-#[cfg(feature = "rust-crypto")]
+#[cfg(all(feature = "rust-crypto", not(feature = "openssl")))]
 use aes_gcm::{aead::Aead, Aes256Gcm, Key, KeyInit, Nonce};
 
-#[cfg(feature = "rust-crypto")]
+#[cfg(all(feature = "rust-crypto", not(feature = "openssl")))]
 pub fn decrypt(encrypted_data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     let decrypting_key = Key::<Aes256Gcm>::from_slice(key);
     let cipher = Aes256Gcm::new(decrypting_key);
@@ -40,15 +40,14 @@ pub fn decrypt(encrypted_data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> 
         .map_err(|e| anyhow!(e.to_string()))
 }
 
+#[cfg(all(feature = "rust-crypto", feature = "openssl"))]
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "crypto-compatibility-test")]
     use aes_gcm::{
         aead::{Aead, OsRng},
         Aes256Gcm, KeyInit, Nonce,
     };
 
-    #[cfg(feature = "crypto-compatibility-test")]
     #[test]
     fn compatible_with_openssl() {
         let plaintext = b"plaintext message";
