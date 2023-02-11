@@ -9,6 +9,7 @@ edition = "2021"
 anyhow.workspace = true
 base64.workspace = true
 log.workspace = true
+occlum_dcap = { git = "https://github.com/occlum/occlum", rev = "dbe404f", optional = true }
 serde.workspace = true
 serde_json.workspace = true
 strum.workspace = true
@@ -16,6 +17,7 @@ tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimit
 
 [features]
 default = ["all-attesters"]
-all-attesters = ["tdx-attester"]
+all-attesters = ["tdx-attester", "occlum-attester"]
 
 tdx-attester = ["tdx-attest-rs"]
+occlum-attester = ["occlum_dcap"]

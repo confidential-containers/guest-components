@@ -132,6 +132,7 @@ dependencies = [
  "foreign-types 0.5.0",
  "kbs-types",
  "log",
+ "occlum_dcap",
  "openssl",
  "prost 0.11.8",
  "rand",
@@ -1328,6 +1329,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "occlum_dcap"
+version = "0.1.0"
+source = "git+https://github.com/occlum/occlum?rev=dbe404f#dbe404f16a2669df885d1ccf1d52f67de67219b8"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "sgx_types",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2030,6 +2041,11 @@ dependencies = [
  "ryu",
  "serde",
 ]
+
+[[package]]
+name = "sgx_types"
+version = "1.1.5"
+source = "git+https://github.com/occlum/occlum?rev=dbe404f#dbe404f16a2669df885d1ccf1d52f67de67219b8"
 
 [[package]]
 name = "sha2"

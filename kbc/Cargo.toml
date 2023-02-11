@@ -39,6 +39,7 @@ default = ["sample_kbc", "rust-crypto"]
 cc_kbc = ["kbs_protocol"]
 all-attesters = ["kbs_protocol/all-attesters"]
 tdx-attester = ["kbs_protocol/tdx-attester"]
+occlum-attester = ["kbs_protocol/occlum-attester"]
 
 sample_kbc = []
 eaa_kbc = ["foreign-types"]
