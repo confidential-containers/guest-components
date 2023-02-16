@@ -63,7 +63,7 @@ pub trait AttestationAPIs {
 
     /// Request KBS to obtain confidential resources, including confidential data or files.
     ///
-    /// `resource_uri` is a KBS URI pointing to a specific resource.
+    /// `resource_uri` is a KBS Resource URI pointing to a specific resource.
     async fn download_confidential_resource(
         &mut self,
         kbc_name: &str,
