@@ -23,52 +23,54 @@ pub enum SigningName {
     Cosign,
 }
 
-struct TestItem<'a, 'b> {
+struct _TestItem<'a, 'b> {
     image_ref: &'a str,
     allow: bool,
     signing_scheme: SigningName,
     description: &'b str,
 }
 
-#[cfg(feature = "cosign")]
-const ALLOW_COSIGN: bool = true;
-
-#[cfg(not(feature = "cosign"))]
-const ALLOW_COSIGN: bool = false;
+const _TEST_ITEMS: usize = cfg!(feature = "signature-cosign") as usize * 2
+    + cfg!(feature = "signature-simple") as usize * 2
+    + 2;
 
 /// Four test cases.
-const TESTS: [TestItem; 6] = [
-    TestItem {
+const _TESTS: [_TestItem; _TEST_ITEMS] = [
+    _TestItem {
         image_ref: "quay.io/prometheus/busybox:latest",
         allow: true,
         signing_scheme: SigningName::None,
         description: "Allow pulling an unencrypted unsigned image from an unprotected registry.",
     },
-    TestItem {
+    #[cfg(feature = "signature-simple")]
+    _TestItem {
         image_ref: "quay.io/kata-containers/confidential-containers:signed",
         allow: true,
         signing_scheme: SigningName::SimpleSigning,
         description: "Allow pulling a unencrypted signed image from a protected registry.",
     },
-    TestItem {
+    _TestItem {
         image_ref: "quay.io/kata-containers/confidential-containers:unsigned",
         allow: false,
         signing_scheme: SigningName::None,
         description: "Deny pulling an unencrypted unsigned image from a protected registry.",
     },
-    TestItem {
+    #[cfg(feature = "signature-simple")]
+    _TestItem {
         image_ref: "quay.io/kata-containers/confidential-containers:other_signed",
         allow: false,
         signing_scheme: SigningName::SimpleSigning,
         description: "Deny pulling an unencrypted signed image with an unknown signature",
     },
-    TestItem {
+    #[cfg(feature = "signature-cosign")]
+    _TestItem {
         image_ref: "quay.io/kata-containers/confidential-containers:cosign-signed",
-        allow: ALLOW_COSIGN,
+        allow: true,
         signing_scheme: SigningName::Cosign,
         description: "Allow pulling an unencrypted signed image with cosign-signed signature",
     },
-    TestItem {
+    #[cfg(feature = "signature-cosign")]
+    _TestItem {
         image_ref: "quay.io/kata-containers/confidential-containers:cosign-signed-key2",
         allow: false,
         signing_scheme: SigningName::Cosign,
@@ -89,7 +91,7 @@ async fn signature_verification() {
         .await
         .expect("Failed to start attestation agent!");
 
-    for test in &TESTS {
+    for test in &_TESTS {
         // clean former test files
         common::clean_configs()
             .await
@@ -116,10 +118,7 @@ async fn signature_verification() {
                 &Some(common::AA_PARAMETER),
             )
             .await;
-        if cfg!(all(
-            feature = "snapshot-overlayfs",
-            feature = "signature-simple"
-        )) {
+        if cfg!(all(feature = "snapshot-overlayfs",)) {
             assert_eq!(
                 _res.is_ok(),
                 test.allow,

@@ -67,18 +67,43 @@ pub async fn start_attestation_agent() -> Result<Child> {
 
     if !Path::new(&aa_path).exists() {
         let script_path = format!("{}/{}", script_dir, "build_attestation_agent.sh");
-        Command::new(script_path)
-            .output()
-            .await
-            .expect("Failed to build attestation-agent");
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "keywrap-ttrpc")] {
+                Command::new(script_path)
+                    .env("TTRPC", "1")
+                    .output()
+                    .await
+                    .expect("Failed to build attestation-agent");
+            } else {
+                Command::new(script_path)
+                    .output()
+                    .await
+                    .expect("Failed to build attestation-agent");
+            }
+        }
     }
 
-    let aa = tokio::process::Command::new(aa_path)
-        .args(&["--keyprovider_sock"])
-        .args(&["127.0.0.1:50000"])
-        .args(&["--getresource_sock"])
-        .args(&["127.0.0.1:50001"])
-        .spawn()?;
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "keywrap-ttrpc")] {
+            let aa = tokio::process::Command::new(aa_path)
+                .args(&[
+                    "--keyprovider_sock",
+                    "unix:///opt/confidential-containers/attestation-agent/keyprovider.sock",
+                    "--getresource_sock",
+                    "unix:///opt/confidential-containers/attestation-agent/getresource.sock"
+                    ])
+                .spawn()?;
+        } else {
+            let aa = tokio::process::Command::new(aa_path)
+                .args(&[
+                    "--keyprovider_sock",
+                    "127.0.0.1:50000",
+                    "--getresource_sock",
+                    "127.0.0.1:50001"
+                    ])
+                .spawn()?;
+        }
+    };
 
     // Leave some time to let fork-ed AA process to be ready
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;

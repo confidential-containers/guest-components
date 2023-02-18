@@ -15,8 +15,13 @@ mod common;
 const ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS: &str = "docker.io/xynnn007/busybox:encrypted";
 const UNENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS: &str = "docker.io/arronwang/busybox_zstd";
 
-/// Ocicrypt-rs config
-const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider.conf";
+/// Ocicrypt-rs config for grpc
+#[cfg(not(feature = "keywrap-ttrpc"))]
+const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_grpc.conf";
+
+/// Ocicrypt-rs config for ttrpc
+#[cfg(feature = "keywrap-ttrpc")]
+const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_ttrpc.conf";
 
 #[cfg(feature = "getresource")]
 #[tokio::test]
@@ -44,7 +49,7 @@ async fn test_decrypt_layers() {
         .await
         .expect("Delete configs failed.");
     let mut image_client = ImageClient::default();
-    let image_name = if cfg!(all(feature = "encryption", feature = "keywrap-grpc")) {
+    let image_name = if cfg!(all(feature = "encryption")) {
         ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS
     } else {
         UNENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS

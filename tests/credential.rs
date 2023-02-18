@@ -47,10 +47,7 @@ async fn test_use_credential(#[case] image_ref: &str) {
     let res = image_client
         .pull_image(image_ref, bundle_dir.path(), &None, &Some(&aa_parameters))
         .await;
-    if cfg!(all(
-        feature = "snapshot-overlayfs",
-        feature = "keywrap-grpc"
-    )) {
+    if cfg!(all(feature = "snapshot-overlayfs",)) {
         assert!(res.is_ok(), "{:?}", res);
     } else {
         assert!(res.is_err());
