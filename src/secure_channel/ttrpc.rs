@@ -14,7 +14,7 @@ use super::Client;
 use super::ttrpc_proto::getresource::GetResourceRequest;
 use super::ttrpc_proto::getresource_ttrpc::GetResourceServiceClient;
 
-const SOCKET_ADDR: &str = "unix:///tmp/getresource.sock";
+const SOCKET_ADDR: &str = "unix:///opt/confidential-containers/attestation-agent/getresource.sock";
 
 pub struct Ttrpc {
     gtclient: GetResourceServiceClient,
