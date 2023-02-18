@@ -3,6 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#![rustfmt::skip]
+#![allow(clippy::redundant_field_names)]
 pub mod getresource;
 pub mod getresource_ttrpc;
