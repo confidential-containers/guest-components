@@ -101,6 +101,7 @@ dependencies = [
  "async-trait",
  "attestation_agent",
  "base64 0.13.1",
+ "cfg-if",
  "clap 3.2.23",
  "env_logger",
  "futures",

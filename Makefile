@@ -36,11 +36,7 @@ endif
 ifeq ($(ttrpc), true)
     features += ttrpc
 else
-ifeq ($(grpc), true)
     features += grpc
-else
-    features += grpc ttrpc
-endif
 endif
 
 ifeq ($(LIBC), musl)
