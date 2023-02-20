@@ -19,9 +19,10 @@ use core::time::Duration;
 use crypto::{hash_chunks, TeeKey};
 use kbs_protocol::message::*;
 use kbs_types::ErrorInformation;
+use std::str::FromStr;
 use zeroize::Zeroizing;
 
-use super::AnnotationPacket;
+use super::{AnnotationPacket, ResourceName};
 
 const KBS_REQ_TIMEOUT_SEC: u64 = 60;
 const KBS_GET_RESOURCE_MAX_ATTEMPT: u64 = 3;
@@ -81,14 +82,21 @@ impl KbcInterface for Kbc {
     async fn get_resource(&mut self, description: &str) -> Result<Vec<u8>> {
         let desc: ResourceDescription = serde_json::from_str::<ResourceDescription>(description)?;
         let mut resource_url = String::default();
-        let resource_type = desc
-            .optional
-            .get("type")
-            .ok_or_else(|| anyhow!("Invalid Resource description: Missing `type` field"))?;
-        let resource_tag = desc
-            .optional
-            .get("tag")
-            .ok_or_else(|| anyhow!("Invalid Resource description: Missing `tag` field"))?;
+        let resource_type: String = match desc.optional.get("type") {
+            Some(t) => t.clone(),
+            None => match ResourceName::from_str(&desc.name) {
+                Result::Ok(ResourceName::Policy) => "image_policy".to_string(),
+                Result::Ok(ResourceName::SigstoreConfig) => "sigstore_config".to_string(),
+                Result::Ok(ResourceName::GPGPublicKey) => "gpg_pubkey".to_string(),
+                Result::Ok(ResourceName::CosignVerificationKey) => "cosign_key".to_string(),
+                Result::Ok(ResourceName::Credential) => "image_repo_credential".to_string(),
+                _ => bail!("Unsupported Resource Name"),
+            },
+        };
+        let resource_tag: String = match desc.optional.get("tag") {
+            Some(t) => t.clone(),
+            None => "latest".to_string(),
+        };
         if let Some(resource_repo) = desc.optional.get("repository") {
             resource_url = format!(
                 "{}/resource/{resource_repo}/{resource_type}/{resource_tag}",
