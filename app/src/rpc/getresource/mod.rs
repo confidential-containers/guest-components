@@ -42,8 +42,7 @@ pub mod grpc {
             let target_resource = attestation_agent
                 .download_confidential_resource(
                     &request.kbc_name,
-                    &request.kbs_uri,
-                    &request.resource_description,
+                    &request.resource_uri,
                 )
                 .await
                 .map_err(|e| {
@@ -104,8 +103,7 @@ pub mod ttrpc {
 
             let target_resource = block_on(attestation_agent.download_confidential_resource(
                 &req.KbcName,
-                &req.KbsUri,
-                &req.ResourceDescription,
+                &req.ResourceUri,
             ))
             .map_err(|e| {
                 error!("Call AA-KBC to get resource failed: {}", e);
