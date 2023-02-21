@@ -27,6 +27,10 @@ RUSTFLAGS_ARGS ?=
 features ?=
 OPENSSL ?=
 
+ifeq ($(ARCH), s390x)
+  OPENSSL=1
+endif
+
 ifdef KBC
     features += $(KBC)
 else
