@@ -11,11 +11,17 @@ use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use oci_distribution::secrets::RegistryAuth;
 use serde::{Deserialize, Serialize};
-use sigstore::cosign::verification_constraint::{PublicKeyVerifier, VerificationConstraintVec};
-use sigstore::cosign::{verify_constraints, ClientBuilder, CosignCapabilities};
-use sigstore::crypto::SignatureDigestAlgorithm;
-use sigstore::errors::SigstoreVerifyConstraintsError;
-use sigstore::registry::Auth;
+
+#[cfg(feature = "signature-cosign")]
+use sigstore::{
+    cosign::{
+        verification_constraint::{PublicKeyVerifier, VerificationConstraintVec},
+        verify_constraints, ClientBuilder, CosignCapabilities,
+    },
+    crypto::SignatureDigestAlgorithm,
+    errors::SigstoreVerifyConstraintsError,
+    registry::Auth,
+};
 use tokio::fs;
 
 use super::SignScheme;
@@ -58,6 +64,7 @@ pub struct CosignParameters {
 impl SignScheme for CosignParameters {
     /// This initialization will:
     /// * Create [`COSIGN_KEY_DIR`] if not exist.
+    #[cfg(feature = "signature-cosign")]
     async fn init(&mut self, config: &Paths) -> Result<()> {
         self.cosign_key_dir = config.cosign_key_dir.clone();
         if !Path::new(&self.cosign_key_dir).exists() {
@@ -71,6 +78,12 @@ impl SignScheme for CosignParameters {
         Ok(())
     }
 
+    #[cfg(not(feature = "signature-cosign"))]
+    async fn init(&mut self, config: &Paths) -> Result<()> {
+        Ok(())
+    }
+
+    #[cfg(feature = "signature-cosign")]
     fn resource_manifest(&self) -> HashMap<&str, &str> {
         let mut manifest_from_kbs = HashMap::new();
         if let Some(key_path) = &self.key_path {
@@ -81,7 +94,13 @@ impl SignScheme for CosignParameters {
         manifest_from_kbs
     }
 
+    #[cfg(not(feature = "signature-cosign"))]
+    fn resource_manifest(&self) -> HashMap<&str, &str> {
+        HashMap::new()
+    }
+
     /// Judge whether an image is allowed by this SignScheme.
+    #[cfg(feature = "signature-cosign")]
     async fn allows_image(&self, image: &mut Image, auth: &RegistryAuth) -> Result<()> {
         // Check before we access the network
         self.check_reference_rule_types()?;
@@ -100,8 +119,14 @@ impl SignScheme for CosignParameters {
 
         Ok(())
     }
+
+    #[cfg(not(feature = "signature-cosign"))]
+    async fn allows_image(&self, image: &mut Image, auth: &RegistryAuth) -> Result<()> {
+        bail!("feature \"signature-cosign\" not enabled.")
+    }
 }
 
+#[cfg(feature = "signature-cosign")]
 impl CosignParameters {
     /// Check whether this Policy Request Match Type (i.e., signed identity
     /// check type) for the reference is MatchRepository or ExactRepository.
@@ -185,6 +210,7 @@ async fn read_key_from(path: &str) -> Result<Vec<u8>> {
     Ok(fs::read(path).await?)
 }
 
+#[cfg(feature = "signature-cosign")]
 #[cfg(test)]
 mod tests {
     use super::*;

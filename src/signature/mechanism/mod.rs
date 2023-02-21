@@ -24,11 +24,8 @@ use crate::config::Paths;
 
 use super::image::Image;
 
-#[cfg(feature = "signature-simple")]
-pub mod simple;
-
-#[cfg(feature = "signature-cosign")]
 pub mod cosign;
+pub mod simple;
 
 /// The interface of a signing scheme
 #[async_trait]

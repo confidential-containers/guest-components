@@ -8,22 +8,15 @@ use async_trait::async_trait;
 use oci_distribution::secrets::RegistryAuth;
 use serde::*;
 use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::path::Path;
-use std::path::PathBuf;
 use strum_macros::Display;
 use strum_macros::EnumString;
-use tokio::fs;
 
+#[cfg(feature = "signature-simple")]
 mod sigstore;
+#[cfg(feature = "signature-simple")]
 mod verify;
 
-pub use self::sigstore::SigstoreConfig;
-pub use self::sigstore::{format_sigstore_name, get_sigs_from_specific_sigstore};
-pub use verify::verify_sig_and_extract_payload;
-
 use crate::config::Paths;
-use crate::signature::image::digest::Digest;
 use crate::signature::image::Image;
 use crate::signature::policy::ref_match::PolicyReqMatchType;
 
@@ -77,9 +70,10 @@ pub struct SimpleParameters {
 /// Prepare directories for configs and sigstore configs.
 /// It will create (if not) the following dirs:
 /// * [`SIG_STORE_CONFIG_DIR`]
+#[cfg(feature = "signature-simple")]
 async fn prepare_runtime_dirs(sig_store_config_dir: &str) -> Result<()> {
-    if !Path::new(sig_store_config_dir).exists() {
-        fs::create_dir_all(sig_store_config_dir)
+    if !std::path::Path::new(sig_store_config_dir).exists() {
+        tokio::fs::create_dir_all(sig_store_config_dir)
             .await
             .map_err(|e| anyhow!("Create Simple Signing sigstore-config dir failed: {:?}", e))?;
     }
@@ -89,6 +83,7 @@ async fn prepare_runtime_dirs(sig_store_config_dir: &str) -> Result<()> {
 #[async_trait]
 impl SignScheme for SimpleParameters {
     /// Init simple scheme signing
+    #[cfg(feature = "signature-simple")]
     async fn init(&mut self, config: &Paths) -> Result<()> {
         self.sig_store_config_dir = config.sig_store_config_dir.clone();
         self.default_sig_store_config_file = config.default_sig_store_config_file.clone();
@@ -98,12 +93,18 @@ impl SignScheme for SimpleParameters {
         Ok(())
     }
 
+    #[cfg(not(feature = "signature-simple"))]
+    async fn init(&mut self, _config: &Paths) -> Result<()> {
+        Ok(())
+    }
+
     /// Check whether [`SIG_STORE_CONFIG_DIR`] and [`GPG_KEY_RING`] exist.
+    #[cfg(feature = "signature-simple")]
     fn resource_manifest(&self) -> HashMap<&str, &str> {
         let mut res = HashMap::<&str, &str>::new();
 
         // Sigstore Config
-        if PathBuf::from(&self.sig_store_config_dir)
+        if std::path::PathBuf::from(&self.sig_store_config_dir)
             .read_dir()
             .map(|mut i| i.next().is_none())
             .unwrap_or(false)
@@ -112,13 +113,19 @@ impl SignScheme for SimpleParameters {
         }
 
         // gpg key ring
-        if !Path::new(&self.gpg_key_ring).exists() {
+        if !std::path::Path::new(&self.gpg_key_ring).exists() {
             res.insert(GPG_KEY_RING_KBS, &self.gpg_key_ring);
         }
 
         res
     }
 
+    #[cfg(not(feature = "signature-simple"))]
+    fn resource_manifest(&self) -> HashMap<&str, &str> {
+        HashMap::new()
+    }
+
+    #[cfg(feature = "signature-simple")]
     async fn allows_image(&self, image: &mut Image, _auth: &RegistryAuth) -> Result<()> {
         // FIXME: only support "GPGKeys" type now.
         //
@@ -134,7 +141,7 @@ impl SignScheme for SimpleParameters {
             (None, None) => bail!("Neither keyPath or keyData specified."),
             (Some(_), Some(_)) => bail!("Both keyPath and keyData specified."),
             (None, Some(key_data)) => base64::decode(key_data)?,
-            (Some(key_path), None) => fs::read(key_path).await.map_err(|e| {
+            (Some(key_path), None) => tokio::fs::read(key_path).await.map_err(|e| {
                 anyhow!("Read SignedBy keyPath failed: {:?}, path: {}", e, key_path)
             })?,
         };
@@ -168,6 +175,11 @@ impl SignScheme for SimpleParameters {
             reject_reasons
         ))
     }
+
+    #[cfg(not(feature = "signature-simple"))]
+    async fn allows_image(&self, _image: &mut Image, _auth: &RegistryAuth) -> Result<()> {
+        bail!("feature \"signature-simple\" not enabled.")
+    }
 }
 
 #[derive(Deserialize, EnumString, Display, Debug, PartialEq, Eq, Clone)]
@@ -176,6 +188,7 @@ pub enum KeyType {
     Gpg,
 }
 
+#[cfg(feature = "signature-simple")]
 pub fn judge_single_signature(
     image: &Image,
     signed_identity: Option<&PolicyReqMatchType>,
@@ -202,12 +215,14 @@ pub fn judge_single_signature(
     Ok(())
 }
 
+#[cfg(feature = "signature-simple")]
 pub async fn get_signatures(image: &mut Image) -> Result<Vec<Vec<u8>>> {
+    use std::convert::TryInto;
     // Get image digest (manifest digest)
     let image_digest = if !image.manifest_digest.is_empty() {
         image.manifest_digest.clone()
     } else if let Some(d) = image.reference.digest() {
-        Digest::try_from(d)?
+        d.try_into()?
     } else {
         bail!("Missing image digest");
     };

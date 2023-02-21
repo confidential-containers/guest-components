@@ -18,10 +18,6 @@ const OFFLINE_FS_KBC_RESOURCE_SCRIPT: &str = "scripts/install_offline_fs_kbc_fil
 /// Attestation Agent Key Provider Parameter
 pub const AA_PARAMETER: &str = "provider:attestation-agent:offline_fs_kbc::null";
 
-#[cfg(not(feature = "cosign"))]
-const OFFLINE_FS_KBC_RESOURCE: &str = "aa-offline_fs_kbc-resources-no-cosign.json";
-
-#[cfg(feature = "cosign")]
 const OFFLINE_FS_KBC_RESOURCE: &str = "aa-offline_fs_kbc-resources.json";
 
 pub async fn prepare_test() {
@@ -75,10 +71,11 @@ pub async fn start_attestation_agent() -> Result<Child> {
                     .await
                     .expect("Failed to build attestation-agent");
             } else {
-                Command::new(script_path)
+                let output = Command::new(script_path)
                     .output()
                     .await
                     .expect("Failed to build attestation-agent");
+                println!("{output:?}");
             }
         }
     }

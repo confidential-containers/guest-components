@@ -8,11 +8,7 @@ use oci_distribution::secrets::RegistryAuth;
 use serde::*;
 
 use crate::signature::image::Image;
-#[cfg(feature = "signature-cosign")]
-use crate::signature::mechanism::cosign::CosignParameters;
-#[cfg(feature = "signature-simple")]
-use crate::signature::mechanism::simple::SimpleParameters;
-use crate::signature::mechanism::SignScheme;
+use crate::signature::mechanism::{cosign::CosignParameters, simple::SimpleParameters, SignScheme};
 
 /// Policy Requirement Types.
 /// * `Accept`: s.t. `insecureAcceptAnything`, skip signature verification, accept the image unconditionally.
@@ -31,12 +27,10 @@ pub enum PolicyReqType {
     Reject,
 
     /// Signed by Simple Signing
-    #[cfg(feature = "signature-simple")]
     #[serde(rename = "signedBy")]
     SimpleSigning(SimpleParameters),
 
     /// Signed by Cosign
-    #[cfg(feature = "signature-cosign")]
     #[serde(rename = "sigstoreSigned")]
     Cosign(CosignParameters),
     // TODO: Add more signature mechanism.
@@ -54,9 +48,7 @@ impl PolicyReqType {
         match self {
             PolicyReqType::Accept => Ok(()),
             PolicyReqType::Reject => Err(anyhow!(r#"The policy is "reject""#)),
-            #[cfg(feature = "signature-simple")]
             PolicyReqType::SimpleSigning(inner) => inner.allows_image(image, auth).await,
-            #[cfg(feature = "signature-cosign")]
             PolicyReqType::Cosign(inner) => inner.allows_image(image, auth).await,
         }
     }
@@ -65,9 +57,7 @@ impl PolicyReqType {
     /// or None if not.
     pub fn try_into_sign_scheme(&mut self) -> Option<&mut dyn SignScheme> {
         match self {
-            #[cfg(feature = "signature-simple")]
             PolicyReqType::SimpleSigning(scheme) => Some(scheme as &mut dyn SignScheme),
-            #[cfg(feature = "signature-cosign")]
             PolicyReqType::Cosign(scheme) => Some(scheme as &mut dyn SignScheme),
             _ => None,
         }
