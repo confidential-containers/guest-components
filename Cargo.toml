@@ -12,7 +12,7 @@ edition = "2018"
 anyhow = "1"
 async-compression = { version = "0.3.15", features = ["futures-io", "tokio", "gzip", "zstd"] }
 async-trait = "0.1.56"
-attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent", rev = "b45b0f8", optional = true }
+attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent.git", rev = "55db121", optional = true }
 base64 = "0.13.0"
 dircpy = { version = "0.3.12", optional = true }
 flate2 = "1.0"
@@ -25,7 +25,7 @@ log = "0.4.14"
 nix = { version = "0.26", optional = true }
 oci-distribution = "0.9.4"
 oci-spec = "0.5.8"
-ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", rev = "453c699", default-features = false, features = ["keywrap-jwe", "async-io"], optional = true }
+ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs.git", rev = "16e07c7", default-features = false, features = ["keywrap-jwe", "async-io"], optional = true }
 prost = { version = "0.11", optional = true }
 sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"], optional = true }
 protobuf = { version = "3.2.0", optional = true }
@@ -52,6 +52,7 @@ tonic-build = { version = "0.8", optional = true }
 ttrpc-codegen = { version = "0.4.1", optional = true }
 
 [dev-dependencies]
+cfg-if = "1.0.0"
 filetime = "0.2"
 nix = "0.26"
 openssl = "0.10.44"

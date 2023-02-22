@@ -76,3 +76,32 @@ jobs:
       - name: Run cargo test - signature-simple,keywrap-grpc
         run: |
           sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=signature-simple,keywrap-grpc
+
+      - name: Prepare for ttrpc test
+        run: |
+          sudo mkdir -p /opt/confidential-containers/attestation-agent/
+          if test -f "scripts/attestation-agent"; then rm scripts/attestation-agent; fi
+
+      - name: Run cargo test - no-default-features,keywrap-ttrpc
+        run: |
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=keywrap-ttrpc
+          
+      - name: Run cargo test - kata-cc,keywrap-ttrpc
+        run: |
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features encryption,snapshot-overlayfs,signature-cosign,getresource,keywrap-ttrpc,signature-simple
+
+      - name: Run cargo test - encryption,keywrap-ttrpc
+        run: |
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=encryption,keywrap-ttrpc
+
+      - name: Run cargo test - snapshot-overlayfs,keywrap-ttrpc
+        run: |
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=snapshot-overlayfs,keywrap-ttrpc
+
+      - name: Run cargo test - signature-cosign,keywrap-ttrpc
+        run: |
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=signature-cosign,keywrap-ttrpc
+
+      - name: Run cargo test - signature-simple,keywrap-ttrpc
+        run: |
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=signature-simple,keywrap-ttrpc
