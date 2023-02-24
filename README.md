@@ -117,6 +117,18 @@ List of supported KBC modules:
 | online_sev_kbc     | [Online SEV KBC](kbc/src/online_sev_kbc/README.md)          | simple-kbs   | IBM                       |
 | cc_kbc             | [CC KBC](kbc/src/cc_kbc/README.md)                          | [CoCo KBS protocol](https://github.com/confidential-containers/kbs/blob/main/docs/kbs_attestation_protocol.md) | CoCo Community            |
 
+### CC KBC
+
+CC KBC supports different kinds of hardware TEE attesters, now
+| Attester name      |          Info             |
+| ------------------ |---------------------------|
+| tdx-attester       |Intel TDX                  |
+| occlum-attester    |Intel SGX with occlum libOS|
+
+To build cc kbc with tdx and install, use
+```shell
+make KBC=cc_kbc ATTESTER=tdx && make install
+```
 
 ## Tools
 
