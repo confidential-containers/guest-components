@@ -153,7 +153,7 @@ impl SignScheme for SimpleParameters {
             match judge_single_signature(
                 image,
                 self.signed_identity.as_ref(),
-                pubkey_ring.clone(),
+                &pubkey_ring,
                 sig.to_vec(),
             ) {
                 // One accepted signature is enough.
@@ -192,7 +192,7 @@ pub enum KeyType {
 pub fn judge_single_signature(
     image: &Image,
     signed_identity: Option<&PolicyReqMatchType>,
-    pubkey_ring: Vec<u8>,
+    pubkey_ring: &[u8],
     sig: Vec<u8>,
 ) -> Result<()> {
     // Verify the signature with the pubkey ring.
