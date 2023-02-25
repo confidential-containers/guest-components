@@ -11,7 +11,7 @@ fn main() -> Result<()> {
 
     #[cfg(feature = "ttrpc-codegen")]
     ttrpc_codegen::Codegen::new()
-        .out_dir("./src/secure_channel/ttrpc_proto")
+        .out_dir("./src/resource/kbs/ttrpc_proto")
         .input("./protos/getresource.proto")
         .include("./protos")
         .rust_protobuf()

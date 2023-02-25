@@ -180,48 +180,38 @@ impl ImageClient {
         // If one of self.config.auth and self.config.security_validate is enabled,
         // there will establish a secure channel between image-rs and Attestation-Agent
         #[cfg(feature = "getresource")]
-        let secure_channel = match self.config.auth || self.config.security_validate {
-            true => {
-                // Both we need a [`IMAGE_SECURITY_CONFIG_DIR`] dir
-                if !Path::new(IMAGE_SECURITY_CONFIG_DIR).exists() {
-                    tokio::fs::create_dir_all(IMAGE_SECURITY_CONFIG_DIR)
-                        .await
-                        .map_err(|e| {
-                            anyhow!("Create image security runtime config dir failed: {:?}", e)
-                        })?;
-                }
-
-                if let Some(wrapped_aa_kbc_params) = decrypt_config {
-                    let wrapped_aa_kbc_params = wrapped_aa_kbc_params.to_string();
-                    let aa_kbc_params =
-                        wrapped_aa_kbc_params.trim_start_matches("provider:attestation-agent:");
-
-                    // The secure channel to communicate with KBS.
-                    let secure_channel = Arc::new(Mutex::new(
-                        crate::secure_channel::SecureChannel::new(aa_kbc_params).await?,
-                    ));
-                    Some(secure_channel)
-                } else {
-                    bail!("Secure channel creation needs aa_kbc_params.");
-                }
+        if self.config.auth || self.config.security_validate {
+            // Both we need a [`IMAGE_SECURITY_CONFIG_DIR`] dir
+            if !Path::new(IMAGE_SECURITY_CONFIG_DIR).exists() {
+                tokio::fs::create_dir_all(IMAGE_SECURITY_CONFIG_DIR)
+                    .await
+                    .map_err(|e| {
+                        anyhow!("Create image security runtime config dir failed: {:?}", e)
+                    })?;
             }
-            false => None,
+
+            if let Some(wrapped_aa_kbc_params) = decrypt_config {
+                let wrapped_aa_kbc_params = wrapped_aa_kbc_params.to_string();
+                let aa_kbc_params =
+                    wrapped_aa_kbc_params.trim_start_matches("provider:attestation-agent:");
+
+                // The secure channel to communicate with KBS.
+                // This step will initialize the secure channel
+                let mut channel = crate::resource::SECURE_CHANNEL.lock().await;
+                *channel = Some(crate::resource::kbs::SecureChannel::new(aa_kbc_params).await?);
+            } else {
+                bail!("Secure channel creation needs aa_kbc_params.");
+            }
         };
 
         // If no valid auth is given and config.auth is enabled, try to load
-        // auth from `auth.json`.
+        // auth from `auth.json` of given place.
         // If a proper auth is given, use this auth.
         // If no valid auth is given and config.auth is disabled, use Anonymous auth.
-        #[cfg(feature = "getresource")]
         let auth = match (self.config.auth, auth.is_none()) {
             (true, true) => {
-                let secure_channel = secure_channel
-                    .as_ref()
-                    .expect("unexpected uninitialized secure channel")
-                    .clone();
                 match crate::auth::credential_for_reference(
                     &reference,
-                    secure_channel,
                     &self.config.file_paths.auth_file,
                 )
                 .await
@@ -236,27 +226,6 @@ impl ImageClient {
                     }
                 }
             }
-            (false, true) => RegistryAuth::Anonymous,
-            _ => auth.expect("unexpected uninitialized auth"),
-        };
-
-        #[cfg(not(feature = "getresource"))]
-        let auth = match (self.config.auth, auth.is_none()) {
-            (true, true) => match crate::auth::credential_for_reference_local(
-                &reference,
-                &self.config.file_paths.auth_file,
-            )
-            .await
-            {
-                Ok(cred) => cred,
-                Err(e) => {
-                    warn!(
-                        "get credential failed, use Anonymous auth instead: {}",
-                        e.to_string()
-                    );
-                    RegistryAuth::Anonymous
-                }
-            },
             (false, true) => RegistryAuth::Anonymous,
             _ => auth.expect("unexpected uninitialized auth"),
         };
@@ -284,30 +253,13 @@ impl ImageClient {
             }
         }
 
-        #[cfg(all(feature = "getresource", feature = "signature"))]
-        if self.config.security_validate {
-            let secure_channel = secure_channel
-                .as_ref()
-                .expect("unexpected uninitialized secure channel")
-                .clone();
-            crate::signature::allows_image(
-                image_url,
-                &image_digest,
-                secure_channel,
-                &auth,
-                &self.config.file_paths,
-            )
-            .await
-            .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
-        }
-
-        #[cfg(all(not(feature = "getresource"), feature = "signature"))]
+        #[cfg(feature = "signature")]
         if self.config.security_validate {
             crate::signature::allows_image(
                 image_url,
                 &image_digest,
                 &auth,
-                &self.config.file_paths,
+                &self.config.file_paths.policy_path,
             )
             .await
             .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;

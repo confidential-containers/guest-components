@@ -31,16 +31,10 @@ impl Ttrpc {
 
 #[async_trait]
 impl Client for Ttrpc {
-    async fn get_resource(
-        &mut self,
-        kbc_name: &str,
-        kbs_uri: &str,
-        resource_description: String,
-    ) -> Result<Vec<u8>> {
+    async fn get_resource(&mut self, kbc_name: &str, resource_uri: &str) -> Result<Vec<u8>> {
         let req = GetResourceRequest {
-            KbcName: kbc_name.into(),
-            KbsUri: kbs_uri.into(),
-            ResourceDescription: resource_description,
+            KbcName: kbc_name.to_string(),
+            ResourceUri: resource_uri.to_string(),
             ..Default::default()
         };
         let res = self

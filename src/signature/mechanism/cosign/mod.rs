@@ -5,8 +5,6 @@
 
 //! Cosign verification
 
-use std::{collections::HashMap, path::Path};
-
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use oci_distribution::secrets::RegistryAuth;
@@ -22,10 +20,9 @@ use sigstore::{
     errors::SigstoreVerifyConstraintsError,
     registry::Auth,
 };
-use tokio::fs;
 
 use super::SignScheme;
-use crate::config::Paths;
+use crate::resource;
 use crate::signature::{
     image::Image, payload::simple_signing::SigPayload, policy::ref_match::PolicyReqMatchType,
 };
@@ -54,10 +51,6 @@ pub struct CosignParameters {
     // This field is optional.
     #[serde(default, rename = "signedIdentity")]
     pub signed_identity: Option<PolicyReqMatchType>,
-
-    /// Dir for storage of cosign verification keys
-    #[serde(skip)]
-    pub cosign_key_dir: String,
 }
 
 #[async_trait]
@@ -65,38 +58,13 @@ impl SignScheme for CosignParameters {
     /// This initialization will:
     /// * Create [`COSIGN_KEY_DIR`] if not exist.
     #[cfg(feature = "signature-cosign")]
-    async fn init(&mut self, config: &Paths) -> Result<()> {
-        self.cosign_key_dir = config.cosign_key_dir.clone();
-        if !Path::new(&self.cosign_key_dir).exists() {
-            fs::create_dir_all(&self.cosign_key_dir)
-                .await
-                .map_err(|e| {
-                    anyhow!("Create Simple Signing sigstore-config dir failed: {:?}", e)
-                })?;
-        }
-
+    async fn init(&mut self) -> Result<()> {
         Ok(())
     }
 
     #[cfg(not(feature = "signature-cosign"))]
     async fn init(&mut self, config: &Paths) -> Result<()> {
         Ok(())
-    }
-
-    #[cfg(feature = "signature-cosign")]
-    fn resource_manifest(&self) -> HashMap<&str, &str> {
-        let mut manifest_from_kbs = HashMap::new();
-        if let Some(key_path) = &self.key_path {
-            if !Path::new(key_path).exists() {
-                manifest_from_kbs.insert(COSIGN_KEY_KBS, &key_path[..]);
-            }
-        }
-        manifest_from_kbs
-    }
-
-    #[cfg(not(feature = "signature-cosign"))]
-    fn resource_manifest(&self) -> HashMap<&str, &str> {
-        HashMap::new()
     }
 
     /// Judge whether an image is allowed by this SignScheme.
@@ -160,7 +128,7 @@ impl CosignParameters {
         // Get the pubkey
         let key = match (&self.key_data, &self.key_path) {
             (None, None) => bail!("Neither keyPath nor keyData is specified."),
-            (None, Some(key_path)) => read_key_from(key_path).await?,
+            (None, Some(key_path)) => resource::get_resource(key_path).await?,
             (Some(key_data), None) => key_data.as_bytes().to_vec(),
             (Some(_), Some(_)) => bail!("Both keyPath and keyData are specified."),
         };
@@ -201,15 +169,6 @@ impl CosignParameters {
     }
 }
 
-async fn read_key_from(path: &str) -> Result<Vec<u8>> {
-    // TODO: Do we need define a new URL scheme
-    // named `kbs://` to indicate that the key
-    // should be got from kbs? This would be
-    // helpful for issue
-    // <https://github.com/confidential-containers/image-rs/issues/9>
-    Ok(fs::read(path).await?)
-}
-
 #[cfg(feature = "signature-cosign")]
 #[cfg(test)]
 mod tests {
@@ -236,7 +195,6 @@ mod tests {
             key_path: Some("test_data/signature/cosign/cosign1.pub".into()),
             key_data: None,
             signed_identity: None,
-            cosign_key_dir: crate::config::COSIGN_KEY_DIR.into(),
         },
         "registry.cn-hangzhou.aliyuncs.com/xynnn/cosign:latest",
     )]
@@ -245,7 +203,6 @@ mod tests {
             key_path: Some("test_data/signature/cosign/cosign1.pub".into()),
             key_data: None,
             signed_identity: None,
-            cosign_key_dir: crate::config::COSIGN_KEY_DIR.into(),
         },
         "registry-1.docker.io/xynnn007/cosign:latest",
     )]
@@ -254,7 +211,6 @@ mod tests {
             key_path: Some("test_data/signature/cosign/cosign1.pub".into()),
             key_data: None,
             signed_identity: None,
-            cosign_key_dir: crate::config::COSIGN_KEY_DIR.into(),
         },
         "quay.io/kata-containers/confidential-containers:cosign-signed",
     )]
@@ -299,7 +255,6 @@ mod tests {
             key_path: None,
             key_data: None,
             signed_identity: Some(policy_match),
-            cosign_key_dir: crate::config::COSIGN_KEY_DIR.into(),
         };
         assert_eq!(parameter.check_reference_rule_types().is_ok(), pass);
     }
