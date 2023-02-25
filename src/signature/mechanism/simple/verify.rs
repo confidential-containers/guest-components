@@ -51,9 +51,9 @@ impl SigKeyIDs {
 
 // Verifies the input signature, and verifies its principal components match expected
 // values, both as specified by rules, and returns the signature payload.
-pub fn verify_sig_and_extract_payload(pubkey_ring: Vec<u8>, sig: Vec<u8>) -> Result<SigPayload> {
+pub fn verify_sig_and_extract_payload(pubkey_ring: &[u8], sig: Vec<u8>) -> Result<SigPayload> {
     // Parse the gpg pubkey ring.
-    let keyring_packet = PacketPile::from_bytes(&pubkey_ring)?;
+    let keyring_packet = PacketPile::from_bytes(pubkey_ring)?;
     let keyring_iter = keyring_packet.descendants();
     // Parse the signature cliam file into sequoia-opengpg PacketPile format.
     let mut sig_packet = PacketPile::from_bytes(&sig)?;
@@ -253,7 +253,7 @@ mod tests {
             ::std::fs::read("./test_data/signature/signatures/signature-1").unwrap();
 
         let sig_payload_verified =
-            verify_sig_and_extract_payload(keyring_bytes_case_1, sig_bytes_case_1).unwrap();
+            verify_sig_and_extract_payload(&keyring_bytes_case_1, sig_bytes_case_1).unwrap();
 
         let sig_payload_verified = serde_json::to_value(&sig_payload_verified).unwrap();
 
