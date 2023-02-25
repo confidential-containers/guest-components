@@ -7,7 +7,6 @@ use anyhow::*;
 use async_trait::async_trait;
 use oci_distribution::secrets::RegistryAuth;
 use serde::*;
-use std::collections::HashMap;
 use strum_macros::Display;
 use strum_macros::EnumString;
 
@@ -16,17 +15,10 @@ mod sigstore;
 #[cfg(feature = "signature-simple")]
 mod verify;
 
-use crate::config::Paths;
 use crate::signature::image::Image;
 use crate::signature::policy::ref_match::PolicyReqMatchType;
 
 use super::SignScheme;
-
-/// The name of resource to request sigstore config from kbs
-pub const SIG_STORE_CONFIG_KBS: &str = "Sigstore Config";
-
-/// The name of gpg key ring to request sigstore config from kbs
-pub const GPG_KEY_RING_KBS: &str = "GPG Keyring";
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Serialize, Default)]
 pub struct SimpleParameters {
@@ -53,18 +45,6 @@ pub struct SimpleParameters {
     // This field is optional.
     #[serde(default, rename = "signedIdentity")]
     pub signed_identity: Option<PolicyReqMatchType>,
-
-    /// Dir of `Sigstore Config file`
-    #[serde(skip)]
-    pub sig_store_config_dir: String,
-
-    /// Default sigstore config file
-    #[serde(skip)]
-    pub default_sig_store_config_file: String,
-
-    /// Path to the gpg pubkey ring of the signature
-    #[serde(skip)]
-    pub gpg_key_ring: String,
 }
 
 /// Prepare directories for configs and sigstore configs.
@@ -84,11 +64,8 @@ async fn prepare_runtime_dirs(sig_store_config_dir: &str) -> Result<()> {
 impl SignScheme for SimpleParameters {
     /// Init simple scheme signing
     #[cfg(feature = "signature-simple")]
-    async fn init(&mut self, config: &Paths) -> Result<()> {
-        self.sig_store_config_dir = config.sig_store_config_dir.clone();
-        self.default_sig_store_config_file = config.default_sig_store_config_file.clone();
-        self.gpg_key_ring = config.gpg_key_ring.clone();
-        prepare_runtime_dirs(&self.sig_store_config_dir).await?;
+    async fn init(&mut self) -> Result<()> {
+        prepare_runtime_dirs(crate::config::SIG_STORE_CONFIG_DIR).await?;
 
         Ok(())
     }
@@ -96,33 +73,6 @@ impl SignScheme for SimpleParameters {
     #[cfg(not(feature = "signature-simple"))]
     async fn init(&mut self, _config: &Paths) -> Result<()> {
         Ok(())
-    }
-
-    /// Check whether [`SIG_STORE_CONFIG_DIR`] and [`GPG_KEY_RING`] exist.
-    #[cfg(feature = "signature-simple")]
-    fn resource_manifest(&self) -> HashMap<&str, &str> {
-        let mut res = HashMap::<&str, &str>::new();
-
-        // Sigstore Config
-        if std::path::PathBuf::from(&self.sig_store_config_dir)
-            .read_dir()
-            .map(|mut i| i.next().is_none())
-            .unwrap_or(false)
-        {
-            res.insert(SIG_STORE_CONFIG_KBS, &self.default_sig_store_config_file);
-        }
-
-        // gpg key ring
-        if !std::path::Path::new(&self.gpg_key_ring).exists() {
-            res.insert(GPG_KEY_RING_KBS, &self.gpg_key_ring);
-        }
-
-        res
-    }
-
-    #[cfg(not(feature = "signature-simple"))]
-    fn resource_manifest(&self) -> HashMap<&str, &str> {
-        HashMap::new()
     }
 
     #[cfg(feature = "signature-simple")]
@@ -141,9 +91,11 @@ impl SignScheme for SimpleParameters {
             (None, None) => bail!("Neither keyPath or keyData specified."),
             (Some(_), Some(_)) => bail!("Both keyPath and keyData specified."),
             (None, Some(key_data)) => base64::decode(key_data)?,
-            (Some(key_path), None) => tokio::fs::read(key_path).await.map_err(|e| {
-                anyhow!("Read SignedBy keyPath failed: {:?}, path: {}", e, key_path)
-            })?,
+            (Some(key_path), None) => {
+                crate::resource::get_resource(key_path).await.map_err(|e| {
+                    anyhow!("Read SignedBy keyPath failed: {:?}, path: {}", e, key_path)
+                })?
+            }
         };
 
         let sigs = get_signatures(image).await?;

@@ -14,26 +14,22 @@ use crate::CC_IMAGE_WORK_DIR;
 const DEFAULT_WORK_DIR: &str = "/var/lib/image-rs/";
 
 /// Default policy file path.
-pub const POLICY_FILE_PATH: &str = "/run/image-security/security_policy.json";
+pub const POLICY_FILE_PATH: &str = "kbs:///default/security-policy/test";
 
 /// Dir of Sigstore Config file.
 /// The reason for using the `/run` directory here is that in general HW-TEE,
 /// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
 pub const SIG_STORE_CONFIG_DIR: &str = "/run/image-security/simple_signing/sigstore_config";
 
-pub const SIG_STORE_CONFIG_DEFAULT_FILE: &str =
-    "/run/image-security/simple_signing/sigstore_config/default.yaml";
+pub const SIG_STORE_CONFIG_DEFAULT_FILE: &str = "kbs:///default/sigstore-config/test";
 
 /// Path to the gpg pubkey ring of the signature
 pub const GPG_KEY_RING: &str = "/run/image-security/simple_signing/pubkey.gpg";
 
-/// Dir for storage of cosign verification keys.
-pub const COSIGN_KEY_DIR: &str = "/run/image-security/cosign";
-
 /// The reason for using the `/run` directory here is that in general HW-TEE,
 /// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
 /// [`AUTH_FILE_PATH`] shows the path to the `auth.json` file.
-pub const AUTH_FILE_PATH: &str = "/run/image-security/auth.json";
+pub const AUTH_FILE_PATH: &str = "kbs:///default/credential/test";
 
 /// `image-rs` configuration information.
 #[derive(Clone, Debug, Deserialize)]
@@ -111,18 +107,6 @@ pub struct Paths {
     /// Path to `Policy.json`
     pub policy_path: String,
 
-    /// Dir of `Sigstore Config file`, used by simple signing
-    pub sig_store_config_dir: String,
-
-    /// Default sigstore config file, used by simple signing
-    pub default_sig_store_config_file: String,
-
-    /// Path to the gpg pubkey ring of the signature
-    pub gpg_key_ring: String,
-
-    /// Dir for storage of cosign verification keys
-    pub cosign_key_dir: String,
-
     /// Path to the auth file
     pub auth_file: String,
 }
@@ -131,10 +115,6 @@ impl Default for Paths {
     fn default() -> Self {
         Self {
             policy_path: POLICY_FILE_PATH.into(),
-            sig_store_config_dir: SIG_STORE_CONFIG_DIR.into(),
-            default_sig_store_config_file: SIG_STORE_CONFIG_DEFAULT_FILE.into(),
-            gpg_key_ring: GPG_KEY_RING.into(),
-            cosign_key_dir: COSIGN_KEY_DIR.into(),
             auth_file: AUTH_FILE_PATH.into(),
         }
     }

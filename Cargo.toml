@@ -14,12 +14,14 @@ async-compression = { version = "0.3.15", features = ["futures-io", "tokio", "gz
 async-trait = "0.1.56"
 attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent.git", rev = "55db121", optional = true }
 base64 = "0.13.0"
+cfg-if = { version = "1.0.0", optional = true }
 dircpy = { version = "0.3.12", optional = true }
 flate2 = "1.0"
 flume = "0.10.14"
 fs_extra = { version = "1.2.0", optional = true }
 futures-util = "0.3"
 hex = { version = "0.4.3", optional = true }
+lazy_static = { version = "1.4.0", optional = true }
 libc = "0.2"
 log = "0.4.14"
 nix = { version = "0.26", optional = true }
@@ -41,7 +43,7 @@ strum_macros = "0.24"
 tar = "0.4.37"
 tokio = "1.0"
 tonic = { version = "0.8", optional = true }
-url = { version = "2.2.2", optional = true }
+url = "2.2.2"
 ttrpc = { version = "0.7.1", features = [ "async" ], optional = true }
 walkdir = "2"
 zstd = "0.11"
@@ -83,10 +85,10 @@ keywrap-ttrpc = ["ocicrypt-rs/keywrap-keyprovider-ttrpc", "dep:ttrpc", "dep:prot
 eaa-kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]
 
 signature = ["hex"]
-signature-simple = ["signature", "sequoia-openpgp", "serde_yaml", "url"]
+signature-simple = ["signature", "sequoia-openpgp", "serde_yaml"]
 signature-cosign = ["signature", "sigstore"]
 
 snapshot-overlayfs = ["nix"]
 snapshot-unionfs = ["nix", "dircpy", "fs_extra"]
 
-getresource = []
+getresource = [ "lazy_static", "cfg-if" ]

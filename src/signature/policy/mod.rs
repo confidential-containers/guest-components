@@ -3,13 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use oci_distribution::secrets::RegistryAuth;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::vec::Vec;
 use strum_macros::{Display, EnumString};
-use tokio::fs;
 
 use self::policy_requirement::PolicyReqType;
 
@@ -44,16 +43,6 @@ pub struct Policy {
 pub type PolicyTransportScopes = HashMap<String, Vec<PolicyReqType>>;
 
 impl Policy {
-    // Parse the JSON file of policy (policy.json).
-    pub async fn from_file(file_path: &str) -> Result<Self> {
-        let policy_json_string = fs::read_to_string(file_path)
-            .await
-            .map_err(|e| anyhow!("Read policy.json file failed: {:?}", e))?;
-
-        let policy = serde_json::from_str::<Policy>(&policy_json_string)?;
-        Ok(policy)
-    }
-
     // Returns Ok(()) if the requirement allows running an image.
     // WARNING: This validates signatures and the manifest, but does not download or validate the
     // layers. Users must validate that the layers match their expected digests.
