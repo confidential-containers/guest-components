@@ -12,7 +12,7 @@
 
 use anyhow::*;
 use async_trait::async_trait;
-use tokio::{fs, sync::Mutex};
+use tokio::fs;
 
 #[cfg(feature = "getresource")]
 pub mod kbs;
@@ -20,8 +20,8 @@ pub mod kbs;
 #[cfg(feature = "getresource")]
 lazy_static::lazy_static! {
     /// SecureChannel
-    pub static ref SECURE_CHANNEL: Mutex<Option<kbs::SecureChannel>> = {
-        Mutex::new(None)
+    pub static ref SECURE_CHANNEL: tokio::sync::Mutex<Option<kbs::SecureChannel>> = {
+        tokio::sync::Mutex::new(None)
     };
 }
 

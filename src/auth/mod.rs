@@ -28,7 +28,6 @@ pub struct DockerAuthConfig {
 /// Get a credential (RegistryAuth) for the given Reference.
 /// The path can be from different places. Like `path://` or
 /// `kbs://`.
-#[cfg(feature = "getresource")]
 pub async fn credential_for_reference(
     reference: &Reference,
     auth_file_path: &str,
