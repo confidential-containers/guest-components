@@ -26,7 +26,7 @@ pub fn format_sigstore_name(image_ref: &Reference, image_digest: image::digest::
 
 // Defines sigstore locations (sigstore base url) for a single namespace.
 // Please refer to https://github.com/containers/image/blob/main/docs/containers-registries.d.5.md for more details.
-#[derive(Serialize, Deserialize, Default, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq, Clone, Eq)]
 pub struct SigstoreConfig {
     #[serde(rename = "default-docker")]
     default_config: Option<SigstoreConfigEntry>,
@@ -57,36 +57,56 @@ impl SigstoreConfig {
             let config = serde_yaml::from_str::<SigstoreConfig>(&config_yaml_string)?;
 
             // The "default-docker" only allowed to be defined in one config file.
-            if config.default_config.is_some() {
-                if merged_config.default_config.is_some() {
-                    bail!("Error parsing sigstore config: \"default-docker\" defined repeatedly.");
-                }
-                merged_config.default_config = config.default_config;
-            }
-
-            // An image namespace is not allowed appear in two different configuration files.
-            if let Some(docker_config_map) = config.docker_namespace_config {
-                for (ns_name, ns_config) in docker_config_map.iter() {
-                    if merged_config.contains_namespace(ns_name) {
-                        bail!(
-                            "Error parsing sigstore config: {} defined repeatedly.",
-                            &ns_name
-                        );
-                    }
-
-                    merged_config.insert(ns_name, ns_config);
-                }
-            }
+            merged_config.update_self(config)?;
         }
 
         Ok(merged_config)
     }
 
-    fn contains_namespace(&self, ns: &str) -> bool {
+    /// Update current [`SigstoreConfig`] using another [`SigstoreConfig`].
+    /// - If current [`SigstoreConfig`] does not have a `default_config` but the input [`SigstoreConfig`]
+    /// has one, the current [`SigstoreConfig`] will use the input one's `default_config`.
+    /// - If no duplicated `docker_namespace_config` is found in the input  [`SigstoreConfig`],
+    /// the current [`SigstoreConfig`] will be added all the input one's `docker_namespace_config`.
+    /// Any error will cause the update fail, and roll back to the original state.
+    pub fn update_self(&mut self, input: SigstoreConfig) -> Result<()> {
+        let mut merged_config = self.clone();
+        // The "default-docker" only allowed to be defined in one config file.
+        if input.default_config.is_some() {
+            if merged_config.default_config.is_some()
+                && input.default_config != merged_config.default_config
+            {
+                bail!("Error parsing sigstore config: \"default-docker\" defined repeatedly but differently.");
+            }
+            merged_config.default_config = input.default_config;
+        }
+
+        // Different SigstoreConfigEntry of same namespace is not allowed to appear in two different configuration files.
+        if let Some(docker_config_map) = input.docker_namespace_config {
+            for (ns_name, ns_config) in docker_config_map.iter() {
+                if let Some(namespace) = merged_config.get_namespace(ns_name) {
+                    if namespace != ns_config {
+                        bail!(
+                            "Error parsing sigstore config: {} defined repeatedly.",
+                            &ns_name
+                        );
+                    }
+                    continue;
+                }
+
+                merged_config.insert(ns_name, ns_config);
+            }
+        }
+
+        *self = merged_config;
+        Ok(())
+    }
+
+    fn get_namespace(&self, ns: &str) -> Option<&SigstoreConfigEntry> {
         if let Some(docker) = &self.docker_namespace_config {
-            docker.get(ns).is_some()
+            docker.get(ns)
         } else {
-            false
+            None
         }
     }
 
@@ -125,7 +145,7 @@ impl SigstoreConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Eq)]
 struct SigstoreConfigEntry {
     sigstore: String,
 }
@@ -223,7 +243,7 @@ mod tests {
             },
         ];
 
-        let test_sigstore_config_dir = "./test_data/signature/sigstore_config";
+        let test_sigstore_config_dir = "./test_data/signature/sigstore_config/get_base_url";
         let sigstore_config = SigstoreConfig::new_from_configs(test_sigstore_config_dir)
             .await
             .unwrap();
@@ -247,19 +267,20 @@ mod tests {
             merged_res_path: &'a str,
         }
 
-        let tests_unexpect = &[
-            "./test_data/signature/sigstore_config/test_case_1",
-            "./test_data/signature/sigstore_config/test_case_2",
+        let tests_expect = &[
+            TestData {
+                sigstore_config_path: "./test_data/signature/sigstore_config/test_case_3",
+                merged_res_path: "./test_data/signature/sigstore_config/merged_result/res3.yaml",
+            },
+            TestData {
+                sigstore_config_path: "./test_data/signature/sigstore_config/test_case_2",
+                merged_res_path: "./test_data/signature/sigstore_config/merged_result/res2.yaml",
+            },
+            TestData {
+                sigstore_config_path: "./test_data/signature/sigstore_config/test_case_1",
+                merged_res_path: "./test_data/signature/sigstore_config/merged_result/res1.yaml",
+            },
         ];
-
-        let tests_expect = &[TestData {
-            sigstore_config_path: "./test_data/signature/sigstore_config/test_case_3",
-            merged_res_path: "./test_data/signature/sigstore_config/res.yaml",
-        }];
-
-        for case in tests_unexpect.iter() {
-            assert!(SigstoreConfig::new_from_configs(case).await.is_err());
-        }
 
         for case in tests_expect.iter() {
             let merged_string = fs::read_to_string(case.merged_res_path).unwrap();
@@ -268,7 +289,7 @@ mod tests {
                 merged_config,
                 SigstoreConfig::new_from_configs(case.sigstore_config_path)
                     .await
-                    .unwrap()
+                    .expect("new sigstore config from filesystem")
             );
         }
     }

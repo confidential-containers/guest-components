@@ -139,18 +139,21 @@ mod tests {
                 key_path: Some("/keys/public-gpg-keyring".into()),
                 key_data: None,
                 signed_identity: None,
+                ..Default::default()
             }),
             PolicyReqType::SimpleSigning(SimpleParameters {
                 key_type: "GPGKeys".into(),
                 key_path: None,
                 key_data: Some("bm9uc2Vuc2U=".into()),
                 signed_identity: None,
+                ..Default::default()
             }),
             PolicyReqType::SimpleSigning(SimpleParameters {
                 key_type: "GPGKeys".into(),
                 key_path: Some("/keys/public-gpg-keyring".into()),
                 key_data: None,
                 signed_identity: Some(PolicyReqMatchType::MatchExact),
+                ..Default::default()
             }),
             PolicyReqType::SimpleSigning(SimpleParameters {
                 key_type: "GPGKeys".into(),
@@ -159,6 +162,7 @@ mod tests {
                 signed_identity: Some(PolicyReqMatchType::ExactReference {
                     docker_reference: "docker.io/example/busybox:latest".into(),
                 }),
+                ..Default::default()
             }),
             PolicyReqType::SimpleSigning(SimpleParameters {
                 key_type: "GPGKeys".into(),
@@ -168,6 +172,7 @@ mod tests {
                     prefix: "example".into(),
                     signed_prefix: "example".into(),
                 }),
+                ..Default::default()
             }),
         ];
 

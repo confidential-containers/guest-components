@@ -259,7 +259,7 @@ impl ImageClient {
                 image_url,
                 &image_digest,
                 &auth,
-                &self.config.file_paths.policy_path,
+                &self.config.file_paths,
             )
             .await
             .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;

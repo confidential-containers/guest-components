@@ -46,12 +46,10 @@ Let's see what the code do here:
 1. `init()` will check and create the directory
 * Sigstore Dir: `/run/image-security/simple_signing/sigstore_config`
 
-2. Then the following files will be got from kbs
-* Sigstore Configfile: `/run/image-security/simple_signing/sigstore_config/default.yaml`. This file shows where the signatures are stored.
-* Gpg public key ring: `/run/image-security/simple_signing/pubkey.gpg`. This key
-ring is used to verify signatures.
+2. Where an image's related signature is stored is defined in `Sigstore Configfile`. The uri of the `Sigstore Configfile` will be defined in `ImageClient.config.file_paths.sigstore_config`.
+The `Sigstore Configfile` will be fetched.
 
-3. Then access the Sigstore, and gather the signatures related to the image, and
+3. Then access the `Sigstore Configfile`, and gather the signatures related to the image, and
 do verifications.
 
 ## KBS ResourceDescription
