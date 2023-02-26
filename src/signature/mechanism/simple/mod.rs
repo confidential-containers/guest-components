@@ -15,13 +15,7 @@ mod sigstore;
 #[cfg(feature = "signature-simple")]
 mod verify;
 
-use crate::{
-    resource,
-    signature::{
-        image::Image, mechanism::simple::sigstore::SigstoreConfig, mechanism::Paths,
-        policy::ref_match::PolicyReqMatchType,
-    },
-};
+use crate::signature::{image::Image, mechanism::Paths, policy::ref_match::PolicyReqMatchType};
 
 use super::SignScheme;
 
@@ -52,8 +46,9 @@ pub struct SimpleParameters {
     pub signed_identity: Option<PolicyReqMatchType>,
 
     /// Sigstore config file
+    #[cfg(feature = "signature-simple")]
     #[serde(skip)]
-    pub(crate) sig_store_config_file: SigstoreConfig,
+    pub(crate) sig_store_config_file: sigstore::SigstoreConfig,
 }
 
 /// Prepare directories for configs and sigstore configs.
@@ -76,9 +71,9 @@ impl SignScheme for SimpleParameters {
     async fn init(&mut self, config: &Paths) -> Result<()> {
         prepare_runtime_dirs(crate::config::SIG_STORE_CONFIG_DIR).await?;
         self.initialize_sigstore_config().await?;
-        let sig_store_config_file = resource::get_resource(&config.sigstore_config).await?;
+        let sig_store_config_file = crate::resource::get_resource(&config.sigstore_config).await?;
         let sig_store_config_file =
-            serde_yaml::from_slice::<SigstoreConfig>(&sig_store_config_file)?;
+            serde_yaml::from_slice::<sigstore::SigstoreConfig>(&sig_store_config_file)?;
         self.sig_store_config_file
             .update_self(sig_store_config_file)?;
         Ok(())
@@ -143,7 +138,7 @@ impl SignScheme for SimpleParameters {
     }
 
     #[cfg(not(feature = "signature-simple"))]
-    async fn allows_image(&mut self, _image: &mut Image, _auth: &RegistryAuth) -> Result<()> {
+    async fn allows_image(&self, _image: &mut Image, _auth: &RegistryAuth) -> Result<()> {
         bail!("feature \"signature-simple\" not enabled.")
     }
 }
