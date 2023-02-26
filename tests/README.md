@@ -12,7 +12,7 @@ And both of test set will use the following key broker client:
 Implemented in `image_decryption.rs`.
 
 Image decryption will cover `Offline-fs-kbc`:
-* `Offline-fs-kbc` uses `docker.io/xynnn007/busybox:encrypted`
+* `Offline-fs-kbc` uses `docker.io/xynnn007/busybox:encrypted-uri-key`
 
 Each test suite will follow these steps:
 
