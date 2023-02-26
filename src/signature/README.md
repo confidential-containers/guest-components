@@ -75,21 +75,6 @@ pub trait SignScheme {
     /// * gathering necessary files.
     async fn init(&self) -> Result<()>;
 
-    /// Reture a HashMap including a resource's name => file path in fs.
-    /// 
-    /// Here `resource's name` is the `name` field for a ResourceDescription
-    /// in GetResourceRequest.
-    /// Please refer to https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md#get-resource-service
-    /// for more information about the `GetResourceRequest`.
-    /// 
-    /// This function will be called by `Agent`, to get the manifest
-    /// of all the resources to be gathered from kbs. The gathering
-    /// operation will happen after `init_scheme()`, to prepare necessary
-    /// resources. The HashMap here uses &str rather than String,
-    /// which encourages developer of new signing schemes to define
-    /// const &str for these information.
-    fn resource_manifest(&self) -> HashMap<&str, &str>;
-
     /// Judge whether an image is allowed by this SignScheme.
     async fn allows_image(&self, image: &mut Image) -> Result<()>;
 }
@@ -133,16 +118,7 @@ It can do initialization work for this scheme. This may include the following
 * preparing runtime directories for storing signatures, configurations, etc.
 * gathering necessary files.
 
-2. `resource_manifest()`: This function will tell the `Agent`
-which resources it need to retrieve from the kbs. The return value should be
-a HashMap. The key of the HashMap is the `name` field for a ResourceDescription
-in GetResourceRequest. The value is the file path that the returned resource will be
-written into after retrieving the resource. Refer to 
-[get-resource-service](https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md#get-resource-service)
-for more information about GetResourceRequest. This function will be called
-on every check for a Policy Requirement of this signing scheme.
-
-3. `allows_image()`: This function will do the verification. This
+2. `allows_image()`: This function will do the verification. This
 function will be called on every check for a Policy Requirement of this signing scheme.
 
 ### `src/policy/policy_requirement.rs`

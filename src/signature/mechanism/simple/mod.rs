@@ -15,8 +15,13 @@ mod sigstore;
 #[cfg(feature = "signature-simple")]
 mod verify;
 
-use crate::signature::image::Image;
-use crate::signature::policy::ref_match::PolicyReqMatchType;
+use crate::{
+    resource,
+    signature::{
+        image::Image, mechanism::simple::sigstore::SigstoreConfig, mechanism::Paths,
+        policy::ref_match::PolicyReqMatchType,
+    },
+};
 
 use super::SignScheme;
 
@@ -45,6 +50,10 @@ pub struct SimpleParameters {
     // This field is optional.
     #[serde(default, rename = "signedIdentity")]
     pub signed_identity: Option<PolicyReqMatchType>,
+
+    /// Sigstore config file
+    #[serde(skip)]
+    pub(crate) sig_store_config_file: SigstoreConfig,
 }
 
 /// Prepare directories for configs and sigstore configs.
@@ -64,9 +73,14 @@ async fn prepare_runtime_dirs(sig_store_config_dir: &str) -> Result<()> {
 impl SignScheme for SimpleParameters {
     /// Init simple scheme signing
     #[cfg(feature = "signature-simple")]
-    async fn init(&mut self) -> Result<()> {
+    async fn init(&mut self, config: &Paths) -> Result<()> {
         prepare_runtime_dirs(crate::config::SIG_STORE_CONFIG_DIR).await?;
-
+        self.initialize_sigstore_config().await?;
+        let sig_store_config_file = resource::get_resource(&config.sigstore_config).await?;
+        let sig_store_config_file =
+            serde_yaml::from_slice::<SigstoreConfig>(&sig_store_config_file)?;
+        self.sig_store_config_file
+            .update_self(sig_store_config_file)?;
         Ok(())
     }
 
@@ -98,7 +112,7 @@ impl SignScheme for SimpleParameters {
             }
         };
 
-        let sigs = get_signatures(image).await?;
+        let sigs = self.get_signatures(image).await?;
         let mut reject_reasons: Vec<anyhow::Error> = Vec::new();
 
         for sig in sigs.iter() {
@@ -129,7 +143,7 @@ impl SignScheme for SimpleParameters {
     }
 
     #[cfg(not(feature = "signature-simple"))]
-    async fn allows_image(&self, _image: &mut Image, _auth: &RegistryAuth) -> Result<()> {
+    async fn allows_image(&mut self, _image: &mut Image, _auth: &RegistryAuth) -> Result<()> {
         bail!("feature \"signature-simple\" not enabled.")
     }
 }
@@ -168,40 +182,50 @@ pub fn judge_single_signature(
 }
 
 #[cfg(feature = "signature-simple")]
-pub async fn get_signatures(image: &mut Image) -> Result<Vec<Vec<u8>>> {
-    use std::convert::TryInto;
-    // Get image digest (manifest digest)
-    let image_digest = if !image.manifest_digest.is_empty() {
-        image.manifest_digest.clone()
-    } else if let Some(d) = image.reference.digest() {
-        d.try_into()?
-    } else {
-        bail!("Missing image digest");
-    };
+impl SimpleParameters {
+    /// Set the content of sigstore config with files in
+    /// [`crate::config::SIG_STORE_CONFIG_DIR`]
+    pub async fn initialize_sigstore_config(&mut self) -> Result<()> {
+        // If the registry support `X-Registry-Supports-Signatures` API extension,
+        // try to get signatures from the registry first.
+        // Else, get signatures from "sigstore" according to the sigstore config file.
+        // (https://github.com/containers/image/issues/384)
+        //
+        // TODO: Add get signatures from registry X-R-S-S API extension.
+        //
+        // issue: https://github.com/confidential-containers/image-rs/issues/12
+        let sigstore_config =
+            sigstore::SigstoreConfig::new_from_configs(crate::config::SIG_STORE_CONFIG_DIR).await?;
+        self.sig_store_config_file.update_self(sigstore_config)?;
 
-    // Format the sigstore name: `image-repository@digest-algorithm=digest-value`.
-    let sigstore_name = sigstore::format_sigstore_name(&image.reference, image_digest);
+        Ok(())
+    }
 
-    // If the registry support `X-Registry-Supports-Signatures` API extension,
-    // try to get signatures from the registry first.
-    // Else, get signatures from "sigstore" according to the sigstore config file.
-    // (https://github.com/containers/image/issues/384)
-    //
-    // TODO: Add get signatures from registry X-R-S-S API extension.
-    //
-    // issue: https://github.com/confidential-containers/image-rs/issues/12
-    let sigstore_config =
-        sigstore::SigstoreConfig::new_from_configs(crate::config::SIG_STORE_CONFIG_DIR).await?;
+    pub async fn get_signatures(&self, image: &mut Image) -> Result<Vec<Vec<u8>>> {
+        use std::convert::TryInto;
+        // Get image digest (manifest digest)
+        let image_digest = if !image.manifest_digest.is_empty() {
+            image.manifest_digest.clone()
+        } else if let Some(d) = image.reference.digest() {
+            d.try_into()?
+        } else {
+            bail!("Missing image digest");
+        };
 
-    let sigstore_base_url = sigstore_config
-        .base_url(&image.reference)?
-        .ok_or_else(|| anyhow!("The sigstore base url is none"))?;
+        // Format the sigstore name: `image-repository@digest-algorithm=digest-value`.
+        let sigstore_name = sigstore::format_sigstore_name(&image.reference, image_digest);
 
-    let sigstore = format!("{}/{}", &sigstore_base_url, &sigstore_name);
-    let sigstore_uri =
-        url::Url::parse(&sigstore).map_err(|e| anyhow!("Failed to parse sigstore_uri: {:?}", e))?;
+        let sigstore_base_url = self
+            .sig_store_config_file
+            .base_url(&image.reference)?
+            .ok_or_else(|| anyhow!("The sigstore base url is none"))?;
 
-    let sigs = sigstore::get_sigs_from_specific_sigstore(sigstore_uri).await?;
+        let sigstore = format!("{}/{}", &sigstore_base_url, &sigstore_name);
+        let sigstore_uri = url::Url::parse(&sigstore)
+            .map_err(|e| anyhow!("Failed to parse sigstore_uri: {:?}", e))?;
 
-    Ok(sigs)
+        let sigs = sigstore::get_sigs_from_specific_sigstore(sigstore_uri).await?;
+
+        Ok(sigs)
+    }
 }

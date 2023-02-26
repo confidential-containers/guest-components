@@ -24,7 +24,8 @@ use sigstore::{
 use super::SignScheme;
 use crate::resource;
 use crate::signature::{
-    image::Image, payload::simple_signing::SigPayload, policy::ref_match::PolicyReqMatchType,
+    image::Image, mechanism::Paths, payload::simple_signing::SigPayload,
+    policy::ref_match::PolicyReqMatchType,
 };
 
 /// The name of resource to request cosign verification key from kbs
@@ -58,12 +59,12 @@ impl SignScheme for CosignParameters {
     /// This initialization will:
     /// * Create [`COSIGN_KEY_DIR`] if not exist.
     #[cfg(feature = "signature-cosign")]
-    async fn init(&mut self) -> Result<()> {
+    async fn init(&mut self, _config: &Paths) -> Result<()> {
         Ok(())
     }
 
     #[cfg(not(feature = "signature-cosign"))]
-    async fn init(&mut self, config: &Paths) -> Result<()> {
+    async fn init(&mut self, _config: &Paths) -> Result<()> {
         Ok(())
     }
 
@@ -192,7 +193,15 @@ mod tests {
     #[rstest]
     #[case(
         CosignParameters{
-            key_path: Some("test_data/signature/cosign/cosign1.pub".into()),
+            key_path: Some(
+                format!(
+                    "{}/test_data/signature/cosign/cosign1.pub",
+                    std::env::current_dir()
+                        .expect("get current dir")
+                        .to_str()
+                        .expect("get current dir"),
+                )
+            ),
             key_data: None,
             signed_identity: None,
         },
@@ -200,7 +209,15 @@ mod tests {
     )]
     #[case(
         CosignParameters{
-            key_path: Some("test_data/signature/cosign/cosign1.pub".into()),
+            key_path: Some(
+                format!(
+                    "{}/test_data/signature/cosign/cosign1.pub",
+                    std::env::current_dir()
+                        .expect("get current dir")
+                        .to_str()
+                        .expect("get current dir"),
+                )
+            ),
             key_data: None,
             signed_identity: None,
         },
@@ -208,7 +225,15 @@ mod tests {
     )]
     #[case(
         CosignParameters{
-            key_path: Some("test_data/signature/cosign/cosign1.pub".into()),
+            key_path: Some(
+                format!(
+                    "{}/test_data/signature/cosign/cosign1.pub",
+                    std::env::current_dir()
+                        .expect("get current dir")
+                        .to_str()
+                        .expect("get current dir"),
+                )
+            ),
             key_data: None,
             signed_identity: None,
         },
@@ -226,17 +251,18 @@ mod tests {
         image
             .set_manifest_digest(IMAGE_DIGEST)
             .expect("Set manifest digest failed.");
+        let res = parameter
+            .verify_signature_and_get_payload(
+                &mut image,
+                &oci_distribution::secrets::RegistryAuth::Anonymous,
+            )
+            .await;
         assert!(
-            parameter
-                .verify_signature_and_get_payload(
-                    &mut image,
-                    &oci_distribution::secrets::RegistryAuth::Anonymous
-                )
-                .await
-                .is_ok(),
-            "failed test:\nparameter:{:?}\nimage reference:{}",
+            res.is_ok(),
+            "failed test:\nparameter:  {:?}\nimage reference:  {}\nreason:  {:?}",
             parameter,
-            image_reference
+            image_reference,
+            res,
         );
     }
 
@@ -261,75 +287,93 @@ mod tests {
 
     #[rstest]
     #[case(
-        r#"{
-            "type": "sigstoreSigned",
-            "keyPath": "test_data/signature/cosign/cosign2.pub"
-        }"#, 
+        &format!("\
+            {{\
+                \"type\": \"sigstoreSigned\",\
+                \"keyPath\": \"{}/test_data/signature/cosign/cosign2.pub\"\
+            }}", 
+            std::env::current_dir().expect("get current dir").to_str().expect("get current dir")
+        ),
         "registry.cn-hangzhou.aliyuncs.com/xynnn/cosign:latest",
         false,
         // If verified failed, the pubkey given to verify will be printed.
         "[PublicKeyVerifier { key: CosignVerificationKey { verification_algorithm: ECDSA_P256_SHA256_ASN1, data: [4, 192, 146, 124, 21, 74, 44, 46, 129, 189, 211, 135, 35, 87, 145, 71, 172, 25, 92, 98, 102, 245, 109, 29, 191, 50, 55, 236, 233, 47, 136, 66, 124, 253, 181, 135, 68, 180, 68, 84, 60, 97, 97, 147, 39, 218, 80, 228, 49, 224, 66, 101, 2, 236, 78, 109, 162, 5, 171, 119, 141, 234, 112, 247, 247] } }]"
     )]
     #[case(
-        r#"{
-            "type": "sigstoreSigned",
-            "keyPath": "test_data/signature/cosign/cosign1.pub",
-            "signedIdentity": {
-                "type": "exactRepository",
-                "dockerRepository": "registry-1.docker.io/xynnn007/cosign-err"
-            }
-        }"#,
+        &format!("\
+            {{\
+                \"type\": \"sigstoreSigned\",\
+                \"keyPath\": \"{}/test_data/signature/cosign/cosign1.pub\",\
+                \"signedIdentity\": {{\
+                    \"type\": \"exactRepository\",\
+                    \"dockerRepository\": \"registry-1.docker.io/xynnn007/cosign-err\"\
+                }}\
+            }}", 
+            std::env::current_dir().expect("get current dir").to_str().expect("get current dir")
+        ),
         // The repository of the given image's and the Payload's are different
         "registry-1.docker.io/xynnn007/cosign:latest",
         false,
         "Match reference failed.",
     )]
     #[case(
-        r#"{
-            "type": "sigstoreSigned",
-            "keyPath": "test_data/signature/cosign/cosign2.pub"
-        }"#,
+        &format!("\
+            {{\
+                \"type\": \"sigstoreSigned\",\
+                \"keyPath\": \"{}/test_data/signature/cosign/cosign2.pub\"\
+            }}", 
+            std::env::current_dir().expect("get current dir").to_str().expect("get current dir")
+        ),
         "quay.io/kata-containers/confidential-containers:cosign-signed",
         false,
         // If verified failed, the pubkey given to verify will be printed.
         "[PublicKeyVerifier { key: CosignVerificationKey { verification_algorithm: ECDSA_P256_SHA256_ASN1, data: [4, 192, 146, 124, 21, 74, 44, 46, 129, 189, 211, 135, 35, 87, 145, 71, 172, 25, 92, 98, 102, 245, 109, 29, 191, 50, 55, 236, 233, 47, 136, 66, 124, 253, 181, 135, 68, 180, 68, 84, 60, 97, 97, 147, 39, 218, 80, 228, 49, 224, 66, 101, 2, 236, 78, 109, 162, 5, 171, 119, 141, 234, 112, 247, 247] } }]",
     )]
     #[case(
-        r#"{
-            "type": "sigstoreSigned",
-            "keyPath": "test_data/signature/cosign/cosign1.pub",
-            "signedIdentity": {
-                "type" : "matchExact"
-            }
-        }"#,
+        &format!("\
+            {{\
+                \"type\": \"sigstoreSigned\",\
+                \"keyPath\": \"{}/test_data/signature/cosign/cosign1.pub\",\
+                \"signedIdentity\": {{\
+                    \"type\": \"matchExact\"\
+                }}\
+            }}", 
+            std::env::current_dir().expect("get current dir").to_str().expect("get current dir")
+        ),
         "quay.io/kata-containers/confidential-containers:cosign-signed",
         false,
         // Only MatchRepository and ExactRepository are supported.
         "Denied by MatchExact",
     )]
     #[case(
-        r#"{
-            "type": "sigstoreSigned",
-            "keyPath": "test_data/signature/cosign/cosign1.pub"
-        }"#,
+        &format!("\
+        {{\
+            \"type\": \"sigstoreSigned\",\
+            \"keyPath\": \"{}/test_data/signature/cosign/cosign1.pub\"\
+            }}", 
+        std::env::current_dir().expect("get current dir").to_str().expect("get current dir")),
         "registry.cn-hangzhou.aliyuncs.com/xynnn/cosign:signed",
         true,
         ""
     )]
     #[case(
-        r#"{
-            "type": "sigstoreSigned",
-            "keyPath": "test_data/signature/cosign/cosign1.pub"
-        }"#,
+        &format!("\
+        {{\
+            \"type\": \"sigstoreSigned\",\
+            \"keyPath\": \"{}/test_data/signature/cosign/cosign1.pub\"\
+        }}", 
+        std::env::current_dir().expect("get current dir").to_str().expect("get current dir")),
         "registry-1.docker.io/xynnn007/cosign:latest",
         true,
         ""
     )]
     #[case(
-        r#"{
-            "type": "sigstoreSigned",
-            "keyPath": "test_data/signature/cosign/cosign1.pub"
-        }"#,
+        &format!("\
+        {{\
+            \"type\": \"sigstoreSigned\",\
+            \"keyPath\": \"{}/test_data/signature/cosign/cosign1.pub\"\
+        }}", 
+        std::env::current_dir().expect("get current dir").to_str().expect("get current dir")),
         "quay.io/kata-containers/confidential-containers:cosign-signed",
         true,
         ""

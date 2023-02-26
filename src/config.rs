@@ -104,6 +104,9 @@ impl TryFrom<&Path> for ImageConfig {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Paths {
+    /// sigstore config file for simple signing
+    pub sigstore_config: String,
+
     /// Path to `Policy.json`
     pub policy_path: String,
 
@@ -114,6 +117,7 @@ pub struct Paths {
 impl Default for Paths {
     fn default() -> Self {
         Self {
+            sigstore_config: SIG_STORE_CONFIG_DEFAULT_FILE.into(),
             policy_path: POLICY_FILE_PATH.into(),
             auth_file: AUTH_FILE_PATH.into(),
         }
