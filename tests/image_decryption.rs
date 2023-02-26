@@ -11,10 +11,6 @@ use serial_test::serial;
 
 mod common;
 
-/// The image to be decrypted using offline-fs-kbc
-const ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS: &str = "docker.io/xynnn007/busybox:encrypted";
-const UNENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS: &str = "docker.io/arronwang/busybox_zstd";
-
 /// Ocicrypt-rs config for grpc
 #[cfg(not(feature = "keywrap-ttrpc"))]
 const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_grpc.conf";
@@ -23,10 +19,12 @@ const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_grpc.conf";
 #[cfg(feature = "keywrap-ttrpc")]
 const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_ttrpc.conf";
 
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "encryption"))]
+#[rstest::rstest]
+#[case("docker.io/xynnn007/busybox:encrypted-uri-key")]
 #[tokio::test]
 #[serial]
-async fn test_decrypt_layers() {
+async fn test_decrypt_layers(#[case] image: &str) {
     common::prepare_test().await;
     // Init AA
     let mut aa = common::start_attestation_agent()
@@ -49,31 +47,16 @@ async fn test_decrypt_layers() {
         .await
         .expect("Delete configs failed.");
     let mut image_client = ImageClient::default();
-    let image_name = if cfg!(all(feature = "encryption")) {
-        ENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS
-    } else {
-        UNENCRYPTED_IMAGE_REFERENCE_OFFLINE_FS_KBS
-    };
     if cfg!(feature = "snapshot-overlayfs") {
         if let Err(e) = image_client
-            .pull_image(
-                image_name,
-                bundle_dir.path(),
-                &None,
-                &Some(common::AA_PARAMETER),
-            )
+            .pull_image(image, bundle_dir.path(), &None, &Some(common::AA_PARAMETER))
             .await
         {
             panic!("test_decrypt_layers() failed to download image, {}", e);
         }
     } else {
         image_client
-            .pull_image(
-                image_name,
-                bundle_dir.path(),
-                &None,
-                &Some(common::AA_PARAMETER),
-            )
+            .pull_image(image, bundle_dir.path(), &None, &Some(common::AA_PARAMETER))
             .await
             .unwrap_err();
     }

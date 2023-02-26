@@ -20,7 +20,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 AA_DIR=$SCRIPT_DIR/attestation_agent
 
 pushd $SCRIPT_DIR
-git clone --depth 1 "https://github.com/confidential-containers/attestation-agent.git" $AA_DIR
+git clone "https://github.com/confidential-containers/attestation-agent.git" $AA_DIR
 pushd $AA_DIR
 
 make $parameters

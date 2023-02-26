@@ -78,6 +78,10 @@ const _TESTS: [_TestItem; _TEST_ITEMS] = [
     },
 ];
 
+const POLICY_URI: &str = "kbs:///default/security-policy/test";
+
+const SIGSTORE_CONFIG_URI: &str = "kbs:///default/sigstore-config/test";
+
 /// image-rs built without support for cosign image signing cannot use a policy that includes a type that
 /// uses cosign (type: sigstoreSigned), even if the image being pulled is not signed using cosign.
 /// https://github.com/confidential-containers/attestation-agent/blob/main/src/kbc_modules/sample_kbc/policy.json
@@ -107,6 +111,14 @@ async fn signature_verification() {
 
         // enable signature verification
         image_client.config.security_validate = true;
+
+        // set the image security policy
+        image_client.config.file_paths.policy_path = POLICY_URI.into();
+
+        #[cfg(feature = "signature-simple")]
+        {
+            image_client.config.file_paths.sigstore_config = SIGSTORE_CONFIG_URI.into();
+        }
 
         let bundle_dir = tempfile::tempdir().unwrap();
 
