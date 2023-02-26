@@ -75,7 +75,6 @@ pub async fn start_attestation_agent() -> Result<Child> {
                     .output()
                     .await
                     .expect("Failed to build attestation-agent");
-                println!("{output:?}");
             }
         }
     }

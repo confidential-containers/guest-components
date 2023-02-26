@@ -11,11 +11,11 @@ mod common;
 
 #[cfg(feature = "getresource")]
 #[rstest]
-#[case("liudalibj/private-busy-box")]
-#[case("quay.io/liudalibj/private-busy-box")]
+#[case("liudalibj/private-busy-box", "kbs:///default/credential/test")]
+#[case("quay.io/liudalibj/private-busy-box", "kbs:///default/credential/test")]
 #[tokio::test]
 #[serial]
-async fn test_use_credential(#[case] image_ref: &str) {
+async fn test_use_credential(#[case] image_ref: &str, #[case] auth_file_uri: &str) {
     common::prepare_test().await;
 
     // Init AA
@@ -41,6 +41,9 @@ async fn test_use_credential(#[case] image_ref: &str) {
 
     // enable container auth
     image_client.config.auth = true;
+
+    // set credential file uri
+    image_client.config.file_paths.auth_file = auth_file_uri.into();
 
     let bundle_dir = tempfile::tempdir().unwrap();
 
