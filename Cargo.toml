@@ -39,8 +39,12 @@ tonic-build = { version = "0.8.0", optional = true }
 
 [features]
 default = ["sample_kbc", "rust-crypto"]
+
+cc_kbc = ["rand", "rsa", "sha2", "reqwest"]
+all-attesters = ["tdx-attester"]
+tdx-attester = ["tdx-attest-rs"]
+
 sample_kbc = []
-cc_kbc = ["rand", "rsa", "sha2", "tdx-attest-rs", "reqwest"]
 eaa_kbc = ["foreign-types"]
 offline_fs_kbc = []
 offline_sev_kbc = []

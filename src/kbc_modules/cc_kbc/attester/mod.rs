@@ -6,6 +6,8 @@
 use anyhow::*;
 
 pub mod sample;
+
+#[cfg(feature = "tdx-attester")]
 pub mod tdx;
 
 /// The supported TEE types:
@@ -27,6 +29,7 @@ impl Tee {
     pub fn to_attester(&self) -> Result<Box<dyn Attester + Send + Sync>> {
         match self {
             Tee::Sample => Ok(Box::<sample::SampleAttester>::default()),
+            #[cfg(feature = "tdx-attester")]
             Tee::Tdx => Ok(Box::<tdx::TdxAttester>::default()),
             _ => bail!("TEE is not supported!"),
         }
@@ -40,10 +43,11 @@ pub trait Attester {
 // Detect which TEE platform the KBC running environment is.
 pub fn detect_tee_type() -> Tee {
     if sample::detect_platform() {
-        Tee::Sample
-    } else if tdx::detect_platform() {
-        Tee::Tdx
-    } else {
-        Tee::Unknown
+        return Tee::Sample;
     }
+    #[cfg(feature = "tdx-attester")]
+    if tdx::detect_platform() {
+        return Tee::Tdx;
+    }
+    Tee::Unknown
 }
