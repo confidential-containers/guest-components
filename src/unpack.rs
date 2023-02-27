@@ -2,8 +2,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::Context;
 use anyhow::{bail, Result};
 use libc::timeval;
+use log::warn;
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::fs;
@@ -16,7 +18,12 @@ pub fn unpack<R: io::Read>(input: R, destination: &Path) -> Result<()> {
     let mut archive = Archive::new(input);
 
     if destination.exists() {
-        bail!("unpack destination {:?} already exists", destination);
+        warn!(
+            "unpack destination {:?} already exists, will delete and rerwrite the layer",
+            destination
+        );
+        fs::remove_dir_all(destination)
+            .context("Failed to delete existed broken layer when unpacking")?;
     }
 
     fs::create_dir_all(destination)?;
@@ -125,7 +132,8 @@ mod tests {
         let new_mtime = filetime::FileTime::from_last_modification_time(&metadata);
         assert_eq!(mtime, new_mtime);
 
-        // destination already exists
-        assert!(unpack(data.as_slice(), destination).is_err());
+        // though destination already exists, it will be deleted
+        // and rewrite
+        assert!(unpack(data.as_slice(), destination).is_ok());
     }
 }
