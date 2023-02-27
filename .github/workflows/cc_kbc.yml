@@ -22,6 +22,9 @@ jobs:
       matrix:
         rust:
           - stable
+        kbc:
+          - cc_kbc
+          - cc_kbc_tdx
 
     steps:
       - name: Code checkout
@@ -44,13 +47,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libtdx-attest-dev
 
-      - name: Build and install with cc_kbc feature
+      - name: Build and install with ${{ matrix.kbc }} feature
         run: |
-          make KBC=cc_kbc && make install
+          make KBC=${{ matrix.kbc }} && make install
 
       - name: Run rust lint check
         uses: actions-rs/cargo@v1
         with:
           command: clippy
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
-          args: --all-targets --features cc_kbc,rust-crypto -- -D warnings -A clippy::derive_partial_eq_without_eq
+          args: --all-targets --features cc_kbc,tdx-attester,rust-crypto -- -D warnings -A clippy::derive_partial_eq_without_eq
