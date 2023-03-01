@@ -20,9 +20,8 @@ jobs:
       matrix:
         rust:
           - stable
-        feature:
-          - sample_enc
-          - offline_fs_kbs
+          - nightly
+
     steps:
       - name: Code checkout
         uses: actions/checkout@v2
@@ -35,16 +34,28 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
-          components: rustfmt
+          components: rustfmt, clippy
 
-      - name: Build and install with ${{ matrix.feature }} feature
+      - name: Rust fmt check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --check --manifest-path sample_keyprovider/Cargo.toml
+        
+      - name: Rust clippy check
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path sample_keyprovider/Cargo.toml -- -D warnings
+
+      - name: Build and install
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --manifest-path sample_keyprovider/Cargo.toml --features ${{ matrix.feature }}
+          args: --manifest-path sample_keyprovider/Cargo.toml
 
-      - name: Run cargo test with ${{ matrix.feature }} feature
+      - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path sample_keyprovider/Cargo.toml --features ${{ matrix.feature }}
+          args: --manifest-path sample_keyprovider/Cargo.toml
