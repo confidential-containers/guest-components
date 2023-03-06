@@ -274,3 +274,31 @@ impl EAAKbc {
         Ok(recv_string)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_check_kbc() {
+        let kbs_addr = "127.0.0.1:30000".to_string();
+        let kbs_protocol_version = "0.1.0".to_string();
+
+        let eaa_kbc = EAAKbc {
+            kbs_uri: kbs_addr.clone(),
+            protocol_version: kbs_protocol_version.clone(),
+            algorithm: String::new(),
+            key_length: 32,
+            tcp_stream: None,
+            tls_handle: None,
+        };
+
+        let check_res = eaa_kbc.check();
+        assert!(check_res.is_ok());
+
+        let info = check_res.unwrap().kbs_info;
+
+        assert_eq!(info.get("kbs_addr").unwrap(), &kbs_addr);
+        assert_eq!(info.get("protocol_version").unwrap(), &kbs_protocol_version);
+    }
+}
