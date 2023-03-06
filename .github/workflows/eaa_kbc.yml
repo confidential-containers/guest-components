@@ -50,3 +50,7 @@ jobs:
       - name: Build AA with EAA KBC
         run: |
           make KBC=eaa_kbc && make install
+
+      - name: Run cargo test with eaa_kbc feature
+        run: |
+          RUSTFLAGS="-C link-args=-Wl,-rpath,/usr/local/lib/rats-tls" cargo test --features eaa_kbc kbc_modules::eaa_kbc
