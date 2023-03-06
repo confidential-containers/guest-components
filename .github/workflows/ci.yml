@@ -59,7 +59,7 @@ jobs:
 
       - name: Run cargo test - kata-cc,keywrap-grpc
         run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=kata-cc,keywrap-grpc
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=encryption,snapshot-overlayfs,signature-cosign,getresource,keywrap-grpc
 
       - name: Run cargo test - encryption,keywrap-grpc
         run: |
