@@ -144,7 +144,7 @@ mod tests {
     #[case(true, ResourcePath::CosignVerificationKey.as_ref(), COSIGNKEY)]
     #[case(true, ResourcePath::Credential.as_ref(), CREDENTIAL)]
     // Case 2. Error while get bad resource name from a good kbc instance
-    #[case(false, "kbs://example.org/test-repo/credential/not-existed", "")]
+    #[case(false, "kbs:///default/credential/not-existed", "")]
     #[tokio::test]
     async fn test_get_resource(
         #[case] success: bool,

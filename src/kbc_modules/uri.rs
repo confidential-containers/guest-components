@@ -36,9 +36,7 @@ impl TryFrom<url::Url> for ResourceUri {
     type Error = &'static str;
 
     fn try_from(value: url::Url) -> Result<Self, Self::Error> {
-        let addr = value
-            .host_str()
-            .ok_or("can not parse kbs address from the url")?;
+        let addr = value.host_str().unwrap_or_default();
         if value.scheme() != SCHEME {
             return Err("scheme must be kbs");
         }
@@ -107,14 +105,14 @@ impl<'de> Deserialize<'de> for ResourceUri {
 mod tests {
     use super::ResourceUri;
 
-    const TEST_URL: &str = "kbs://example.org/alice/cosign-key/213";
+    const TEST_URL: &str = "kbs:///alice/cosign-key/213";
 
     #[test]
     fn deserialize() {
         let resource: ResourceUri =
             serde_json::from_str(&format!("\"{TEST_URL}\"")).expect("deserialize failed");
         let expected = ResourceUri {
-            kbs_addr: "example.org".into(),
+            kbs_addr: "".into(),
             repository: "alice".into(),
             r#type: "cosign-key".into(),
             tag: "213".into(),
@@ -125,7 +123,7 @@ mod tests {
     #[test]
     fn serialize() {
         let rid = ResourceUri {
-            kbs_addr: "example.org".into(),
+            kbs_addr: "".into(),
             repository: "alice".into(),
             r#type: "cosign-key".into(),
             tag: "213".into(),
@@ -138,7 +136,7 @@ mod tests {
     #[test]
     fn conversions() {
         let rid = ResourceUri {
-            kbs_addr: "example.org".into(),
+            kbs_addr: "".into(),
             repository: "alice".into(),
             r#type: "cosign-key".into(),
             tag: "213".into(),

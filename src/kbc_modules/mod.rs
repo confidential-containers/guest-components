@@ -152,31 +152,31 @@ pub mod tests {
     pub enum ResourcePath {
         /// image security policy, used to define whether a specific
         /// image can be pulled, or signature verification is needed
-        #[strum(serialize = "kbs://example.org/test-repo/security-policy/test")]
+        #[strum(serialize = "kbs:///default/security-policy/test")]
         Policy,
 
         /// used to configure the storage path of public keys used
         /// by simple signing when doing iamge signature verification
-        #[strum(serialize = "kbs://example.org/test-repo/sigstore-config/test")]
+        #[strum(serialize = "kbs:///default/sigstore-config/test")]
         SigstoreConfig,
 
         /// gpg public key used to verify signature of images in
         /// simple signing scheme.
-        #[strum(serialize = "kbs://example.org/test-repo/gpg-public-config/test")]
+        #[strum(serialize = "kbs:///default/gpg-public-config/test")]
         GPGPublicKey,
 
         /// public key file used to verify signature of images in
         /// cosign scheme.
-        #[strum(serialize = "kbs://example.org/test-repo/cosign-public-key/test")]
+        #[strum(serialize = "kbs:///default/cosign-public-key/test")]
         CosignVerificationKey,
 
         /// container registry auth file, used to provide auth
         /// when accessing a private registry / repository
-        #[strum(serialize = "kbs://example.org/test-repo/credential/test")]
+        #[strum(serialize = "kbs:///default/credential/test")]
         Credential,
 
         /// client ID used in online sev kbc
-        #[strum(serialize = "kbs://example.org/test-repo/client-id/test")]
+        #[strum(serialize = "kbs:///default/client-id/test")]
         ClientId,
     }
 }

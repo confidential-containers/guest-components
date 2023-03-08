@@ -63,7 +63,7 @@ pub mod tests {
     #[allow(dead_code)]
     pub const RESOURCES_NAME: &str = "aa-offline_fs_kbc-resources.json";
 
-    pub const KBS_URI_PREFIX: &str = "kbs://example.org/";
+    pub const KBS_URI_PREFIX: &str = "kbs:///";
 
     #[macro_export]
     macro_rules! resource_path {
