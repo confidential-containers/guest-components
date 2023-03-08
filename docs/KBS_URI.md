@@ -14,8 +14,8 @@ kbs://<url-of-kbs>/<repository>/<type>/<tag>
 
 Here,
 - `kbs://`: a fixed scheme, indicating that this uri is a KBS Resource URI and used in CoCo Key Broker System.
-- `<url-of-kbs>`: the address of the KBS which stores the resource. It is either a ip address or a domain name. Also can be treated as a `confidential resource registry`.
-- `<repository>/<type>/<tag>`: They compose a path to the resource altogether. Usually, `<repository>` can be a user name, `<type>` can be the type of the resource, and `<tag>` to distinguish different instances of the same type.
+- `<url-of-kbs>`: the address of the KBS which stores the resource. It is either a ip address or a domain name. Also can be treated as a `confidential resource registry`. Currently, we do not actually use this field in the code, so a uri looks like `kbs:///...`.
+- `<repository>/<type>/<tag>`: They compose a path to the resource altogether. Usually, `<repository>` can be a user name, `<type>` can be the type of the resource, and `<tag>` to distinguish different instances of the same type. The default value of `<repository>` is `default`.
 
 ## How Different KBC/KBS uses a KBS Resource URI
 
