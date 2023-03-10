@@ -4,13 +4,14 @@
 //
 
 use super::*;
+use const_format::concatcp;
 use ::ttrpc::Server;
 use std::path::Path;
 
-const DEFAULT_KEYPROVIDER_UNIX_ADDR: &str =
-    "unix:///opt/confidential-containers/attestation-agent/keyprovider.sock";
-const DEFAULT_GETRESOURCE_UNIX_ADDR: &str =
-    "unix:///opt/confidential-containers/attestation-agent/getresource.sock";
+const DEFAULT_UNIX_SOCKET_DIR: &str = "/run/confidential-containers/attestation-agent";
+const UNIX_SOCKET_PREFIX: &str = "unix://";
+const DEFAULT_KEYPROVIDER_SOCKET_ADDR: &str = concatcp!(UNIX_SOCKET_PREFIX, DEFAULT_UNIX_SOCKET_DIR, "keyprovider.sock");
+const DEFAULT_GETRESOURCE_SOCKET_ADDR: &str = concatcp!(UNIX_SOCKET_PREFIX, DEFAULT_UNIX_SOCKET_DIR, "getresource.sock");
 
 lazy_static! {
     pub static ref SYNC_ATTESTATION_AGENT: Arc<std::sync::Mutex<AttestationAgent>> =
@@ -36,13 +37,16 @@ pub fn ttrpc_main() {
             )
             .get_matches();
 
+    if !Path::new(DEFAULT_UNIX_SOCKET_DIR).exists() {
+        std::fs::create_dir_all(DEFAULT_UNIX_SOCKET_DIR).expect("Create unix socket dir failed");
+    }
     let keyprovider_socket = app_matches
         .value_of("KeyProvider ttRPC Unix socket addr")
-        .unwrap_or(DEFAULT_KEYPROVIDER_UNIX_ADDR);
+        .unwrap_or(DEFAULT_KEYPROVIDER_SOCKET_ADDR);
 
     let getresource_socket = app_matches
         .value_of("GetResource ttRPC Unix socket addr")
-        .unwrap_or(DEFAULT_GETRESOURCE_UNIX_ADDR);
+        .unwrap_or(DEFAULT_GETRESOURCE_SOCKET_ADDR);
 
     debug!(
         "KeyProvider ttRPC service listening on: {:?}",
@@ -74,7 +78,7 @@ pub fn ttrpc_main() {
 
 fn clean_previous_sock_file(unix_socket: &str) -> Result<()> {
     let path = unix_socket
-        .strip_prefix("unix://")
+        .strip_prefix(UNIX_SOCKET_PREFIX)
         .expect("socket address scheme is not expected");
 
     if Path::new(path).exists() {
