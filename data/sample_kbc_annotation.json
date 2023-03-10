@@ -1,5 +1,5 @@
 {
-	"kid": "null",
+	"kid": "kbs:///default/key/1",
 	"wrapped_data": "KxAFgXwa0y72Xdygub9lF00RVMtSRbYzvakIEASgi3Gvt1wGLkhKPXf0S033Jdi6vAN6zBM7d0xZSDo2JCeew0FeKwTYgdJfdcPhuEpZOpjhwIsidyeiunzp0J/crvI1tSPZJw4DPHZN2eQtg71rDzIbuDM5ATheiDM9/YJv+k+n6Nv6/pRb8qynNzbWFz7Q8wEo1ZZlL6UftOBJ6j9GuEOTM2k/B+5sMA2VhGHSzDsKA1mn0qzcn2HJg4GcmxwDpJwzm5n7B4iIJ3A0umrQAjQ=",
 	"iv": "3PQMqtjbR4hxCr83",
 	"wrap_type": "aes_256_gcm"
