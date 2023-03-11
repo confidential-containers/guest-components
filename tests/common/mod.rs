@@ -84,9 +84,9 @@ pub async fn start_attestation_agent() -> Result<Child> {
             let aa = tokio::process::Command::new(aa_path)
                 .args(&[
                     "--keyprovider_sock",
-                    "unix:///opt/confidential-containers/attestation-agent/keyprovider.sock",
+                    "unix:///run/confidential-containers/attestation-agent/keyprovider.sock",
                     "--getresource_sock",
-                    "unix:///opt/confidential-containers/attestation-agent/getresource.sock"
+                    "unix:///run/confidential-containers/attestation-agent/getresource.sock"
                     ])
                 .spawn()?;
         } else {
