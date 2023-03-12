@@ -64,6 +64,7 @@ impl KbcInterface for EAAKbc {
             base64::decode(annotation_packet.wrapped_data)?,
             annotation_packet.kid.resource_path(),
             base64::decode(annotation_packet.iv)?,
+            annotation_packet.wrap_type,
         )?;
         debug!("decrypted success");
         Ok(decrypted_payload)
@@ -134,11 +135,12 @@ impl EAAKbc {
         encrypted_payload: Vec<u8>,
         key_id: String,
         iv: Vec<u8>,
+        wrap_type: String,
     ) -> Result<Vec<u8>> {
         let blob = Blob {
             kid: key_id,
             encrypted_data: base64::encode(&encrypted_payload),
-            algorithm: "AES".to_string(),
+            algorithm: wrap_type,
             key_length: 256,
             iv: base64::encode(iv),
         };
@@ -179,8 +181,12 @@ impl EAAKbc {
 
     fn kbs_get_resource(&mut self, rid: &ResourceUri) -> Result<Vec<u8>> {
         let resource_path = rid.resource_path();
-        let command = format!("Get {resource_path}");
-        let request = GetResourceRequest::new(&command, HashMap::new());
+        let command = format!("Get Resource");
+
+        let request = GetResourceRequest::new(
+            &command,
+            [("resource_path".to_string(), resource_path.clone())].into(),
+        );
         let resource_info = self.kbs_get_resource_info(resource_path.as_str())?;
 
         let trans_json = serde_json::to_string(&request)?;
