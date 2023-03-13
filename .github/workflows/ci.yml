@@ -39,7 +39,7 @@ jobs:
 
       - name: Install tonic's protoc dependencies
         run: |
-          apt install apt protobuf-compiler libprotobuf-dev
+          apt install -y protobuf-compiler libprotobuf-dev
       - name: Build and install rats-tls
         run: | 
           apt-get install -y libcurl4-openssl-dev
