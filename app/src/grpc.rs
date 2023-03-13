@@ -18,6 +18,7 @@ lazy_static! {
 pub async fn grpc_main() -> Result<()> {
     let app_matches = App::new(rpc::AGENT_NAME)
         .version(env!("CARGO_PKG_VERSION"))
+        .about(rpc::ABOUT.as_str())
         .arg(
             Arg::with_name("KeyProvider gRPC socket addr")
                 .long("keyprovider_sock")

@@ -136,6 +136,10 @@ impl KbcModuleList {
             })?;
         Ok(instantiate_func)
     }
+
+    pub fn names(&self) -> Vec<String> {
+        self.mod_list.keys().cloned().collect()
+    }
 }
 
 /// Descriptor for resources managed by attestation agent.

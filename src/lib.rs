@@ -92,6 +92,11 @@ impl AttestationAgent {
         }
     }
 
+    pub fn about(&self) -> String {
+        let kbc_names_list = self.kbc_module_list.names().join(", ");
+        format!("KBCs: {kbc_names_list}")
+    }
+
     fn register_instance(&mut self, kbc_name: String, kbc_instance: KbcInstance) {
         self.kbc_instance_map.insert(kbc_name, kbc_instance);
     }

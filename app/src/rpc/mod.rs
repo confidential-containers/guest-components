@@ -12,4 +12,18 @@ pub mod ttrpc_protocol;
 pub type TtrpcService =
     std::collections::HashMap<String, Box<dyn ::ttrpc::MethodHandler + Send + Sync>>;
 
+use crate::AttestationAgent;
+
 pub const AGENT_NAME: &str = "attestation-agent";
+
+#[cfg(feature = "ttrpc")]
+const PROTOCOL: &str = "ttrpc";
+#[cfg(feature = "grpc")]
+const PROTOCOL: &str = "grpc";
+
+lazy_static! {
+    pub static ref ABOUT: String = {
+        let aa_about = AttestationAgent::new().about();
+        format!("Protocol: {PROTOCOL}\n{aa_about}")
+    };
+}

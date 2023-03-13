@@ -21,6 +21,7 @@ lazy_static! {
 pub fn ttrpc_main() {
     let app_matches = App::new(rpc::AGENT_NAME)
             .version(env!("CARGO_PKG_VERSION"))
+            .about(rpc::ABOUT.as_str())
             .arg(
                 Arg::with_name("KeyProvider ttRPC Unix socket addr")
                     .long("keyprovider_sock")
