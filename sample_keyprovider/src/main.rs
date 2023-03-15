@@ -29,7 +29,7 @@ struct Cli {
     /// this field are specified, the keys generated to encrypt an image
     /// will be automatically registered into the KBS.
     #[arg(long)]
-    kbs: Option<SocketAddr>,
+    kbs: Option<String>,
 }
 
 #[tokio::main]
@@ -41,7 +41,14 @@ async fn main() -> Result<()> {
     debug!("starting keyprovider gRPC service...");
     info!("listening to socket addr: {:?}", cli.socket);
 
-    grpc::start_service(socket).await?;
+    if cli.auth_private_key.is_some() && cli.kbs.is_some() {
+        info!(
+            "The encryption key will be registered to kbs: {:?}",
+            cli.kbs
+        );
+    }
+
+    grpc::start_service(cli.socket, cli.auth_private_key, cli.kbs).await?;
 
     Ok(())
 }

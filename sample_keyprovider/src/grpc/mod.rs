@@ -7,6 +7,7 @@ use crate::enc_mods;
 use anyhow::*;
 use log::*;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use tonic::{transport::Server, Request, Response, Status};
 
 use key_provider::key_provider_service_server::{KeyProviderService, KeyProviderServiceServer};
@@ -18,8 +19,25 @@ pub mod key_provider {
     tonic::include_proto!("keyprovider");
 }
 
-#[derive(Debug, Default)]
-pub struct KeyProvider {}
+#[derive(Debug)]
+pub struct KeyProvider {
+    auth_private_key: Option<Ed25519KeyPair>,
+    kbs: Option<Url>,
+}
+
+impl KeyProvider {
+    pub fn new(auth_private_key: Option<Ed25519KeyPair>, kbs: Option<String>) -> Result<Self> {
+        let kbs = match kbs {
+            Some(addr) => addr.parse().ok(),
+            None => None,
+        };
+
+        Ok(Self {
+            auth_private_key,
+            kbs,
+        })
+    }
+}
 
 #[tonic::async_trait]
 impl KeyProviderService for KeyProvider {
@@ -84,10 +102,16 @@ impl KeyProviderService for KeyProvider {
     }
 }
 
-pub async fn start_service(socket: SocketAddr) -> Result<()> {
-    let service = KeyProvider::default();
+pub async fn start_service(
+    socket: SocketAddr,
+    auth_private_key: Option<PathBuf>,
+    kbs: Option<String>,
+) -> Result<()> {
     Server::builder()
-        .add_service(KeyProviderServiceServer::new(service))
+        .add_service(KeyProviderServiceServer::new(KeyProvider::new(
+            auth_private_key,
+            kbs,
+        )?))
         .serve(socket)
         .await?;
     Ok(())
