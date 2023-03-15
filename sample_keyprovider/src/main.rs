@@ -34,19 +34,7 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    env_logger::init();
-    let app_matches = App::new("sample_keyprovider")
-        .version("1.0.0")
-        .arg(
-            Arg::with_name("socket addr")
-                .long("keyprovider_sock")
-                .takes_value(true)
-                .help(
-                    "The socket address which the grpc service will listen to, 
-                    for example: --keyprovider_sock 127.0.0.1:11223",
-                ),
-        )
-        .get_matches();
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     let cli = Cli::parse();
 
