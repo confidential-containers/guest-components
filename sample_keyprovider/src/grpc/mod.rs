@@ -45,29 +45,50 @@ impl KeyProviderService for KeyProvider {
         &self,
         request: Request<KeyProviderKeyWrapProtocolInput>,
     ) -> Result<Response<KeyProviderKeyWrapProtocolOutput>, Status> {
-        let input_string =
-            String::from_utf8(request.into_inner().key_provider_key_wrap_protocol_input).unwrap();
+        let input_string = String::from_utf8(
+            request.into_inner().key_provider_key_wrap_protocol_input,
+        )
+        .map_err(|e| {
+            Status::invalid_argument(format!(
+                "key_provider_key_wrap_protocol_input is not legal utf8 string: {e}"
+            ))
+        })?;
+
         debug!("WrapKey API Request Input: {}", input_string);
-        let input: KeyProviderInput =
-            serde_json::from_str::<KeyProviderInput>(&input_string).unwrap();
-        let optsdata = input.keywrapparams.optsdata.unwrap();
+        let input: KeyProviderInput = serde_json::from_str::<KeyProviderInput>(&input_string)
+            .map_err(|e| {
+                Status::invalid_argument(format!("parse key provider input failed: {e}"))
+            })?;
+        let optsdata = input
+            .keywrapparams
+            .optsdata
+            .ok_or_else(|| Status::invalid_argument("illegal keywrapparams without optsdata"))?;
         let params: Vec<String> = input
             .keywrapparams
             .ec
-            .unwrap()
+            .ok_or_else(|| Status::invalid_argument("illegal keywrapparams without ec"))?
             .parameters
             .get("attestation-agent")
-            .unwrap()
+            .ok_or_else(|| {
+                Status::invalid_argument("illegal encryption provider without attestation-agent")
+            })?
             .iter()
             // According to
             // https://github.com/containers/ocicrypt/blob/e4a936881fb7cf4b2b8fe49e81b8232fd4c48e97/config/constructors.go#L112,
             // this Vec will only have one element anyways, but let's decode all elements of it
             // just to be sure.
-            .map(|p| String::from_utf8(base64::decode(p).unwrap()).unwrap())
+            .filter_map(|p| {
+                base64::decode(p)
+                    .ok()
+                    .and_then(|st| String::from_utf8(st).ok())
+            })
             .collect();
 
-        let annotation: String =
-            enc_mods::enc_optsdata_gen_anno(&base64::decode(optsdata).unwrap(), params).unwrap();
+        let annotation: String = enc_mods::enc_optsdata_gen_anno(
+            &base64::decode(optsdata).map_err(|_| Status::aborted("base64 decode"))?,
+            params,
+        )
+        .map_err(|e| Status::internal(format!("encrypt failed: {e}")))?;
 
         let output_struct = KeyWrapOutput {
             keywrapresults: KeyWrapResults {
@@ -75,12 +96,13 @@ impl KeyProviderService for KeyProvider {
             },
         };
         let output = serde_json::to_string(&output_struct)
-            .unwrap()
+            .map_err(|e| Status::internal(format!("serde json failed: {e}")))?
             .as_bytes()
             .to_vec();
         debug!(
             "WrapKey API output: {}",
-            serde_json::to_string(&output_struct).unwrap()
+            serde_json::to_string(&output_struct)
+                .map_err(|e| Status::internal(format!("serde json failed: {e}")))?
         );
         let reply = KeyProviderKeyWrapProtocolOutput {
             key_provider_key_wrap_protocol_output: output,
