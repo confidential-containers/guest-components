@@ -5,9 +5,11 @@
 
 use crate::enc_mods;
 use anyhow::*;
+use jwt_simple::prelude::Ed25519KeyPair;
 use log::*;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use tokio::fs;
 use tonic::{transport::Server, Request, Response, Status};
 
 use key_provider::key_provider_service_server::{KeyProviderService, KeyProviderServiceServer};
@@ -19,7 +21,6 @@ pub mod key_provider {
     tonic::include_proto!("keyprovider");
 }
 
-#[derive(Debug)]
 pub struct KeyProvider {
     auth_private_key: Option<Ed25519KeyPair>,
     kbs: Option<Url>,
@@ -85,9 +86,11 @@ impl KeyProviderService for KeyProvider {
             .collect();
 
         let annotation: String = enc_mods::enc_optsdata_gen_anno(
+            (&self.kbs, &self.auth_private_key),
             &base64::decode(optsdata).map_err(|_| Status::aborted("base64 decode"))?,
             params,
         )
+        .await
         .map_err(|e| Status::internal(format!("encrypt failed: {e}")))?;
 
         let output_struct = KeyWrapOutput {
@@ -129,6 +132,17 @@ pub async fn start_service(
     auth_private_key: Option<PathBuf>,
     kbs: Option<String>,
 ) -> Result<()> {
+    let auth_private_key = match auth_private_key {
+        Some(key_path) => {
+            let pem = fs::read_to_string(key_path)
+                .await
+                .context("open auth private key")?;
+
+            Some(Ed25519KeyPair::from_pem(&pem)?)
+        }
+        None => None,
+    };
+
     Server::builder()
         .add_service(KeyProviderServiceServer::new(KeyProvider::new(
             auth_private_key,
