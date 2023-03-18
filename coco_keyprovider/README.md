@@ -12,8 +12,8 @@ The following guide will help make an encrypted image using CoCo keyprovider and
 Build and run CoCo keyprovider.
 
 ```
-cd attestation-agent/sample_keyprovider
-RUST_LOG=sample_keyprovider cargo run --release -- --keyprovider_sock 127.0.0.1:50000
+cd attestation-agent/coco_keyprovider
+RUST_LOG=coco_keyprovider cargo run --release -- --keyprovider_sock 127.0.0.1:50000
 ```
 
 vim ocicrypt.conf: 

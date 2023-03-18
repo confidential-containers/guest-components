@@ -120,7 +120,7 @@ List of supported KBC modules:
 
 ## Tools
 
-- [Sample Keyprovider](./sample_keyprovider): A simple tool for encrypting container images with skopeo, please refer to its [README](./sample_keyprovider/README.md).
+- [Sample Keyprovider](./coco_keyprovider): A simple tool for encrypting container images with skopeo, please refer to its [README](./coco_keyprovider/README.md).
 
 
 

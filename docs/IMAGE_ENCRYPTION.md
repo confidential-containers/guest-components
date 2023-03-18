@@ -5,7 +5,7 @@
 As stated in [CCv0 image security design](https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md), CoCo uses image encryption machanism compatible with [ocicrypt](https://github.com/containers/ocicrypt) and [ocicrypt-rs](https://github.com/confidential-containers/ocicrypt-rs).
 
 Attestation-Agent as a [Key Provider](https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md#update-manifest) implements API `unwrapkey`, which works together
-with the [Sample Key Provider](../sample_keyprovider/) who implements API `wrapkey`.
+with the [Sample Key Provider](../coco_keyprovider/) who implements API `wrapkey`.
 
 This document will describe how Attestation-Agent and Sample Key Provider play a role in image encryption. Together, some specifications will also be defined.
 

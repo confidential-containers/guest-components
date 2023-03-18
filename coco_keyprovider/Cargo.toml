@@ -1,5 +1,5 @@
 [package]
-name = "sample_keyprovider"
+name = "coco_keyprovider"
 version = "0.1.0"
 authors = ["The Attestation Agent Authors"]
 publish = false
