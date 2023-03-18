@@ -3,12 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{collections::HashMap, net::SocketAddr};
+use std::collections::HashMap;
 
 use anyhow::*;
 use jwt_simple::prelude::Ed25519KeyPair;
 use log::{debug, info};
 use rand::RngCore;
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 
@@ -62,7 +63,9 @@ const HARD_CODED_KEYID: &str = "kbs:///default/test-key/1";
 
 /// When a KEK is randomly generated, a new kid will be generated
 /// with this prefix.
-const DEFAULT_KEY_REPO_PATH: &str = "kbs:///default/key/";
+const DEFAULT_KEY_REPO_PATH: &str = "default/image-kek";
+
+const KBS_RESOURCE_URL_PREFIX: &str = "kbs://";
 
 fn parse_input_params(input: &str) -> Result<InputParams> {
     let map: HashMap<&str, &str> = input
@@ -108,8 +111,7 @@ async fn generate_key_parameters(input_params: &InputParams) -> Result<(Vec<u8>,
         false => match &input_params.keypath {
             Some(kpath) => {
                 debug!("use given key from: {kpath}");
-                let key =
-                    fs::read(kpath).await.context("read Key file failed")?;
+                let key = fs::read(kpath).await.context("read Key file failed")?;
                 let mut iv = [0; 12];
                 rand::rngs::OsRng.fill_bytes(&mut iv);
                 let kid = match &input_params.keyid {
@@ -117,10 +119,10 @@ async fn generate_key_parameters(input_params: &InputParams) -> Result<(Vec<u8>,
                     None => {
                         debug!("no kid input, generate a random kid");
                         let tag = uuid::Uuid::new_v4().to_string();
-                        format!("{DEFAULT_KEY_REPO_PATH}{tag}")
+                        format!("{DEFAULT_KEY_REPO_PATH}/{tag}")
                     }
                 };
-                    
+
                 Ok((key.to_vec(), iv.to_vec(), kid))
             }
             None => {
@@ -129,7 +131,7 @@ async fn generate_key_parameters(input_params: &InputParams) -> Result<(Vec<u8>,
                 let mut iv = [0; 12];
                 rand::rngs::OsRng.fill_bytes(&mut iv);
 
-                let mut key = [0; 256];
+                let mut key = [0; 32];
                 rand::rngs::OsRng.fill_bytes(&mut key);
 
                 let kid = match &input_params.keyid {
@@ -137,12 +139,12 @@ async fn generate_key_parameters(input_params: &InputParams) -> Result<(Vec<u8>,
                     None => {
                         debug!("no kid input, generate a random kid");
                         let tag = uuid::Uuid::new_v4().to_string();
-                        format!("{DEFAULT_KEY_REPO_PATH}{tag}")
+                        format!("{DEFAULT_KEY_REPO_PATH}/{tag}")
                     }
                 };
                 Ok((key.to_vec(), iv.to_vec(), kid))
             }
-        }
+        },
     }
 }
 
@@ -161,12 +163,14 @@ async fn generate_key_parameters(input_params: &InputParams) -> Result<(Vec<u8>,
 /// | keypath   | path to the KEK, e.g. `/home/key`    | Specify the KEK to encrypted the image in local filesystem                                       |
 /// | algorithm | `A256GCM` or `A256CTR`               | Encryption algorithm, included in the `wrap_type` field of AnnotationPacket. By default `A256GCM`|
 pub async fn enc_optsdata_gen_anno(
-    kbs_parameter: (&Option<SocketAddr>, &Option<Ed25519KeyPair>),
+    kbs_parameter: (&Option<Url>, &Option<Ed25519KeyPair>),
     optsdata: &[u8],
     params: Vec<String>,
 ) -> Result<String> {
     let input_params = parse_input_params(&params[0])?;
-    let (key, iv, kid) = generate_key_parameters(&input_params).await.context("generating key params")?;
+    let (key, iv, kid) = generate_key_parameters(&input_params)
+        .await
+        .context("generating key params")?;
 
     let algorithm = input_params.algorithm;
     let encrypt_optsdata = crypto::encrypt(optsdata, &key, &iv, &algorithm)
@@ -175,13 +179,15 @@ pub async fn enc_optsdata_gen_anno(
     if let (Some(addr), Some(private_key)) = kbs_parameter {
         if !input_params.sample {
             // We do not register KEK for sample kbc
-            register_kek(private_key, addr, key, &kid).await.context("register KEK failed")?;
+            register_kek(private_key, addr, key, &kid)
+                .await
+                .context("register KEK failed")?;
             info!("register KEK succeeded.");
         }
     }
 
     let annotation = AnnotationPacket {
-        kid,
+        kid: format!("{KBS_RESOURCE_URL_PREFIX}/{kid}"),
         wrapped_data: base64::encode(encrypt_optsdata),
         iv: base64::encode(iv),
         wrap_type: algorithm.to_string(),

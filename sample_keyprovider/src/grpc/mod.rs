@@ -7,6 +7,7 @@ use crate::enc_mods;
 use anyhow::*;
 use jwt_simple::prelude::Ed25519KeyPair;
 use log::*;
+use reqwest::Url;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use tokio::fs;
