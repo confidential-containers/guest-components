@@ -19,6 +19,9 @@ use protocol::keyprovider_structs::*;
 
 pub mod protocol;
 pub mod key_provider {
+    #![allow(unknown_lints)]
+    #![allow(clippy::derive_partial_eq_without_eq)]
+    #![allow(clippy::redundant_async_block)]
     tonic::include_proto!("keyprovider");
 }
 
