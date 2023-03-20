@@ -25,7 +25,7 @@ lazy_static = { version = "1.4.0", optional = true }
 libc = "0.2"
 log = "0.4.14"
 nix = { version = "0.26", optional = true }
-oci-distribution = "0.9.4"
+oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c" }
 oci-spec = "0.5.8"
 ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs.git", rev = "3763189", default-features = false, features = ["keywrap-jwe", "async-io"], optional = true }
 prost = { version = "0.11", optional = true }
@@ -35,9 +35,6 @@ serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
 serde_yaml = { version = "0.8", optional = true }
 sha2 = ">=0.10"
-
-# Latest version of sigstore conflicts with sequoia-openpgp, so stick to v0.3
-sigstore = { version = "0.3.0",  optional = true}
 strum = { version = "0.24", features = ["derive"] }
 strum_macros = "0.24"
 tar = "0.4.37"
@@ -47,6 +44,14 @@ url = "2.2.2"
 ttrpc = { version = "0.7.1", features = [ "async" ], optional = true }
 walkdir = "2"
 zstd = "0.11"
+
+# Latest version of sigstore conflicts with sequoia-openpgp, so stick to v0.3
+[dependencies.sigstore]
+version = "0.3.0"
+optional = true
+
+[patch.crates-io]
+oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c" }
 
 [build-dependencies]
 anyhow = "1"
