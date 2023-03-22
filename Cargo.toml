@@ -18,7 +18,7 @@ log = "0.4.14"
 openssl = { version = "0.10", features = ["vendored"], optional = true}
 prost = { version = "0.11.0", optional = true }
 rand = { version = "0.8.5", optional = true }
-reqwest = { version = "0.11.13", features = ["cookies", "json"], optional = true }
+reqwest = { version = "0.11.13", default-features = false, features = ["cookies", "json"], optional = true }
 rsa = { version = "0.6.1", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -53,5 +53,5 @@ online_sev_kbc = ["tonic", "prost", "uuid", "bincode", "tokio"]
 gen-proto = ["tonic-build"]
 
 # Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
-rust-crypto = ["dep:aes-gcm", "ctr"]
-openssl = ["dep:openssl"]
+rust-crypto = ["dep:aes-gcm", "ctr", "reqwest?/rustls-tls"]
+openssl = ["dep:openssl", "reqwest?/native-tls-vendored"]
