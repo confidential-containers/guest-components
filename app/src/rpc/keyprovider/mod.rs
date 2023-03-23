@@ -146,8 +146,8 @@ pub mod ttrpc {
     use crate::rpc::ttrpc_protocol::{keyprovider, keyprovider_ttrpc};
     use crate::rpc::TtrpcService;
     use crate::ttrpc::SYNC_ATTESTATION_AGENT;
-    use futures::executor::block_on;
     use ::ttrpc::proto::Code;
+    use futures::executor::block_on;
     impl keyprovider_ttrpc::KeyProviderService for KeyProvider {
         fn un_wrap_key(
             &self,

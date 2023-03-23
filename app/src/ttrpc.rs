@@ -4,14 +4,22 @@
 //
 
 use super::*;
-use const_format::concatcp;
 use ::ttrpc::Server;
+use const_format::concatcp;
 use std::path::Path;
 
 const DEFAULT_UNIX_SOCKET_DIR: &str = "/run/confidential-containers/attestation-agent";
 const UNIX_SOCKET_PREFIX: &str = "unix://";
-const DEFAULT_KEYPROVIDER_SOCKET_ADDR: &str = concatcp!(UNIX_SOCKET_PREFIX, DEFAULT_UNIX_SOCKET_DIR, "keyprovider.sock");
-const DEFAULT_GETRESOURCE_SOCKET_ADDR: &str = concatcp!(UNIX_SOCKET_PREFIX, DEFAULT_UNIX_SOCKET_DIR, "getresource.sock");
+const DEFAULT_KEYPROVIDER_SOCKET_ADDR: &str = concatcp!(
+    UNIX_SOCKET_PREFIX,
+    DEFAULT_UNIX_SOCKET_DIR,
+    "keyprovider.sock"
+);
+const DEFAULT_GETRESOURCE_SOCKET_ADDR: &str = concatcp!(
+    UNIX_SOCKET_PREFIX,
+    DEFAULT_UNIX_SOCKET_DIR,
+    "getresource.sock"
+);
 
 lazy_static! {
     pub static ref SYNC_ATTESTATION_AGENT: Arc<std::sync::Mutex<AttestationAgent>> =
