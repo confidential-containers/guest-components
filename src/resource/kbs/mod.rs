@@ -54,7 +54,12 @@ pub struct SecureChannel {
 
 #[async_trait]
 trait Client: Send + Sync {
-    async fn get_resource(&mut self, kbc_name: &str, resource_uri: &str) -> Result<Vec<u8>>;
+    async fn get_resource(
+        &mut self,
+        kbc_name: &str,
+        resource_path: &str,
+        kbs_uri: &str,
+    ) -> Result<Vec<u8>>;
 }
 
 impl SecureChannel {
@@ -90,9 +95,17 @@ impl SecureChannel {
 
             fs::create_dir_all(STORAGE_PATH).await?;
 
+            let kbs_uri = match kbs_uri {
+                "null" => {
+                    log::warn!("detected kbs uri `null`, use localhost to be placeholder");
+                    "localhost".into()
+                }
+                uri => uri.into(),
+            };
+
             Ok(Self {
                 client,
-                kbs_uri: kbs_uri.into(),
+                kbs_uri,
                 kbc_name: kbc_name.into(),
                 storage_path: STORAGE_PATH.into(),
             })
@@ -120,11 +133,6 @@ impl SecureChannel {
         sha256.update(uri.as_bytes());
         format!("{}/{:x}", self.storage_path, sha256.finalize())
     }
-
-    fn overwrite_kbs_uri(&self, uri: &str) -> Result<String> {
-        let path = url::Url::parse(uri)?;
-        Ok(format!("kbs://{}{}", self.kbs_uri, path.path()))
-    }
 }
 
 #[async_trait]
@@ -149,15 +157,20 @@ impl Protocol for SecureChannel {
         // Thus as a temporary solution, we need to overwrite the
         // kbs uri field using the one included in `aa_kbc_params`, s.t.
         // `kbs_uri` of [`SecureChannel`].
-        let processed_resource_uri = self.overwrite_kbs_uri(resource_uri)?;
+        let resource_path = get_resource_path(resource_uri)?;
 
         let res = self
             .client
-            .get_resource(&self.kbc_name, &processed_resource_uri)
+            .get_resource(&self.kbc_name, &resource_path, &self.kbs_uri)
             .await?;
 
         let path = self.get_filepath(resource_uri);
         fs::write(path, &res).await?;
         Ok(res)
     }
+}
+
+fn get_resource_path(uri: &str) -> Result<String> {
+    let path = url::Url::parse(uri)?;
+    Ok(path.path().to_string())
 }

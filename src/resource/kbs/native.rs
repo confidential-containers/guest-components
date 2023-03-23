@@ -19,9 +19,14 @@ pub struct Native {
 
 #[async_trait]
 impl Client for Native {
-    async fn get_resource(&mut self, kbc_name: &str, resource_uri: &str) -> Result<Vec<u8>> {
+    async fn get_resource(
+        &mut self,
+        kbc_name: &str,
+        resource_path: &str,
+        kbs_uri: &str,
+    ) -> Result<Vec<u8>> {
         self.inner
-            .download_confidential_resource(kbc_name, resource_uri)
+            .download_confidential_resource(kbc_name, resource_path, kbs_uri)
             .await
     }
 }

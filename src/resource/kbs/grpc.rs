@@ -38,10 +38,16 @@ impl Grpc {
 
 #[async_trait]
 impl Client for Grpc {
-    async fn get_resource(&mut self, kbc_name: &str, resource_uri: &str) -> Result<Vec<u8>> {
+    async fn get_resource(
+        &mut self,
+        kbc_name: &str,
+        resource_path: &str,
+        kbs_uri: &str,
+    ) -> Result<Vec<u8>> {
         let req = tonic::Request::new(GetResourceRequest {
             kbc_name: kbc_name.to_string(),
-            resource_uri: resource_uri.to_string(),
+            resource_path: resource_path.to_string(),
+            kbs_uri: kbs_uri.to_string(),
         });
         Ok(self.inner.get_resource(req).await?.into_inner().resource)
     }

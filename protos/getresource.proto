@@ -3,8 +3,9 @@ syntax = "proto3";
 package getresource;
 
 message GetResourceRequest {
-    string ResourceUri = 1;
+    string ResourcePath = 1;
     string KbcName = 2;
+    string KbsUri = 3;
 }
 
 message GetResourceResponse {
