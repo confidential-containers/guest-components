@@ -42,7 +42,8 @@ pub mod grpc {
             let target_resource = attestation_agent
                 .download_confidential_resource(
                     &request.kbc_name,
-                    &request.resource_uri,
+                    &request.resource_path,
+                    &request.kbs_uri,
                 )
                 .await
                 .map_err(|e| {
@@ -79,8 +80,8 @@ pub mod ttrpc {
     use crate::rpc::ttrpc_protocol::{getresource, getresource_ttrpc};
     use crate::rpc::TtrpcService;
     use crate::ttrpc::SYNC_ATTESTATION_AGENT;
-    use futures::executor::block_on;
     use ::ttrpc::proto::Code;
+    use futures::executor::block_on;
 
     impl getresource_ttrpc::GetResourceService for GetResource {
         fn get_resource(
@@ -103,7 +104,8 @@ pub mod ttrpc {
 
             let target_resource = block_on(attestation_agent.download_confidential_resource(
                 &req.KbcName,
-                &req.ResourceUri,
+                &req.ResourcePath,
+                &req.KbsUri,
             ))
             .map_err(|e| {
                 error!("Call AA-KBC to get resource failed: {}", e);
