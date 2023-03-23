@@ -6,28 +6,31 @@ To uniquely identify every resource/key in the CoCo Key Broker System, a __KBS R
 
 ## Specification
 
-The format of a KBS Resource URI is
+A KBS Resource URI must comply with the following format:
 
 ```plaintext
-kbs://<url-of-kbs>/<repository>/<type>/<tag>
+kbs://<kbs_host>:<kbs_port>/<repository>/<type>/<tag>
 ```
 
-Here,
-- `kbs://`: a fixed scheme, indicating that this uri is a KBS Resource URI and used in CoCo Key Broker System.
-- `<url-of-kbs>`: the address of the KBS which stores the resource. It is either a ip address or a domain name. Also can be treated as a `confidential resource registry`. Currently, we do not actually use this field in the code, so a uri looks like `kbs:///...`.
-- `<repository>/<type>/<tag>`: They compose a path to the resource altogether. Usually, `<repository>` can be a user name, `<type>` can be the type of the resource, and `<tag>` to distinguish different instances of the same type. The default value of `<repository>` is `default`.
+where:
+
+- `kbs://`: This is the fixed, custom KBS resource scheme. It indicates that this URI for a [CoCo KBS](https://github.com/confidential-containers/kbs) resource.
+- `<kbs_host>:<kbs_port>`: This the KBS host address and port. It is either an IP address or a domain name, and an *optional* TCP/UDP port. Also can be treated as a `confidential resource registry`.
+- `<repository>/<type>/<tag>`: This is the resource path. Typically, `<repository>` would be a user name, `<type>` would be the type of the resource, and `<tag>` would help distinguish between different resource instances of the same type. The default value of `<repository>` is `default`.
+
+For example: `kbs://example.cckbs.org:8081/alice/decryption-key/1`
 
 ## How Different KBC/KBS uses a KBS Resource URI
 
 ### CC-KBC
 
-CC-KBC will convert a KBS Resource URI into a web link to request a [coco-KBS](https://github.com/confidential-containers/kbs). The web link follows the [OpenAPI of KBS](https://github.com/confidential-containers/kbs/blob/main/docs/kbs.yaml#L74).
+`CC-KBC` will convert a KBS Resource URI into a [CoCo KBS Resource API](https://github.com/confidential-containers/kbs/blob/main/docs/kbs.yaml#L74) compliant HTTP/HTTPS request.
 For example, a KBS Resource URI `kbs://example.cckbs.org/alice/decryption-key/1` will be converted to `http://example.cckbs.org/kbs/v0/resource/alice/decryption-key/1`.
 
-### EAA KBC & Online Sev KBC
+### EAA KBC & Online SEV KBC
 
 Both KBCs will use the `<repository>/<type>/<tag>` as key/resource id in their requests.
 
-### Offline Fs KBC & Offline Sev KBC
+### Offline KBCs (e.g FS KBC & Offline SEV KBC)
 
-Both KBCs are local KBC. They will ignore the `<url-of-kbs>` field, and use the `<repository>/<type>/<tag>` as key/resource id to index the resource.
+Offline KBCs should ignore the `<kbs_host>:<kbs_port>` host part of the URI, and use the resource path (`<repository>/<type>/<tag>`) to locally fetch the resource.
