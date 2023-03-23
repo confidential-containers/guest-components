@@ -30,7 +30,7 @@ tonic-build = { version = "0.7.2", optional = true }
 ttrpc-codegen = { version = "0.4.1", optional = true }
 
 [features]
-default = ["sample_kbc", "grpc", "ttrpc"]
+default = ["sample_kbc", "ttrpc"]
 grpc = ["tokio", "tonic", "prost", "tonic-build"]
 ttrpc = ["dep:ttrpc", "ttrpc-codegen", "protobuf"]
 sample_kbc = ["attestation_agent/sample_kbc"]
