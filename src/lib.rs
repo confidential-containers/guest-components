@@ -7,7 +7,7 @@
 #[macro_use]
 extern crate strum;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use kbc_modules::{uri::ResourceUri, AnnotationPacket};
 use std::collections::HashMap;
@@ -145,18 +145,15 @@ impl AttestationAPIs for AttestationAgent {
         resource_path: &str,
         kbs_uri: &str,
     ) -> Result<Vec<u8>> {
-        let kbs_socket = url::Url::parse(kbs_uri)
-            .context("kbs addr parse")?
-            .socket_addrs(|| Some(8080))
-            .context("Could not resolve kbs addr")?
-            .first()
-            .ok_or_else(|| anyhow!("Could not resolve kbs addr {kbs_uri}"))?
-            .to_string();
+        let kbs_socket = match kbs_uri.split_once("://") {
+            Some((_, addr)) => addr.to_string(),
+            None => kbs_uri.to_string(),
+        };
 
         let resource_uri = ResourceUri::new(&kbs_socket, resource_path)?;
 
         if !self.kbc_instance_map.contains_key(kbc_name) {
-            self.instantiate_kbc(kbc_name, &resource_uri.kbs_addr)?;
+            self.instantiate_kbc(kbc_name, kbs_uri)?;
         }
 
         self.kbc_instance_map
