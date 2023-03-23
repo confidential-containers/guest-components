@@ -7,9 +7,7 @@
 //! obtained from `get_resource` endpoint. Also, `kid` field in an
 //! [`super::AnnotationPacket`] of `decrypt_payload` should also follow this.
 
-use std::net::ToSocketAddrs;
-
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 const RESOURCE_ID_ERROR_INFO: &str =
@@ -82,7 +80,6 @@ impl From<ResourceUri> for url::Url {
 
 impl ResourceUri {
     pub fn new(socket: &str, resource_path: &str) -> Result<Self> {
-        let _ = socket.to_socket_addrs().context("illegal socket")?;
         if !resource_path.starts_with('/') {
             bail!("resource_path should starts with '/'")
         }
