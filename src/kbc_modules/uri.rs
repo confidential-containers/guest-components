@@ -7,7 +7,7 @@
 //! obtained from `get_resource` endpoint. Also, `kid` field in an
 //! [`super::AnnotationPacket`] of `decrypt_payload` should also follow this.
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 const RESOURCE_ID_ERROR_INFO: &str =
@@ -79,21 +79,38 @@ impl From<ResourceUri> for url::Url {
 }
 
 impl ResourceUri {
-    pub fn new(socket: &str, resource_path: &str) -> Result<Self> {
+    pub fn new(kbs_uri: &str, resource_path: &str) -> Result<Self> {
+        let kbs_addr = match url::Url::parse(kbs_uri) {
+            Ok(url) => {
+                let kbs_host = url
+                    .host_str()
+                    .ok_or_else(|| anyhow!("Invalid URL: {}", url))?;
+
+                if let Some(port) = url.port() {
+                    format!("{kbs_host}:{port}")
+                } else {
+                    kbs_host.to_string()
+                }
+            }
+            Err(_) => kbs_uri.to_string(),
+        };
+
         if !resource_path.starts_with('/') {
-            bail!("resource_path should starts with '/'")
+            bail!("Resource path {resource_path} must start with '/'")
         }
 
         let values: Vec<&str> = resource_path.split('/').collect();
         if values.len() == 4 {
             Ok(Self {
-                kbs_addr: socket.to_string(),
+                kbs_addr,
                 repository: values[1].into(),
                 r#type: values[2].into(),
                 tag: values[3].into(),
             })
         } else {
-            bail!("resource_path should follow the format '/<repository>/<type>/<tag>'")
+            bail!(
+                "Resource path {resource_path} must follow the format '/<repository>/<type>/<tag>'"
+            )
         }
     }
 

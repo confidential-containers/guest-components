@@ -145,12 +145,7 @@ impl AttestationAPIs for AttestationAgent {
         resource_path: &str,
         kbs_uri: &str,
     ) -> Result<Vec<u8>> {
-        let kbs_socket = match kbs_uri.split_once("://") {
-            Some((_, addr)) => addr.to_string(),
-            None => kbs_uri.to_string(),
-        };
-
-        let resource_uri = ResourceUri::new(&kbs_socket, resource_path)?;
+        let resource_uri = ResourceUri::new(kbs_uri, resource_path)?;
 
         if !self.kbc_instance_map.contains_key(kbc_name) {
             self.instantiate_kbc(kbc_name, kbs_uri)?;
