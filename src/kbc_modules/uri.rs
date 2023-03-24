@@ -15,10 +15,6 @@ const RESOURCE_ID_ERROR_INFO: &str =
 
 const SCHEME: &str = "kbs";
 
-/// If the kbs address inside a kbs resource uri does not have a port field,
-/// use this value as default. This value follows the CC-KBS implementation.
-const DEFAULT_KBS_PORT: u16 = 8080;
-
 /// Resource Id document <https://github.com/confidential-containers/attestation-agent/blob/main/docs/KBS_URI.md>
 #[derive(Clone, Debug, PartialEq)]
 pub struct ResourceUri {
@@ -44,9 +40,10 @@ impl TryFrom<url::Url> for ResourceUri {
         let mut addr = value.host_str().unwrap_or_default().to_string();
 
         if !addr.is_empty() {
-            let port = value.port().unwrap_or(DEFAULT_KBS_PORT).to_string();
-            addr += ":";
-            addr += &port;
+            if let Some(port) = value.port() {
+                addr += ":";
+                addr += &port.to_string();
+            }
         }
 
         if value.scheme() != SCHEME {
