@@ -226,7 +226,14 @@ impl Kbc {
             .kbs_uri
             .host_str()
             .ok_or_else(|| anyhow!("Invalid URL: {}", self.kbs_uri))?;
-        if !resource.kbs_addr.is_empty() && kbs_host != resource.kbs_addr {
+
+        let kbs_addr = if let Some(port) = self.kbs_uri.port() {
+            format!("{kbs_host}:{port}")
+        } else {
+            kbs_host.to_string()
+        };
+
+        if !resource.kbs_addr.is_empty() && resource.kbs_addr != kbs_addr {
             bail!(
                 "The resource KBS host {} differs from the KBS URL one {kbs_addr}",
                 resource.kbs_addr
@@ -253,4 +260,71 @@ fn build_http_client() -> Result<reqwest::Client> {
         .timeout(Duration::from_secs(KBS_REQ_TIMEOUT_SEC))
         .build()
         .map_err(|e| anyhow!("Build KBS http client failed: {:?}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ResourceUri;
+    use crate::kbc_modules::cc_kbc::Kbc;
+
+    const RESOURCE_URL_PORT: &str = "kbs://127.0.0.1:8081/alice/cosign-key/213";
+    const RESOURCE_URL_NO_PORT: &str = "kbs://127.0.0.1/alice/cosign-key/213";
+    const RESOURCE_NO_HOST_URL: &str = "kbs:///alice/cosign-key/213";
+
+    const KBS_URL_PORT: &str = "https://127.0.0.1:8081";
+    const KBS_URL_NO_PORT: &str = "https://127.0.0.1";
+    const KBS_INVALID_URL: &str = "kbs:///alice/cosign-key/213";
+
+    const RESOURCE_KBS_URL_PORT: &str =
+        "https://127.0.0.1:8081/kbs/v0/resource/alice/cosign-key/213";
+    const RESOURCE_KBS_URL_NO_PORT: &str = "https://127.0.0.1/kbs/v0/resource/alice/cosign-key/213";
+
+    #[test]
+    fn new_invalid_uri() {
+        let kbc = Kbc::new(KBS_INVALID_URL.to_string());
+        assert!(kbc.is_err());
+    }
+
+    #[test]
+    fn new_valid_uri() {
+        let kbc = Kbc::new(KBS_URL_PORT.to_string());
+        assert!(kbc.is_ok());
+    }
+
+    fn to_kbs_uri(kbs_url: &str, resource_url: &str, expected_kbs_url: &str) {
+        let resource: ResourceUri =
+            serde_json::from_str(&format!("\"{resource_url}\"")).expect("deserialize failed");
+
+        let kbc = Kbc::new(kbs_url.to_string());
+        assert!(kbc.is_ok());
+
+        println!(
+            "{} {:?}",
+            resource.kbs_addr,
+            kbc.as_ref().unwrap().kbs_uri()
+        );
+        let resource_kbs_url = kbc.unwrap().resource_to_kbs_uri(&resource);
+
+        assert!(resource_kbs_url.is_ok());
+        assert_eq!(resource_kbs_url.unwrap(), expected_kbs_url);
+    }
+
+    #[test]
+    fn resource_port_to_kbs_uri() {
+        to_kbs_uri(KBS_URL_PORT, RESOURCE_URL_PORT, RESOURCE_KBS_URL_PORT);
+    }
+
+    #[test]
+    fn resource_no_port_to_kbs_uri() {
+        to_kbs_uri(
+            KBS_URL_NO_PORT,
+            RESOURCE_URL_NO_PORT,
+            RESOURCE_KBS_URL_NO_PORT,
+        );
+    }
+
+    #[test]
+    fn resource_no_host_to_kbs_uri() {
+        to_kbs_uri(KBS_URL_PORT, RESOURCE_NO_HOST_URL, RESOURCE_KBS_URL_PORT);
+    }
 }
