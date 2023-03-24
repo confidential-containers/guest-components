@@ -19,7 +19,7 @@ use core::time::Duration;
 use crypto::{hash_chunks, TeeKey};
 use kbs_protocol::message::*;
 use kbs_types::ErrorInformation;
-use log::warn;
+use url::Url;
 use zeroize::Zeroizing;
 
 use super::{uri::ResourceUri, AnnotationPacket};
@@ -31,7 +31,7 @@ pub const KBS_URL_PREFIX: &str = "kbs/v0";
 
 pub struct Kbc {
     tee: String,
-    kbs_uri: String,
+    kbs_uri: Url,
     token: Option<String>,
     nonce: String,
     tee_key: Option<TeeKey>,
@@ -47,7 +47,7 @@ impl KbcInterface for Kbc {
     }
 
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
-        let key_url = self.resource_web_addr(&annotation_packet.kid)?;
+        let key_url = self.resource_to_kbs_uri(&annotation_packet.kid)?;
 
         let response = self.request_kbs_resource(key_url).await?;
         let key = Zeroizing::new(self.decrypt_response_output(response)?);
@@ -62,8 +62,7 @@ impl KbcInterface for Kbc {
 
     #[allow(unused_assignments)]
     async fn get_resource(&mut self, desc: ResourceUri) -> Result<Vec<u8>> {
-        let resource_url = self.resource_web_addr(&desc)?;
-
+        let resource_url = self.resource_to_kbs_uri(&desc)?;
         let response = self.request_kbs_resource(resource_url).await?;
 
         self.decrypt_response_output(response)
@@ -71,23 +70,29 @@ impl KbcInterface for Kbc {
 }
 
 impl Kbc {
-    pub fn new(kbs_uri: String) -> Kbc {
+    pub fn new(kbs_uri: String) -> Result<Kbc> {
+        // Check the KBS URI validity
+        let url = Url::parse(&kbs_uri).map_err(|e| anyhow!("Invalid URI {kbs_uri}: {e}"))?;
+        if !url.has_host() {
+            bail!("{kbs_uri} is missing a host");
+        }
+
         // Detect TEE type of the current platform.
         let tee_type = detect_tee_type();
 
         // Create attester instance.
         let attester = tee_type.to_attester().ok();
 
-        Kbc {
+        Ok(Kbc {
             tee: tee_type.to_string(),
-            kbs_uri,
+            kbs_uri: url,
             token: None,
             nonce: String::default(),
             tee_key: TeeKey::new().ok(),
             attester,
             http_client: build_http_client().unwrap(),
             authenticated: false,
-        }
+        })
     }
 
     fn generate_evidence(&self) -> Result<Attestation> {
@@ -134,7 +139,7 @@ impl Kbc {
     }
 
     fn kbs_uri(&self) -> &str {
-        &self.kbs_uri
+        self.kbs_uri.as_str()
     }
 
     fn http_client(&mut self) -> &mut reqwest::Client {
@@ -146,7 +151,7 @@ impl Kbc {
 
         let challenge = self
             .http_client()
-            .post(format!("{kbs_uri}/{KBS_URL_PREFIX}/auth"))
+            .post(format!("{kbs_uri}{KBS_URL_PREFIX}/auth"))
             .header("Content-Type", "application/json")
             .json(&Request::new(self.tee().to_string()))
             .send()
@@ -157,7 +162,7 @@ impl Kbc {
 
         let attest_response = self
             .http_client()
-            .post(format!("{kbs_uri}/{KBS_URL_PREFIX}/attest"))
+            .post(format!("{kbs_uri}{KBS_URL_PREFIX}/attest"))
             .header("Content-Type", "application/json")
             .json(&self.generate_evidence()?)
             .send()
@@ -215,23 +220,25 @@ impl Kbc {
         bail!("Request KBS resource: Attested but KBS still return Unauthorized")
     }
 
-    /// Convert a [`ResourceUri`] to the address of kind cc-kbc.
-    /// This function will **ignore** the kbs address the kid carries,
-    /// instead overwrite with the kbs_uri the [`Kbc`] carries.
-    /// Related issue: <https://github.com/confidential-containers/attestation-agent/issues/130>
-    pub fn resource_web_addr(&self, kid: &ResourceUri) -> Result<String> {
-        if self.kbs_uri != kid.kbs_addr {
-            warn!(
-                "The KBS address contained in the URI is not the same as the KBC's, use the KBC's.",
-            )
+    /// Convert a [`ResourceUri`] to a KBS URL.
+    pub fn resource_to_kbs_uri(&self, resource: &ResourceUri) -> Result<String> {
+        let kbs_host = self
+            .kbs_uri
+            .host_str()
+            .ok_or_else(|| anyhow!("Invalid URL: {}", self.kbs_uri))?;
+        if !resource.kbs_addr.is_empty() && kbs_host != resource.kbs_addr {
+            bail!(
+                "The resource KBS host {} differs from the KBS URL one {kbs_addr}",
+                resource.kbs_addr
+            );
         }
 
-        let kbs_addr = &self.kbs_uri;
-        let repo = &kid.repository;
-        let r#type = &kid.r#type;
-        let tag = &kid.tag;
+        let kbs_addr = &self.kbs_uri();
+        let repo = &resource.repository;
+        let r#type = &resource.r#type;
+        let tag = &resource.tag;
         Ok(format!(
-            "http://{kbs_addr}/{KBS_URL_PREFIX}/resource/{repo}/{type}/{tag}"
+            "{kbs_addr}{KBS_URL_PREFIX}/resource/{repo}/{type}/{tag}"
         ))
     }
 }
