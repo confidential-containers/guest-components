@@ -88,7 +88,7 @@ pub fn ttrpc_main() {
 fn clean_previous_sock_file(unix_socket: &str) -> Result<()> {
     let path = unix_socket
         .strip_prefix(UNIX_SOCKET_PREFIX)
-        .expect("socket address scheme is not expected");
+        .ok_or_else(|| anyhow!("socket address scheme is not expected"))?;
 
     if Path::new(path).exists() {
         std::fs::remove_file(path)?;
