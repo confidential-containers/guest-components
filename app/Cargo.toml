@@ -20,16 +20,16 @@ prost = { version = "0.10.4", optional = true }
 protobuf = { version = "3.1.0", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.0", default-features = false, features = ["rt-multi-thread", "rt"]}
+tokio = { version = "1.0", default-features = false, features = ["rt-multi-thread", "rt", "sync"]}
 tonic = { version = "0.7.2", optional = true }
-ttrpc = { version = "0.7.1", optional = true }
+ttrpc = { version = "0.7.1", features = ["async"], optional = true }
 
 [build-dependencies]
 tonic-build = { version = "0.7.2", optional = true }
 ttrpc-codegen = { version = "0.4.1", optional = true }
 
 [features]
-default = ["sample_kbc", "ttrpc", "rust-crypto"]
+default = ["sample_kbc", "ttrpc"]
 grpc = ["tonic", "prost", "tonic-build"]
 ttrpc = ["dep:ttrpc", "ttrpc-codegen", "protobuf"]
 sample_kbc = ["attestation_agent/sample_kbc"]

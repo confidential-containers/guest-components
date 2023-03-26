@@ -8,9 +8,6 @@ pub mod keyprovider;
 
 #[cfg(feature = "ttrpc")]
 pub mod ttrpc_protocol;
-#[cfg(feature = "ttrpc")]
-pub type TtrpcService =
-    std::collections::HashMap<String, Box<dyn ::ttrpc::MethodHandler + Send + Sync>>;
 
 use crate::AttestationAgent;
 

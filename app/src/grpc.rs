@@ -14,7 +14,6 @@ lazy_static! {
         Arc::new(tokio::sync::Mutex::new(AttestationAgent::new()));
 }
 
-#[tokio::main]
 pub async fn grpc_main() -> Result<()> {
     let app_matches = App::new(rpc::AGENT_NAME)
         .version(env!("CARGO_PKG_VERSION"))

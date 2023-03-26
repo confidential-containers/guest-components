@@ -20,14 +20,15 @@ mod grpc;
 
 mod rpc;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     env_logger::init();
 
     cfg_if::cfg_if! {
         if #[cfg(feature = "ttrpc")] {
-            ttrpc::ttrpc_main();
+            ttrpc::ttrpc_main().await.unwrap();
         } else if #[cfg(feature = "grpc")] {
-            grpc::grpc_main().unwrap();
+            grpc::grpc_main().await.unwrap();
         } else {
             compile_error!("one feature of `grpc` or `ttrpc` must be enabled.");
         }

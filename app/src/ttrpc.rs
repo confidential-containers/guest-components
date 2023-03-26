@@ -4,9 +4,10 @@
 //
 
 use super::*;
-use ::ttrpc::Server;
+use ::ttrpc::asynchronous::Server;
 use const_format::concatcp;
 use std::path::Path;
+use tokio::sync::Mutex;
 
 const DEFAULT_UNIX_SOCKET_DIR: &str = "/run/confidential-containers/attestation-agent/";
 const UNIX_SOCKET_PREFIX: &str = "unix://";
@@ -22,11 +23,11 @@ const DEFAULT_GETRESOURCE_SOCKET_ADDR: &str = concatcp!(
 );
 
 lazy_static! {
-    pub static ref SYNC_ATTESTATION_AGENT: Arc<std::sync::Mutex<AttestationAgent>> =
-        Arc::new(std::sync::Mutex::new(AttestationAgent::new()));
+    pub static ref ASYNC_ATTESTATION_AGENT: Arc<Mutex<AttestationAgent>> =
+        Arc::new(Mutex::new(AttestationAgent::new()));
 }
 
-pub fn ttrpc_main() {
+pub async fn ttrpc_main() -> Result<()> {
     let app_matches = App::new(rpc::AGENT_NAME)
             .version(env!("CARGO_PKG_VERSION"))
             .about(rpc::ABOUT.as_str())
@@ -49,6 +50,7 @@ pub fn ttrpc_main() {
     if !Path::new(DEFAULT_UNIX_SOCKET_DIR).exists() {
         std::fs::create_dir_all(DEFAULT_UNIX_SOCKET_DIR).expect("Create unix socket dir failed");
     }
+
     let keyprovider_socket = app_matches
         .value_of("KeyProvider ttRPC Unix socket addr")
         .unwrap_or(DEFAULT_KEYPROVIDER_SOCKET_ADDR);
@@ -56,6 +58,27 @@ pub fn ttrpc_main() {
     let getresource_socket = app_matches
         .value_of("GetResource ttRPC Unix socket addr")
         .unwrap_or(DEFAULT_GETRESOURCE_SOCKET_ADDR);
+
+    clean_previous_sock_file(&keyprovider_socket)
+        .context("clean previous keyprovider socket file")?;
+    clean_previous_sock_file(&getresource_socket)
+        .context("clean previous getresource socket file")?;
+
+    let kp = rpc::keyprovider::ttrpc::start_ttrpc_service()?;
+    let gs = rpc::getresource::ttrpc::start_ttrpc_service()?;
+    let mut kps = Server::new()
+        .bind(getresource_socket)
+        .context("cannot bind getresource ttrpc service")?
+        .register_service(gs);
+
+    kps.start().await?;
+
+    let mut gss = Server::new()
+        .bind(keyprovider_socket)
+        .context("cannot bind keyprovider ttrpc service")?
+        .register_service(kp);
+
+    gss.start().await?;
 
     debug!(
         "KeyProvider ttRPC service listening on: {:?}",
@@ -66,23 +89,7 @@ pub fn ttrpc_main() {
         getresource_socket
     );
 
-    clean_previous_sock_file(keyprovider_socket).unwrap();
-    clean_previous_sock_file(getresource_socket).unwrap();
-
-    let keyprovider_service = rpc::keyprovider::ttrpc::ttrpc_service();
-    let getresource_service = rpc::getresource::ttrpc::ttrpc_service();
-
-    let mut keyprovider_server = Server::new()
-        .bind(keyprovider_socket)
-        .unwrap()
-        .register_service(keyprovider_service);
-    keyprovider_server.start().unwrap();
-
-    let mut getresource_server = Server::new()
-        .bind(getresource_socket)
-        .unwrap()
-        .register_service(getresource_service);
-    getresource_server.start().unwrap();
+    loop {}
 }
 
 fn clean_previous_sock_file(unix_socket: &str) -> Result<()> {

@@ -143,15 +143,22 @@ pub mod grpc {
 #[cfg(feature = "ttrpc")]
 pub mod ttrpc {
     use super::*;
+    use crate::rpc::ttrpc_protocol::keyprovider_ttrpc::{
+        create_key_provider_service, KeyProviderService,
+    };
     use crate::rpc::ttrpc_protocol::{keyprovider, keyprovider_ttrpc};
-    use crate::rpc::TtrpcService;
-    use crate::ttrpc::SYNC_ATTESTATION_AGENT;
+    use crate::ttrpc::ASYNC_ATTESTATION_AGENT;
+    use ::ttrpc::asynchronous::Service;
     use ::ttrpc::proto::Code;
-    use tokio::runtime::Runtime;
+    use async_trait::async_trait;
+
+    use std::collections::HashMap;
+
+    #[async_trait]
     impl keyprovider_ttrpc::KeyProviderService for KeyProvider {
-        fn un_wrap_key(
+        async fn un_wrap_key(
             &self,
-            _ctx: &::ttrpc::TtrpcContext,
+            _ctx: &::ttrpc::r#async::TtrpcContext,
             req: keyprovider::KeyProviderKeyWrapProtocolInput,
         ) -> ::ttrpc::Result<keyprovider::KeyProviderKeyWrapProtocolOutput> {
             debug!("The UnWrapKey API is called...");
@@ -169,35 +176,18 @@ pub mod ttrpc {
                     ::ttrpc::Error::RpcStatus(error_status)
                 })?;
 
-            let attestation_agent_mutex_clone = Arc::clone(&SYNC_ATTESTATION_AGENT);
-            let mut attestation_agent = attestation_agent_mutex_clone.lock().map_err(|e| {
-                let mut error_status = ::ttrpc::proto::Status::new();
-                error_status.set_code(Code::INTERNAL);
-                error_status.set_message(format!(
-                    "[ERROR:{}] AA-KBC get mutex lock: {}",
-                    AGENT_NAME, e
-                ));
-                ::ttrpc::Error::RpcStatus(error_status)
-            })?;
+            let attestation_agent_mutex_clone = ASYNC_ATTESTATION_AGENT.clone();
+            let mut attestation_agent = attestation_agent_mutex_clone.lock().await;
 
             debug!("Call AA-KBC to decrypt...");
 
-            let rt = Runtime::new().map_err(|e| {
-                let mut error_status = ::ttrpc::proto::Status::new();
-                error_status.set_code(Code::INTERNAL);
-                error_status.set_message(format!(
-                    "[ERROR:{}] AA-KBC create runtime failed: {}",
-                    AGENT_NAME, e
-                ));
-                ::ttrpc::Error::RpcStatus(error_status)
-            })?;
-
-            let decrypted_optsdata = rt
-                .block_on(attestation_agent.decrypt_image_layer_annotation(
+            let decrypted_optsdata = attestation_agent
+                .decrypt_image_layer_annotation(
                     &input_payload.kbc_name,
                     &input_payload.kbs_uri,
                     &input_payload.annotation,
-                ))
+                )
+                .await
                 .map_err(|e| {
                     error!("Call AA-KBC to provide key failed: {}", e);
                     let mut error_status = ::ttrpc::proto::Status::new();
@@ -219,7 +209,16 @@ pub mod ttrpc {
             };
 
             let output = serde_json::to_string(&output_struct)
-                .unwrap()
+                .map_err(|e| {
+                    error!("Serialize output failed: {}", e);
+                    let mut error_status = ::ttrpc::proto::Status::new();
+                    error_status.set_code(Code::INTERNAL);
+                    error_status.set_message(format!(
+                        "[ERROR:{}] Serialize output failed: {}",
+                        AGENT_NAME, e
+                    ));
+                    ::ttrpc::Error::RpcStatus(error_status)
+                })?
                 .as_bytes()
                 .to_vec();
 
@@ -236,9 +235,9 @@ pub mod ttrpc {
             ::ttrpc::Result::Ok(reply)
         }
 
-        fn wrap_key(
+        async fn wrap_key(
             &self,
-            _ctx: &::ttrpc::TtrpcContext,
+            _ctx: &::ttrpc::r#async::TtrpcContext,
             _req: keyprovider::KeyProviderKeyWrapProtocolInput,
         ) -> ::ttrpc::Result<keyprovider::KeyProviderKeyWrapProtocolOutput> {
             debug!("The WrapKey API is called...");
@@ -250,9 +249,12 @@ pub mod ttrpc {
         }
     }
 
-    pub fn ttrpc_service() -> TtrpcService {
-        keyprovider_ttrpc::create_key_provider_service(Arc::new(Box::new(KeyProvider {})
-            as Box<dyn keyprovider_ttrpc::KeyProviderService + Send + Sync>))
+    pub fn start_ttrpc_service() -> Result<HashMap<String, Service>> {
+        let service = Box::new(KeyProvider {}) as Box<dyn KeyProviderService + Send + Sync>;
+        let service = Arc::new(service);
+
+        let key_provider_service = create_key_provider_service(service);
+        Ok(key_provider_service)
     }
 }
 

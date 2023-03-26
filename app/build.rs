@@ -24,6 +24,7 @@ fn main() -> std::io::Result<()> {
             .include("../protos")
             .rust_protobuf()
             .customize(Customize {
+                async_all: true,
                 ..Default::default()
             })
             .rust_protobuf_customize(protobuf_customized)
