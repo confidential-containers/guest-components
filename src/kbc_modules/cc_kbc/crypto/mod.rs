@@ -40,8 +40,8 @@ impl TeeKey {
 
     // Export TEE public key as specific structure.
     pub fn export_pubkey(&self) -> Result<TeePubKey> {
-        let k_mod = self.public_key.n().to_string();
-        let k_exp = self.public_key.e().to_string();
+        let k_mod = base64::encode(self.public_key.n().to_bytes_be());
+        let k_exp = base64::encode(self.public_key.e().to_bytes_be());
 
         Ok(TeePubKey {
             alg: RSA_ALGORITHM.to_string(),
