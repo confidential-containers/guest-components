@@ -40,18 +40,6 @@ pub struct Challenge {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Attestation {
-    // The public key of TEE.
-    // Its hash is included in `tee-evidence`.
-    #[serde(rename = "tee-pubkey")]
-    pub tee_pubkey: TeePubKey,
-
-    // TEE quote, different TEE type has different format of the content.
-    #[serde(rename = "tee-evidence")]
-    pub tee_evidence: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Response {
     pub protected: String,
     pub encrypted_key: String,

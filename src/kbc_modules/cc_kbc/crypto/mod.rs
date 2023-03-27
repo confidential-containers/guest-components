@@ -6,13 +6,12 @@
 use crate::common::crypto::{self, WrapType};
 use crate::kbc_modules::cc_kbc::kbs_protocol::message::Response;
 use anyhow::*;
-use rsa::pkcs8::EncodePublicKey;
-use rsa::{PaddingScheme, RsaPrivateKey, RsaPublicKey};
+use kbs_types::TeePubKey;
+use rsa::{PaddingScheme, PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha384};
 use zeroize::Zeroizing;
 
-const RSA_KEY_TYPE: &str = "RSA";
 const RSA_ALGORITHM: &str = "RSA1_5";
 const RSA_PUBKEY_LENGTH: usize = 2048;
 const NEW_PADDING: fn() -> PaddingScheme = PaddingScheme::new_pkcs1v15_encrypt;
@@ -24,14 +23,6 @@ pub const AES_256_GCM_ALGORITHM: &str = "A256GCM";
 pub struct TeeKey {
     private_key: RsaPrivateKey,
     public_key: RsaPublicKey,
-}
-
-// The struct that used to export the public key of TEE.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TeePubKey {
-    kty: String,
-    alg: String,
-    pub k: String,
 }
 
 impl TeeKey {
@@ -49,13 +40,13 @@ impl TeeKey {
 
     // Export TEE public key as specific structure.
     pub fn export_pubkey(&self) -> Result<TeePubKey> {
-        let pem_line_ending = rsa::pkcs1::LineEnding::default();
-        let pubkey_pem_string = self.public_key.to_public_key_pem(pem_line_ending)?;
+        let k_mod = self.public_key.n().to_string();
+        let k_exp = self.public_key.e().to_string();
 
         Ok(TeePubKey {
-            kty: RSA_KEY_TYPE.to_string(),
             alg: RSA_ALGORITHM.to_string(),
-            k: pubkey_pem_string,
+            k_mod,
+            k_exp,
         })
     }
 

@@ -18,7 +18,7 @@ use attester::{detect_tee_type, Attester};
 use core::time::Duration;
 use crypto::{hash_chunks, TeeKey};
 use kbs_protocol::message::*;
-use kbs_types::ErrorInformation;
+use kbs_types::{Attestation, ErrorInformation};
 use url::Url;
 use zeroize::Zeroizing;
 
@@ -111,7 +111,8 @@ impl Kbc {
 
         let ehd_chunks = vec![
             self.nonce.clone().into_bytes(),
-            tee_pubkey.k.clone().into_bytes(),
+            tee_pubkey.k_mod.clone().into_bytes(),
+            tee_pubkey.k_exp.clone().into_bytes(),
         ];
 
         let ehd = hash_chunks(ehd_chunks);
