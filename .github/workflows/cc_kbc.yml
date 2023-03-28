@@ -19,7 +19,7 @@ jobs:
   cc_kbc_ci:
     if: github.event_name == 'pull_request'
     name: Check
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -29,7 +29,7 @@ jobs:
           - cc_kbc
           - cc_kbc_tdx
           - cc_kbc_occlum
-
+          - cc_kbc_az_snp_vtpm
     steps:
       - name: Code checkout
         uses: actions/checkout@v2
@@ -50,6 +50,11 @@ jobs:
           sudo echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
           sudo apt-get update
           sudo apt-get install -y libtdx-attest-dev
+
+      - name: Install TPM dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libtss2-dev
 
       - name: Build and install with ${{ matrix.kbc }} feature
         run: |
