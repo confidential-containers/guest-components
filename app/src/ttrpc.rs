@@ -66,20 +66,20 @@ pub fn ttrpc_main() {
         getresource_socket
     );
 
-    clean_previous_sock_file(&keyprovider_socket).unwrap();
-    clean_previous_sock_file(&getresource_socket).unwrap();
+    clean_previous_sock_file(keyprovider_socket).unwrap();
+    clean_previous_sock_file(getresource_socket).unwrap();
 
     let keyprovider_service = rpc::keyprovider::ttrpc::ttrpc_service();
     let getresource_service = rpc::getresource::ttrpc::ttrpc_service();
 
     let mut keyprovider_server = Server::new()
-        .bind(&keyprovider_socket)
+        .bind(keyprovider_socket)
         .unwrap()
         .register_service(keyprovider_service);
     keyprovider_server.start().unwrap();
 
     let mut getresource_server = Server::new()
-        .bind(&getresource_socket)
+        .bind(getresource_socket)
         .unwrap()
         .register_service(getresource_service);
     getresource_server.start().unwrap();
@@ -91,7 +91,7 @@ fn clean_previous_sock_file(unix_socket: &str) -> Result<()> {
         .expect("socket address scheme is not expected");
 
     if Path::new(path).exists() {
-        std::fs::remove_file(&path)?;
+        std::fs::remove_file(path)?;
     }
 
     Ok(())

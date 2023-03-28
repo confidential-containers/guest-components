@@ -26,7 +26,7 @@ fn main() -> std::io::Result<()> {
             .customize(Customize {
                 ..Default::default()
             })
-            .rust_protobuf_customize(protobuf_customized.clone())
+            .rust_protobuf_customize(protobuf_customized)
             .run()
             .expect("Generate ttrpc protocol code failed.");
     }
