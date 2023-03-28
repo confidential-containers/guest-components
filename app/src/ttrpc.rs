@@ -8,7 +8,7 @@ use ::ttrpc::Server;
 use const_format::concatcp;
 use std::path::Path;
 
-const DEFAULT_UNIX_SOCKET_DIR: &str = "/run/confidential-containers/attestation-agent";
+const DEFAULT_UNIX_SOCKET_DIR: &str = "/run/confidential-containers/attestation-agent/";
 const UNIX_SOCKET_PREFIX: &str = "unix://";
 const DEFAULT_KEYPROVIDER_SOCKET_ADDR: &str = concatcp!(
     UNIX_SOCKET_PREFIX,

@@ -147,7 +147,7 @@ pub mod ttrpc {
     use crate::rpc::TtrpcService;
     use crate::ttrpc::SYNC_ATTESTATION_AGENT;
     use ::ttrpc::proto::Code;
-    use futures::executor::block_on;
+    use tokio::runtime::Runtime;
     impl keyprovider_ttrpc::KeyProviderService for KeyProvider {
         fn un_wrap_key(
             &self,
@@ -182,21 +182,32 @@ pub mod ttrpc {
 
             debug!("Call AA-KBC to decrypt...");
 
-            let decrypted_optsdata = block_on(attestation_agent.decrypt_image_layer_annotation(
-                &input_payload.kbc_name,
-                &input_payload.kbs_uri,
-                &input_payload.annotation,
-            ))
-            .map_err(|e| {
-                error!("Call AA-KBC to provide key failed: {}", e);
+            let rt = Runtime::new().map_err(|e| {
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
                 error_status.set_message(format!(
-                    "[ERROR:{}] AA-KBC key provider failed: {}",
+                    "[ERROR:{}] AA-KBC create runtime failed: {}",
                     AGENT_NAME, e
                 ));
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
+
+            let decrypted_optsdata = rt
+                .block_on(attestation_agent.decrypt_image_layer_annotation(
+                    &input_payload.kbc_name,
+                    &input_payload.kbs_uri,
+                    &input_payload.annotation,
+                ))
+                .map_err(|e| {
+                    error!("Call AA-KBC to provide key failed: {}", e);
+                    let mut error_status = ::ttrpc::proto::Status::new();
+                    error_status.set_code(Code::INTERNAL);
+                    error_status.set_message(format!(
+                        "[ERROR:{}] AA-KBC key provider failed: {}",
+                        AGENT_NAME, e
+                    ));
+                    ::ttrpc::Error::RpcStatus(error_status)
+                })?;
 
             debug!("Provide key successfully, get the plain PLBCO");
 

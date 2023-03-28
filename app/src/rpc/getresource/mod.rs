@@ -81,7 +81,7 @@ pub mod ttrpc {
     use crate::rpc::TtrpcService;
     use crate::ttrpc::SYNC_ATTESTATION_AGENT;
     use ::ttrpc::proto::Code;
-    use futures::executor::block_on;
+    use tokio::runtime::Runtime;
 
     impl getresource_ttrpc::GetResourceService for GetResource {
         fn get_resource(
@@ -102,21 +102,32 @@ pub mod ttrpc {
 
             debug!("Call AA-KBC to download resource ...");
 
-            let target_resource = block_on(attestation_agent.download_confidential_resource(
-                &req.KbcName,
-                &req.ResourcePath,
-                &req.KbsUri,
-            ))
-            .map_err(|e| {
-                error!("Call AA-KBC to get resource failed: {}", e);
+            let rt = Runtime::new().map_err(|e| {
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
                 error_status.set_message(format!(
-                    "[ERROR:{}] AA-KBC get resource failed: {}",
+                    "[ERROR:{}] AA-KBC create runtime failed: {}",
                     AGENT_NAME, e
                 ));
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
+
+            let target_resource = rt
+                .block_on(attestation_agent.download_confidential_resource(
+                    &req.KbcName,
+                    &req.ResourcePath,
+                    &req.KbsUri,
+                ))
+                .map_err(|e| {
+                    error!("Call AA-KBC to get resource failed: {}", e);
+                    let mut error_status = ::ttrpc::proto::Status::new();
+                    error_status.set_code(Code::INTERNAL);
+                    error_status.set_message(format!(
+                        "[ERROR:{}] AA-KBC get resource failed: {}",
+                        AGENT_NAME, e
+                    ));
+                    ::ttrpc::Error::RpcStatus(error_status)
+                })?;
 
             debug!("Get resource from KBS successfully!");
 
