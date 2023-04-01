@@ -18,6 +18,7 @@ pub(crate) async fn register_kek(
     key: Vec<u8>,
     kid: &str,
 ) -> Result<()> {
+    let kid = kid.strip_prefix('/').unwrap_or(kid);
     let claims = Claims::create(Duration::from_hours(2));
     let token = private_key.sign(claims)?;
     debug!("sign claims.");

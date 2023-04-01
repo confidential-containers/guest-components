@@ -148,6 +148,29 @@ async fn generate_key_parameters(input_params: &InputParams) -> Result<(Vec<u8>,
     }
 }
 
+/// Normalize the given keyid into (kbs addr, key path), s.t.
+/// converting `kbs://...` or `../..` to `(<kbs-addr>, <repository>/<type>/<tag>)`.
+fn normalize_path(keyid: &str) -> Result<(String, String)> {
+    debug!("normalize key id {keyid}");
+    let path = keyid.strip_prefix(KBS_RESOURCE_URL_PREFIX).unwrap_or(keyid);
+    let values: Vec<&str> = path.split('/').collect();
+    if values.len() == 4 {
+        Ok((
+            values[0].to_string(),
+            format!("{}/{}/{}", values[1], values[2], values[3]),
+        ))
+    } else {
+        bail!(
+            "Resource path {keyid} must follow one of the following formats:
+                'kbs:///<repository>/<type>/<tag>'
+                'kbs://<kbs-addr>/<repository>/<type>/<tag>'
+                '<kbs-addr>/<repository>/<type>/<tag>'
+                '/<repository>/<type>/<tag>'
+            "
+        )
+    }
+}
+
 /// The input params vector should only have one element.
 /// The format of the element is in the following format:
 /// ```plaintext
@@ -172,6 +195,8 @@ pub async fn enc_optsdata_gen_anno(
         .await
         .context("generating key params")?;
 
+    let (kbs_addr, k_path) = normalize_path(&kid)?;
+
     let algorithm = input_params.algorithm;
     let encrypt_optsdata = crypto::encrypt(optsdata, &key, &iv, &algorithm)
         .map_err(|e| anyhow!("Encrypt failed: {:?}", e))?;
@@ -179,7 +204,7 @@ pub async fn enc_optsdata_gen_anno(
     if let (Some(addr), Some(private_key)) = kbs_parameter {
         if !input_params.sample {
             // We do not register KEK for sample kbc
-            register_kek(private_key, addr, key, &kid)
+            register_kek(private_key, addr, key, &k_path)
                 .await
                 .context("register KEK failed")?;
             info!("register KEK succeeded.");
@@ -187,11 +212,27 @@ pub async fn enc_optsdata_gen_anno(
     }
 
     let annotation = AnnotationPacket {
-        kid: format!("{KBS_RESOURCE_URL_PREFIX}/{kid}"),
+        kid: format!("{KBS_RESOURCE_URL_PREFIX}{kbs_addr}/{k_path}"),
         wrapped_data: base64::encode(encrypt_optsdata),
         iv: base64::encode(iv),
         wrap_type: algorithm.to_string(),
     };
 
     serde_json::to_string(&annotation).map_err(|_| anyhow!("Serialize annotation failed"))
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    #[rstest]
+    #[case("kbs://a/b/c/d", ("a", "b/c/d"))]
+    #[case("kbs:///b/c/d", ("", "b/c/d"))]
+    #[case("a/b/c/d", ("a", "b/c/d"))]
+    #[case("/b/c/d", ("", "b/c/d"))]
+    fn test_normalize_keypath(#[case] input: &str, #[case] expected: (&str, &str)) {
+        let res = crate::enc_mods::normalize_path(input).expect("normalize failed");
+        assert_eq!(res.0, expected.0);
+        assert_eq!(res.1, expected.1);
+    }
 }
