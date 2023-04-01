@@ -1106,7 +1106,8 @@ dependencies = [
 [[package]]
 name = "kbs-types"
 version = "0.2.0"
-source = "git+https://github.com/virtee/kbs-types#a25284eb9eb221bba752a7d250f502a2b8e7561b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf54492d453c6c287fd130112e58a7588ddb3f28b4dea44daf32000f99e13077"
 dependencies = [
  "serde",
  "serde_json",
@@ -2159,7 +2160,7 @@ checksum = "2047c6ded9c721764247e62cd3b03c09ffc529b2ba5b10ec482ae507a4a70160"
 [[package]]
 name = "tdx-attest-rs"
 version = "0.1.0"
-source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?rev=85cf8bdd393ab273a308be3f41d2f7cc25c0ec0c#85cf8bdd393ab273a308be3f41d2f7cc25c0ec0c"
+source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?rev=cc582e8be0c9010295c66fb58c59f74744017600#cc582e8be0c9010295c66fb58c59f74744017600"
 dependencies = [
  "tdx-attest-sys",
 ]
@@ -2167,7 +2168,7 @@ dependencies = [
 [[package]]
 name = "tdx-attest-sys"
 version = "0.1.0"
-source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?rev=85cf8bdd393ab273a308be3f41d2f7cc25c0ec0c#85cf8bdd393ab273a308be3f41d2f7cc25c0ec0c"
+source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?rev=cc582e8be0c9010295c66fb58c59f74744017600#cc582e8be0c9010295c66fb58c59f74744017600"
 dependencies = [
  "bindgen",
 ]
