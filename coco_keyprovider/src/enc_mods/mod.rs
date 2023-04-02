@@ -63,7 +63,7 @@ const HARD_CODED_KEYID: &str = "kbs:///default/test-key/1";
 
 /// When a KEK is randomly generated, a new kid will be generated
 /// with this prefix.
-const DEFAULT_KEY_REPO_PATH: &str = "default/image-kek";
+const DEFAULT_KEY_REPO_PATH: &str = "/default/image-kek";
 
 const KBS_RESOURCE_URL_PREFIX: &str = "kbs://";
 
