@@ -289,11 +289,22 @@ impl ImageClient {
             unique_layers.push(l.clone());
         }
 
+        let mut unique_diff_ids = Vec::new();
+        let mut id_tree = BTreeSet::new();
+        for id in diff_ids {
+            if id_tree.contains(id.as_str()) {
+                continue;
+            }
+
+            id_tree.insert(id.as_str());
+            unique_diff_ids.push(id.clone());
+        }
+
         let unique_layers_len = unique_layers.len();
         let layer_metas = client
             .async_pull_layers(
                 unique_layers,
-                diff_ids,
+                &unique_diff_ids,
                 decrypt_config,
                 self.meta_store.clone(),
             )
