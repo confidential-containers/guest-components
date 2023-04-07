@@ -7,10 +7,11 @@ use anyhow::{anyhow, Result};
 use ctr::cipher::generic_array::GenericArray;
 use ctr::cipher::{KeyIvInit, StreamCipher};
 use hmac::{Hmac, Mac};
-use openssl::rand::rand_bytes;
 use sha2::Sha256;
 
 use crate::blockcipher::{EncryptionFinalizer, LayerBlockCipher, LayerBlockCipherOptions};
+
+use super::rand::rand_bytes;
 
 const AES256_KEY_SIZE: usize = 32;
 const AES256_NONCE_SIZE: usize = 16;
