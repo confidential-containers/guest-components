@@ -53,55 +53,23 @@ jobs:
         run: |
           sudo -E PATH=$PATH -s cargo test --all --features default
 
-      - name: Run cargo test - no-default-features,keywrap-grpc
+      - name: Run cargo test - kata-cc (rust-tls version) with keywrap-grpc
         run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=keywrap-grpc
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=encryption-ring,keywrap-grpc,snapshot-overlayfs,signature-cosign-rustls,signature-simple,getresource,oci-distribution/rustls-tls
 
-      - name: Run cargo test - kata-cc,keywrap-grpc
+      - name: Run cargo test - kata-cc (native-tls version) with keywrap-grpc
         run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=encryption,snapshot-overlayfs,signature-cosign,getresource,keywrap-grpc
-
-      - name: Run cargo test - encryption,keywrap-grpc
-        run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=encryption,keywrap-grpc
-
-      - name: Run cargo test - snapshot-overlayfs,keywrap-grpc
-        run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=snapshot-overlayfs,keywrap-grpc
-
-      - name: Run cargo test - signature-cosign,keywrap-grpc
-        run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=signature-cosign,keywrap-grpc
-
-      - name: Run cargo test - signature-simple,keywrap-grpc
-        run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=signature-simple,keywrap-grpc
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=encryption-openssl,keywrap-grpc,snapshot-overlayfs,signature-cosign-native,signature-simple,getresource,oci-distribution/native-tls
 
       - name: Prepare for ttrpc test
         run: |
           sudo mkdir -p /opt/confidential-containers/attestation-agent/
           if test -f "scripts/attestation-agent"; then rm scripts/attestation-agent; fi
 
-      - name: Run cargo test - no-default-features,keywrap-ttrpc
+      - name: Run cargo test - kata-cc (rust-tls version) with keywrap-ttrpc (default)
         run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=keywrap-ttrpc
-          
-      - name: Run cargo test - kata-cc,keywrap-ttrpc
-        run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features encryption,snapshot-overlayfs,signature-cosign,getresource,keywrap-ttrpc,signature-simple
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=kata-cc-rustls-tls
 
-      - name: Run cargo test - encryption,keywrap-ttrpc
+      - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default)
         run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=encryption,keywrap-ttrpc
-
-      - name: Run cargo test - snapshot-overlayfs,keywrap-ttrpc
-        run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=snapshot-overlayfs,keywrap-ttrpc
-
-      - name: Run cargo test - signature-cosign,keywrap-ttrpc
-        run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=signature-cosign,keywrap-ttrpc
-
-      - name: Run cargo test - signature-simple,keywrap-ttrpc
-        run: |
-          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=signature-simple,keywrap-ttrpc
+          sudo -E PATH=$PATH -s cargo test --all --no-default-features --features=kata-cc-native-tls
