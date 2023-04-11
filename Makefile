@@ -117,7 +117,7 @@ endif
 build:
 	cd app && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features)" $(LIBC_FLAG)
 
-TARGET := app/$(TARGET_DIR)/$(BIN_NAME)
+TARGET := $(TARGET_DIR)/$(BIN_NAME)
 
 install: 
 	install -D -m0755 $(TARGET) $(DESTDIR)
