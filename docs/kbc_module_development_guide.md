@@ -9,7 +9,7 @@ Now let's start.
 First, create a new  KBC module (e.g, my_kbc) as following:
 
 ```
-cd attestation-agent/src/kbc_modules
+cd attestation-agent/kbc
 mkdir my_kbc
 cd my_kbc
 touch mod.rs
@@ -24,7 +24,7 @@ use crate::kbc_modules::{KbcCheckInfo, KbcInterface};
 Add the implementations for my_kbc module.
 
 ```rust
-// src/kbc_modules/my_kbc/mod.rs
+// kbc/my_kbc/mod.rs
 
 pub struct MyKbc {
     // The object of this structure will exist as a KBC instance
@@ -66,7 +66,7 @@ You need to integrate my_kbc module into AA as following:
 1. Import my_kbc module: 
 
 ```rust
-// src/kbc_modules/mod.rs
+// kbc/mod.rs
 
 // Add my specific kbc declaration here.
 // For example: "pub mod sample_kbc;"
@@ -77,7 +77,7 @@ pub mod my_kbc;
 2. Register the function to create KBC instance in KbcModuleList: 
 
 ```rust
-// src/kbc_modules/mod.rs
+// kbc/mod.rs
 
 impl KbcModuleList {
     fn new() -> KbcModuleList {
