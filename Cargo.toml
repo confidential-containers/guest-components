@@ -12,7 +12,7 @@ edition = "2018"
 anyhow = "1"
 async-compression = { version = "0.3.15", features = ["futures-io", "tokio", "gzip", "zstd"] }
 async-trait = "0.1.56"
-attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent.git", rev = "d7ace56", optional = true }
+attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent.git", rev = "c939d21", optional = true }
 base64 = "0.13.0"
 cfg-if = { version = "1.0.0", optional = true }
 dircpy = { version = "0.3.12", optional = true }
