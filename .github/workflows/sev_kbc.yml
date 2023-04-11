@@ -2,16 +2,16 @@ name: offline_sev_kbc build CI
 on:
   push:
     paths:
-      - 'src/kbc_modules/offline_sev_kbc/**'
-      - 'src/kbc_modules/online_sev_kbc/**'
+      - 'kbc/offline_sev_kbc/**'
+      - 'kbc/online_sev_kbc/**'
   pull_request:
     paths:
-      - 'src/kbc_modules/offline_sev_kbc/**'
-      - 'src/kbc_modules/online_sev_kbc/**'
+      - 'kbc/offline_sev_kbc/**'
+      - 'kbc/online_sev_kbc/**'
   create:
     paths:
-      - 'src/kbc_modules/offline_sev_kbc/**'
-      - 'src/kbc_modules/online_sev_kbc/**'
+      - 'kbc/offline_sev_kbc/**'
+      - 'kbc/online_sev_kbc/**'
 
 jobs:
   offline_sev_kbc_ci:
@@ -52,4 +52,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --no-default-features --features ${{ matrix.kbc }},rust-crypto
+          args: -p kbc --no-default-features --features ${{ matrix.kbc }},rust-crypto

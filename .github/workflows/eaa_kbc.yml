@@ -2,15 +2,15 @@ name: EAA kbc build CI
 on:
   push:
     paths:
-      - 'src/kbc_modules/eaa_kbc/**'
+      - 'kbc/eaa_kbc/**'
       - '.github/workflows/eaa_kbc.yml'
   pull_request:
     paths:
-      - 'src/kbc_modules/eaa_kbc/**'
+      - 'kbc/eaa_kbc/**'
       - '.github/workflows/eaa_kbc.yml'
   create:
     paths:
-      - 'src/kbc_modules/eaa_kbc/**'
+      - 'kbc/eaa_kbc/**'
 
 jobs:
   eaa_kbc_ci:
@@ -38,14 +38,14 @@ jobs:
           rustup install stable
           rustup default stable
 
-      - name: Build and install rats-tls
+      - name: install dependencies
         run: | 
-          apt-get install -y libcurl4-openssl-dev
-          git clone https://github.com/inclavare-containers/rats-tls
-          cd rats-tls
-          git reset --hard 5de6fc308f2a18f4105429451c85e6173b42ab9d
-          cmake -DBUILD_SAMPLES=on -H. -Bbuild
-          make -C build install
+          echo 'deb [arch=amd64] http://mirrors.openanolis.cn/inclavare-containers/ubuntu20.04 focal main' | tee /etc/apt/sources.list.d/inclavare-containers.list
+          curl -L http://mirrors.openanolis.cn/inclavare-containers/ubuntu20.04/DEB-GPG-KEY.key | apt-key add -
+          echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | tee /etc/apt/sources.list.d/intel-sgx.list
+          curl -L https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
+          apt-get update
+          apt-get install -y rats-tls-tdx libtdx-attest=1.15\*
       
       - name: Build AA with EAA KBC
         run: |
@@ -53,4 +53,4 @@ jobs:
 
       - name: Run cargo test with eaa_kbc feature
         run: |
-          RUSTFLAGS="-C link-args=-Wl,-rpath,/usr/local/lib/rats-tls" cargo test --features eaa_kbc kbc_modules::eaa_kbc
+          RUSTFLAGS="-C link-args=-Wl,-rpath,/usr/local/lib/rats-tls" cargo test --manifest-path kbc/Cargo.toml --features eaa_kbc

@@ -65,4 +65,4 @@ jobs:
         with:
           command: clippy
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
-          args: --all-targets --features rust-crypto -- -D warnings -A clippy::derive_partial_eq_without_eq
+          args: -p attestation_agent --all-targets --features rust-crypto -- -D warnings -A clippy::derive_partial_eq_without_eq

@@ -2,15 +2,18 @@ name: CC kbc build CI
 on:
   push:
     paths:
-      - 'src/kbc_modules/cc_kbc/**'
+      - 'kbc/cc_kbc/**'
+      - 'kbs_protocol/**'
       - '.github/workflows/cc_kbc.yml'
   pull_request:
     paths:
-      - 'src/kbc_modules/cc_kbc/**'
+      - 'kbc/cc_kbc/**'
+      - 'kbs_protocol/**'
       - '.github/workflows/cc_kbc.yml'
   create:
     paths:
-      - 'src/kbc_modules/cc_kbc/**'
+      - 'kbc/cc_kbc/**'
+      - 'kbs_protocol/**'
 
 jobs:
   cc_kbc_ci:
@@ -56,4 +59,4 @@ jobs:
         with:
           command: clippy
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
-          args: --all-targets --features cc_kbc,tdx-attester,rust-crypto -- -D warnings -A clippy::derive_partial_eq_without_eq
+          args: -p kbc --all-targets --features cc_kbc,tdx-attester,rust-crypto -- -D warnings -A clippy::derive_partial_eq_without_eq
