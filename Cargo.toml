@@ -27,7 +27,7 @@ log = "0.4.14"
 nix = { version = "0.26", optional = true }
 oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c" }
 oci-spec = "0.5.8"
-ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", tag = "v0.5.0", default-features = false, features = ["keywrap-jwe", "async-io"], optional = true }
+ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", tag = "v0.5.1", default-features = false, features = ["keywrap-jwe", "async-io"], optional = true }
 prost = { version = "0.11", optional = true }
 sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"], optional = true }
 protobuf = { version = "3.2.0", optional = true }
