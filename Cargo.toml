@@ -29,7 +29,7 @@ oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", r
 oci-spec = "0.5.8"
 ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs", rev = "55ab22d", default-features = false, features = ["keywrap-jwe", "async-io"], optional = true }
 prost = { version = "0.11", optional = true }
-sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"], optional = true }
+pgp = { git = "https://github.com/Xynnn007/rpgp.git", branch = "feat-packet", optional = true }
 protobuf = { version = "3.2.0", optional = true }
 serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
@@ -90,7 +90,7 @@ keywrap-ttrpc = ["ocicrypt-rs/keywrap-keyprovider-ttrpc", "dep:ttrpc", "dep:prot
 eaa-kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]
 
 signature = ["hex"]
-signature-simple = ["signature", "sequoia-openpgp", "serde_yaml"]
+signature-simple = ["signature", "pgp", "serde_yaml"]
 signature-cosign = ["signature", "sigstore"]
 
 snapshot-overlayfs = ["nix"]
