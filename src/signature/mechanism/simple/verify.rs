@@ -3,10 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::io::{BufReader, Read};
+
 use anyhow::{anyhow, bail, Result};
-use openpgp::parse::Parse;
-use openpgp::PacketPile;
-use sequoia_openpgp as openpgp;
+use pgp::{
+    packet::{Packet, PacketParser},
+    types::KeyTrait,
+};
 
 use crate::signature::payload::simple_signing::SigPayload;
 
@@ -53,74 +56,62 @@ impl SigKeyIDs {
 // values, both as specified by rules, and returns the signature payload.
 pub fn verify_sig_and_extract_payload(pubkey_ring: &[u8], sig: Vec<u8>) -> Result<SigPayload> {
     // Parse the gpg pubkey ring.
-    let keyring_packet = PacketPile::from_bytes(pubkey_ring)?;
-    let keyring_iter = keyring_packet.descendants();
-    // Parse the signature cliam file into sequoia-opengpg PacketPile format.
-    let mut sig_packet = PacketPile::from_bytes(&sig)?;
+    let public_keys = parse_packets(pubkey_ring)?;
+
+    // Parse the signature claim file.
+    let signature_packets = parse_packets(BufReader::new(&*sig))?;
 
     let mut validate_key_id = SigKeyIDs::default();
 
-    // Dump the keyID which recorded in the signature itself from the OnePassSig of the sig claim file.
-    // OnePassSig: https://docs.rs/sequoia-openpgp/1.7.0/sequoia_openpgp/packet/enum.OnePassSig.html
-    //
-    // sig_packet is a sequoia-opengpg PacketPile, `path_ref()` and `path_ref_mut()`
-    // returns a reference to the packet at the location described by
-    // `pathspec`.
-    //
-    // `pathspec` is a slice of the form `[0, 1, 2]`.  Each element
-    // is the index of packet in a container.  Thus, the previous
-    // path specification means: return the third child of the second
-    // child of the first top-level packet.  In other words, the
-    // starred packet in the following tree:
-    //
-    // ```text
-    //         PacketPile
-    //        /     |     \
-    //       0      1      2  ...
-    //     /   \
-    //    /     \
-    //  0         1  ...
-    //        /   |   \  ...
-    //       0    1    2
-    //                 *
-    // ```
-    //
-    // According to sequoia-opengpg docs, the path ref of OnePassSig is [0, 0],
-    // The path ref of Signature is [0, 2].
-    if let Some(openpgp::Packet::OnePassSig(ref sig_info)) = sig_packet.path_ref(&[0, 0]) {
-        validate_key_id.sig_info_key_id = sig_info.issuer().as_bytes().to_vec();
+    if signature_packets.is_empty() {
+        bail!("Illegal signature (No packet readable)");
     }
 
-    // Try to use each pubkey in the pubkey ring to verify the signature.
-    // If the signature is verified,
-    // verify that the keyID of the pubkey is consistent with the keyID recorded in the signature.
-    for packet in keyring_iter {
-        if let openpgp::Packet::PublicKey(pubkey) = packet {
-            if let Some(openpgp::Packet::Signature(ref mut signature)) =
-                sig_packet.path_ref_mut(&[0, 2])
-            {
-                if signature.verify(pubkey).is_ok() {
-                    validate_key_id.trusted_key_id = pubkey.fingerprint().as_bytes().to_vec();
-                    // If the cryptography verification passes, but the key IDs are inconsistent,
-                    // the verification failure is returned directly.
-                    validate_key_id.validate()?;
-                }
-            }
+    let signature_packets = match &signature_packets[0] {
+        Packet::CompressedData(inner) => {
+            let compressed = inner.decompress()?;
+            parse_packets(compressed)?
         }
+        _ => bail!("Illegal signature (The first packet is not CompressdData)"),
+    };
+
+    if let Packet::OnePassSignature(inner) = &signature_packets[0] {
+        validate_key_id.sig_info_key_id = inner.key_id.to_vec();
     }
 
-    if validate_key_id.trusted_key_id.is_empty() {
-        bail!("signature verify failed! There is no pubkey can verify the signature!");
-    }
+    let signature = match &signature_packets[2] {
+        Packet::Signature(inner) => inner,
+        _ => bail!("Illegal signature (no Signature given)"),
+    };
 
-    // Dump the signature payload.
-    if let Some(openpgp::Packet::Literal(ref literal)) = sig_packet.path_ref(&[0, 1]) {
-        let body_message = String::from_utf8(literal.body().to_vec())?;
-        let sig_payload = serde_json::from_str::<SigPayload>(&body_message)?;
-        Ok(sig_payload)
-    } else {
-        Err(anyhow!("Signature format error: no literal field in it!"))
-    }
+    public_keys
+        .into_iter()
+        .filter_map(|ps| match ps {
+            Packet::PublicKey(p) => Some(p),
+            _ => None,
+        })
+        .try_for_each(|pkey| {
+            if signature.verify_key(&pkey).is_ok() {
+                validate_key_id.sig_info_key_id = pkey.fingerprint();
+                validate_key_id.validate()?;
+            }
+            anyhow::Ok(())
+        })?;
+    let literal = match &signature_packets[1] {
+        Packet::LiteralData(inner) => inner,
+        _ => bail!("Illegal signature (no Literal given)"),
+    };
+
+    let payload: SigPayload = serde_json::from_slice(literal.data())?;
+    Ok(payload)
+}
+
+/// Parse [Packets](https://www.rfc-editor.org/rfc/rfc4880.html#section-4.3) from a given
+/// reader
+fn parse_packets<R: Read>(reader: R) -> Result<Vec<Packet>> {
+    let parser = PacketParser::new(reader);
+    let signature_packets: Vec<Packet> = parser.into_iter().filter_map(|f| f.ok()).collect();
+    Ok(signature_packets)
 }
 
 #[cfg(test)]
