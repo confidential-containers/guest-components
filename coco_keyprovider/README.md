@@ -13,7 +13,7 @@ Build and run CoCo keyprovider.
 
 ```
 cd attestation-agent/coco_keyprovider
-RUST_LOG=coco_keyprovider cargo run --release -- --keyprovider_sock 127.0.0.1:50000
+RUST_LOG=coco_keyprovider cargo run --release -- --socket 127.0.0.1:50000
 ```
 
 vim ocicrypt.conf: 

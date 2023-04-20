@@ -5,7 +5,7 @@
 
 use aes_gcm::{aead::Aead, aes::Aes256, Aes256Gcm, Key, Nonce};
 use anyhow::*;
-use strum_macros::EnumString;
+use strum::EnumString;
 
 /// Only for sample
 pub const HARDCODED_KEY: &[u8] = &[

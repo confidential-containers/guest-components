@@ -7,7 +7,8 @@ members = [
     "attester",
     "deps/resource_uri",
     "deps/crypto",
-    "deps/sev"
+    "deps/sev",
+    "coco_keyprovider"
 ]
 
 [workspace.package]
