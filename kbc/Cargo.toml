@@ -40,6 +40,7 @@ cc_kbc = ["kbs_protocol"]
 all-attesters = ["kbs_protocol/all-attesters"]
 tdx-attester = ["kbs_protocol/tdx-attester"]
 occlum-attester = ["kbs_protocol/occlum-attester"]
+az-snp-vtpm-attester= ["kbs_protocol/az-snp-vtpm-attester"]
 
 sample_kbc = []
 eaa_kbc = ["foreign-types"]

@@ -36,6 +36,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libtdx-attest-dev
 
+      - name: Install TPM dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libtss2-dev
+
       - name: Build and install with default features
         run: |
           make && make install
