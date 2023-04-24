@@ -62,9 +62,9 @@ pub async fn ttrpc_main() -> Result<()> {
         .value_of("GetResource ttRPC Unix socket addr")
         .unwrap_or(DEFAULT_GETRESOURCE_SOCKET_ADDR);
 
-    clean_previous_sock_file(&keyprovider_socket)
+    clean_previous_sock_file(keyprovider_socket)
         .context("clean previous keyprovider socket file")?;
-    clean_previous_sock_file(&getresource_socket)
+    clean_previous_sock_file(getresource_socket)
         .context("clean previous getresource socket file")?;
 
     let kp = rpc::keyprovider::ttrpc::start_ttrpc_service()?;

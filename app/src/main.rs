@@ -33,6 +33,4 @@ async fn main() {
             compile_error!("one feature of `grpc` or `ttrpc` must be enabled.");
         }
     }
-
-    loop {}
 }

@@ -4,6 +4,8 @@
 //
 
 pub mod getresource;
+#[allow(clippy::redundant_field_names)]
 pub mod getresource_ttrpc;
 pub mod keyprovider;
+#[allow(clippy::redundant_field_names)]
 pub mod keyprovider_ttrpc;
