@@ -41,10 +41,6 @@ pub enum PolicyReqType {
 impl PolicyReqType {
     /// Check whether an image is allowed by a given policy requirement.
     pub async fn allows_image(&self, image: &mut Image, auth: &RegistryAuth) -> Result<()> {
-        // On big endian targets such as the s390x architecture, the cosign feature needs
-        // to be disabled because the ring crate pulled in by the sigstore-rs crate does not
-        // support compiling on big-endian targets. There is an issue open to add
-        // big-endian support to ring here: https://github.com/briansmith/ring/issues/1555
         match self {
             PolicyReqType::Accept => Ok(()),
             PolicyReqType::Reject => Err(anyhow!(r#"The policy is "reject""#)),
