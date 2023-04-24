@@ -7,7 +7,10 @@ use super::*;
 use ::ttrpc::asynchronous::Server;
 use const_format::concatcp;
 use std::path::Path;
-use tokio::sync::Mutex;
+use tokio::{
+    signal::unix::{signal, SignalKind},
+    sync::Mutex,
+};
 
 const DEFAULT_UNIX_SOCKET_DIR: &str = "/run/confidential-containers/attestation-agent/";
 const UNIX_SOCKET_PREFIX: &str = "unix://";
@@ -89,7 +92,22 @@ pub async fn ttrpc_main() -> Result<()> {
         getresource_socket
     );
 
-    loop {}
+    let mut interrupt = signal(SignalKind::interrupt())?;
+    let mut hangup = signal(SignalKind::hangup())?;
+    tokio::select! {
+        _ = hangup.recv() => {
+            info!("Client terminal disconnected.");
+            kps.shutdown().await?;
+            gss.shutdown().await?;
+        }
+        _ = interrupt.recv() => {
+            info!("SIGINT received, gracefully shutdown.");
+            kps.shutdown().await?;
+            gss.shutdown().await?;
+        }
+    };
+
+    Ok(())
 }
 
 fn clean_previous_sock_file(unix_socket: &str) -> Result<()> {
