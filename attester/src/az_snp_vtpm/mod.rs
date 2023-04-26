@@ -5,11 +5,16 @@
 
 use super::Attester;
 use anyhow::*;
-use az_snp_vtpm::vtpm;
+use az_snp_vtpm::{imds, vtpm};
+use log::debug;
 use serde::{Deserialize, Serialize};
 
 pub fn detect_platform() -> bool {
-    vtpm::has_tpm_device()
+    if let Err(err) = vtpm::get_report() {
+        debug!("Failed to retrieve Azure HCL data from vTPM: {err}");
+        return false;
+    }
+    true
 }
 
 #[derive(Debug, Default)]
@@ -19,6 +24,7 @@ pub struct AzSnpVtpmAttester;
 struct Evidence {
     quote: vtpm::Quote,
     report: Vec<u8>,
+    vcek: String,
 }
 
 impl Attester for AzSnpVtpmAttester {
@@ -26,8 +32,14 @@ impl Attester for AzSnpVtpmAttester {
         let report = vtpm::get_report()?;
         let report_data_bin = base64::decode(report_data)?;
         let quote = vtpm::get_quote(&report_data_bin)?;
+        let certs = imds::get_certs()?;
+        let vcek = certs.vcek;
 
-        let evidence = Evidence { quote, report };
+        let evidence = Evidence {
+            quote,
+            report,
+            vcek,
+        };
 
         Ok(serde_json::to_string(&evidence)?)
     }

@@ -14,7 +14,7 @@ serde.workspace = true
 serde_json.workspace = true
 strum.workspace = true
 tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", rev = "cc582e8be0c9010295c66fb58c59f74744017600", optional = true }
-az-snp-vtpm = { version = "0.1", optional = true }
+az-snp-vtpm = { version = "0.2", optional = true }
 
 [features]
 default = ["all-attesters"]
