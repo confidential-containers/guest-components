@@ -27,7 +27,11 @@ RUSTFLAGS_ARGS ?=
 features ?=
 OPENSSL ?=
 
-ifeq ($(ARCH), s390x)
+ifeq ($(SOURCE_ARCH), ppc64le)
+  ARCH=powerpc64le
+endif
+
+ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
   OPENSSL=1
 endif
 
@@ -44,8 +48,8 @@ else
 endif
 
 ifeq ($(LIBC), musl)
-    ifeq ($(ARCH), s390x)
-        $(error ERROR: Attestation agent does not support building with the musl libc target for s390x architecture!)
+    ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
+        $(error ERROR: Attestation agent does not support building with the musl libc target for s390x and ppc64le architectures!)
     endif
     MUSL_ADD := $(shell rustup target add ${ARCH}-unknown-linux-musl)
     ifeq ($(DEBIANOS), true)
@@ -54,7 +58,10 @@ ifeq ($(LIBC), musl)
 endif
 
 ifneq ($(SOURCE_ARCH), $(ARCH))
-    ifeq ($(DEBIANOS), true)
+    # SOURCE_ARCH and target architecture(ARCH) are different on ppc64le
+    ifeq ($(SOURCE_ARCH), ppc64le)
+        $(info INFO: Ignore cross-compiling when SOURCE_ARCH is ppc64le)
+    else ifeq ($(DEBIANOS), true)
         GCC_COMPILER_PACKAGE_FOR_TARGET_ARCH := gcc-$(ARCH)-linux-$(LIBC)
         GCC_COMPILER_FOR_TARGET_ARCH := $(ARCH)-linux-$(LIBC)-gcc
         RUSTC_TARGET_FOR_TARGET_ARCH := $(ARCH)-unknown-linux-$(LIBC)
@@ -66,7 +73,7 @@ ifneq ($(SOURCE_ARCH), $(ARCH))
     endif
 endif
 
-ifeq ($(SOURCE_ARCH), s390x)
+ifeq ($(SOURCE_ARCH), $(filter $(SOURCE_ARCH), s390x ppc64le))
     ifeq ($(DEBIANOS), true)
         PROTOC_BINARY_INSTALL := $(shell sudo apt-get install -y protobuf-compiler)  
     endif
@@ -87,8 +94,8 @@ ifeq ($(KBC), eaa_kbc)
     ifeq ($(LIBC), musl)
         $(error ERROR: EAA KBC does not support MUSL build!)
     endif
-    ifeq ($(ARCH), s390x)
-        $(error ERROR: EAA KBC does not support s390x architecture!)
+    ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
+        $(error ERROR: EAA KBC does not support s390x and ppc64le architectures!)
     endif
     RATS_TLS := $(shell ls /usr/local/lib/rats-tls/ 2> /dev/null)
     ifeq ($(RATS_TLS),)
@@ -99,8 +106,8 @@ ifeq ($(KBC), eaa_kbc)
 endif
 
 ifeq ($(KBC), offline_sev_kbc)
-    ifeq ($(ARCH), s390x)
-        $(error ERROR: Offline SEV KBC does not support s390x architecture!)
+    ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
+        $(error ERROR: Offline SEV KBC does not support s390x and ppc64le architectures!)
     endif
 endif
 
@@ -130,5 +137,5 @@ clean:
 
 help:
 	@echo "==========================Help========================================="
-	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x)] [KBC=xxx_kbc] [OPENSSL=1]"
+	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [KBC=xxx_kbc] [OPENSSL=1]"
 	@echo "install: make install [DESTDIR=/path/to/target] [LIBC=(musl)]"
