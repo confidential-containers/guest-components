@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
+az-snp-vtpm = { version = "~0.2.1", default-features = false, features = ["attester"], optional = true }
 base64.workspace = true
 log.workspace = true
 occlum_dcap = { git = "https://github.com/occlum/occlum", rev = "dbe404f", optional = true }
@@ -14,7 +15,6 @@ serde.workspace = true
 serde_json.workspace = true
 strum.workspace = true
 tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", rev = "cc582e8be0c9010295c66fb58c59f74744017600", optional = true }
-az-snp-vtpm = { version = "0.2", optional = true }
 
 [features]
 default = ["all-attesters"]
