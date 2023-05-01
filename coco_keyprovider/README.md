@@ -1,146 +1,211 @@
 # CoCo Keyprovider
 
 CoCo Keyprovider is a very simple keyprovider tool, which can help to generate CoCo-compatible encrypted images.
-The encrypted image can be decrypted using `cc-kbc`, `offline-fs-kbc`, `offline-sev-kbc`, `online-sev-kbc` and `eaa-kbc`.
+The encrypted image can be decrypted using the following Key Broker Client (KBC):
+ * cc-kbc
+ * offline-fs-kbc
+ * offline-sev-kbc
+ * online-sev-kbc
+ * eaa-kbc
+ * sample kbc (toy KBC still supported for historical reason)
 
-Also, historical toy KBC `sample kbc` is also supported.
-
-The following guide will help make an encrypted image using CoCo keyprovider and decrypt that.
+The following guide will help make an encrypted image using [skopeo](https://github.com/containers/skopeo) and CoCo keyprovider, inspect the image as well as decrypt it.
 
 ## Encryption
 
-Build and run CoCo keyprovider.
+Build and run CoCo keyprovider at localhost on port 50000:
 
-```
-cd attestation-agent/coco_keyprovider
-RUST_LOG=coco_keyprovider cargo run --release -- --socket 127.0.0.1:50000
+```shell
+$ cd attestation-agent/coco_keyprovider
+$ RUST_LOG=coco_keyprovider cargo run --release -- --socket 127.0.0.1:50000 &
 ```
 
-vim ocicrypt.conf: 
+Skopeo leverages the [Ocicrypt](https://github.com/containers/ocicrypt) library to encrypt/decrypt images. Create an [Ocicrypt keyprovider](https://github.com/containers/ocicrypt/blob/main/docs/keyprovider.md) configuration file as shown below and export the `OCICRYPT_KEYPROVIDER_CONFIG` variable:
 
-```
+```shell
+$ cat <<EOF > ocicrypt.conf
 {
-    "key-providers": {
-        "attestation-agent": {
-            "grpc": "127.0.0.1:50000"
-        }
-    }
-}
+  "key-providers": {
+    "attestation-agent": {
+      "grpc": "127.0.0.1:50000"
+}}}
+EOF
+
+$ export OCICRYPT_KEYPROVIDER_CONFIG="$(pwd)/ocicrypt.conf"
 ```
 
-Copy the image you want to encrypt to your current directory. This example uses a *busybox* image:
+Use the skopeo's *copy* command to copy the original image and encrypt it. This tool may copy images from/to different storages using various transport protocols (e.g. docker, oci, docker-archive,...etc) but not all storages support encrypted images. Also beware that skopeo will not warn that the image was left unencrypted in case of failure. In our experience, two scenarious will produce a correct encrypted image:
+ * copying to oci image on the current directory
+ * copying directly to a remote image registry using the docker protocol, as long as the destination registry support encrypted images. Examples of image registry services that support encrypted images are [docker.io](https://docker.io) and [ghcr.io](https://ghcr.io).
 
-```
-OCICRYPT_KEYPROVIDER_CONFIG=ocicrypt.conf skopeo copy --encryption-key provider:attestation-agent:<parameters> docker://busybox oci:busybox_encrypted
-```
-After encryption, it can be seen that busybox-encrypted is generated in the current directory.
+The following example copy *busybox* and encrypt to *busybox_encrypted* image in the current directory:
 
-Or we can directly push the encrypted image to the remote image registry
-
-```
-OCICRYPT_KEYPROVIDER_CONFIG=ocicrypt.conf skopeo copy --encryption-key provider:attestation-agent:<parameters> docker://busybox docker://docker.io/myrepo/busybox:encrypted
+```shell
+$ skopeo copy --insecure-policy --encryption-key provider:attestation-agent:<parameters> docker://busybox oci:busybox_encrypted
 ```
 
-### Parameters
+Or we can directly push the encrypted image to the remote image registry:
 
-The `<parameters>` in skopeo command is a key-value list separated by double colons. Here are the defined keys:
+```shell
+$ skopeo copy --insecure-policy --encryption-key provider:attestation-agent:<parameters> docker://busybox docker://docker.io/myrepo/busybox:encrypted
+```
+
+On the examples above the `--insecure-policy` option is not needed for encryption, it only disables the system's trust policy to avoid any errors with image validation, so it can be ommitted if your system's policy is properly configured. The `--encryption-key` specifies the encryption protocol that will be explained on the next section.
+
+### The encryption protocol explained
+
+As shown on the previous section, the encryption protocol (`--encryption-key`) passed to skopeo has the `provider:attestation-agent:<parameters>` format.
+
+The `<parameters>` is a key-value list separated by double colons (e.g. key1=value1::key2=value2). Here are the defined keys:
 - `sample`: Not required. Either `true` or `false`. If not set, use `false`. This value indicates whether the hardcoded encryption key is used. This works the same way as `sample keyprovider`.
-- `keyid`: Required if `sample` is not enabled. It is a KBS Resource URI, s.t. `kbs://<kbs-addr>/<repo>/<type>/<tag>`. When decryption occurs, the `keyid` value is used to index the KEK.
-- `keypath`: Required if `sample` is not enabled. A local filesystem path, absolute path recommended. Specify the KEK to encrypted the image in local filesystem. KEK will be read from fs and then used to encrypt the image. This key's length must be 32 bytes.
+- `keyid`: Required if `sample` is not enabled. It is a Key Broker Service (KBS) Resource URI (see the specification below). When decryption occurs, the `keyid` value is used to index the Key Encryption Key (KEK).
+- `keypath`: Required if `sample` is not enabled. A local filesystem path, absolute path recommended. Specify the KEK to encrypt the image in local filesystem. KEK will be read from filesystem and then used to encrypt the image. This key's length must be 32 bytes.
 - `algorithm`: Not required. Indicate the encryption algorithm used. Either `A256GCM` or `A256CTR`. If not provided, use `A256GCM` by default as it is AEAD scheme.
+
+The `keyid` parameter refers an KBS Resource URI and must follow one of the following formats,
+- `kbs:///<repository>/<type>/<tag>`
+- `kbs://<kbs-addr>/<repository>/<type>/<tag>`
+- `<kbs-addr>/<repository>/<type>/<tag>`
+- `/<repository>/<type>/<tag>`
+
+Where:
+- `kbs-addr`: is the `address[:port]` of the KBS
+- `repository`: is the resource's repository (e.g. docker.io)
+- `type`: is the resource type (e.g. key)
+- `tag`: is the resource tag or identifier (e.g. key\_id1)
 
 ### Examples
 
-Generate a key to encrypt the image
-```bash
-head -c32 < /dev/random > key1
+This section contain encrypting examples.
+
+#### Example 1: encrypting for sample kbc
+
+Let's start with the simplest example possible, which is to encrypt an image using the sample key provider:
+
+```shell
+$ skopeo copy --insecure-policy --encryption-key provider:attestation-agent:sample=true docker://busybox oci:busybox_encrypted:sample
 ```
 
-- Use key of path `key1`, and keyid `kbs:///default/key/key_id1` to encrypt an image. In this way sample is disabled, and will use A256GCM (AES-256-GCM).
-```
-OCICRYPT_KEYPROVIDER_CONFIG=ocicrypt.conf skopeo copy --insecure-policy --encryption-key provider:attestation-agent:keypath=$(pwd)/key1::keyid=kbs:///default/key/key_id1::algorithm=A256GCM docker://busybox oci:busybox:encrypted
+#### Example 2: encrypting for Offline fs, Offline SEV and Online SEV KBC
+
+For `offline-fs-kbc`, `offline-sev-kbc` and `online-sev-kbc` the KBS address is ommitted and the encryption key created upfront. This key can be then provisioned in a KBS as, for example, on the [simple-kbs](https://github.com/confidential-containers/simple-kbs) for `online-sev-kbc`.
+
+So create a random 32-bytes key file:
+
+```shell
+$ head -c32 < /dev/random > key1
 ```
 
-- Use sample key provider to encrypt an image
+Use key of path `key1`, and keyid `kbs:///default/key/key_id1` to encrypt an image. In this way sample is disabled, and will use A256GCM (AES-256-GCM):
+
+```shell
+$ skopeo copy --insecure-policy --encryption-key provider:attestation-agent:keypath=$(pwd)/key1::keyid=kbs:///default/key/key_id1::algorithm=A256GCM docker://busybox oci:busybox_encrypted:default
 ```
-OCICRYPT_KEYPROVIDER_CONFIG=ocicrypt.conf skopeo copy --insecure-policy --encryption-key provider:attestation-agent:sample=true docker://busybox oci:busybox:encrypted
-```
+
+### Inspecting the image
 
 If not sure about whether the image is encrypted, we can export the image to check whether it is encrypted.
 
-In this example, we can find `./busybox/index.json` as following
-> **Note** : If the image is pushed to a registry, use skopeo to copy to local first and check.
+The examples one and two of the previous section, we can find the OCI image in the `busybox` directory at the current directory.
 
-```json
+> **Note** : If the image is pushed to a registry, use the "docker://" transport protocol instead on the examples below.
+
+You can use skopeo's *inspect* command to print low-level information of the image:
+
+```bash
+$ skopeo inspect oci:busybox_encrypted:default
 {
-    "schemaVersion": 2,
-    "manifests": [
+    "Digest": "sha256:28d649e5c1fb00b5a2cfdc8a0e95057a17addf80797ce2a6b45d89964b35b968",
+    "RepoTags": [],
+    "Created": "2023-05-11T22:48:43.533857581Z",
+    "DockerVersion": "",
+    "Labels": null,
+    "Architecture": "amd64",
+    "Os": "linux",
+    "Layers": [
+        "sha256:4d7ebe01f6574c525dc52ad6506d19aac1ad14eb783955cc1df93fda14073ae1"
+    ],
+    "LayersData": [
         {
-            "mediaType": "application/vnd.oci.image.manifest.v1+json",
-            "digest": "sha256:73135775766027c5006e7744fa8007e812afec905064743c68b780dd49c1eeaf",
-            "size": 1195,
-            "annotations": {
-                "org.opencontainers.image.ref.name": "encrypted"
+            "MIMEType": "application/vnd.oci.image.layer.v1.tar+gzip+encrypted",
+            "Digest": "sha256:4d7ebe01f6574c525dc52ad6506d19aac1ad14eb783955cc1df93fda14073ae1",
+            "Size": 2590751,
+            "Annotations": {
+                "org.opencontainers.image.enc.keys.provider.attestation-agent": "eyJraWQiOiJrYnM6Ly8vZGVmYXVsdC9rZXkva2V5X2lkMSIsIndyYXBwZWRfZGF0YSI6IjNFZ1FidzZDUlY0YmlrMnNLM3RrTUpweWNWV0RVZXVIY1luZ1drZFd1K0swQXpDUGY3dFlCQ1oxSGxXaWFsZmdFdEQxdDBuc3N2YS81aElFbUxPbXZjYXJ2SGlNdERyRElhY1JIdElOTHFyUUpCZUY1M2Q4MTN1L0dDK3prL3RHeEF3ZVd6ZTR1S0VROG1qc2hyMytiYll3RUhKdVFyM3VncWlXRTlnNUhndU1HVmVFZ2ZReWR2dS9TZmVYMmZSeTRQWmtGcjhWbkQ3WjRrNUhXVkhaTWY0U21oSUhhUnlVa1NoT3B4dVdQcG54OW9IaGJSMEdKd2Zwb3l4TzRydEpYaTI4ODVxZ1Uya0dVaFo2RTJTbmgrQT0iLCJpdiI6IjRlekxiZU1RZEVrWS9pdUYiLCJ3cmFwX3R5cGUiOiJBMjU2R0NNIn0=",
+                "org.opencontainers.image.enc.pubopts": "eyJjaXBoZXIiOiJBRVNfMjU2X0NUUl9ITUFDX1NIQTI1NiIsImhtYWMiOiJQM08rQ1lhRGNSNkJteEpvdWlFV0lYM05XN1l2Nk5UcEp5dmhlNlBmbFA4PSIsImNpcGhlcm9wdGlvbnMiOnt9fQ=="
             }
         }
-    ]
-}
-```
-Then we can find the manifest `./busybox/blocs/sha256/73135775766027c5006e7744fa8007e812afec905064743c68b780dd49c1eeaf`
-```json
-{
-    "schemaVersion": 2,
-    "mediaType": "application/vnd.oci.image.manifest.v1+json",
-    "config": {
-        "mediaType": "application/vnd.oci.image.config.v1+json",
-        "digest": "sha256:3488e6e2e41e62fc51be840cd61d806d5b45defdb84a2e6c99ea8a0edb4b6cc7",
-        "size": 575
-    },
-    "layers": [
-        {
-            "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip+encrypted",
-            "digest": "sha256:0dfdc90a4529ca0b38e575945748d6f8258ad2ea2cce8755b8a9f0e1566e447f",
-            "size": 2592227,
-            "annotations": {
-                "org.opencontainers.image.enc.keys.provider.attestation-agent": "eyJraWQiOiJrYnM6Ly8vZGVmYXVsdC90ZXN0LWtleS8xIiwid3JhcHBlZF9kYXRhIjoiLzNMeWhsdVE1aG42MVVjN0ZDM1BWTlNDUlV0YitLc1h5ZWhGTERtaUJlcUE4cStrcGgxbFpwckR4cjh0ck5RUFpxRDB2UlFobVFFWTM1YnV3R05VeGRINXdyeWtCa0x2OTFkSHFHMEJOY1FETVNhNTBBZFpqb00xTHQ0SUdIUDlZeEpGL3hmcWk4RFFBUmdXNjhpV3hlcWgxTFRMQ01hcUg5TzUxeXduYmcxTmJ3aFM0aXdkRSttMGRhOWwyTXpqeklrbjRtN3pWZUl6cFRVVHJuS0gyM1RmWmVWZUZsZVMxY0VscWhGdGw4bnZDYmphNlZyQlFYTzRFVVZUdjkvemxzS2xnRnl3aEhnL1VvUHBmMXMvY2RJPSIsIml2IjoiQUFBQUFBQUFBQUFBQUFBQSIsIndyYXBfdHlwZSI6IkEyNTZHQ00ifQ==",
-                "org.opencontainers.image.enc.pubopts": "eyJjaXBoZXIiOiJBRVNfMjU2X0NUUl9ITUFDX1NIQTI1NiIsImhtYWMiOiJqWHhYMGVWWGR2RHAxbVpxSHVXYzFJWGFwazhicmhKMHdpbDl5K3JLUXc4PSIsImNpcGhlcm9wdGlvbnMiOnt9fQ=="
-            }
-        }
+    ],
+    "Env": [
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     ]
 }
 ```
 
-We can see that the layer's `mediaType` is `application/vnd.oci.image.layer.v1.tar+gzip+encrypted`, which means the layer is encrypted.
+We can see that the layer's `MIMEType` is `application/vnd.oci.image.layer.v1.tar+gzip+encrypted`, which means the layer is encrypted.
 
-Another way to ensure the image is encrypted is to use offline_fs_kbc to test, which will be described in the following.
+The `org.opencontainers.image.enc.keys.provider.attestation-agent` layer's annotation contains (base64 encoded) the used encryption parameters, and `org.opencontainers.image.enc.pubopts` the cipher options. Those are used by the kbc on the decryption process.
+
+You can inspect content of the layer's annotations as:
+
+```bash
+$ skopeo inspect oci:busybox_encrypted:default | jq -r '.LayersData[].Annotations."org.opencontainers.image.enc.keys.provider.attestation-agent"' | base64 -d
+{"kid":"kbs:///default/key/key_id1","wrapped_data":"3EgQbw6CRV4bik2sK3tkMJpycVWDUeuHcYngWkdWu+K0AzCPf7tYBCZ1HlWialfgEtD1t0nssva/5hIEmLOmvcarvHiMtDrDIacRHtINLqrQJBeF53d813u/GC+zk/tGxAweWze4uKEQ8mjshr3+bbYwEHJuQr3ugqiWE9g5HguMGVeEgfQydvu/SfeX2fRy4PZkFr8VnD7Z4k5HWVHZMf4SmhIHaRyUkShOpxuWPpnx9oHhbR0GJwfpoyxO4rtJXi2885qgU2kGUhZ6E2Snh+A=","iv":"4ezLbeMQdEkY/iuF","wrap_type":"A256GCM"}
+$ skopeo inspect oci:busybox_encrypted:default | jq -r '.LayersData[].Annotations."org.opencontainers.image.enc.pubopts"' | base64 -d
+{"cipher":"AES_256_CTR_HMAC_SHA256","hmac":"P3O+CYaDcR6BmxJouiEWIX3NW7Yv6NTpJyvhe6PflP8=","cipheroptions":{}}
+```
+
+Another way to ensure the image is encrypted is to use offline_fs_kbc to test, which will be described in the following section.
+
 ## Decryption
 
-Build and run AA: 
+Let's show how the image created on [example two](#example-2-encrypting-for-offline-fs-offline-sev-and-online-sev-kbc) can be decrypted.
 
-```
-cd attestation-agent
-make KBC=offline_fs_kbc && make install
-RUST_LOG=attestation_agent attestation-agent --keyprovider_sock 127.0.0.1:48888
+Build and run Attestation Agent (AA) at localhost on port 48888:
+
+```shell
+$ cd attestation-agent
+$ make KBC=offline_fs_kbc && make DESTDIR="$(pwd)" install
+$ RUST_LOG=attestation_agent ./attestation-agent --keyprovider_sock 127.0.0.1:48888 &
 ```
 
-Modify ocicrypt.conf: 
+Create a new ocicrypt.conf and re-export OCICRYPT_KEYPROVIDER_CONFIG:
 
-```
+```shell
+$ cat <<EOF > ocicrypt.conf
 {
-    "key-providers": {
-        "attestation-agent": {
-            "grpc": "127.0.0.1:48888"
-        }
-    }
+  "key-providers": {
+    "attestation-agent": {
+      "grpc": "127.0.0.1:48888"
+}}}
+EOF
+$ export OCICRYPT_KEYPROVIDER_CONFIG="$(pwd)/ocicrypt.conf"
+```
+
+Ensure the key is recorded in the `/etc/aa-offline_fs_kbc-keys.json`. In the example two in [encryption](#encryption), `"default/key/key_id1":"<base64-encoded-key>"` should be included in `/etc/aa-offline_fs_kbc-keys.json`:
+
+```shell
+$ cd attestation-agent/coco_keyprovider
+$ ENC_KEY_BASE64="$(cat key1 | base64)"
+$ cat <<EOF > aa-offline_fs_kbc-keys.json
+{
+  "default/key/key_id1": "${ENC_KEY_BASE64}"
 }
+EOF
+$ sudo cp aa-offline_fs_kbc-keys.json /etc/
 ```
 
-Ensure the key is recorded in the `/etc/aa-offline_fs_kbc-keys.json`. In the example in [encryption](#encryption), `"kbs:///default/key/key_id1":"<base64-encoded-key>"` should be included in `/etc/aa-offline_fs_kbc-keys.json`.
+Decrypt the image:
 
-Decrypt container image: 
-
+```shell
+$ skopeo copy --insecure-policy --decryption-key provider:attestation-agent:offline_fs_kbc::null oci:busybox_encrypted:default oci:busybox_decrypted
 ```
-OCICRYPT_KEYPROVIDER_CONFIG=ocicrypt.conf skopeo copy --insecure-policy --decryption-key provider:attestation-agent:offline_fs_kbc::null oci:busybox:encrypted oci:busybox-decrypted
+
+The decrypted image should have the layers's `MIMEType` equal to `application/vnd.oci.image.layer.v1.tar+gzip` as:
+
+```shell
+$ skopeo inspect oci:busybox_decrypted | jq -r '.LayersData[].MIMEType'
+application/vnd.oci.image.layer.v1.tar+gzip
 ```
 
 ## Related tools
