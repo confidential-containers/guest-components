@@ -62,8 +62,8 @@ jobs:
 
       - name: Run cargo test - enclave-cc (rustls-tls version)
         run: |
-          cargo test --all --no-default-features --features=enclave-cc-rustls-tls
+          cargo test --all --no-default-features --features=enclave-cc-eaakbc-rustls-tls
 
       - name: Run cargo test - enclave-cc (native-tls version)
         run: |
-          cargo test --all --no-default-features --features=enclave-cc-native-tls
+          cargo test --all --no-default-features --features=enclave-cc-eaakbc-native-tls
