@@ -12,7 +12,7 @@ edition = "2018"
 anyhow = "1"
 async-compression = { version = "0.3.15", features = ["futures-io", "tokio", "gzip", "zstd"] }
 async-trait = "0.1.56"
-attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent.git", tag = "v0.5.0", optional = true }
+attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent.git", rev = "80b84cf", optional = true }
 base64 = "0.13.0"
 cfg-if = { version = "1.0.0", optional = true }
 dircpy = { version = "0.3.12", optional = true }
@@ -28,7 +28,7 @@ log = "0.4.14"
 nix = { version = "0.26", optional = true }
 oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c", default-features = false, optional = true }
 oci-spec = "0.5.8"
-ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs.git", rev = "076c7bd", default-features = false, features = ["async-io", "keywrap-jwe"], optional = true }
+ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs.git", rev = "bbbb95f", default-features = false, features = ["async-io", "keywrap-jwe"], optional = true }
 prost = { version = "0.11", optional = true }
 protobuf = { version = "3.2.0", optional = true }
 sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"], optional = true }
@@ -73,17 +73,19 @@ members = ["libs/test-utils"]
 exclude = ["scripts/attestation_agent/app"]
 
 [features]
-default = ["snapshot-overlayfs", "signature-cosign-rustls", "keywrap-grpc", "oci-distribution/rustls-tls"]
+default = ["snapshot-overlayfs", "signature-cosign-rustls", "keywrap-grpc", "oci-distribution-rustls"]
 
 # This will be based on `ring` dependency
 kata-cc-rustls-tls = ["encryption-ring", "keywrap-ttrpc", "snapshot-overlayfs", "signature-cosign-rustls", "signature-simple", "getresource", "oci-distribution/rustls-tls"]
-enclave-cc-rustls-tls = ["encryption-ring", "keywrap-native", "eaa-kbc", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-rustls", "oci-distribution/rustls-tls"]
+enclave-cc-eaakbc-rustls-tls = ["encryption-ring", "keywrap-native", "eaa-kbc", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-rustls", "oci-distribution-rustls"]
+enclave-cc-cckbc-rustls-tls = ["encryption-ring", "keywrap-native", "cc-kbc-occlum", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-rustls", "oci-distribution-rustls"]
 
 # This will be based on `openssl` dependency
 kata-cc-native-tls = ["encryption-openssl", "keywrap-ttrpc", "snapshot-overlayfs", "signature-cosign-native", "signature-simple", "getresource", "oci-distribution/native-tls"]
-enclave-cc-native-tls = ["encryption-openssl", "keywrap-native", "eaa-kbc", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-native", "oci-distribution/native-tls"]
+enclave-cc-eaakbc-native-tls = ["encryption-openssl", "keywrap-native", "eaa-kbc", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-native", "oci-distribution-native"]
+enclave-cc-cckbc-native-tls = ["encryption-openssl", "keywrap-native", "cc-kbc-occlum", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-native", "oci-distribution-native"]
 
-encryption = []
+encryption = ["ocicrypt-rs/block-cipher"]
 encryption-ring = ["ocicrypt-rs/block-cipher-ring", "encryption"]
 encryption-openssl = ["ocicrypt-rs/block-cipher-openssl", "encryption"]
 
@@ -93,11 +95,15 @@ keywrap-native = ["ocicrypt-rs/keywrap-keyprovider-native", "attestation_agent"]
 keywrap-ttrpc = ["ocicrypt-rs/keywrap-keyprovider-ttrpc", "dep:ttrpc", "dep:protobuf", "ttrpc-codegen"]
 
 eaa-kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]
+cc-kbc-occlum = ["attestation_agent/cc_kbc", "ocicrypt-rs/cc_kbc_occlum"]
 
 signature = ["hex"]
 signature-cosign = ["signature", "futures"]
 signature-cosign-rustls = ["signature-cosign", "sigstore/cosign-rustls-tls"]
 signature-cosign-native = ["signature-cosign", "sigstore/cosign-native-tls"]
+
+oci-distribution-rustls = ["oci-distribution/rustls-tls"]
+oci-distribution-native = ["oci-distribution/native-tls"]
 
 signature-simple = ["signature", "sequoia-openpgp", "serde_yaml"]
 
