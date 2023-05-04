@@ -40,6 +40,7 @@ jobs:
       - name: Install tonic's protoc dependencies
         run: |
           apt install -y protobuf-compiler libprotobuf-dev
+
       - name: Build and install rats-tls
         run: | 
           apt-get install -y libcurl4-openssl-dev
@@ -48,6 +49,7 @@ jobs:
           git reset --hard 8fbfdb6
           cmake -DBUILD_SAMPLES=on -H. -Bbuild
           make -C build install
+
       - name: Run cargo build
         uses: actions-rs/cargo@v1
         with:
@@ -131,6 +133,12 @@ jobs:
         with:
           command: test
           args: --no-default-features --features=eaa_kbc
+
+      - name: Run cargo test - cc-kbc-occlum
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-default-features --features=cc_kbc_occlum
 
       - name: Run cargo test - default
         uses: actions-rs/cargo@v1
