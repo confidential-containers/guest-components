@@ -58,7 +58,7 @@ head -c32 < /dev/random > key1
 
 - Use key of path `key1`, and keyid `kbs:///default/key/key_id1` to encrypt an image. In this way sample is disabled, and will use A256GCM (AES-256-GCM).
 ```
-OCICRYPT_KEYPROVIDER_CONFIG=ocicrypt.conf skopeo copy --insecure-policy --encryption-key provider:attestation-agent:keypath=key1::keyid=kbs:///default/key/key_id1::algorithm=A256GCM docker://busybox oci:busybox:encrypted
+OCICRYPT_KEYPROVIDER_CONFIG=ocicrypt.conf skopeo copy --insecure-policy --encryption-key provider:attestation-agent:keypath=$(pwd)/key1::keyid=kbs:///default/key/key_id1::algorithm=A256GCM docker://busybox oci:busybox:encrypted
 ```
 
 - Use sample key provider to encrypt an image
