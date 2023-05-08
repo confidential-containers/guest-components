@@ -93,7 +93,7 @@ impl KbsProtocolWrapper {
     async fn attestation(&mut self, kbs_host_url: String) -> Result<()> {
         let challenge = self
             .http_client()
-            .post(format!("{kbs_host_url}{KBS_URL_PREFIX}/auth"))
+            .post(format!("{kbs_host_url}/{KBS_URL_PREFIX}/auth"))
             .header("Content-Type", "application/json")
             .json(&Request::new(self.tee().to_string()))
             .send()
@@ -104,7 +104,7 @@ impl KbsProtocolWrapper {
 
         let attest_response = self
             .http_client()
-            .post(format!("{kbs_host_url}{KBS_URL_PREFIX}/attest"))
+            .post(format!("{kbs_host_url}/{KBS_URL_PREFIX}/attest"))
             .header("Content-Type", "application/json")
             .json(&self.generate_evidence()?)
             .send()
@@ -134,16 +134,17 @@ impl KbsRequest for KbsProtocolWrapper {
     async fn http_get(&mut self, url_string: String) -> Result<Vec<u8>> {
         let url = Url::parse(&url_string)
             .map_err(|e| anyhow!("Invalid Request URL {url_string}: {e}"))?;
-        let host_url = url
-            .host()
-            .ok_or_else(|| anyhow!("Request URL must include KBS host address"))?
-            .to_owned();
+
+        // Use default port of KBS: 8080
+        let port = url.port().unwrap_or(8080);
+        let host_str = url.host_str().ok_or_else(|| anyhow!("No KBS host given"))?;
+        let kbs_url = format!("{}://{host_str}:{port}", url.scheme());
 
         for attempt in 1..=KBS_GET_RESOURCE_MAX_ATTEMPT {
             log::info!("CC-KBC: trying to request KBS, attempt {attempt}");
 
             if !self.authenticated {
-                self.attestation(host_url.to_string()).await?;
+                self.attestation(kbs_url.clone()).await?;
             }
 
             let res = self.http_client().get(&url_string).send().await?;
