@@ -28,6 +28,7 @@ pub mod sgx_occlum;
 #[strum(ascii_case_insensitive, serialize_all = "lowercase")]
 pub enum Tee {
     Tdx,
+    #[strum(serialize = "sgx")]
     SgxOcclum,
     Sevsnp,
     AzSnpVtpm,
