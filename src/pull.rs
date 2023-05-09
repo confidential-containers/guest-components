@@ -441,7 +441,7 @@ mod tests {
         }
     }
 
-    #[cfg(all(feature = "encryption", feature = "keywrap-grpc"))]
+    #[cfg(all(feature = "encryption", feature = "keywrap-jwe"))]
     #[tokio::test]
     async fn test_async_pull_client_encrypted() {
         let oci_images = vec!["docker.io/arronwang/busybox_encrypted"];
