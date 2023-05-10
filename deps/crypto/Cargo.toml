@@ -18,6 +18,9 @@ strum.workspace = true
 rand = { version = "0.8.5" }
 sha2 = { version = "0.10" }
 
+[dev-dependencies]
+rstest = "0.17.0"
+
 [features]
 default = ["rust-crypto"]
 rust-crypto = ["dep:aes-gcm", "ctr"]

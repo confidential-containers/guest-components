@@ -31,7 +31,10 @@ pub enum WrapType {
     Aes256Ctr,
 }
 
-/// Decrypt the given `ciphertext`
+/// Decrypt the given `ciphertext`.
+/// Note:
+/// - IV length for A256GCM: 12 bytes
+/// - IV length for A256CTR: 16 bytes
 pub fn decrypt(
     key: Zeroizing<Vec<u8>>,
     ciphertext: Vec<u8>,
@@ -45,5 +48,25 @@ pub fn decrypt(
     match wrap_type {
         WrapType::Aes256Gcm => aes256gcm::decrypt(&ciphertext, &key, &iv),
         WrapType::Aes256Ctr => aes256ctr::decrypt(&ciphertext, &key, &iv),
+    }
+}
+
+/// Encrypt the given `plaintext`.
+/// Note:
+/// - IV length for A256GCM: 12 bytes
+/// - IV length for A256CTR: 16 bytes
+pub fn encrypt(
+    key: Zeroizing<Vec<u8>>,
+    plaintext: Vec<u8>,
+    iv: Vec<u8>,
+    wrap_type: &str,
+) -> Result<Vec<u8>> {
+    let wrap_type = WrapType::from_str(wrap_type).context(format!(
+        "Unsupported wrap type {wrap_type} when decrypt image layer",
+    ))?;
+
+    match wrap_type {
+        WrapType::Aes256Gcm => aes256gcm::encrypt(&plaintext, &key, &iv),
+        WrapType::Aes256Ctr => aes256ctr::encrypt(&plaintext, &key, &iv),
     }
 }
