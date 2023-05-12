@@ -3,7 +3,7 @@
 The offline file system KBC reads keys and resources from files present in the guest file system.
 **The offline file system KBC is only secure to use when the guest file system is at no point readable by a hypothetical adversary**, such as with IBM Secure Execution for Linux (IBM Z & LinuxONE).
 Being an offline module, it is not a broker _client_ in the stricter sense of the word.
-See the [offline file system KBS](../../../sample_keyprovider/src/enc_mods/offline_fs_kbs/README.md) for correspondent software to wrap keys.
+See the [CoCo Keyprovider](../../../coco_keyprovider/README.md) for correspondent software to wrap keys.
 
 ## Usage
 
@@ -19,7 +19,7 @@ Keys must be provided in the guest file system at `/etc/aa-offline_fs_kbc-keys.j
 
 with the 32-byte keys base64-encoded.
 
-The script [`generate_keys.sh`](https://github.com/confidential-containers/attestation-agent/blob/main/sample_keyprovider/src/enc_mods/offline_fs_kbs/generate_keys.sh) can be used to generate some sample keys based on `/dev/random` if it fits your use case sufficiently well.
+The script [`generate_keys.sh`](../../../coco_keyprovider/tools/generate_keys.sh) can be used to generate some sample keys based on `/dev/random` if it fits your use case sufficiently well.
 Here is a sample generated keys file [`aa-offline_fs_kbc-keys.json`](aa-offline_fs_kbc-keys.json)
 
 Resources must be provide in the guest file system at `/etc/aa-offline_fs_kbc-resources.json` like:
