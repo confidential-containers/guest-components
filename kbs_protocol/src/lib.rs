@@ -21,7 +21,10 @@ pub const KBS_URL_PREFIX: &str = "kbs/v0";
 
 #[async_trait]
 pub trait KbsRequest {
-    async fn http_get(&mut self, url: String) -> Result<Vec<u8>>;
+    /// Get confidential resource
+    async fn http_get(&mut self, resource_url: String) -> Result<Vec<u8>>;
+    /// Attestation and get attestation results token (Base64 endcoded)
+    async fn attest(&mut self, host_url: String) -> Result<String>;
 }
 
 pub struct KbsProtocolWrapper {
@@ -90,7 +93,7 @@ impl KbsProtocolWrapper {
         &mut self.http_client
     }
 
-    async fn attestation(&mut self, kbs_host_url: String) -> Result<()> {
+    async fn attestation(&mut self, kbs_host_url: String) -> Result<String> {
         let challenge = self
             .http_client()
             .post(format!("{kbs_host_url}/{KBS_URL_PREFIX}/auth"))
@@ -113,7 +116,8 @@ impl KbsProtocolWrapper {
         match attest_response.status() {
             reqwest::StatusCode::OK => {
                 self.authenticated = true;
-                Ok(())
+                let token = attest_response.json::<serde_json::Value>().await?["token"].to_string();
+                Ok(token)
             }
             reqwest::StatusCode::UNAUTHORIZED => {
                 let error_info = attest_response.json::<ErrorInformation>().await?;
@@ -176,6 +180,10 @@ impl KbsRequest for KbsProtocolWrapper {
         }
 
         bail!("Request KBS: Attested but KBS still return Unauthorized")
+    }
+
+    async fn attest(&mut self, host_url: String) -> Result<String> {
+        self.attestation(host_url).await
     }
 }
 
