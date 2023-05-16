@@ -4,6 +4,7 @@
 
 use anyhow::{anyhow, bail, Context, Result};
 use futures_util::future;
+use futures_util::stream::{self, StreamExt, TryStreamExt};
 use oci_distribution::manifest::{OciDescriptor, OciImageManifest};
 use oci_distribution::{secrets::RegistryAuth, Client, Reference};
 use sha2::Digest;
@@ -27,6 +28,8 @@ const ERR_NO_DECRYPT_CFG: &str = "decrypt_config is None";
 const ERR_BAD_UNCOMPRESSED_DIGEST: &str = "unsupported uncompressed digest format";
 const ERR_BAD_COMPRESSED_DIGEST: &str = "unsupported compressed digest format";
 
+pub const DEFAULT_MAX_CONCURRENT_DOWNLOAD: usize = 6;
+
 /// The PullClient connects to remote OCI registry, pulls the container image,
 /// and save the image layers under data_dir and return the layer meta info.
 pub struct PullClient<'a> {
@@ -41,6 +44,9 @@ pub struct PullClient<'a> {
 
     /// OCI image layer data store dir.
     pub data_dir: PathBuf,
+
+    /// Max number of concurrent downloads.
+    pub max_concurrent_download: usize,
 }
 
 impl<'a> PullClient<'a> {
@@ -50,6 +56,7 @@ impl<'a> PullClient<'a> {
         reference: Reference,
         data_dir: &Path,
         auth: &'a RegistryAuth,
+        max_concurrent_download: usize,
     ) -> Result<PullClient<'a>> {
         let client = Client::default();
 
@@ -58,6 +65,7 @@ impl<'a> PullClient<'a> {
             auth,
             reference,
             data_dir: data_dir.to_path_buf(),
+            max_concurrent_download,
         })
     }
 
@@ -212,30 +220,33 @@ impl<'a> PullClient<'a> {
         decrypt_config: &Option<&str>,
         meta_store: Arc<Mutex<MetaStore>>,
     ) -> Result<Vec<LayerMeta>> {
-        let layer_metas = layer_descs.into_iter().enumerate().map(|(i, layer)| {
-            let client = &self.client;
-            let reference = &self.reference;
-            let ms = meta_store.clone();
+        let layer_metas = stream::iter(layer_descs)
+            .enumerate()
+            .map(|(i, layer)| {
+                let client = &self.client;
+                let reference = &self.reference;
+                let ms = meta_store.clone();
 
-            async move {
-                let layer_reader = client
-                    .async_pull_blob(reference, &layer.digest)
+                async move {
+                    let layer_reader = client
+                        .async_pull_blob(reference, &layer.digest)
+                        .await
+                        .map_err(|e| anyhow!("failed to async pull blob {}", e.to_string()))?;
+
+                    self.async_handle_layer(
+                        layer,
+                        diff_ids[i].clone(),
+                        decrypt_config,
+                        layer_reader,
+                        ms,
+                    )
                     .await
-                    .map_err(|e| anyhow!("failed to async pull blob {}", e.to_string()))?;
-
-                self.async_handle_layer(
-                    layer,
-                    diff_ids[i].clone(),
-                    decrypt_config,
-                    layer_reader,
-                    ms,
-                )
-                .await
-                .map_err(|e| anyhow!("failed to handle layer: {:?}", e))
-            }
-        });
-
-        let layer_metas = future::try_join_all(layer_metas).await?;
+                    .map_err(|e| anyhow!("failed to handle layer: {:?}", e))
+                }
+            })
+            .buffer_unordered(self.max_concurrent_download)
+            .try_collect()
+            .await?;
 
         Ok(layer_metas)
     }
@@ -354,8 +365,13 @@ mod tests {
         for image_url in oci_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
             let image = Reference::try_from(image_url.clone()).expect("create reference failed");
-            let mut client =
-                PullClient::new(image, tempdir.path(), &RegistryAuth::Anonymous).unwrap();
+            let mut client = PullClient::new(
+                image,
+                tempdir.path(),
+                &RegistryAuth::Anonymous,
+                DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+            )
+            .unwrap();
             let (image_manifest, _image_digest, image_config) =
                 client.pull_manifest().await.unwrap();
 
@@ -382,8 +398,13 @@ mod tests {
         for image_url in oci_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
             let image = Reference::try_from(image_url.clone()).expect("create reference failed");
-            let mut client =
-                PullClient::new(image, tempdir.path(), &RegistryAuth::Anonymous).unwrap();
+            let mut client = PullClient::new(
+                image,
+                tempdir.path(),
+                &RegistryAuth::Anonymous,
+                DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+            )
+            .unwrap();
             let (image_manifest, _image_digest, image_config) =
                 client.pull_manifest().await.unwrap();
 
@@ -421,8 +442,13 @@ mod tests {
         for image_url in oci_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
             let image = Reference::try_from(image_url.clone()).expect("create reference failed");
-            let mut client =
-                PullClient::new(image, tempdir.path(), &RegistryAuth::Anonymous).unwrap();
+            let mut client = PullClient::new(
+                image,
+                tempdir.path(),
+                &RegistryAuth::Anonymous,
+                DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+            )
+            .unwrap();
             let (image_manifest, _image_digest, image_config) =
                 client.pull_manifest().await.unwrap();
 
@@ -449,8 +475,13 @@ mod tests {
         for image_url in oci_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
             let image = Reference::try_from(image_url.clone()).expect("create reference failed");
-            let mut client =
-                PullClient::new(image, tempdir.path(), &RegistryAuth::Anonymous).unwrap();
+            let mut client = PullClient::new(
+                image,
+                tempdir.path(),
+                &RegistryAuth::Anonymous,
+                DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+            )
+            .unwrap();
             let (image_manifest, _image_digest, image_config) =
                 client.pull_manifest().await.unwrap();
 
@@ -508,8 +539,13 @@ mod tests {
         };
 
         let tempdir = tempfile::tempdir().unwrap();
-        let mut client =
-            PullClient::new(oci_image, tempdir.path(), &RegistryAuth::Anonymous).unwrap();
+        let mut client = PullClient::new(
+            oci_image,
+            tempdir.path(),
+            &RegistryAuth::Anonymous,
+            DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+        )
+        .unwrap();
 
         let (_image_manifest, _image_digest, _image_config) = client.pull_manifest().await.unwrap();
 
@@ -622,8 +658,13 @@ mod tests {
         };
 
         let tempdir = tempfile::tempdir().unwrap();
-        let mut client =
-            PullClient::new(oci_image, tempdir.path(), &RegistryAuth::Anonymous).unwrap();
+        let mut client = PullClient::new(
+            oci_image,
+            tempdir.path(),
+            &RegistryAuth::Anonymous,
+            DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+        )
+        .unwrap();
 
         let (_image_manifest, _image_digest, _image_config) = client.pull_manifest().await.unwrap();
 

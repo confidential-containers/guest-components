@@ -19,7 +19,7 @@ use crate::bundle::{create_runtime_config, BUNDLE_ROOTFS};
 use crate::config::ImageConfig;
 use crate::decoder::Compression;
 use crate::meta_store::{MetaStore, METAFILE};
-use crate::pull::PullClient;
+use crate::pull::{PullClient, DEFAULT_MAX_CONCURRENT_DOWNLOAD};
 
 #[cfg(feature = "snapshot-unionfs")]
 use crate::snapshots::occlum::unionfs::Unionfs;
@@ -230,7 +230,15 @@ impl ImageClient {
             _ => auth.expect("unexpected uninitialized auth"),
         };
 
-        let mut client = PullClient::new(reference, &self.config.work_dir.join("layers"), &auth)?;
+        let max_concurrent_download = std::thread::available_parallelism()
+            .map_or(DEFAULT_MAX_CONCURRENT_DOWNLOAD, |v| v.get());
+
+        let mut client = PullClient::new(
+            reference,
+            &self.config.work_dir.join("layers"),
+            &auth,
+            max_concurrent_download,
+        )?;
         let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
 
         let id = image_manifest.config.digest.clone();
