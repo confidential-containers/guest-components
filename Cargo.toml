@@ -34,7 +34,7 @@ protobuf = { version = "3.2.0", optional = true }
 sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"], optional = true }
 serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
-serde_yaml = { version = "0.8", optional = true }
+serde_yaml = { version = "0.9", optional = true }
 sha2 = ">=0.10"
 sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "69e8f33", default-features = false, optional = true}
 strum = { version = "0.24", features = ["derive"] }
