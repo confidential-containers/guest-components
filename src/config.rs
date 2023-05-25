@@ -31,6 +31,9 @@ pub const GPG_KEY_RING: &str = "/run/image-security/simple_signing/pubkey.gpg";
 /// [`AUTH_FILE_PATH`] shows the path to the `auth.json` file.
 pub const AUTH_FILE_PATH: &str = "kbs:///default/credential/test";
 
+/// Default max concurrent download.
+pub const DEFAULT_MAX_CONCURRENT_DOWNLOAD: usize = 3;
+
 /// `image-rs` configuration information.
 #[derive(Clone, Debug, Deserialize)]
 pub struct ImageConfig {
@@ -52,6 +55,11 @@ pub struct ImageConfig {
         deserialize_with = "deserialize_null_default"
     )]
     pub file_paths: Paths,
+
+    /// Maximum number of concurrent downloads to perform during image pull.
+    ///
+    /// This defaults to [`DEFAULT_MAX_CONCURRENT_DOWNLOAD`].
+    pub max_concurrent_download: usize,
 }
 
 /// This function used to parse from string. When it is an
@@ -82,6 +90,7 @@ impl Default for ImageConfig {
             security_validate: false,
             auth: false,
             file_paths: Paths::default(),
+            max_concurrent_download: DEFAULT_MAX_CONCURRENT_DOWNLOAD,
         }
     }
 }
@@ -140,6 +149,10 @@ mod tests {
 
         assert_eq!(config.work_dir, work_dir);
         assert_eq!(config.default_snapshot, SnapshotType::Overlay);
+        assert_eq!(
+            config.max_concurrent_download,
+            DEFAULT_MAX_CONCURRENT_DOWNLOAD
+        );
 
         let env_work_dir = "/tmp";
         std::env::set_var(CC_IMAGE_WORK_DIR, env_work_dir);
@@ -154,7 +167,8 @@ mod tests {
             "work_dir": "/var/lib/image-rs/",
             "default_snapshot": "overlay",
             "security_validate": false,
-            "auth": false
+            "auth": false,
+	    "max_concurrent_download": 1
         }"#;
 
         let tempdir = tempfile::tempdir().unwrap();
@@ -170,6 +184,7 @@ mod tests {
 
         assert_eq!(config.work_dir, work_dir);
         assert_eq!(config.default_snapshot, SnapshotType::Overlay);
+        assert_eq!(config.max_concurrent_download, 1);
 
         let invalid_config_file = tempdir.path().join("does-not-exist");
         assert!(!invalid_config_file.exists());
