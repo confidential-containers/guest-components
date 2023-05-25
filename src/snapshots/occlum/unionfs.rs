@@ -47,6 +47,14 @@ fn create_dir(create_path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
+fn create_example_file(create_path: &PathBuf) -> Result<()> {
+    if !create_path.exists() {
+        let mut file = File::create(create_path.as_path().join("/foo.txt"))?;
+        file.write_all(b"Hello, world!")?;
+    }
+    Ok(())
+}
+
 fn create_environment(mount_path: &Path) -> Result<()> {
     let mut from_paths = Vec::new();
     let mut copy_options = dir::CopyOptions::new();
@@ -128,6 +136,7 @@ impl Snapshotter for Unionfs {
         let sefs_base = Path::new("/images").join(cid).join("sefs");
         let unionfs_lowerdir = sefs_base.join("lower");
         let unionfs_upperdir = sefs_base.join("upper");
+        create_example_file(sefs_base)?;
 
         // For mounting trusted UnionFS at runtime of occlum,
         // you can refer to https://github.com/occlum/occlum/blob/master/docs/runtime_mount.md#1-mount-trusted-unionfs-consisting-of-sefss.
@@ -149,14 +158,14 @@ impl Snapshotter for Unionfs {
             flags,
             Some(options.as_str()),
         )
-        .map_err(|e| {
-            anyhow!(
+            .map_err(|e| {
+                anyhow!(
                 "failed to mount {:?} to {:?}, with error: {}",
                 source,
                 mount_path,
                 e
             )
-        })?;
+            })?;
 
         // clear the mount_path if there is something
         clear_path(mount_path)?;
