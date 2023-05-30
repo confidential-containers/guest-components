@@ -5,6 +5,8 @@
 // This unionfs file is used for occlum only
 
 use std::fs;
+use std::fs::File;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
 
@@ -136,7 +138,7 @@ impl Snapshotter for Unionfs {
         let sefs_base = Path::new("/images").join(cid).join("sefs");
         let unionfs_lowerdir = sefs_base.join("lower");
         let unionfs_upperdir = sefs_base.join("upper");
-        create_example_file(sefs_base)?;
+        create_example_file(&sefs_base)?;
 
         // For mounting trusted UnionFS at runtime of occlum,
         // you can refer to https://github.com/occlum/occlum/blob/master/docs/runtime_mount.md#1-mount-trusted-unionfs-consisting-of-sefss.
