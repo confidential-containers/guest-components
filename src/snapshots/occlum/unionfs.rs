@@ -126,6 +126,7 @@ impl Snapshotter for Unionfs {
         // the source type of runtime mount is "unionfs".
         let fs_type = String::from("unionfs");
         let source = Path::new(&fs_type);
+        log::error!("mount_path {}", mount_path.display());
 
         if !mount_path.exists() {
             fs::create_dir_all(mount_path)?;
@@ -143,6 +144,7 @@ impl Snapshotter for Unionfs {
         println!("Moving to create file here");
         warn!("Moving to create file here");
         create_example_file(&sefs_base)?;
+
 
         // For mounting trusted UnionFS at runtime of occlum,
         // you can refer to https://github.com/occlum/occlum/blob/master/docs/runtime_mount.md#1-mount-trusted-unionfs-consisting-of-sefss.
@@ -171,6 +173,26 @@ impl Snapshotter for Unionfs {
                 mount_path,
                 e
             )
+            })?;
+
+
+        let hostfs_mount_dir = format!(
+            "dir={}", &sefs_base.as_path().join("foo.txt").display()
+        );
+        nix::mount::mount(
+            Some("hostfs"),
+            mount_path,
+            Some("hostfs"),
+            flags,
+            Some(hostfs_mount_dir.as_str()),
+        )
+            .map_err(|e| {
+                anyhow!(
+                    "failed to mount {:?} to {:?}, with error: {}",
+                    source,
+                    mount_path,
+                    e
+                )
             })?;
 
         // clear the mount_path if there is something
