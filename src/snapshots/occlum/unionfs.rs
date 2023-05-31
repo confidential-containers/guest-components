@@ -175,26 +175,6 @@ impl Snapshotter for Unionfs {
             )
             })?;
 
-
-        let hostfs_mount_dir = format!(
-            "dir={}", &sefs_base.as_path().join("foo.txt").display()
-        );
-        nix::mount::mount(
-            Some("hostfs"),
-            mount_path,
-            Some("hostfs"),
-            flags,
-            Some(hostfs_mount_dir.as_str()),
-        )
-            .map_err(|e| {
-                anyhow!(
-                    "failed to mount {:?} to {:?}, with error: {}",
-                    source,
-                    mount_path,
-                    e
-                )
-            })?;
-
         // clear the mount_path if there is something
         clear_path(mount_path)?;
 
