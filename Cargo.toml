@@ -12,14 +12,14 @@ edition = "2018"
 anyhow = ">=1.0"
 aes = { version = ">=0.8", optional = true }
 async-trait = { version = "0.1.61", optional = true }
-attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent.git", rev = "80b84cf", optional = true  }
+attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent.git", rev = "aa1d3c5", optional = true  }
 base64 = "0.13"
 base64-serde = { version = "0.6", optional = true }
 cfg-if = "1.0.0"
 ctr = { version = ">=0.9", optional = true }
 hmac = { version = ">=0.12", optional = true }
 josekit = { version = ">=0.7", optional = true }
-kbc = { git = "https://github.com/confidential-containers/attestation-agent.git", rev = "80b84cf", optional = true  }
+kbc = { git = "https://github.com/confidential-containers/attestation-agent.git", rev = "aa1d3c5", optional = true  }
 lazy_static = ">=1.4"
 openssl = { version = ">=0.10", features = ["vendored"], optional = true }
 pin-project-lite = { version = "0.2.9", optional = true }
