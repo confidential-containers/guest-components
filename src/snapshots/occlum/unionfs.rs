@@ -14,7 +14,7 @@ use anyhow::{anyhow, Result};
 use dircpy::CopyBuilder;
 use fs_extra;
 use fs_extra::dir;
-use log::info;
+use log::{warn, info};
 use nix::mount::MsFlags;
 
 use crate::snapshots::{MountPoint, Snapshotter};
@@ -140,6 +140,8 @@ impl Snapshotter for Unionfs {
         let sefs_base = Path::new("/images").join(cid).join("sefs");
         let unionfs_lowerdir = sefs_base.join("lower");
         let unionfs_upperdir = sefs_base.join("upper");
+        println!("Moving to create file here");
+        warn!("Moving to create file here");
         create_example_file(&sefs_base)?;
 
         // For mounting trusted UnionFS at runtime of occlum,
