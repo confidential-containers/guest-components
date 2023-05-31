@@ -54,7 +54,7 @@ fn create_example_file(create_path: &PathBuf) -> Result<()> {
     println!("Writing file to directory {}", create_path.display());
     let mut file = File::create(create_path.as_path().join("/foo.txt"))?;
     file.write_all(b"Hello, world!")?;
-    info!("INFO log of success")
+    info!("INFO log of success");
     println!("Success!");
     Ok(())
 }
