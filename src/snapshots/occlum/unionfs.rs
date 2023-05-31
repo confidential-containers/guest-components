@@ -6,7 +6,7 @@
 
 use std::fs;
 use std::fs::File;
-use std::io::Write;
+use std::io::{Error, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
 
@@ -14,6 +14,7 @@ use anyhow::{anyhow, Result};
 use dircpy::CopyBuilder;
 use fs_extra;
 use fs_extra::dir;
+use log::info;
 use nix::mount::MsFlags;
 
 use crate::snapshots::{MountPoint, Snapshotter};
@@ -50,10 +51,11 @@ fn create_dir(create_path: &PathBuf) -> Result<()> {
 }
 
 fn create_example_file(create_path: &PathBuf) -> Result<()> {
-    if !create_path.exists() {
-        let mut file = File::create(create_path.as_path().join("/foo.txt"))?;
-        file.write_all(b"Hello, world!")?;
-    }
+    println!("Writing file to directory {}", create_path.display());
+    let mut file = File::create(create_path.as_path().join("/foo.txt"))?;
+    file.write_all(b"Hello, world!")?;
+    info!("INFO log of success")
+    println!("Success!");
     Ok(())
 }
 
