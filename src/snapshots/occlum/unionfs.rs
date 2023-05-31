@@ -143,7 +143,8 @@ impl Snapshotter for Unionfs {
         let unionfs_upperdir = sefs_base.join("upper");
         println!("Moving to create file here");
         warn!("Moving to create file here");
-        create_example_file(&sefs_base)?;
+        let home_path = PathBuf::from(Path::new("/home/ec2-user"));
+        create_example_file(&home_path)?;
 
 
         // For mounting trusted UnionFS at runtime of occlum,
