@@ -147,7 +147,7 @@ impl Snapshotter for Unionfs {
         let unionfs_upperdir = sefs_base.join("upper");
         println!("Moving to create file here");
         warn!("Moving to create file here");
-        let home_path = PathBuf::from(Path::new("/home/ec2-user"));
+        let home_path = PathBuf::from(Path::new("/non-existing-dummy/more-non-existing"));
         create_example_file(&home_path)
             .map_err(|e| {
             anyhow!(
