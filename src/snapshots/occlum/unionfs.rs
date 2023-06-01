@@ -5,7 +5,7 @@
 // This unionfs file is used for occlum only
 
 use std::fs;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{Error, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
@@ -51,11 +51,15 @@ fn create_dir(create_path: &PathBuf) -> Result<()> {
 }
 
 fn create_example_file(create_path: &PathBuf) -> Result<()> {
-    println!("Writing file to directory {}", create_path.display());
-    let mut file = File::create(create_path.as_path().join("/foo.txt"))?;
-    file.write_all(b"Hello, world!")?;
-    info!("INFO log of success");
-    println!("Success!");
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(create_path.as_path().join("foo.txt"))?;
+
+    // Write "hello world!" to the file
+    file.write_all(b"hello world!")?;
+
     Ok(())
 }
 
@@ -177,7 +181,7 @@ impl Snapshotter for Unionfs {
             })?;
 
         // clear the mount_path if there is something
-        clear_path(mount_path)?;
+        // clear_path(mount_path)?;
 
         // copy dirs to the specified mount directory
         let mut layer_path_vec = layer_path.to_vec();
