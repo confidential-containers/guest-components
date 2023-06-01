@@ -13,6 +13,7 @@ use sha2::{Digest, Sha384};
 const RSA_PUBKEY_LENGTH: usize = 2048;
 const NEW_PADDING: fn() -> PaddingScheme = PaddingScheme::new_pkcs1v15_encrypt;
 
+pub const RSA_KEY_TYPE: &str = "RSA";
 pub const RSA_ALGORITHM: &str = "RSA1_5";
 pub const AES_256_GCM_ALGORITHM: &str = "A256GCM";
 
@@ -36,12 +37,15 @@ impl TeeKey {
         })
     }
 
-    // Export TEE public key as specific structure.
+    // Export TEE public key as JWK, as defined in RFC 7517.
     pub fn export_pubkey(&self) -> Result<TeePubKey> {
-        let k_mod = base64::encode(self.public_key.n().to_bytes_be());
-        let k_exp = base64::encode(self.public_key.e().to_bytes_be());
+        let k_mod =
+            base64::encode_config(self.public_key.n().to_bytes_be(), base64::URL_SAFE_NO_PAD);
+        let k_exp =
+            base64::encode_config(self.public_key.e().to_bytes_be(), base64::URL_SAFE_NO_PAD);
 
         Ok(TeePubKey {
+            kty: RSA_KEY_TYPE.to_string(),
             alg: RSA_ALGORITHM.to_string(),
             k_mod,
             k_exp,
