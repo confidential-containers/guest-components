@@ -10,7 +10,7 @@ use std::io::{Error, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use dircpy::CopyBuilder;
 use fs_extra;
 use fs_extra::dir;
@@ -50,17 +50,17 @@ fn create_dir(create_path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn create_example_file(create_path: &PathBuf) -> Result<()> {
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(create_path.as_path().join("foo.txt"))?;
+fn create_example_file(path: &PathBuf) -> Result<()> {
+    // Open the file in write mode, creating it if it doesn't exist
+    let mut file = File::create(path)
+        .with_context(|| format!("Failed to create file: {:?}", path))?;
 
     // Write "hello world!" to the file
-    file.write_all(b"hello world!")?;
+    file.write_all(b"hello world!")
+        .with_context(|| format!("Failed to write to file: {:?}", path))?;
 
     Ok(())
+
 }
 
 fn create_environment(mount_path: &Path) -> Result<()> {
