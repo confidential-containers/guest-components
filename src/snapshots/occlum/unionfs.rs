@@ -148,7 +148,14 @@ impl Snapshotter for Unionfs {
         println!("Moving to create file here");
         warn!("Moving to create file here");
         let home_path = PathBuf::from(Path::new("/home/ec2-user"));
-        create_example_file(&home_path)?;
+        create_example_file(&home_path)
+            .map_err(|e| {
+            anyhow!(
+                "failed to write file {:?} with error: {}",
+                home_path,
+                e
+            )
+        })?;
 
 
         // For mounting trusted UnionFS at runtime of occlum,
