@@ -238,6 +238,7 @@ impl ImageClient {
         )?;
         println!("TEST");
         info!("TEST");
+        panic!("TESTPANIC");
         let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
 
         let id = image_manifest.config.digest.clone();
