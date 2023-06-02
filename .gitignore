@@ -3,4 +3,4 @@ Cargo.lock
 
 .DS_Store
 
-scripts/attestation-agent
+image-rs/scripts/attestation-agent
