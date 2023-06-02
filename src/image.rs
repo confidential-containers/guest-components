@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, bail, Result};
-use log::warn;
+use log::{info, warn};
 use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
 use oci_spec::image::{ImageConfiguration, Os};
@@ -236,6 +236,8 @@ impl ImageClient {
             &auth,
             self.config.max_concurrent_download,
         )?;
+        println!("TEST");
+        info!("TEST");
         let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
 
         let id = image_manifest.config.digest.clone();
