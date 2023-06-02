@@ -1,0 +1,56 @@
+name: EAA kbc build CI
+on:
+  push:
+    paths:
+      - 'kbc/eaa_kbc/**'
+      - '.github/workflows/eaa_kbc.yml'
+  pull_request:
+    paths:
+      - 'kbc/eaa_kbc/**'
+      - '.github/workflows/eaa_kbc.yml'
+  create:
+    paths:
+      - 'kbc/eaa_kbc/**'
+
+jobs:
+  eaa_kbc_ci:
+    if: github.event_name == 'pull_request'
+    name: Check
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+
+    container: runetest/compilation-testing:ubuntu18.04
+          
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        run: |
+          apt-get update && apt-get install -y cargo
+          cp -r /root/.cargo /github/home/.cargo
+          rustup install stable
+          rustup default stable
+
+      - name: install dependencies
+        run: | 
+          echo 'deb [arch=amd64] http://mirrors.openanolis.cn/inclavare-containers/ubuntu20.04 focal main' | tee /etc/apt/sources.list.d/inclavare-containers.list
+          curl -L http://mirrors.openanolis.cn/inclavare-containers/ubuntu20.04/DEB-GPG-KEY.key | apt-key add -
+          echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | tee /etc/apt/sources.list.d/intel-sgx.list
+          curl -L https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
+          apt-get update
+          apt-get install -y rats-tls-tdx libtdx-attest=1.15\*
+      
+      - name: Build AA with EAA KBC
+        run: |
+          make KBC=eaa_kbc && make install
+
+      - name: Run cargo test with eaa_kbc feature
+        run: |
+          RUSTFLAGS="-C link-args=-Wl,-rpath,/usr/local/lib/rats-tls" cargo test --manifest-path kbc/Cargo.toml --features eaa_kbc

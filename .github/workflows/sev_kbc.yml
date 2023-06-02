@@ -1,0 +1,55 @@
+name: offline_sev_kbc build CI
+on:
+  push:
+    paths:
+      - 'kbc/offline_sev_kbc/**'
+      - 'kbc/online_sev_kbc/**'
+  pull_request:
+    paths:
+      - 'kbc/offline_sev_kbc/**'
+      - 'kbc/online_sev_kbc/**'
+  create:
+    paths:
+      - 'kbc/offline_sev_kbc/**'
+      - 'kbc/online_sev_kbc/**'
+
+jobs:
+  offline_sev_kbc_ci:
+    if: github.event_name == 'pull_request'
+    name: Check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+        kbc:
+          - offline_sev_kbc
+          - online_sev_kbc
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt
+
+      - name: Build and install with ${{ matrix.kbc }} feature
+        run: |
+          make KBC=${{ matrix.kbc }} && make install
+
+      - name: Musl build with ${{ matrix.kbc }} feature
+        run: |
+          make LIBC=musl KBC=${{ matrix.kbc }}
+
+      - name: Run cargo test with ${{ matrix.kbc }} feature
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -p kbc --no-default-features --features ${{ matrix.kbc }},rust-crypto

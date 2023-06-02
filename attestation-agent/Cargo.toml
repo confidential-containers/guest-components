@@ -1,0 +1,38 @@
+[workspace]
+members = [
+    "app",
+    "lib",
+    "kbc",
+    "kbs_protocol",
+    "attester",
+    "deps/resource_uri",
+    "deps/crypto",
+    "deps/sev",
+    "coco_keyprovider",
+    "test-binaries"
+]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["The Confidential Container Authors"]
+description = "Attestation Agent"
+documentation = "https://github.com/confidential-containers/attestation-agent"
+edition = "2021"
+
+[workspace.dependencies]
+anyhow = "1.0"
+async-trait = "0.1.56"
+base64 = "0.13.0"
+cfg-if = "1.0.0"
+clap = "3.2.5"
+const_format = "0.2.30"
+env_logger = "0.9.0"
+kbs-types = "0.3"
+lazy_static = "1.4.0"
+log = "0.4.14"
+resource_uri = { path = "deps/resource_uri" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+strum = { version = "0.24.0", features = ["derive"] }
+url = "2.3.1"
+zeroize = "1.5.7"

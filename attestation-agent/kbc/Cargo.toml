@@ -1,0 +1,55 @@
+[package]
+name = "kbc"
+version = "0.1.0"
+authors = ["The Attestation Agent Authors"]
+publish = false
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+base64.workspace = true
+bincode = { version = "1.3.3", optional = true }
+crypto = { path = "../deps/crypto", default-features = false }
+foreign-types = { version = "0.5.0", optional = true }
+kbs_protocol = { path = "../kbs_protocol", default-features = false, optional = true }
+log.workspace = true
+prost = { version = "0.11.0", optional = true }
+resource_uri.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sev = { path = "../deps/sev", optional = true }
+strum.workspace = true
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"], optional = true }
+tonic = { version = "0.8.0", optional = true }
+url.workspace = true
+uuid = { version = "1.1.2", features = ["serde", "v4"], optional = true }
+zeroize.workspace = true
+
+[dev-dependencies]
+tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
+rstest = "0.16.0"
+
+[build-dependencies]
+tonic-build = { version = "0.8.0", optional = true }
+
+[features]
+default = ["sample_kbc", "rust-crypto"]
+
+cc_kbc = ["kbs_protocol"]
+all-attesters = ["kbs_protocol/all-attesters"]
+tdx-attester = ["kbs_protocol/tdx-attester"]
+occlum-attester = ["kbs_protocol/occlum-attester"]
+az-snp-vtpm-attester= ["kbs_protocol/az-snp-vtpm-attester"]
+snp-attester = ["kbs_protocol/snp-attester"]
+
+sample_kbc = []
+eaa_kbc = ["foreign-types"]
+offline_fs_kbc = []
+offline_sev_kbc = []
+online_sev_kbc = ["tonic", "sev", "prost", "uuid", "bincode", "tokio"]
+gen-proto = ["tonic-build"]
+
+# Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
+rust-crypto = ["crypto/rust-crypto", "kbs_protocol/rust-crypto"]
+openssl = ["crypto/openssl", "kbs_protocol/openssl"]
