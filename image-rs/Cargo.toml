@@ -12,7 +12,7 @@ edition = "2018"
 anyhow = "1"
 async-compression = { version = "0.3.15", features = ["futures-io", "tokio", "gzip", "zstd"] }
 async-trait = "0.1.56"
-attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent.git", rev = "aa1d3c5", optional = true }
+attestation_agent = { path = "../attestation-agent/lib", optional = true }
 base64 = "0.13.0"
 cfg-if = { version = "1.0.0", optional = true }
 dircpy = { version = "0.3.12", optional = true }
@@ -68,9 +68,12 @@ tempfile = "3.2"
 test-utils = { path = "libs/test-utils" }
 tokio = { version = "1", features = ["process"] }
 
-[workspace]
-members = ["libs/test-utils"]
-exclude = ["scripts/attestation_agent/app"]
+# Remove nested workspace.
+# Unclear if test-utils is needed as a member or not.
+# Excluded member scripts/attestation_agent/app doesn't seem to exist.
+# [workspace]
+# members = ["libs/test-utils"]
+# exclude = ["scripts/attestation_agent/app"]
 
 [features]
 default = ["snapshot-overlayfs", "signature-cosign-rustls", "keywrap-grpc", "oci-distribution-rustls"]
