@@ -116,8 +116,8 @@ impl KbsProtocolWrapper {
         match attest_response.status() {
             reqwest::StatusCode::OK => {
                 self.authenticated = true;
-                let token = attest_response.json::<serde_json::Value>().await?["token"].to_string();
-                Ok(token)
+                let resp = attest_response.json::<AttestationResponseData>().await?;
+                Ok(resp.token)
             }
             reqwest::StatusCode::UNAUTHORIZED => {
                 let error_info = attest_response.json::<ErrorInformation>().await?;
