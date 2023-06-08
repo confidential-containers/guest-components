@@ -41,6 +41,12 @@ pub struct Challenge {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AttestationResponseData {
+    // Attestation token in JWT format
+    pub token: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Response {
     pub protected: String,
     pub encrypted_key: String,
