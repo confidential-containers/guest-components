@@ -19,7 +19,7 @@ cfg-if = "1.0.0"
 ctr = { version = ">=0.9", optional = true }
 hmac = { version = ">=0.12", optional = true }
 josekit = { version = ">=0.7", optional = true }
-########## kbc = { path = "../attestation-agent/lib", optional = true  }
+kbc = { path = "../attestation-agent/kbc", optional = true  }
 lazy_static = ">=1.4"
 openssl = { version = ">=0.10", features = ["vendored"], optional = true }
 pin-project-lite = { version = "0.2.9", optional = true }
