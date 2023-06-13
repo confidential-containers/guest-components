@@ -59,3 +59,26 @@ async fn test_use_credential(#[case] image_ref: &str, #[case] auth_file_uri: &st
 
     common::clean().await;
 }
+
+#[cfg(all(feature = "getresource", feature = "snapshot-overlayfs",))]
+#[rstest::rstest]
+#[case("localhost:5000/coco/busybox:v1", "kbs:///default/credential/coco")]
+#[tokio::test]
+#[cfg_attr(not(feature = "e2e-test"), ignore)]
+#[serial]
+async fn retrieve_credentials_via_kbs(#[case] image: &str, #[case] kbs_uri: &str) {
+    common::assert_root_privilege();
+
+    let temp = common::TempDirs::new();
+    std::env::set_var("CC_IMAGE_WORK_DIR", &temp.work_dir.path());
+
+    let mut image_client = ImageClient::default();
+    image_client.config.auth = true;
+    image_client.config.file_paths.auth_file = kbs_uri.into();
+
+    let aa_parameter = "provider:attestation-agent:cc_kbc::http://127.0.0.1:8080";
+    image_client
+        .pull_image(image, temp.bundle_dir.path(), &None, &Some(aa_parameter))
+        .await
+        .expect("failed to download image");
+}

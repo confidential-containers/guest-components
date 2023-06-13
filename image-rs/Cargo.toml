@@ -114,3 +114,5 @@ snapshot-overlayfs = ["nix"]
 snapshot-unionfs = ["nix", "dircpy", "fs_extra"]
 
 getresource = [ "lazy_static", "cfg-if" ]
+
+e2e-test = []

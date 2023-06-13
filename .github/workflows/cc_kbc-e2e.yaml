@@ -1,0 +1,89 @@
+name: cc_kbc-e2e
+
+on:
+  push:
+    branches: [ "main" ]
+
+# Self-hosted runners do not set -o pipefail otherwise
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  e2e-test:
+    runs-on: 'ubuntu-22.04'
+    env:
+      SKOPEO_VERSION: "1.12.0"
+    strategy:
+      matrix:
+        test: [credentials-e2e.sh, decryption-e2e.sh]
+
+    steps:
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+
+    - uses: actions/setup-go@v4
+      with:
+        go-version: stable
+
+    - name: Install dependencies
+      env:
+        SGX_URL: https://download.01.org/intel-sgx/sgx_repo/ubuntu
+      run: |
+        curl -L "${SGX_URL}/intel-sgx-deb.key" | sudo apt-key add -
+        echo "deb [arch=amd64] ${SGX_URL} jammy main" \
+          | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          clang \
+          libassuan-dev \
+          libbtrfs-dev \
+          libdevmapper-dev \
+          libgpgme-dev \
+          libsgx-dcap-quote-verify-dev \
+          libtdx-attest-dev \
+          libtss2-dev \
+          openssl \
+          pkg-config \
+          protobuf-compiler \
+          wait-for-it \
+          wget
+
+    - uses: actions/checkout@v3
+
+    - uses: actions/checkout@v3
+      with:
+        repository: confidential-containers/kbs
+        path: kbs
+
+    - name: Set up rust build cache
+      uses: actions/cache@v3
+      continue-on-error: false
+      with:
+        path: |
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          target
+          kbs/target
+        key: rust-${{ hashFiles('**/Cargo.toml') }}
+
+    - name: Set up skopeo build cache
+      uses: actions/cache@v3
+      continue-on-error: false
+      with:
+        path: /usr/local/bin/skopeo
+        key: skopeo-${{ env.SKOPEO_VERSION }}
+
+    - name: Build skopeo
+      run: |
+        if [ -f /usr/local/bin/skopeo ]; then exit 0; fi
+        wget -qO- "https://github.com/containers/skopeo/archive/refs/tags/v${SKOPEO_VERSION}.tar.gz" | tar xz
+        cd "skopeo-${SKOPEO_VERSION}"
+        DISABLE_DOCS=1 make bin/skopeo
+        sudo cp bin/skopeo /usr/local/bin
+
+    - name: Run ${{ matrix.test }}
+      run: ./hack/${{ matrix.test }}

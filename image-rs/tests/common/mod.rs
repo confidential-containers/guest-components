@@ -20,12 +20,39 @@ pub const AA_PARAMETER: &str = "provider:attestation-agent:offline_fs_kbc::null"
 
 const OFFLINE_FS_KBC_RESOURCE: &str = "aa-offline_fs_kbc-resources.json";
 
-pub async fn prepare_test() {
+pub struct TempDirs {
+    pub work_dir: tempfile::TempDir,
+    pub bundle_dir: tempfile::TempDir,
+}
+
+impl TempDirs {
+    pub fn new() -> Self {
+        let work_dir = tempfile::tempdir().unwrap();
+        let bundle_dir = tempfile::tempdir().unwrap();
+        Self {
+            work_dir,
+            bundle_dir,
+        }
+    }
+}
+
+#[cfg(feature = "snapshot-overlayfs")]
+impl Drop for TempDirs {
+    fn drop(&mut self) {
+        umount_bundle(&self.bundle_dir);
+    }
+}
+
+pub fn assert_root_privilege() {
     // Check whether is in root privilege
     assert!(
         nix::unistd::Uid::effective().is_root(),
         "The test needs to run as root."
     );
+}
+
+pub async fn prepare_test() {
+    assert_root_privilege();
 
     // Prepare files
     Command::new(SIGNATURE_SCRIPT)

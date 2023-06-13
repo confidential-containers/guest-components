@@ -34,4 +34,3 @@ zeroize = "1.5.7"
 
 [patch.crates-io]
 oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c" }
-

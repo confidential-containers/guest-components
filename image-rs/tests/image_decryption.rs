@@ -19,6 +19,8 @@ const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_grpc.conf";
 #[cfg(feature = "keywrap-ttrpc")]
 const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_ttrpc.conf";
 
+const MANIFEST_DIR: &str = std::env!("CARGO_MANIFEST_DIR");
+
 #[cfg(all(feature = "getresource", feature = "encryption"))]
 #[rstest::rstest]
 #[case("docker.io/xynnn007/busybox:encrypted-uri-key")]
@@ -33,8 +35,7 @@ async fn test_decrypt_layers(#[case] image: &str) {
 
     // Set env for ocicrypt-rs. The env is needed by ocicrypt-rs
     // to communicate with AA
-    let manifest_dir = std::env!("CARGO_MANIFEST_DIR");
-    let keyprovider_config = format!("{}/{}", manifest_dir, OCICRYPT_CONFIG);
+    let keyprovider_config = format!("{}/{}", MANIFEST_DIR, OCICRYPT_CONFIG);
     std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
 
     let work_dir = tempfile::tempdir().unwrap();
@@ -61,4 +62,30 @@ async fn test_decrypt_layers(#[case] image: &str) {
     }
 
     common::clean().await;
+}
+
+#[cfg(all(
+    feature = "getresource",
+    feature = "encryption",
+    feature = "snapshot-overlayfs"
+))]
+#[rstest::rstest]
+#[case("localhost:5000/coco/busybox_encrypted:v1")]
+#[tokio::test]
+#[cfg_attr(not(feature = "e2e-test"), ignore)]
+#[serial]
+async fn decrypt_layers_via_kbs(#[case] image: &str) {
+    common::assert_root_privilege();
+    let keyprovider_config = format!("{}/{}", MANIFEST_DIR, OCICRYPT_CONFIG);
+    std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
+
+    let temp = common::TempDirs::new();
+    std::env::set_var("CC_IMAGE_WORK_DIR", &temp.work_dir.path());
+
+    let mut image_client = ImageClient::default();
+    let aa_parameter = "provider:attestation-agent:cc_kbc::http://127.0.0.1:8080";
+    image_client
+        .pull_image(image, temp.bundle_dir.path(), &None, &Some(aa_parameter))
+        .await
+        .expect("failed to download image");
 }
