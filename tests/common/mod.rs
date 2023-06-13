@@ -82,6 +82,7 @@ pub async fn start_attestation_agent() -> Result<Child> {
     cfg_if::cfg_if! {
         if #[cfg(feature = "keywrap-ttrpc")] {
             let mut aa = tokio::process::Command::new(aa_path)
+                .kill_on_drop(true)
                 .args(&[
                     "--keyprovider_sock",
                     "unix:///run/confidential-containers/attestation-agent/keyprovider.sock",
@@ -91,6 +92,7 @@ pub async fn start_attestation_agent() -> Result<Child> {
                 .spawn()?;
         } else {
             let mut aa = tokio::process::Command::new(aa_path)
+                .kill_on_drop(true)
                 .args(&[
                     "--keyprovider_sock",
                     "127.0.0.1:50000",
