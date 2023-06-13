@@ -52,6 +52,7 @@ async fn test_decrypt_layers(#[case] image: &str) {
             .pull_image(image, bundle_dir.path(), &None, &Some(common::AA_PARAMETER))
             .await
             .expect("failed to download image");
+        common::umount_bundle(&bundle_dir);
     } else {
         image_client
             .pull_image(image, bundle_dir.path(), &None, &Some(common::AA_PARAMETER))

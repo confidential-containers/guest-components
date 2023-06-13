@@ -111,6 +111,11 @@ pub async fn start_attestation_agent() -> Result<Child> {
     Ok(aa)
 }
 
+pub fn umount_bundle(bundle_dir: &tempfile::TempDir) {
+    let rootfs_path = bundle_dir.path().join("rootfs");
+    nix::mount::umount(&rootfs_path).expect("failed to umount rootfs");
+}
+
 pub async fn clean_configs() -> Result<()> {
     if Path::new(IMAGE_SECURITY_CONFIG_DIR).exists() {
         tokio::fs::remove_dir_all(IMAGE_SECURITY_CONFIG_DIR).await?;
