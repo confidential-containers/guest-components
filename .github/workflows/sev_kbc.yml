@@ -2,21 +2,24 @@ name: offline_sev_kbc build CI
 on:
   push:
     paths:
-      - 'kbc/offline_sev_kbc/**'
-      - 'kbc/online_sev_kbc/**'
+      - 'attestation-agent/kbc/offline_sev_kbc/**'
+      - 'attestation-agent/kbc/online_sev_kbc/**'
   pull_request:
     paths:
-      - 'kbc/offline_sev_kbc/**'
-      - 'kbc/online_sev_kbc/**'
+      - 'attestation-agent/kbc/offline_sev_kbc/**'
+      - 'attestation-agent/kbc/online_sev_kbc/**'
   create:
     paths:
-      - 'kbc/offline_sev_kbc/**'
-      - 'kbc/online_sev_kbc/**'
+      - 'attestation-agent/kbc/offline_sev_kbc/**'
+      - 'attestation-agent/kbc/online_sev_kbc/**'
 
 jobs:
   offline_sev_kbc_ci:
     if: github.event_name == 'pull_request'
     name: Check
+    defaults:
+      run:
+        working-directory: ./attestation-agent
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

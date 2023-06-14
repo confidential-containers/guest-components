@@ -2,15 +2,15 @@ name: CC kbc build CI
 on:
   push:
     paths:
-      - 'attester/src/sgx_occlum'
+      - 'attestation-agent/attester/src/sgx_occlum'
       - '.github/workflows/occlum_sgx.yml'
   pull_request:
     paths:
-      - 'attester/src/sgx_occlum'
+      - 'attestation-agent/attester/src/sgx_occlum'
       - '.github/workflows/occlum_sgx.yml'
   create:
     paths:
-      - 'attester/src/sgx_occlum'
+      - 'attestation-agent/attester/src/sgx_occlum'
       - '.github/workflows/occlum_sgx.yml'
 
 jobs:
@@ -22,6 +22,7 @@ jobs:
     defaults:
       run:
         shell: bash
+        working-directory: ./attestation-agent
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2

@@ -2,20 +2,23 @@ name: EAA kbc build CI
 on:
   push:
     paths:
-      - 'kbc/eaa_kbc/**'
+      - 'attestation-agent/kbc/eaa_kbc/**'
       - '.github/workflows/eaa_kbc.yml'
   pull_request:
     paths:
-      - 'kbc/eaa_kbc/**'
+      - 'attestation-agent/kbc/eaa_kbc/**'
       - '.github/workflows/eaa_kbc.yml'
   create:
     paths:
-      - 'kbc/eaa_kbc/**'
+      - 'attestation-agent/kbc/eaa_kbc/**'
 
 jobs:
   eaa_kbc_ci:
     if: github.event_name == 'pull_request'
     name: Check
+    defaults:
+      run:
+        working-directory: ./attestation-agent
     runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
@@ -54,3 +57,4 @@ jobs:
       - name: Run cargo test with eaa_kbc feature
         run: |
           RUSTFLAGS="-C link-args=-Wl,-rpath,/usr/local/lib/rats-tls" cargo test --manifest-path kbc/Cargo.toml --features eaa_kbc
+

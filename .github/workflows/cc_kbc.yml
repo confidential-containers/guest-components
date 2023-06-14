@@ -2,23 +2,26 @@ name: CC kbc build CI
 on:
   push:
     paths:
-      - 'kbc/cc_kbc/**'
-      - 'kbs_protocol/**'
+      - 'attestation-agent/kbc/cc_kbc/**'
+      - 'attestation-agent/kbs_protocol/**'
       - '.github/workflows/cc_kbc.yml'
   pull_request:
     paths:
-      - 'kbc/cc_kbc/**'
-      - 'kbs_protocol/**'
+      - 'attestation-agent/kbc/cc_kbc/**'
+      - 'attestation-agent/kbs_protocol/**'
       - '.github/workflows/cc_kbc.yml'
   create:
     paths:
-      - 'kbc/cc_kbc/**'
-      - 'kbs_protocol/**'
+      - 'attestation-agent/kbc/cc_kbc/**'
+      - 'attestation-agent/kbs_protocol/**'
 
 jobs:
   cc_kbc_ci:
     if: github.event_name == 'pull_request'
     name: Check
+    defaults:
+      run:
+        working-directory: ./attestation-agent
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
@@ -67,3 +70,4 @@ jobs:
           command: clippy
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
           args: -p kbc --all-targets --features cc_kbc,all-attesters,rust-crypto -- -D warnings -A clippy::derive_partial_eq_without_eq
+

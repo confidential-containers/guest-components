@@ -23,7 +23,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./docker/Dockerfile.keyprovider
+          file: ./attestation-agent/docker/Dockerfile.keyprovider
           platforms: linux/amd64
           push: true
           tags: ghcr.io/confidential-containers/coco-keyprovider:${{ github.ref_name }}, ghcr.io/confidential-containers/coco-keyprovider:latest

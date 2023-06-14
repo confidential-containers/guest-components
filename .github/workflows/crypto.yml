@@ -2,21 +2,24 @@ name: Crypto CI
 on:
   push:
     paths:
-      - 'deps/crypto/**'
+      - 'attestation-agent/deps/crypto/**'
       - '.github/workflows/crypto.yml'
   pull_request:
     paths:
-      - 'deps/crypto/**'
+      - 'attestation-agent/deps/crypto/**'
       - '.github/workflows/crypto.yml'
   create:
     paths:
-      - 'deps/crypto/**'
+      - 'attestation-agent/deps/crypto/**'
       - '.github/workflows/crypto.yml'
 
 jobs:
   crypto_ci:
     if: github.event_name == 'pull_request'
     name: Check
+    defaults:
+      run:
+        working-directory: ./attestation-agent
     runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
@@ -57,3 +60,4 @@ jobs:
         with:
           command: test
           args: -p crypto --no-default-features --features ${{ matrix.suites }}
+
