@@ -3,11 +3,11 @@ on:
   push:
     paths:
       - 'attestation-agent/kbc/eaa_kbc/**'
-      - '.github/workflows/eaa_kbc.yml'
+      - '.github/workflows/aa_eaa_kbc.yml'
   pull_request:
     paths:
       - 'attestation-agent/kbc/eaa_kbc/**'
-      - '.github/workflows/eaa_kbc.yml'
+      - '.github/workflows/aa_eaa_kbc.yml'
   create:
     paths:
       - 'attestation-agent/kbc/eaa_kbc/**'

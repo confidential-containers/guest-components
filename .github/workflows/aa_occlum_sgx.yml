@@ -3,15 +3,15 @@ on:
   push:
     paths:
       - 'attestation-agent/attester/src/sgx_occlum'
-      - '.github/workflows/occlum_sgx.yml'
+      - '.github/workflows/aa_occlum_sgx.yml'
   pull_request:
     paths:
       - 'attestation-agent/attester/src/sgx_occlum'
-      - '.github/workflows/occlum_sgx.yml'
+      - '.github/workflows/aa_occlum_sgx.yml'
   create:
     paths:
       - 'attestation-agent/attester/src/sgx_occlum'
-      - '.github/workflows/occlum_sgx.yml'
+      - '.github/workflows/aa_occlum_sgx.yml'
 
 jobs:
   build-and-run-occlum:

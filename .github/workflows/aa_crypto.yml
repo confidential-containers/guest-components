@@ -3,15 +3,15 @@ on:
   push:
     paths:
       - 'attestation-agent/deps/crypto/**'
-      - '.github/workflows/crypto.yml'
+      - '.github/workflows/aa_crypto.yml'
   pull_request:
     paths:
       - 'attestation-agent/deps/crypto/**'
-      - '.github/workflows/crypto.yml'
+      - '.github/workflows/aa_crypto.yml'
   create:
     paths:
       - 'attestation-agent/deps/crypto/**'
-      - '.github/workflows/crypto.yml'
+      - '.github/workflows/aa_crypto.yml'
 
 jobs:
   crypto_ci:

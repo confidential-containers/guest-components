@@ -4,12 +4,12 @@ on:
     paths:
       - 'attestation-agent/kbc/cc_kbc/**'
       - 'attestation-agent/kbs_protocol/**'
-      - '.github/workflows/cc_kbc.yml'
+      - '.github/workflows/aa_cc_kbc.yml'
   pull_request:
     paths:
       - 'attestation-agent/kbc/cc_kbc/**'
       - 'attestation-agent/kbs_protocol/**'
-      - '.github/workflows/cc_kbc.yml'
+      - '.github/workflows/aa_cc_kbc.yml'
   create:
     paths:
       - 'attestation-agent/kbc/cc_kbc/**'
