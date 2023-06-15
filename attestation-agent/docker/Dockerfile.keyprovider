@@ -11,9 +11,9 @@ RUN apt-get update && apt-get install protobuf-compiler -y && \
 
 COPY . .
 
-LABEL org.opencontainers.image.source="https://github.com/confidential-containers/attestation-agent"
+LABEL org.opencontainers.image.source="https://github.com/confidential-containers/image-rs"
 
-RUN cd coco_keyprovider && cargo install --path .
+RUN cd attestation-agent/coco_keyprovider && cargo install --path .
 
 FROM ubuntu:20.04
 
