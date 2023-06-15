@@ -146,8 +146,7 @@ impl Snapshotter for Unionfs {
         let unionfs_lowerdir = sefs_base.join("lower");
         let unionfs_upperdir = sefs_base.join("upper");
         info!("Moving to create file here");
-        let home_path = PathBuf::from(Path::new("/non-existing-dummy/more-non-existing"));
-        create_example_file(&home_path)
+        create_example_file(&sefs_base)
             .map_err(|e| {
             anyhow!(
                 "failed to write file {:?} with error: {}",
