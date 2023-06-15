@@ -1,0 +1,6 @@
+# Global owner for changes not matched by more specific rules
+* @sameo
+
+/attestation-agent/ @jialez0
+/image-rs/ @sameo @jiangliu @arronwy @lumjjb @jialez0 @Xynnn007
+/ocicrypt-rs/ @sameo @jiangliu @arronwy @lumjjb

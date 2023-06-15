@@ -1,6 +1,4 @@
 # Attestation Agent
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fconfidential-containers%2Fattestation-agent.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fconfidential-containers%2Fattestation-agent?ref=badge_shield)
-
 
 Attestation Agent (AA for short) is a service function set for attestation procedure
 in Confidential Containers. It provides kinds of service APIs that need to make
@@ -134,7 +132,3 @@ make KBC=cc_kbc ATTESTER=tdx && make install
 
 - [Sample Keyprovider](./coco_keyprovider): A simple tool for encrypting container images with skopeo, please refer to its [README](./coco_keyprovider/README.md).
 
-
-
-## License
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fconfidential-containers%2Fattestation-agent.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fconfidential-containers%2Fattestation-agent?ref=badge_large)
