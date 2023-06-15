@@ -118,14 +118,16 @@ List of supported KBC modules:
 ### CC KBC
 
 CC KBC supports different kinds of hardware TEE attesters, now
-| Attester name      |          Info             |
-| ------------------ |---------------------------|
-| tdx-attester       |Intel TDX                  |
-| occlum-attester    |Intel SGX with occlum libOS|
+| Attester name       |           Info              |
+| ------------------- | --------------------------  |
+| tdx-attester        | Intel TDX                   |
+| occlum-attester     | Intel SGX with occlum libOS |
+| snp-attester        | AMD SEV-SNP                 |
+| az-snp-vtpm-attester| Azure SEV-SNP CVM           |
 
-To build cc kbc with tdx and install, use
+To build cc kbc with all available attesters and install, use
 ```shell
-make KBC=cc_kbc ATTESTER=tdx && make install
+make KBC=cc_kbc && make install
 ```
 
 ## Tools
