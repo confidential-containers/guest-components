@@ -150,7 +150,7 @@ impl Snapshotter for Unionfs {
             .map_err(|e| {
             anyhow!(
                 "failed to write file {:?} with error: {}",
-                home_path,
+                sefs_base,
                 e
             )
         })?;
