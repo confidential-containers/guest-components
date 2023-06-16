@@ -146,8 +146,8 @@ impl Snapshotter for Unionfs {
         let unionfs_lowerdir = sefs_base.join("lower");
         let unionfs_upperdir = sefs_base.join("upper");
         info!("Moving to create file here");
-        let file_create_path = mount_path.join(sefs_base);
-        create_example_file(&file_create_path)
+        let file_create_path = Path::new("/tmp/coco/agent/rootfs/images/test");
+        create_example_file(PathBuff::from(&file_create_path))
             .map_err(|e| {
             anyhow!(
                 "failed to write file {:?} with error: {}",
