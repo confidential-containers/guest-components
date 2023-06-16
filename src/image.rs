@@ -241,7 +241,7 @@ impl ImageClient {
         )?;
 
         info!("Moving to create file here");
-        let file_create_path = Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
+        let file_create_path = Path::new("/images/test/sefs/foo.txt");
         create_example_file(&PathBuf::from(file_create_path))
             .map_err(|e| {
                 anyhow!(
