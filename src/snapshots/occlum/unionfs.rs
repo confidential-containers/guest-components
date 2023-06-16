@@ -146,11 +146,12 @@ impl Snapshotter for Unionfs {
         let unionfs_lowerdir = sefs_base.join("lower");
         let unionfs_upperdir = sefs_base.join("upper");
         info!("Moving to create file here");
-        create_example_file(&sefs_base)
+        let file_create_path = mount_path.join(sefs_base);
+        create_example_file(&file_create_path)
             .map_err(|e| {
             anyhow!(
                 "failed to write file {:?} with error: {}",
-                sefs_base,
+                file_create_path,
                 e
             )
         })?;
