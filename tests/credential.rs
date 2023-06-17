@@ -19,7 +19,7 @@ async fn test_use_credential(#[case] image_ref: &str, #[case] auth_file_uri: &st
     common::prepare_test().await;
 
     // Init AA
-    let mut aa = common::start_attestation_agent()
+    let _aa = common::start_attestation_agent()
         .await
         .expect("Failed to start attestation agent!");
 
@@ -52,11 +52,10 @@ async fn test_use_credential(#[case] image_ref: &str, #[case] auth_file_uri: &st
         .await;
     if cfg!(all(feature = "snapshot-overlayfs",)) {
         assert!(res.is_ok(), "{:?}", res);
+        common::umount_bundle(&bundle_dir);
     } else {
         assert!(res.is_err());
     }
 
-    // kill AA when the test is finished
-    aa.kill().await.expect("Failed to stop attestation agent!");
     common::clean().await;
 }

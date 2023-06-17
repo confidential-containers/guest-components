@@ -91,7 +91,7 @@ const SIGSTORE_CONFIG_URI: &str = "kbs:///default/sigstore-config/test";
 async fn signature_verification() {
     common::prepare_test().await;
     // Init AA
-    let mut aa = common::start_attestation_agent()
+    let _aa = common::start_attestation_agent()
         .await
         .expect("Failed to start attestation agent!");
 
@@ -142,7 +142,5 @@ async fn signature_verification() {
         }
     }
 
-    // kill AA when the test is finished
-    aa.kill().await.expect("Failed to stop attestation agent!");
     common::clean().await;
 }

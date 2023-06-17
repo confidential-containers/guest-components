@@ -27,7 +27,7 @@ const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_ttrpc.conf";
 async fn test_decrypt_layers(#[case] image: &str) {
     common::prepare_test().await;
     // Init AA
-    let mut aa = common::start_attestation_agent()
+    let _aa = common::start_attestation_agent()
         .await
         .expect("Failed to start attestation agent!");
 
@@ -48,12 +48,11 @@ async fn test_decrypt_layers(#[case] image: &str) {
         .expect("Delete configs failed.");
     let mut image_client = ImageClient::default();
     if cfg!(feature = "snapshot-overlayfs") {
-        if let Err(e) = image_client
+        image_client
             .pull_image(image, bundle_dir.path(), &None, &Some(common::AA_PARAMETER))
             .await
-        {
-            panic!("test_decrypt_layers() failed to download image, {}", e);
-        }
+            .expect("failed to download image");
+        common::umount_bundle(&bundle_dir);
     } else {
         image_client
             .pull_image(image, bundle_dir.path(), &None, &Some(common::AA_PARAMETER))
@@ -61,7 +60,5 @@ async fn test_decrypt_layers(#[case] image: &str) {
             .unwrap_err();
     }
 
-    // kill AA when the test is finished
-    aa.kill().await.expect("Failed to stop attestation agent!");
     common::clean().await;
 }

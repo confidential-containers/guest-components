@@ -81,7 +81,8 @@ pub async fn start_attestation_agent() -> Result<Child> {
 
     cfg_if::cfg_if! {
         if #[cfg(feature = "keywrap-ttrpc")] {
-            let aa = tokio::process::Command::new(aa_path)
+            let mut aa = tokio::process::Command::new(aa_path)
+                .kill_on_drop(true)
                 .args(&[
                     "--keyprovider_sock",
                     "unix:///run/confidential-containers/attestation-agent/keyprovider.sock",
@@ -90,7 +91,8 @@ pub async fn start_attestation_agent() -> Result<Child> {
                     ])
                 .spawn()?;
         } else {
-            let aa = tokio::process::Command::new(aa_path)
+            let mut aa = tokio::process::Command::new(aa_path)
+                .kill_on_drop(true)
                 .args(&[
                     "--keyprovider_sock",
                     "127.0.0.1:50000",
@@ -103,7 +105,15 @@ pub async fn start_attestation_agent() -> Result<Child> {
 
     // Leave some time to let fork-ed AA process to be ready
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    if let Some(_) = aa.try_wait()? {
+        panic!("Attestation Agent failed to start");
+    }
     Ok(aa)
+}
+
+pub fn umount_bundle(bundle_dir: &tempfile::TempDir) {
+    let rootfs_path = bundle_dir.path().join("rootfs");
+    nix::mount::umount(&rootfs_path).expect("failed to umount rootfs");
 }
 
 pub async fn clean_configs() -> Result<()> {
