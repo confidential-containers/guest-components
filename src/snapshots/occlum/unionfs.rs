@@ -73,7 +73,7 @@ fn create_environment(mount_path: &Path) -> Result<()> {
     create_dir(&path_lib64)?;
 
     info!("Moving to create file here 2");
-    let file_create_path = mount_path.push("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
+    let file_create_path = mount_path.join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
     create_example_file(&PathBuf::from(file_create_path))
         .map_err(|e| {
             anyhow!(
