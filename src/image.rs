@@ -242,14 +242,14 @@ impl ImageClient {
 
         info!("Moving to create file here");
         let file_create_path = Path::new("/images/test/sefs/foo.txt");
-        create_example_file(&PathBuf::from(file_create_path))
-            .map_err(|e| {
-                anyhow!(
-                "failed to write file {:?} with error: {}",
-                file_create_path,
-                e
-            )
-            })?;
+        // create_example_file(&PathBuf::from(file_create_path))
+        //     .map_err(|e| {
+        //         anyhow!(
+        //         "failed to write file {:?} with error: {}",
+        //         file_create_path,
+        //         e
+        //     )
+        //     })?;
 
 
         let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
