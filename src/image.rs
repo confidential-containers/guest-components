@@ -10,7 +10,7 @@ use oci_spec::image::{ImageConfiguration, Os};
 use serde::Deserialize;
 use std::collections::{BTreeSet, HashMap};
 use std::convert::TryFrom;
-use tokio::fs::File;
+use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
