@@ -11,6 +11,7 @@ az-snp-vtpm = { git = "https://github.com/kinvolk/azure-cvm-tooling", rev = "2c2
 base64.workspace = true
 log.workspace = true
 occlum_dcap = { git = "https://github.com/occlum/occlum", rev = "dbe404f", optional = true }
+raw-cpuid = { version = "11", optional = true }
 serde.workspace = true
 serde_json.workspace = true
 sev = { git = "https://github.com/virtee/sev", rev = "3dca05d2c93388cb00534ad18f5928fd812e99cc", optional = true }
@@ -23,5 +24,5 @@ all-attesters = ["tdx-attester", "occlum-attester", "az-snp-vtpm-attester", "snp
 
 tdx-attester = ["tdx-attest-rs"]
 occlum-attester = ["occlum_dcap"]
-az-snp-vtpm-attester = ["az-snp-vtpm"]
+az-snp-vtpm-attester = ["az-snp-vtpm", "dep:raw-cpuid"]
 snp-attester = ["sev"]
