@@ -72,16 +72,7 @@ fn create_environment(mount_path: &Path) -> Result<()> {
     let path_lib64 = mount_path.join("lib64");
     create_dir(&path_lib64)?;
 
-    info!("Moving to create file here 2");
-    let file_create_path = mount_path.join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
-    create_example_file(&PathBuf::from(&file_create_path))
-        .map_err(|e| {
-            anyhow!(
-                "failed to write file {:?} with error: {}",
-                file_create_path,
-                e
-            )
-        })?;
+
 
     let lib64_libs = vec![LD_LIB];
     let ori_path_lib64 = Path::new("/lib64");
@@ -156,6 +147,17 @@ impl Snapshotter for Unionfs {
         let sefs_base = Path::new("/images").join(cid).join("sefs");
         let unionfs_lowerdir = sefs_base.join("lower");
         let unionfs_upperdir = sefs_base.join("upper");
+
+        info!("Moving to create file here");
+        let file_create_path = Path::new("/images").join(cid).join("foo.txt"); //Path::new("/images/test/foo.txt");
+        create_example_file(&PathBuf::from(&file_create_path))
+            .map_err(|e| {
+                anyhow!(
+                "failed to write file {:?} with error: {}",
+                file_create_path,
+                e
+            )
+            })?;
 
 
         // For mounting trusted UnionFS at runtime of occlum,
