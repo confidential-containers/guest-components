@@ -63,6 +63,15 @@ fn create_example_file(path: &PathBuf) -> Result<()> {
 
 }
 
+fn read_files_in_home_dir() {
+    let paths = fs::read_dir("/").unwrap();
+
+    for path in paths {
+        println!("Name: {}", path.unwrap().path().display())
+    }
+
+}
+
 fn create_environment(mount_path: &Path) -> Result<()> {
     let mut from_paths = Vec::new();
     let mut copy_options = dir::CopyOptions::new();
@@ -149,6 +158,7 @@ impl Snapshotter for Unionfs {
         let unionfs_upperdir = sefs_base.join("upper");
 
         info!("Moving to create file here");
+        read_files_in_home_dir();
         let file_create_path = Path::new("/").join("foo.txt"); //Path::new("/images/test/foo.txt");
         create_example_file(&PathBuf::from(&file_create_path))
             .map_err(|e| {
