@@ -65,9 +65,17 @@ fn create_example_file(path: &PathBuf) -> Result<()> {
 
 fn read_files_in_home_dir() {
     let paths = fs::read_dir("/").unwrap();
+    let paths1 = fs::read_dir("/root").unwrap();
+    let paths2 = fs::read_dir("/run").unwrap();
 
     for path in paths {
-        println!("Name: {}", path.unwrap().path().display())
+        println!("Name in /: {}", path.unwrap().path().display())
+    }
+    for path in paths1 {
+        println!("Name in /root: {}", path.unwrap().path().display())
+    }
+    for path in paths2 {
+        println!("Name in /run: {}", path.unwrap().path().display())
     }
 
 }
