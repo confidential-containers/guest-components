@@ -167,8 +167,17 @@ impl Snapshotter for Unionfs {
 
         info!("Moving to create file here");
         read_files_in_home_dir();
-        let file_create_path = Path::new("/").join("foo.txt"); //Path::new("/images/test/foo.txt");
-        create_example_file(&PathBuf::from(&file_create_path))
+        let file_create_path_1 = mount_path.join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
+        let file_create_path_2 = unionfs_lowerdir.join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
+        create_example_file(&PathBuf::from(&file_create_path_1))
+            .map_err(|e| {
+                anyhow!(
+                "failed to write file {:?} with error: {}",
+                file_create_path,
+                e
+            )
+            })?;
+        create_example_file(&PathBuf::from(&file_create_path_2))
             .map_err(|e| {
                 anyhow!(
                 "failed to write file {:?} with error: {}",
