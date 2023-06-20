@@ -173,7 +173,7 @@ impl Snapshotter for Unionfs {
             .map_err(|e| {
                 anyhow!(
                 "failed to write file {:?} with error: {}",
-                file_create_path,
+                file_create_path_1,
                 e
             )
             })?;
@@ -181,7 +181,7 @@ impl Snapshotter for Unionfs {
             .map_err(|e| {
                 anyhow!(
                 "failed to write file {:?} with error: {}",
-                file_create_path,
+                file_create_path_2,
                 e
             )
             })?;
