@@ -45,7 +45,7 @@ impl Tee {
         match self {
             Tee::Sample => Ok(Box::<sample::SampleAttester>::default()),
             #[cfg(feature = "tdx-attester")]
-            Tee::Tdx => Ok(Box::<tdx::TdxAttester>::default()),
+            Tee::Tdx => Ok(tdx::make_attester()),
             #[cfg(feature = "occlum-attester")]
             Tee::SgxOcclum => Ok(Box::<sgx_occlum::SgxOcclumAttester>::default()),
             #[cfg(feature = "az-snp-vtpm-attester")]

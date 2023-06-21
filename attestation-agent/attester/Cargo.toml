@@ -10,8 +10,11 @@ anyhow.workspace = true
 async-trait.workspace = true
 az-snp-vtpm = { git = "https://github.com/kinvolk/azure-cvm-tooling", rev = "2c2e411", default-features = false, features = ["attester"], optional = true }
 base64.workspace = true
+ioctl-sys = { version = "0.8.0", optional = true }
 log.workspace = true
 occlum_dcap = { git = "https://github.com/occlum/occlum", rev = "dbe404f", optional = true }
+raw-cpuid = { version = "11", optional = true }
+reqwest = { version = "0.11", features = ["json"], optional = true }
 serde.workspace = true
 serde_json.workspace = true
 sev = { git = "https://github.com/virtee/sev", rev = "3dca05d2c93388cb00534ad18f5928fd812e99cc", optional = true }
@@ -25,7 +28,7 @@ tokio = { version = "1", features = ["macros"] }
 default = ["all-attesters"]
 all-attesters = ["tdx-attester", "occlum-attester", "az-snp-vtpm-attester", "snp-attester"]
 
-tdx-attester = ["tdx-attest-rs"]
+tdx-attester = ["tdx-attest-rs", "dep:reqwest", "dep:ioctl-sys", "dep:raw-cpuid"]
 occlum-attester = ["occlum_dcap"]
 az-snp-vtpm-attester = ["az-snp-vtpm"]
 snp-attester = ["sev"]
