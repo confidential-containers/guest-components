@@ -24,8 +24,9 @@ struct SnpEvidence {
 #[derive(Debug, Default)]
 pub struct SnpAttester {}
 
+#[async_trait::async_trait]
 impl Attester for SnpAttester {
-    fn get_evidence(&self, report_data: String) -> Result<String> {
+    async fn get_evidence(&self, report_data: String) -> Result<String> {
         let mut report_data_bin = base64::decode(report_data)?;
 
         if report_data_bin.len() != 48 {

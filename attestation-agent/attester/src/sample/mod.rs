@@ -24,8 +24,9 @@ struct SampleQuote {
 #[derive(Debug, Default)]
 pub struct SampleAttester {}
 
+#[async_trait::async_trait]
 impl Attester for SampleAttester {
-    fn get_evidence(&self, report_data: String) -> Result<String> {
+    async fn get_evidence(&self, report_data: String) -> Result<String> {
         let evidence = SampleQuote {
             svn: "1".to_string(),
             report_data,

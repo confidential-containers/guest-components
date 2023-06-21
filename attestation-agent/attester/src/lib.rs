@@ -57,8 +57,9 @@ impl Tee {
     }
 }
 
+#[async_trait::async_trait]
 pub trait Attester {
-    fn get_evidence(&self, report_data: String) -> Result<String>;
+    async fn get_evidence(&self, report_data: String) -> Result<String>;
 }
 
 // Detect which TEE platform the KBC running environment is.

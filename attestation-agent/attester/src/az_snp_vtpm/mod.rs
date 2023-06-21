@@ -27,8 +27,9 @@ struct Evidence {
     vcek: String,
 }
 
+#[async_trait::async_trait]
 impl Attester for AzSnpVtpmAttester {
-    fn get_evidence(&self, report_data: String) -> Result<String> {
+    async fn get_evidence(&self, report_data: String) -> Result<String> {
         let report = vtpm::get_report()?;
         let report_data_bin = base64::decode(report_data)?;
         let quote = vtpm::get_quote(&report_data_bin)?;

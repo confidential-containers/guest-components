@@ -27,8 +27,9 @@ struct TdxEvidence {
 #[derive(Debug, Default)]
 pub struct TdxAttester {}
 
+#[async_trait::async_trait]
 impl Attester for TdxAttester {
-    fn get_evidence(&self, report_data: String) -> Result<String> {
+    async fn get_evidence(&self, report_data: String) -> Result<String> {
         let mut report_data_bin = base64::decode(report_data)?;
         if report_data_bin.len() != 48 {
             return Err(anyhow!(
@@ -71,13 +72,13 @@ mod tests {
     use super::*;
 
     #[ignore]
-    #[test]
-    fn test_tdx_get_evidence() {
+    #[tokio::test]
+    async fn test_tdx_get_evidence() {
         let attester = TdxAttester::default();
         let report_data: Vec<u8> = vec![0; 48];
         let report_data_base64 = base64::encode(report_data);
 
-        let evidence = attester.get_evidence(report_data_base64);
+        let evidence = attester.get_evidence(report_data_base64).await;
         assert!(evidence.is_ok());
     }
 }

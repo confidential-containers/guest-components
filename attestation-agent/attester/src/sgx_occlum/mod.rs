@@ -23,8 +23,9 @@ struct SgxOcclumAttesterEvidence {
 #[derive(Debug, Default)]
 pub struct SgxOcclumAttester {}
 
+#[async_trait::async_trait]
 impl Attester for SgxOcclumAttester {
-    fn get_evidence(&self, report_data: String) -> Result<String> {
+    async fn get_evidence(&self, report_data: String) -> Result<String> {
         let mut report_data_bin = base64::decode(report_data)?;
         if report_data_bin.len() != 48 {
             bail!("Occlum SGX Attester: Report data should be SHA384 base64 String");
@@ -56,13 +57,13 @@ mod tests {
     use super::*;
 
     #[ignore]
-    #[test]
-    fn test_sgx_get_evidence() {
+    #[tokio::test]
+    async fn test_sgx_get_evidence() {
         let attester = SgxOcclumAttester::default();
         let report_data: Vec<u8> = vec![0; 48];
         let report_data_base64 = base64::encode(report_data);
 
-        let evidence = attester.get_evidence(report_data_base64);
+        let evidence = attester.get_evidence(report_data_base64).await;
         assert!(evidence.is_ok());
     }
 }
