@@ -11,7 +11,7 @@ endif
 
 $(info DEBIANOS is: $(DEBIANOS))
 
-TARGET_DIR := target
+TARGET_DIR := ../target
 BIN_NAME := attestation-agent
 
 SOURCE_ARCH := $(shell uname -m)
