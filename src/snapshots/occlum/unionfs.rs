@@ -168,7 +168,7 @@ impl Snapshotter for Unionfs {
         info!("Moving to create file here");
         read_files_in_home_dir();
         let file_create_path_1 = mount_path.join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
-        let file_create_path_2 = mount_path.join("lower").join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
+        let file_create_path_2 = mount_path.join("sefs").join("lower").join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
         let file_create_path_3 = Path::new("/etc").join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
         create_example_file(&PathBuf::from(&file_create_path_1))
             .map_err(|e| {
