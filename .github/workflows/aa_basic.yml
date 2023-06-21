@@ -1,5 +1,20 @@
 name: attestation-agent basic build and unit tests
-on: [push, pull_request, create]
+on:
+  push:
+    paths:
+      - 'attestation-agent/**'
+      - '.github/workflows/aa_**.yml'
+      - 'Cargo.toml'
+  pull_request:
+    paths:
+      - 'attestation-agent/**'
+      - '.github/workflows/aa_**.yml'
+      - 'Cargo.toml'
+  create:
+    paths:
+      - 'attestation-agent/**'
+      - '.github/workflows/aa_**.yml'
+      - 'Cargo.toml'
 
 jobs:
   basic_ci:
