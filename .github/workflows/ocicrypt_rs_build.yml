@@ -16,7 +16,7 @@ jobs:
 
     # Run all steps in the compilation testing containers
     container:
-      image: runetest/compilation-testing:ubuntu18.04
+      image: runetest/compilation-testing:ubuntu20.04
       env:
         LD_LIBRARY_PATH: /usr/local/lib/rats-tls
 
