@@ -1,116 +1,37 @@
-[package]
-name = "image-rs"
-version = "0.1.0"
-description = "The OCI Images Rust Crate"
-repository = "https://github.com/confidential-containers/image-rs"
-readme = "README.md"
-license = "Apache-2.0"
-authors = ["The image-rs Authors"]
-edition = "2018"
+[workspace]
+members = [
+    "attestation-agent/app",
+    "attestation-agent/lib",
+    "attestation-agent/kbc",
+    "attestation-agent/kbs_protocol",
+    "attestation-agent/attester",
+    "attestation-agent/deps/resource_uri",
+    "attestation-agent/deps/crypto",
+    "attestation-agent/deps/sev",
+    "attestation-agent/coco_keyprovider",
+    "attestation-agent/test-binaries",
+    "image-rs",
+    "ocicrypt-rs",
+]
 
-[dependencies]
-anyhow = "1"
-async-compression = { version = "0.3.15", features = ["futures-io", "tokio", "gzip", "zstd"] }
+[workspace.dependencies]
+anyhow = "1.0"
 async-trait = "0.1.56"
-attestation_agent = { git = "https://github.com/confidential-containers/attestation-agent.git", tag = "v0.6.0", optional = true }
 base64 = "0.13.0"
-cfg-if = { version = "1.0.0", optional = true }
-dircpy = { version = "0.3.12", optional = true }
-flate2 = "1.0"
-flume = "0.10.14"
-fs_extra = { version = "1.2.0", optional = true }
-futures = { version = "0.3.28", optional = true }
-futures-util = "0.3"
-hex = { version = "0.4.3", optional = true }
-lazy_static = { version = "1.4.0", optional = true }
-libc = "0.2"
+cfg-if = "1.0.0"
+clap = "3.2.5"
+const_format = "0.2.30"
+env_logger = "0.9.0"
+kbs-types = "0.3"
+lazy_static = "1.4.0"
 log = "0.4.14"
-nix = { version = "0.26", optional = true }
-oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c", default-features = false, optional = true }
-oci-spec = "0.5.8"
-ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs.git", tag = "v0.6.0", default-features = false, features = ["async-io"], optional = true }
-prost = { version = "0.11", optional = true }
-protobuf = { version = "3.2.0", optional = true }
-sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"], optional = true }
-serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
-serde_json = ">=1.0.9"
-serde_yaml = { version = "0.9", optional = true }
-sha2 = ">=0.10"
-sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "69e8f33", default-features = false, optional = true}
-strum = { version = "0.24", features = ["derive"] }
-strum_macros = "0.24"
-tar = "0.4.37"
-tokio = "1.0"
-tonic = { version = "0.8", optional = true }
-ttrpc = { version = "0.7.1", features = [ "async" ], optional = true }
-url = "2.2.2"
-walkdir = "2"
-zstd = "0.12"
+resource_uri = { path = "attestation-agent/deps/resource_uri" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+strum = { version = "0.24.0", features = ["derive"] }
+url = "2.3.1"
+zeroize = "1.5.7"
 
 [patch.crates-io]
 oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c" }
 
-[build-dependencies]
-anyhow = "1"
-tonic-build = { version = "0.8", optional = true }
-ttrpc-codegen = { version = "0.4.1", optional = true }
-
-[dev-dependencies]
-cfg-if = "1.0.0"
-filetime = "0.2"
-nix = "0.26"
-openssl = "0.10.44"
-rstest = "0.17.0"
-serial_test = "2.0.0"
-strum = "0.24"
-strum_macros = "0.24"
-tempfile = "3.2"
-test-utils = { path = "libs/test-utils" }
-tokio = { version = "1", features = ["process"] }
-
-[workspace]
-members = ["libs/test-utils"]
-exclude = ["scripts/attestation_agent/app"]
-
-[features]
-default = ["snapshot-overlayfs", "signature-cosign-rustls", "keywrap-grpc", "oci-distribution-rustls"]
-
-# This will be based on `ring` dependency
-kata-cc-rustls-tls = ["encryption-ring", "keywrap-ttrpc", "snapshot-overlayfs", "signature-cosign-rustls", "signature-simple", "getresource", "oci-distribution/rustls-tls"]
-enclave-cc-eaakbc-rustls-tls = ["encryption-ring", "keywrap-native", "eaa-kbc", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-rustls", "oci-distribution-rustls"]
-enclave-cc-cckbc-rustls-tls = ["encryption-ring", "keywrap-native", "cc-kbc-occlum", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-rustls", "oci-distribution-rustls"]
-
-# This will be based on `openssl` dependency
-kata-cc-native-tls = ["encryption-openssl", "keywrap-ttrpc", "snapshot-overlayfs", "signature-cosign-native", "signature-simple", "getresource", "oci-distribution/native-tls"]
-enclave-cc-eaakbc-native-tls = ["encryption-openssl", "keywrap-native", "eaa-kbc", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-native", "oci-distribution-native"]
-enclave-cc-cckbc-native-tls = ["encryption-openssl", "keywrap-native", "cc-kbc-occlum", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-native", "oci-distribution-native"]
-
-encryption = ["ocicrypt-rs/block-cipher"]
-encryption-ring = ["ocicrypt-rs/block-cipher-ring", "encryption"]
-encryption-openssl = ["ocicrypt-rs/block-cipher-openssl", "encryption"]
-
-keywrap-cmd = ["ocicrypt-rs/keywrap-keyprovider-cmd"]
-keywrap-grpc = ["ocicrypt-rs/keywrap-keyprovider-grpc", "prost", "tonic", "tonic-build"]
-keywrap-native = ["ocicrypt-rs/keywrap-keyprovider-native", "attestation_agent"]
-keywrap-ttrpc = ["ocicrypt-rs/keywrap-keyprovider-ttrpc", "dep:ttrpc", "dep:protobuf", "ttrpc-codegen"]
-
-# Enable keywrap-jwe to decrypt image
-keywrap-jwe = ["ocicrypt-rs/keywrap-jwe"]
-
-eaa-kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]
-cc-kbc-occlum = ["attestation_agent/cc_kbc", "ocicrypt-rs/cc_kbc_occlum"]
-
-signature = ["hex"]
-signature-cosign = ["signature", "futures"]
-signature-cosign-rustls = ["signature-cosign", "sigstore/cosign-rustls-tls"]
-signature-cosign-native = ["signature-cosign", "sigstore/cosign-native-tls"]
-
-oci-distribution-rustls = ["oci-distribution/rustls-tls"]
-oci-distribution-native = ["oci-distribution/native-tls"]
-
-signature-simple = ["signature", "sequoia-openpgp", "serde_yaml"]
-
-snapshot-overlayfs = ["nix"]
-snapshot-unionfs = ["nix", "dircpy", "fs_extra"]
-
-getresource = [ "lazy_static", "cfg-if" ]

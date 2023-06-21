@@ -1,0 +1,77 @@
+name: attestation-agent basic build and unit tests
+on: [push, pull_request, create]
+
+jobs:
+  basic_ci:
+    if: github.event_name == 'pull_request'
+    name: Check
+    defaults:
+      run:
+        working-directory: ./attestation-agent      
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt, clippy
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Install TDX dependencies
+        run: |
+          sudo curl -L https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
+          sudo echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+          sudo apt-get update
+          sudo apt-get install -y libtdx-attest-dev
+
+      - name: Install TPM dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libtss2-dev
+
+      - name: Build and install with default features
+        run: |
+          make && make install
+
+      - name: Musl build with default features
+        run: |
+          make LIBC=musl
+      
+      - name: s390x build with offline_fs_kbc feature
+        run:
+          make ARCH=s390x KBC=offline_fs_kbc
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features openssl,rust-crypto,offline_fs_kbc
+
+      - name: Run cargo fmt check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - name: Run rust lint check
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
+          args: --workspace -- -D warnings -A clippy::derive-partial-eq-without-eq
+

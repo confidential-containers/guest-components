@@ -1,0 +1,8 @@
+.DS_store
+
+# Added by cargo
+
+/target
+
+src/rpc/ttrpc_protocol/*.rs
+!src/rpc/ttrpc_protocol/mod.rs

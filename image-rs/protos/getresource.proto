@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package getresource;
+
+message GetResourceRequest {
+    string ResourcePath = 1;
+    string KbcName = 2;
+    string KbsUri = 3;
+}
+
+message GetResourceResponse {
+    bytes Resource = 1;
+}
+
+service GetResourceService {
+    rpc GetResource(GetResourceRequest) returns (GetResourceResponse) {};
+}

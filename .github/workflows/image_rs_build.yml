@@ -5,6 +5,9 @@ jobs:
   ci:
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     name: Check
+    defaults:
+      run:
+        working-directory: ./image-rs
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -35,19 +38,19 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --all -- --check
+          args: -p image-rs -- --check
 
       - name: Run rust lint check
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings
+          args: -p image-rs -- -D warnings
 
       - name: Run cargo build
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --features default
+          args: -p image-rs --features default
 
       - name: Run cargo test - default
         run: |

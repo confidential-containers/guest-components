@@ -1,0 +1,44 @@
+name: CC kbc build CI
+on:
+  push:
+    paths:
+      - 'attestation-agent/attester/src/sgx_occlum'
+      - '.github/workflows/aa_occlum_sgx.yml'
+  pull_request:
+    paths:
+      - 'attestation-agent/attester/src/sgx_occlum'
+      - '.github/workflows/aa_occlum_sgx.yml'
+  create:
+    paths:
+      - 'attestation-agent/attester/src/sgx_occlum'
+      - '.github/workflows/aa_occlum_sgx.yml'
+
+jobs:
+  build-and-run-occlum:
+    runs-on: self-hosted
+    container:
+      image: occlum/occlum:latest-ubuntu20.04
+      options: --device /dev/sgx_enclave --device /dev/sgx_provision
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./attestation-agent
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Configure Cargo
+        run: rustup default stable
+ 
+      - name: Compile Occlum Example
+        run: cargo build --bin occlum-attester --no-default-features --features occlum
+
+      - name: Configure PCCS
+        run: |
+          sed -i 's/localhost:8081/sgx-dcap-server-vpc.cn-hongkong.aliyuncs.com/' /etc/sgx_default_qcnl.conf
+
+      - name: Build and run occlum bundle
+        run: |
+          cd ci && bash occlum.sh

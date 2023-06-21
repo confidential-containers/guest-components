@@ -1,0 +1,31 @@
+[package]
+name = "kbs_protocol"
+version = "0.1.0"
+authors = ["The Attestation Agent Authors"]
+publish = false
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+attester = { path = "../attester", default-features = false }
+base64.workspace = true
+crypto = { path = "../deps/crypto", default-features = false }
+kbs-types.workspace = true
+log.workspace = true
+reqwest = { version = "0.11.13", default-features = false, features = ["cookies", "json"], optional = true }
+serde.workspace = true
+serde_json.workspace = true
+url.workspace = true
+zeroize.workspace = true
+
+[features]
+default = ["all-attesters", "rust-crypto"]
+all-attesters = ["attester/all-attesters"]
+tdx-attester = ["attester/tdx-attester"]
+occlum-attester = ["attester/occlum-attester"]
+az-snp-vtpm-attester = ["attester/az-snp-vtpm-attester"]
+snp-attester = ["attester/snp-attester"]
+
+rust-crypto = ["reqwest", "reqwest?/rustls-tls", "crypto/rust-crypto"]
+openssl = ["reqwest", "reqwest?/native-tls-vendored", "crypto/openssl"]

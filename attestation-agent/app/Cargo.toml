@@ -1,0 +1,49 @@
+[package]
+name = "attestation-agent"
+version = "0.1.0"
+authors = ["The Attestation Agent Authors"]
+publish = false
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+attestation_agent = { path = "../lib", default-features = false }
+base64.workspace = true
+cfg-if.workspace = true
+clap.workspace = true
+const_format.workspace = true
+env_logger.workspace = true
+lazy_static.workspace = true
+log.workspace = true
+prost = { version = "0.10.4", optional = true }
+protobuf = { version = "3.1.0", optional = true }
+serde.workspace = true
+serde_json.workspace = true
+tokio = { version = "1.0", default-features = false, features = ["rt-multi-thread", "rt", "sync", "signal"]}
+tonic = { version = "0.7.2", optional = true }
+ttrpc = { version = "0.7.1", features = ["async"], optional = true }
+
+[build-dependencies]
+tonic-build = { version = "0.7.2", optional = true }
+ttrpc-codegen = { version = "0.4.1", optional = true }
+
+[features]
+default = ["sample_kbc", "ttrpc"]
+grpc = ["tonic", "prost", "tonic-build"]
+ttrpc = ["dep:ttrpc", "ttrpc-codegen", "protobuf"]
+sample_kbc = ["attestation_agent/sample_kbc"]
+cc_kbc = ["attestation_agent/cc_kbc", "attestation_agent/all-attesters"]
+
+# attester suites of cc-kbc
+cc_kbc_tdx = ["attestation_agent/cc_kbc", "attestation_agent/tdx-attester"]
+cc_kbc_occlum = ["attestation_agent/cc_kbc","attestation_agent/occlum-attester"]
+cc_kbc_az_snp_vtpm = ["attestation_agent/cc_kbc", "attestation_agent/az-snp-vtpm-attester"]
+cc_kbc_snp = ["attestation_agent/cc_kbc", "attestation_agent/snp-attester"]
+
+eaa_kbc = ["attestation_agent/eaa_kbc"]
+offline_fs_kbc = ["attestation_agent/offline_fs_kbc"]
+offline_sev_kbc = ["attestation_agent/offline_sev_kbc"]
+online_sev_kbc = ["attestation_agent/online_sev_kbc"]
+openssl = ["attestation_agent/openssl"]
+rust-crypto = ["attestation_agent/rust-crypto"]

@@ -1,0 +1,61 @@
+name: Coco Keyprovider CI
+on:
+  push:
+    paths:
+      - 'attestation-agent/coco_keyprovider/**'
+  pull_request:
+    paths:
+      - 'attestation-agent/coco_keyprovider/**'
+  create:
+    paths:
+      - 'attestation-agent/coco_keyprovider/**'
+
+jobs:
+  coco_keyprovider_ci:
+    if: github.event_name == 'pull_request'
+    name: Check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+          - nightly
+
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt, clippy
+
+      - name: Rust fmt check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --check --manifest-path attestation-agent/coco_keyprovider/Cargo.toml
+        
+      - name: Rust clippy check
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path attestation-agent/coco_keyprovider/Cargo.toml -- -D warnings
+
+      - name: Build and install
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --manifest-path attestation-agent/coco_keyprovider/Cargo.toml
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path attestation-agent/coco_keyprovider/Cargo.toml
