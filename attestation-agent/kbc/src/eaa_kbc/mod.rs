@@ -181,10 +181,9 @@ impl EAAKbc {
 
     fn kbs_get_resource(&mut self, rid: &ResourceUri) -> Result<Vec<u8>> {
         let resource_path = rid.resource_path();
-        let command = format!("Get Resource");
 
         let request = GetResourceRequest::new(
-            &command,
+            "Get Resource",
             [("resource_path".to_string(), resource_path.clone())].into(),
         );
         let resource_info = self.kbs_get_resource_info(resource_path.as_str())?;
