@@ -4,12 +4,12 @@ on:
     branches:
       - 'main'
     paths:
-      - 'attestation-agent/attester/src/sgx_occlum'
+      - 'attestation-agent/attester/src/sgx_dcap'
       - 'attestation-agent/ci/occlum**'
       - '.github/workflows/aa_occlum_sgx.yml'
   pull_request:
     paths:
-      - 'attestation-agent/attester/src/sgx_occlum'
+      - 'attestation-agent/attester/src/sgx_dcap'
       - 'attestation-agent/ci/occlum**'
       - '.github/workflows/aa_occlum_sgx.yml'
   create:

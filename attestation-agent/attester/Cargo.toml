@@ -19,9 +19,9 @@ tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimit
 
 [features]
 default = ["all-attesters"]
-all-attesters = ["tdx-attester", "occlum-attester", "az-snp-vtpm-attester", "snp-attester"]
+all-attesters = ["tdx-attester", "sgx-attester", "az-snp-vtpm-attester", "snp-attester"]
 
 tdx-attester = ["tdx-attest-rs"]
-occlum-attester = ["occlum_dcap"]
+sgx-attester = ["occlum_dcap"]
 az-snp-vtpm-attester = ["az-snp-vtpm"]
 snp-attester = ["sev"]

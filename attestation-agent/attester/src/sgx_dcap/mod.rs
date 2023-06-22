@@ -15,19 +15,19 @@ pub fn detect_platform() -> bool {
 }
 
 #[derive(Serialize, Deserialize)]
-struct SgxOcclumAttesterEvidence {
+struct SgxDcapAttesterEvidence {
     /// Base64 encoded SGX quote.
     quote: String,
 }
 
 #[derive(Debug, Default)]
-pub struct SgxOcclumAttester {}
+pub struct SgxDcapAttester {}
 
-impl Attester for SgxOcclumAttester {
+impl Attester for SgxDcapAttester {
     fn get_evidence(&self, report_data: String) -> Result<String> {
         let mut report_data_bin = base64::decode(report_data)?;
         if report_data_bin.len() != 48 {
-            bail!("Occlum SGX Attester: Report data should be SHA384 base64 String");
+            bail!("SGX Attester: Report data should be SHA384 base64 String");
         }
 
         report_data_bin.extend([0; 16]);
@@ -42,12 +42,12 @@ impl Attester for SgxOcclumAttester {
             )
             .map_err(|e| anyhow!("generate quote: {e}"))?;
 
-        let evidence = SgxOcclumAttesterEvidence {
+        let evidence = SgxDcapAttesterEvidence {
             quote: base64::encode(quote),
         };
 
         serde_json::to_string(&evidence)
-            .map_err(|e| anyhow!("Serialize SGX-Occlum evidence failed: {:?}", e))
+            .map_err(|e| anyhow!("Serialize SGX DCAP Attester evidence failed: {:?}", e))
     }
 }
 
@@ -58,7 +58,7 @@ mod tests {
     #[ignore]
     #[test]
     fn test_sgx_get_evidence() {
-        let attester = SgxOcclumAttester::default();
+        let attester = SgxDcapAttester::default();
         let report_data: Vec<u8> = vec![0; 48];
         let report_data_base64 = base64::encode(report_data);
 

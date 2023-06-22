@@ -4,10 +4,10 @@
 //
 
 use anyhow::*;
-use attester::{sgx_occlum::SgxOcclumAttester, Attester};
+use attester::{sgx_dcap::SgxDcapAttester, Attester};
 
 fn real_main() -> Result<String> {
-    let sgx_attester = SgxOcclumAttester {};
+    let sgx_attester = SgxDcapAttester {};
     sgx_attester.get_evidence("test".into())
 }
 
