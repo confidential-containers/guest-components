@@ -12,6 +12,7 @@ required-features = ["occlum"]
 [dependencies]
 anyhow = "1.0"
 attester = { path = "../attester", default-features = false, optional = true }
+crypto = { path = "../deps/crypto" }
 
 [features]
 occlum = ["attester/sgx-attester"]
