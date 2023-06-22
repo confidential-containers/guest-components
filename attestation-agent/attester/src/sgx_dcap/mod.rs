@@ -10,8 +10,29 @@ use serde::{Deserialize, Serialize};
 
 const OCCLUM_ENV: &str = "OCCLUM";
 
+enum SgxLibOsType {
+    Invalid,
+    Occlum,
+    Gramine,
+}
+
+fn get_libos_type() -> SgxLibOsType {
+    if std::env::var(OCCLUM_ENV).is_ok() {
+        return SgxLibOsType::Occlum;
+    }
+
+    match std::fs::read_to_string("/dev/attestation/attestation_type") {
+        Ok(d) if d == "dcap" => SgxLibOsType::Gramine,
+        _ => SgxLibOsType::Invalid,
+    }
+}
+
 pub fn detect_platform() -> bool {
-    std::env::var(OCCLUM_ENV).is_ok()
+    match get_libos_type() {
+        SgxLibOsType::Invalid => false,
+        SgxLibOsType::Occlum => true,
+        SgxLibOsType::Gramine => true,
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -31,16 +52,29 @@ impl Attester for SgxDcapAttester {
         }
 
         report_data_bin.extend([0; 16]);
-        let mut handler = DcapQuote::new();
-        let quote_size = handler.get_quote_size() as usize;
-        let mut quote = Vec::new();
-        quote.resize(quote_size, b'\0');
-        let _ = handler
-            .generate_quote(
-                quote.as_mut_ptr(),
-                report_data_bin.as_ptr() as *const sgx_report_data_t,
-            )
-            .map_err(|e| anyhow!("generate quote: {e}"))?;
+
+        let quote = match get_libos_type() {
+            SgxLibOsType::Invalid => unimplemented!("empty quote"),
+            SgxLibOsType::Occlum => {
+                let mut handler = DcapQuote::new();
+                let quote_size = handler.get_quote_size() as usize;
+                let mut occlum_quote = Vec::new();
+
+                occlum_quote.resize(quote_size, b'\0');
+
+                match handler.generate_quote(
+                    occlum_quote.as_mut_ptr(),
+                    report_data_bin.as_ptr() as *const sgx_report_data_t,
+                ) {
+                    Ok(_) => occlum_quote,
+                    Err(e) => bail!("generate quote: {e}"),
+                }
+            }
+            SgxLibOsType::Gramine => {
+                std::fs::write("/dev/attestation/user_report_data", report_data_bin)?;
+                std::fs::read("/dev/attestation/quote")?
+            }
+        };
 
         let evidence = SgxDcapAttesterEvidence {
             quote: base64::encode(quote),
