@@ -34,6 +34,18 @@ jobs:
         run: |
           sudo apt install clang llvm pkg-config nettle-dev protobuf-compiler libprotobuf-dev
 
+      - name: Install TDX dependencies
+        run: |
+          sudo curl -L https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
+          sudo echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+          sudo apt-get update
+          sudo apt-get install -y libtdx-attest-dev
+
+      - name: Install TPM dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libtss2-dev
+
       - name: Run cargo fmt check
         uses: actions-rs/cargo@v1
         with:
