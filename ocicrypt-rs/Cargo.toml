@@ -48,8 +48,8 @@ default = ["block-cipher-openssl", "keywrap-jwe", "keywrap-keyprovider-cmd"]
 # Use eaa kbc to request KEK
 eaa_kbc = ["keywrap-keyprovider-native", "attestation_agent/eaa_kbc"]
 
-# Use cc kbc + occlum to request KEK
-cc_kbc_occlum = ["keywrap-keyprovider-native", "attestation_agent/cc_kbc", "attestation_agent/occlum-attester"]
+# Use cc kbc + SGX to request KEK
+cc_kbc_sgx = ["keywrap-keyprovider-native", "attestation_agent/cc_kbc", "attestation_agent/sgx-attester"]
 
 async-io = ["tokio"]
 

@@ -80,12 +80,12 @@ default = ["snapshot-overlayfs", "signature-cosign-rustls", "keywrap-grpc", "oci
 # This will be based on `ring` dependency
 kata-cc-rustls-tls = ["encryption-ring", "keywrap-ttrpc", "snapshot-overlayfs", "signature-cosign-rustls", "signature-simple", "getresource", "oci-distribution/rustls-tls"]
 enclave-cc-eaakbc-rustls-tls = ["encryption-ring", "keywrap-native", "eaa-kbc", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-rustls", "oci-distribution-rustls"]
-enclave-cc-cckbc-rustls-tls = ["encryption-ring", "keywrap-native", "cc-kbc-occlum", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-rustls", "oci-distribution-rustls"]
+enclave-cc-cckbc-rustls-tls = ["encryption-ring", "keywrap-native", "cc-kbc-sgx", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-rustls", "oci-distribution-rustls"]
 
 # This will be based on `openssl` dependency
 kata-cc-native-tls = ["encryption-openssl", "keywrap-ttrpc", "snapshot-overlayfs", "signature-cosign-native", "signature-simple", "getresource", "oci-distribution/native-tls"]
 enclave-cc-eaakbc-native-tls = ["encryption-openssl", "keywrap-native", "eaa-kbc", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-native", "oci-distribution-native"]
-enclave-cc-cckbc-native-tls = ["encryption-openssl", "keywrap-native", "cc-kbc-occlum", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-native", "oci-distribution-native"]
+enclave-cc-cckbc-native-tls = ["encryption-openssl", "keywrap-native", "cc-kbc-sgx", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-native", "oci-distribution-native"]
 
 encryption = ["ocicrypt-rs/block-cipher"]
 encryption-ring = ["ocicrypt-rs/block-cipher-ring", "encryption"]
@@ -100,7 +100,7 @@ keywrap-ttrpc = ["ocicrypt-rs/keywrap-keyprovider-ttrpc", "dep:ttrpc", "dep:prot
 keywrap-jwe = ["ocicrypt-rs/keywrap-jwe"]
 
 eaa-kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]
-cc-kbc-occlum = ["attestation_agent/cc_kbc", "ocicrypt-rs/cc_kbc_occlum"]
+cc-kbc-sgx = ["attestation_agent/cc_kbc", "ocicrypt-rs/cc_kbc_sgx"]
 
 signature = ["hex"]
 signature-cosign = ["signature", "futures"]

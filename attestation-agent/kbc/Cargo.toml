@@ -39,7 +39,7 @@ default = ["sample_kbc", "rust-crypto"]
 cc_kbc = ["kbs_protocol"]
 all-attesters = ["kbs_protocol/all-attesters"]
 tdx-attester = ["kbs_protocol/tdx-attester"]
-occlum-attester = ["kbs_protocol/occlum-attester"]
+sgx-attester = ["kbs_protocol/sgx-attester"]
 az-snp-vtpm-attester= ["kbs_protocol/az-snp-vtpm-attester"]
 snp-attester = ["kbs_protocol/snp-attester"]
 

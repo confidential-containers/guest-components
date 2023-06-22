@@ -14,4 +14,4 @@ anyhow = "1.0"
 attester = { path = "../attester", default-features = false, optional = true }
 
 [features]
-occlum = ["attester/occlum-attester"]
+occlum = ["attester/sgx-attester"]

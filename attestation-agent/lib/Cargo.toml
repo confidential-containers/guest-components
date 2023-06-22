@@ -25,7 +25,7 @@ default = ["sample_kbc", "rust-crypto"]
 cc_kbc = ["kbc/cc_kbc"]
 all-attesters = ["kbc/all-attesters"]
 tdx-attester = ["kbc/tdx-attester"]
-occlum-attester = ["kbc/occlum-attester"]
+sgx-attester = ["kbc/sgx-attester"]
 az-snp-vtpm-attester= ["kbc/az-snp-vtpm-attester"]
 snp-attester = ["kbc/snp-attester"]
 

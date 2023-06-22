@@ -23,7 +23,7 @@ zeroize.workspace = true
 default = ["all-attesters", "rust-crypto"]
 all-attesters = ["attester/all-attesters"]
 tdx-attester = ["attester/tdx-attester"]
-occlum-attester = ["attester/occlum-attester"]
+sgx-attester = ["attester/sgx-attester"]
 az-snp-vtpm-attester = ["attester/az-snp-vtpm-attester"]
 snp-attester = ["attester/snp-attester"]
 

@@ -31,7 +31,7 @@ jobs:
         kbc:
           - cc_kbc
           - cc_kbc_tdx
-          - cc_kbc_occlum
+          - cc_kbc_sgx
           - cc_kbc_az_snp_vtpm
           - cc_kbc_snp
     steps:

@@ -121,7 +121,7 @@ CC KBC supports different kinds of hardware TEE attesters, now
 | Attester name       |           Info              |
 | ------------------- | --------------------------  |
 | tdx-attester        | Intel TDX                   |
-| occlum-attester     | Intel SGX with occlum libOS |
+| sgx-attester        | Intel SGX DCAP              |
 | snp-attester        | AMD SEV-SNP                 |
 | az-snp-vtpm-attester| Azure SEV-SNP CVM           |
 
