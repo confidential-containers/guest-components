@@ -17,7 +17,7 @@ pub mod types;
 const KBS_REQ_TIMEOUT_SEC: u64 = 60;
 const KBS_GET_RESOURCE_MAX_ATTEMPT: u64 = 3;
 
-pub const KBS_URL_PREFIX: &str = "kbs/v0";
+pub const KBS_PREFIX: &str = "/kbs/v0";
 
 #[async_trait]
 pub trait KbsRequest {
@@ -93,10 +93,10 @@ impl KbsProtocolWrapper {
         &mut self.http_client
     }
 
-    async fn attestation(&mut self, kbs_host_url: String) -> Result<String> {
+    async fn attestation(&mut self, kbs_root_url: String) -> Result<String> {
         let challenge = self
             .http_client()
-            .post(format!("{kbs_host_url}/{KBS_URL_PREFIX}/auth"))
+            .post(format!("{kbs_root_url}/{KBS_PREFIX}/auth"))
             .header("Content-Type", "application/json")
             .json(&Request::new(self.tee().to_string()))
             .send()
@@ -107,7 +107,7 @@ impl KbsProtocolWrapper {
 
         let attest_response = self
             .http_client()
-            .post(format!("{kbs_host_url}/{KBS_URL_PREFIX}/attest"))
+            .post(format!("{kbs_root_url}/{KBS_PREFIX}/attest"))
             .header("Content-Type", "application/json")
             .json(&self.generate_evidence()?)
             .send()
@@ -136,19 +136,16 @@ impl KbsProtocolWrapper {
 #[async_trait]
 impl KbsRequest for KbsProtocolWrapper {
     async fn http_get(&mut self, url_string: String) -> Result<Vec<u8>> {
-        let url = Url::parse(&url_string)
+        let _ = Url::parse(&url_string)
             .map_err(|e| anyhow!("Invalid Request URL {url_string}: {e}"))?;
 
-        // Use default port of KBS: 8080
-        let port = url.port().unwrap_or(8080);
-        let host_str = url.host_str().ok_or_else(|| anyhow!("No KBS host given"))?;
-        let kbs_url = format!("{}://{host_str}:{port}", url.scheme());
+        let root_url = url_string.split(KBS_PREFIX).collect::<Vec<&str>>()[0].to_string();
 
         for attempt in 1..=KBS_GET_RESOURCE_MAX_ATTEMPT {
             log::info!("CC-KBC: trying to request KBS, attempt {attempt}");
 
             if !self.authenticated {
-                self.attestation(kbs_url.clone()).await?;
+                self.attestation(root_url.clone()).await?;
             }
 
             let res = self.http_client().get(&url_string).send().await?;
