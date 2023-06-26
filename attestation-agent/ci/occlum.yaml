@@ -4,4 +4,4 @@ targets:
   - target: /bin
     copy:
       - files:
-        - ../../target/debug/occlum-attester
+        - ../../../target/debug/occlum-attester
