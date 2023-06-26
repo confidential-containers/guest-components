@@ -6,7 +6,7 @@
 use crate::{KbcCheckInfo, KbcInterface};
 use crypto::decrypt;
 
-use kbs_protocol::{KbsProtocolWrapper, KbsRequest, KBS_URL_PREFIX};
+use kbs_protocol::{KbsProtocolWrapper, KbsRequest, KBS_PREFIX};
 
 use super::AnnotationPacket;
 use anyhow::*;
@@ -98,7 +98,7 @@ impl Kbc {
         let r#type = &resource.r#type;
         let tag = &resource.tag;
         Ok(format!(
-            "{kbs_addr}{KBS_URL_PREFIX}/resource/{repo}/{type}/{tag}"
+            "{kbs_addr}{KBS_PREFIX}/resource/{repo}/{type}/{tag}"
         ))
     }
 }
