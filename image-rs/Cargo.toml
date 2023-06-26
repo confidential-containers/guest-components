@@ -47,6 +47,9 @@ url = "2.2.2"
 walkdir = "2"
 zstd = "0.12"
 
+nydus-api = { version = "0.3.0", optional = true}
+nydus-service = { version = "0.3.0", features = ["coco"], optional = true}
+
 [build-dependencies]
 anyhow = "1"
 tonic-build = { version = "0.8", optional = true }
@@ -114,3 +117,5 @@ snapshot-overlayfs = ["nix"]
 snapshot-unionfs = ["nix", "dircpy", "fs_extra"]
 
 getresource = [ "lazy_static", "cfg-if" ]
+
+nydus = ["lazy_static", "nydus-api", "nydus-service"]

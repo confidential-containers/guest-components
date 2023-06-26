@@ -4,6 +4,7 @@
 
 use anyhow::{anyhow, bail, Result};
 use log::warn;
+use oci_distribution::manifest::{OciDescriptor, OciImageManifest};
 use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
 use oci_spec::image::{ImageConfiguration, Os};
@@ -16,7 +17,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::bundle::{create_runtime_config, BUNDLE_ROOTFS};
-use crate::config::ImageConfig;
+use crate::config::{ImageConfig, CONFIGURATION_FILE_PATH};
 use crate::decoder::Compression;
 use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
@@ -27,6 +28,9 @@ use crate::snapshots::occlum::unionfs::Unionfs;
 use crate::snapshots::overlay::OverlayFs;
 
 use crate::snapshots::{SnapshotType, Snapshotter};
+
+#[cfg(feature = "nydus")]
+use crate::nydus::{service, utils};
 
 /// Image security config dir contains important information such as
 /// security policy configuration file and signature verification configuration file.
@@ -94,7 +98,7 @@ pub struct ImageClient {
 impl Default for ImageClient {
     // construct a default instance of `ImageClient`
     fn default() -> ImageClient {
-        let config = ImageConfig::default();
+        let config = ImageConfig::try_from(Path::new(CONFIGURATION_FILE_PATH)).unwrap_or_default();
         let meta_store = MetaStore::try_from(Path::new(METAFILE)).unwrap_or_default();
 
         #[allow(unused_mut)]
@@ -240,6 +244,46 @@ impl ImageClient {
 
         let id = image_manifest.config.digest.clone();
 
+        #[cfg(feature = "nydus")]
+        if utils::is_nydus_image(&image_manifest) {
+            {
+                let m = self.meta_store.lock().await;
+                if let Some(image_data) = &m.image_db.get(&id) {
+                    return service::create_nydus_bundle(image_data, bundle_dir);
+                }
+            }
+
+            #[cfg(feature = "signature")]
+            if self.config.security_validate {
+                crate::signature::allows_image(
+                    image_url,
+                    &image_digest,
+                    &auth,
+                    &self.config.file_paths,
+                )
+                .await
+                .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
+            }
+
+            let (mut image_data, _, _) = create_image_meta(
+                &id,
+                image_url,
+                &image_manifest,
+                &image_digest,
+                &image_config,
+            )?;
+
+            return self
+                .do_pull_image_with_nydus(
+                    &mut client,
+                    &mut image_data,
+                    &image_manifest,
+                    decrypt_config,
+                    bundle_dir,
+                )
+                .await;
+        }
+
         let snapshot = match self.snapshots.get_mut(&self.config.default_snapshot) {
             Some(s) => s,
             _ => {
@@ -270,40 +314,13 @@ impl ImageClient {
             .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
         }
 
-        let mut image_data = ImageMeta {
-            id,
-            digest: image_digest,
-            reference: image_url.to_string(),
-            image_config: ImageConfiguration::from_reader(image_config.as_bytes())?,
-            ..Default::default()
-        };
-
-        let diff_ids = image_data.image_config.rootfs().diff_ids();
-        if diff_ids.len() != image_manifest.layers.len() {
-            bail!("Pulled number of layers mismatch with image config diff_ids");
-        }
-
-        let mut unique_layers = Vec::new();
-        let mut digests = BTreeSet::new();
-        for l in &image_manifest.layers {
-            if digests.contains(&l.digest) {
-                continue;
-            }
-
-            digests.insert(&l.digest);
-            unique_layers.push(l.clone());
-        }
-
-        let mut unique_diff_ids = Vec::new();
-        let mut id_tree = BTreeSet::new();
-        for id in diff_ids {
-            if id_tree.contains(id.as_str()) {
-                continue;
-            }
-
-            id_tree.insert(id.as_str());
-            unique_diff_ids.push(id.clone());
-        }
+        let (mut image_data, unique_layers, unique_diff_ids) = create_image_meta(
+            &id,
+            image_url,
+            &image_manifest,
+            &image_digest,
+            &image_config,
+        )?;
 
         let unique_layers_len = unique_layers.len();
         let layer_metas = client
@@ -336,10 +353,121 @@ impl ImageClient {
             .lock()
             .await
             .image_db
-            .insert(image_data.id.clone(), image_data);
+            .insert(image_data.id.clone(), image_data.clone());
 
         Ok(image_id)
     }
+
+    #[cfg(feature = "nydus")]
+    async fn do_pull_image_with_nydus<'a>(
+        &mut self,
+        client: &mut PullClient<'_>,
+        image_data: &mut ImageMeta,
+        image_manifest: &OciImageManifest,
+        decrypt_config: &Option<&str>,
+        bundle_dir: &Path,
+    ) -> Result<String> {
+        let diff_ids = image_data.image_config.rootfs().diff_ids();
+        let bootstrap_id = if !diff_ids.is_empty() {
+            diff_ids[diff_ids.len() - 1].to_string()
+        } else {
+            bail!("Failed to get bootstrap id, diff_ids is empty");
+        };
+
+        let bootstrap = utils::get_nydus_bootstrap_desc(image_manifest)
+            .ok_or_else(|| anyhow!("Faild to get bootstrap oci descriptor"))?;
+        let layer_metas = client
+            .pull_bootstrap(
+                bootstrap,
+                bootstrap_id.to_string(),
+                decrypt_config,
+                self.meta_store.clone(),
+            )
+            .await?;
+        image_data.layer_metas = layer_metas;
+        let layer_db: HashMap<String, LayerMeta> = image_data
+            .layer_metas
+            .iter()
+            .map(|layer| (layer.compressed_digest.clone(), layer.clone()))
+            .collect();
+
+        self.meta_store.lock().await.layer_db.extend(layer_db);
+
+        if image_data.layer_metas.is_empty() {
+            bail!("Failed to pull the bootstrap");
+        }
+
+        let reference = Reference::try_from(image_data.reference.clone())?;
+        let nydus_config = self
+            .config
+            .get_nydus_config()
+            .expect("Nydus configuration not found");
+        let work_dir = self.config.work_dir.clone();
+
+        let image_id = service::start_nydus_service(
+            image_data,
+            reference,
+            nydus_config,
+            &work_dir,
+            bundle_dir,
+        )
+        .await?;
+
+        self.meta_store
+            .lock()
+            .await
+            .image_db
+            .insert(image_data.id.clone(), image_data.clone());
+
+        Ok(image_id)
+    }
+}
+
+/// Create image meta object with the image info
+/// Return the image meta object, oci descriptors of the unique layers, and unique diff ids.
+fn create_image_meta(
+    id: &str,
+    image_url: &str,
+    image_manifest: &OciImageManifest,
+    image_digest: &str,
+    image_config: &str,
+) -> Result<(ImageMeta, Vec<OciDescriptor>, Vec<String>)> {
+    let image_data = ImageMeta {
+        id: id.to_string(),
+        digest: image_digest.to_string(),
+        reference: image_url.to_string(),
+        image_config: ImageConfiguration::from_reader(image_config.to_string().as_bytes())?,
+        ..Default::default()
+    };
+
+    let diff_ids = image_data.image_config.rootfs().diff_ids();
+    if diff_ids.len() != image_manifest.layers.len() {
+        bail!("Pulled number of layers mismatch with image config diff_ids");
+    }
+
+    let mut unique_layers = Vec::new();
+    let mut digests = BTreeSet::new();
+    for l in &image_manifest.layers {
+        if digests.contains(&l.digest) {
+            continue;
+        }
+
+        digests.insert(&l.digest);
+        unique_layers.push(l.clone());
+    }
+
+    let mut unique_diff_ids = Vec::new();
+    let mut id_tree = BTreeSet::new();
+    for id in diff_ids {
+        if id_tree.contains(id.as_str()) {
+            continue;
+        }
+
+        id_tree.insert(id.as_str());
+        unique_diff_ids.push(id.clone());
+    }
+
+    Ok((image_data, unique_layers, unique_diff_ids))
 }
 
 fn create_bundle(
@@ -407,7 +535,38 @@ mod tests {
             }
         }
 
-        assert_eq!(image_client.meta_store.lock().await.image_db.len(), 5);
+        assert_eq!(
+            image_client.meta_store.lock().await.image_db.len(),
+            oci_images.len()
+        );
+    }
+
+    #[cfg(feature = "nydus")]
+    #[tokio::test]
+    async fn test_nydus_image() {
+        let work_dir = tempfile::tempdir().unwrap();
+        std::env::set_var("CC_IMAGE_WORK_DIR", &work_dir.path());
+
+        let nydus_images = vec![
+            "eci-nydus-registry.cn-hangzhou.cr.aliyuncs.com/v6/java:latest-test_nydus",
+            //"eci-nydus-registry.cn-hangzhou.cr.aliyuncs.com/test/ubuntu:latest_nydus",
+            //"eci-nydus-registry.cn-hangzhou.cr.aliyuncs.com/test/python:latest_nydus",
+        ];
+
+        let mut image_client = ImageClient::default();
+
+        for image in nydus_images.iter() {
+            let bundle_dir = tempfile::tempdir().unwrap();
+
+            assert!(image_client
+                .pull_image(image, bundle_dir.path(), &None, &None)
+                .await
+                .is_ok());
+        }
+        assert_eq!(
+            image_client.meta_store.lock().await.image_db.len(),
+            nydus_images.len()
+        );
     }
 
     #[tokio::test]

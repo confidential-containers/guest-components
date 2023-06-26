@@ -12,6 +12,8 @@ pub mod decoder;
 pub mod decrypt;
 pub mod image;
 pub mod meta_store;
+#[cfg(feature = "nydus")]
+pub mod nydus;
 pub mod pull;
 pub mod resource;
 #[cfg(feature = "signature")]

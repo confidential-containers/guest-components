@@ -110,6 +110,23 @@ impl<'a> PullClient<'a> {
         Ok(layer_metas)
     }
 
+    /// pull_bootstrap pulls a nydus image's bootstrap layer.
+    pub async fn pull_bootstrap(
+        &self,
+        bootstrap_desc: OciDescriptor,
+        diff_id: String,
+        decrypt_config: &Option<&str>,
+        meta_store: Arc<Mutex<MetaStore>>,
+    ) -> Result<Vec<LayerMeta>> {
+        let layer_metas = self
+            .pull_layers(vec![bootstrap_desc], &[diff_id], decrypt_config, meta_store)
+            .await?;
+        match layer_metas.get(0) {
+            Some(b) => Ok(vec![b.clone()]),
+            None => Err(anyhow!("Failed to  download this bootstrap layer")),
+        }
+    }
+
     async fn handle_layer(
         &self,
         layer: OciDescriptor,
@@ -745,6 +762,40 @@ mod tests {
             let msg = format!("{}: result: {:?}", msg, result);
 
             assert_result!(d.result, result, msg);
+        }
+    }
+
+    #[cfg(feature = "nydus")]
+    #[tokio::test]
+    async fn test_pull_nydus_bootstrap() {
+        let nydus_images =
+            vec!["eci-nydus-registry.cn-hangzhou.cr.aliyuncs.com/v6/java:latest-test_nydus"];
+
+        for image_url in nydus_images.iter() {
+            let tempdir = tempfile::tempdir().unwrap();
+            let image = Reference::try_from((*image_url).clone()).expect("create reference failed");
+            let mut client = PullClient::new(
+                image,
+                tempdir.path(),
+                &RegistryAuth::Anonymous,
+                DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+            )
+            .unwrap();
+            let (image_manifest, _image_digest, image_config) =
+                client.pull_manifest().await.unwrap();
+
+            let image_config = ImageConfiguration::from_reader(image_config.as_bytes()).unwrap();
+            let diff_ids = image_config.rootfs().diff_ids();
+
+            assert!(client
+                .pull_bootstrap(
+                    crate::nydus::utils::get_nydus_bootstrap_desc(&image_manifest).unwrap(),
+                    diff_ids[diff_ids.len() - 1].to_string(),
+                    &None,
+                    Arc::new(Mutex::new(MetaStore::default())),
+                )
+                .await
+                .is_ok());
         }
     }
 }
