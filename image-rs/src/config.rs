@@ -34,6 +34,9 @@ pub const AUTH_FILE_PATH: &str = "kbs:///default/credential/test";
 /// Default max concurrent download.
 pub const DEFAULT_MAX_CONCURRENT_DOWNLOAD: usize = 3;
 
+/// Path to the configuration file to generate ImageConfiguration
+pub const CONFIGURATION_FILE_PATH: &str = "/var/lib/image-rs/config.json";
+
 /// `image-rs` configuration information.
 #[derive(Clone, Debug, Deserialize)]
 pub struct ImageConfig {
@@ -60,6 +63,10 @@ pub struct ImageConfig {
     ///
     /// This defaults to [`DEFAULT_MAX_CONCURRENT_DOWNLOAD`].
     pub max_concurrent_download: usize,
+
+    /// Nydus services configuration
+    #[serde(rename = "nydus")]
+    pub nydus_config: Option<NydusConfig>,
 }
 
 /// This function used to parse from string. When it is an
@@ -91,6 +98,10 @@ impl Default for ImageConfig {
             auth: false,
             file_paths: Paths::default(),
             max_concurrent_download: DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+            #[cfg(feature = "nydus")]
+            nydus_config: Some(NydusConfig::default()),
+            #[cfg(not(feature = "nydus"))]
+            nydus_config: None,
         }
     }
 }
@@ -106,8 +117,35 @@ impl TryFrom<&Path> for ImageConfig {
         let file = File::open(config_path)
             .map_err(|e| anyhow!("failed to open config file {}", e.to_string()))?;
 
-        serde_json::from_reader::<File, ImageConfig>(file)
-            .map_err(|e| anyhow!("failed to parse config file {}", e.to_string()))
+        match serde_json::from_reader::<File, ImageConfig>(file) {
+            Ok(image_config) => {
+                if image_config.validate() {
+                    Ok(image_config)
+                } else {
+                    Err(anyhow!("invalid configuration"))
+                }
+            }
+            Err(e) => Err(anyhow!("failed to parse config file {}", e.to_string())),
+        }
+    }
+}
+
+impl ImageConfig {
+    /// Validate the configuration object.
+    pub fn validate(&self) -> bool {
+        if let Some(nydus_cfg) = self.nydus_config.as_ref() {
+            if !nydus_cfg.validate() {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    pub fn get_nydus_config(&self) -> Result<&NydusConfig> {
+        self.nydus_config
+            .as_ref()
+            .ok_or_else(|| anyhow!("no configuration information for nydus"))
     }
 }
 
@@ -129,6 +167,132 @@ impl Default for Paths {
             sigstore_config: SIG_STORE_CONFIG_DEFAULT_FILE.into(),
             policy_path: POLICY_FILE_PATH.into(),
             auth_file: AUTH_FILE_PATH.into(),
+        }
+    }
+}
+
+/// Nydus daemon service configuration
+/// support fs driver including fusedev and fscache.
+#[derive(Clone, Debug, Deserialize)]
+pub struct NydusConfig {
+    /// Type of daemon service
+    #[serde(rename = "type")]
+    pub driver_type: String,
+
+    /// Service instance identifier
+    pub id: Option<String>,
+
+    /// Fuse service configuration
+    #[serde(rename = "fuse")]
+    pub fuse_config: Option<FuseConfig>,
+
+    /// Fscache service configuration
+    #[serde(rename = "fscache")]
+    pub fscache_config: Option<FscacheConfig>,
+}
+
+impl Default for NydusConfig {
+    fn default() -> Self {
+        Self {
+            driver_type: "fuse".to_string(),
+            id: None,
+            fuse_config: Some(FuseConfig::default()),
+            fscache_config: None,
+        }
+    }
+}
+
+impl NydusConfig {
+    /// Check whether the service type is `fuse`
+    pub fn is_fuse(&self) -> bool {
+        self.driver_type == "fuse"
+    }
+
+    /// Check whether the service type is `fscache`
+    pub fn is_fscache(&self) -> bool {
+        self.driver_type == "fscache"
+    }
+
+    pub fn get_fuse_config(&self) -> Result<&FuseConfig> {
+        self.fuse_config
+            .as_ref()
+            .ok_or_else(|| anyhow!("no configuration information for fuse"))
+    }
+
+    pub fn get_fscache_config(&self) -> Result<&FscacheConfig> {
+        self.fscache_config
+            .as_ref()
+            .ok_or_else(|| anyhow!("no configuration information for fscache"))
+    }
+
+    /// Validate the configuration object.
+    pub fn validate(&self) -> bool {
+        if self.driver_type != "fuse" && self.driver_type != "fscache" {
+            return false;
+        }
+
+        if self.is_fuse() && self.fuse_config.is_none() {
+            return false;
+        }
+
+        if self.is_fscache() && self.fscache_config.is_none() {
+            return false;
+        }
+
+        true
+    }
+}
+
+/// Nydus daemon fs backend configuration for fusedev
+#[derive(Clone, Debug, Deserialize)]
+pub struct FuseConfig {
+    /// FUSE server failover policy
+    pub fail_over_policy: String,
+
+    /// Number of worker threads to serve FUSE I/O requests
+    pub fuse_threads: u32,
+
+    /// Path to the `localfs` working directory, which also enables the `localfs` storage backend
+    pub localfs_dir: Option<PathBuf>,
+
+    /// Path to the prefetch configuration file
+    pub prefetch_files: Option<Vec<String>>,
+
+    /// Mountpoint within the FUSE/virtiofs device to mount the RAFS/passthroughfs filesystem
+    pub virtual_mountpoint: Option<PathBuf>,
+}
+
+impl Default for FuseConfig {
+    fn default() -> Self {
+        Self {
+            fail_over_policy: "flush".to_string(),
+            fuse_threads: 4,
+            localfs_dir: None,
+            prefetch_files: None,
+            virtual_mountpoint: Some(PathBuf::from("/")),
+        }
+    }
+}
+
+/// Nydus daemon fs backend configuration for fusedev
+#[derive(Clone, Debug, Deserialize)]
+pub struct FscacheConfig {
+    /// Working directory for Linux fscache driver to store cache files
+    pub fscache: Option<PathBuf>,
+
+    /// Working directory for Linux fscache driver to store cache files
+    pub fscache_tag: Option<String>,
+
+    /// Number of working threads to serve fscache requests
+    pub fscache_threads: u32,
+}
+
+impl Default for FscacheConfig {
+    fn default() -> Self {
+        Self {
+            fscache: None,
+            fscache_tag: None,
+            fscache_threads: 4,
         }
     }
 }
@@ -185,6 +349,55 @@ mod tests {
         assert_eq!(config.work_dir, work_dir);
         assert_eq!(config.default_snapshot, SnapshotType::Overlay);
         assert_eq!(config.max_concurrent_download, 1);
+
+        let invalid_config_file = tempdir.path().join("does-not-exist");
+        assert!(!invalid_config_file.exists());
+
+        let _ = ImageConfig::try_from(invalid_config_file.as_path()).is_err();
+        assert!(!invalid_config_file.exists());
+    }
+
+    #[test]
+    fn test_nydus_config_from_file() {
+        let data = r#"{
+            "work_dir": "/var/lib/image-rs/",
+            "default_snapshot": "overlay",
+            "security_validate": false,
+            "auth": false,
+            "nydus": {
+                "type": "fuse",
+                "id": "nydus_id",
+                "fuse": {
+                    "fail_over_policy": "flush",
+                    "fuse_threads": 4
+                }
+            },
+            "max_concurrent_download": 1
+        }"#;
+
+        let tempdir = tempfile::tempdir().unwrap();
+        let config_file = tempdir.path().join("config.json");
+
+        File::create(&config_file)
+            .unwrap()
+            .write_all(data.as_bytes())
+            .unwrap();
+
+        let config = ImageConfig::try_from(config_file.as_path()).unwrap();
+        let work_dir = PathBuf::from(DEFAULT_WORK_DIR);
+
+        assert_eq!(config.work_dir, work_dir);
+        assert_eq!(config.default_snapshot, SnapshotType::Overlay);
+
+        assert!(config.nydus_config.is_some());
+        if let Ok(nydus_config) = config.get_nydus_config() {
+            assert_eq!(nydus_config.id, Some("nydus_id".to_string()));
+
+            assert!(nydus_config.fuse_config.is_some());
+            if let Ok(fuse_config) = nydus_config.get_fuse_config() {
+                assert_eq!(fuse_config.fuse_threads, 4)
+            }
+        }
 
         let invalid_config_file = tempdir.path().join("does-not-exist");
         assert!(!invalid_config_file.exists());
