@@ -6,9 +6,9 @@
 use super::Attester;
 use anyhow::*;
 use serde::{Deserialize, Serialize};
-use sev::firmware::guest::types::{AttestationReport, SnpReportReq};
+use sev::firmware::guest::AttestationReport;
 use sev::firmware::guest::Firmware;
-use sev::firmware::host::types::CertTableEntry;
+use sev::firmware::host::CertTableEntry;
 use std::path::Path;
 
 pub fn detect_platform() -> bool {
@@ -35,10 +35,10 @@ impl Attester for SnpAttester {
         report_data_bin.extend([0; 16]);
 
         let mut firmware = Firmware::open()?;
-        let report_request = SnpReportReq::new(Some(report_data_bin.as_slice().try_into()?), 0);
+        let data = report_data_bin.as_slice().try_into()?;
 
         let (report, certs) = firmware
-            .snp_get_ext_report(None, report_request)
+            .get_ext_report(None, Some(data), Some(0))
             .context("Failed to get attestation report")?;
 
         let evidence = SnpEvidence {
