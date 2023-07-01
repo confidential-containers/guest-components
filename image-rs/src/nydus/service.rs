@@ -23,6 +23,9 @@ use super::utils::get_build_time_info;
 use crate::bundle::{create_runtime_config, BUNDLE_ROOTFS};
 use crate::config::{FscacheConfig, FuseConfig, NydusConfig};
 use crate::image::ImageMeta;
+use crate::snapshots::Snapshotter;
+
+pub const NYDUS_ROOTFS: &str = "nydus_rootfs";
 
 lazy_static::lazy_static! {
     static ref DAEMON_CONTROLLER: DaemonController = DaemonController::default();
@@ -35,13 +38,14 @@ pub async fn start_nydus_service(
     nydus_config: &NydusConfig,
     work_dir: &Path,
     bundle_dir: &Path,
+    snapshot: &mut Box<dyn Snapshotter>,
 ) -> Result<String> {
     // when using nydus image, layer_metas containes only bootstrap layer meta
     let bootstrap_meta = image_data.layer_metas[0].clone();
     let bootstrap = Path::new(&bootstrap_meta.store_path)
         .join("image")
         .join("image.boot");
-    let mountpoint = bundle_dir.join(BUNDLE_ROOTFS);
+    let mountpoint = bundle_dir.join(NYDUS_ROOTFS);
     let id = nydus_config.id.clone();
     let work_dir_buf = work_dir.to_owned();
 
@@ -120,7 +124,7 @@ pub async fn start_nydus_service(
         DAEMON_CONTROLLER.set_singleton_mode(false);
         DAEMON_CONTROLLER.shutdown();
     });
-    let image_id = create_nydus_bundle(image_data, bundle_dir)?;
+    let image_id = create_nydus_bundle(image_data, bundle_dir, snapshot)?;
 
     Ok(image_id)
 }
@@ -176,7 +180,6 @@ pub fn process_fuse_daemon(
         Some(mnt) => String::from(mnt.to_string_lossy()),
         None => String::from("/"),
     };
-
     let cmd = FsBackendMountCmd {
         fs_type: FsBackendType::Rafs,
         source: String::from(bootstrap.to_string_lossy()),
@@ -184,9 +187,7 @@ pub fn process_fuse_daemon(
         mountpoint: virtual_mnt,
         prefetch_files: fuse_config.prefetch_files.clone(),
     };
-
     let vfs = create_vfs_backend(FsBackendType::Rafs, true, false)?;
-
     let p = (&fuse_config.fail_over_policy).try_into().map_err(|e| {
         error!("Invalid failover policy");
         e
@@ -325,11 +326,21 @@ pub fn process_fscache_daemon(
     Ok(())
 }
 
-pub fn create_nydus_bundle(image_data: &ImageMeta, bundle_dir: &Path) -> Result<String> {
+pub fn create_nydus_bundle(
+    image_data: &ImageMeta,
+    bundle_dir: &Path,
+    snapshot: &mut Box<dyn Snapshotter>,
+) -> Result<String> {
     let image_config = image_data.image_config.clone();
     if image_config.os() != &Os::Linux {
         bail!("unsupport OS image {:?}", image_config.os());
     }
+
+    let nydus_rootfs = &bundle_dir.join(NYDUS_ROOTFS);
+    snapshot.mount(
+        &[&nydus_rootfs.to_string_lossy()],
+        &bundle_dir.join(BUNDLE_ROOTFS),
+    )?;
 
     create_runtime_config(&image_config, bundle_dir)?;
     let image_id = image_data.id.clone();
