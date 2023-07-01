@@ -244,12 +244,22 @@ impl ImageClient {
 
         let id = image_manifest.config.digest.clone();
 
+        let snapshot = match self.snapshots.get_mut(&self.config.default_snapshot) {
+            Some(s) => s,
+            _ => {
+                bail!(
+                    "default snapshot {} not found",
+                    &self.config.default_snapshot
+                );
+            }
+        };
+
         #[cfg(feature = "nydus")]
         if utils::is_nydus_image(&image_manifest) {
             {
                 let m = self.meta_store.lock().await;
                 if let Some(image_data) = &m.image_db.get(&id) {
-                    return service::create_nydus_bundle(image_data, bundle_dir);
+                    return service::create_nydus_bundle(image_data, bundle_dir, snapshot);
                 }
             }
 
@@ -283,16 +293,6 @@ impl ImageClient {
                 )
                 .await;
         }
-
-        let snapshot = match self.snapshots.get_mut(&self.config.default_snapshot) {
-            Some(s) => s,
-            _ => {
-                bail!(
-                    "default snapshot {} not found",
-                    &self.config.default_snapshot
-                );
-            }
-        };
 
         // If image has already been populated, just create the bundle.
         {
@@ -403,13 +403,22 @@ impl ImageClient {
             .get_nydus_config()
             .expect("Nydus configuration not found");
         let work_dir = self.config.work_dir.clone();
-
+        let snapshot = match self.snapshots.get_mut(&self.config.default_snapshot) {
+            Some(s) => s,
+            _ => {
+                bail!(
+                    "default snapshot {} not found",
+                    &self.config.default_snapshot
+                );
+            }
+        };
         let image_id = service::start_nydus_service(
             image_data,
             reference,
             nydus_config,
             &work_dir,
             bundle_dir,
+            snapshot,
         )
         .await?;
 
