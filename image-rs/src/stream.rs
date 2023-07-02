@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::unpack::unpack;
 use anyhow::{anyhow, bail, Context, Result};
 use sha2::Digest;
 use std::fs;
@@ -10,46 +9,11 @@ use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use tokio::io::{AsyncRead, AsyncReadExt};
 
+use crate::digest::{DigestHasher, LayerDigestHasher, DIGEST_SHA256_PREFIX, DIGEST_SHA512_PREFIX};
+use crate::unpack::unpack;
+
 const CAPACITY: usize = 32768;
-const DIGEST_SHA256: &str = "sha256";
-const DIGEST_SHA512: &str = "sha512";
-
 const ERR_BAD_UNCOMPRESSED_DIGEST: &str = "unsupported uncompressed digest format";
-
-pub trait DigestHasher {
-    fn digest_update(&mut self, buf: &[u8]);
-    fn digest_finalize(self) -> String;
-}
-
-#[derive(Clone, Debug)]
-pub enum LayerDigestHasher {
-    Sha256(sha2::Sha256),
-    Sha512(sha2::Sha512),
-}
-
-impl DigestHasher for LayerDigestHasher {
-    fn digest_update(&mut self, buf: &[u8]) {
-        match self {
-            LayerDigestHasher::Sha256(hasher) => {
-                hasher.update(buf);
-            }
-            LayerDigestHasher::Sha512(hasher) => {
-                hasher.update(buf);
-            }
-        }
-    }
-
-    fn digest_finalize(self) -> String {
-        match self {
-            LayerDigestHasher::Sha256(hasher) => {
-                format!("{}:{:x}", DIGEST_SHA256, hasher.finalize())
-            }
-            LayerDigestHasher::Sha512(hasher) => {
-                format!("{}:{:x}", DIGEST_SHA512, hasher.finalize())
-            }
-        }
-    }
-}
 
 // Wrap a flume channel with [`Read`](std::io::Read) support.
 // This can bridge the [`AsyncRead`](tokio::io::AsyncRead) from
@@ -93,18 +57,18 @@ pub async fn stream_processing(
     destination: &Path,
 ) -> Result<String> {
     let dest = destination.to_path_buf();
-    let digest_str = if diff_id.starts_with(DIGEST_SHA256) {
+    let digest_str = if diff_id.starts_with(DIGEST_SHA256_PREFIX) {
         let hasher = LayerDigestHasher::Sha256(sha2::Sha256::new());
 
         channel_processing(layer_reader, hasher, dest)
             .await
-            .map_err(|e| anyhow!("hasher {} : {:?}", DIGEST_SHA256, e))?
-    } else if diff_id.starts_with(DIGEST_SHA512) {
+            .map_err(|e| anyhow!("hasher {} {:?}", DIGEST_SHA256_PREFIX, e))?
+    } else if diff_id.starts_with(DIGEST_SHA512_PREFIX) {
         let hasher = LayerDigestHasher::Sha512(sha2::Sha512::new());
 
         channel_processing(layer_reader, hasher, dest)
             .await
-            .map_err(|e| anyhow!("hasher {} : {:?}", DIGEST_SHA512, e))?
+            .map_err(|e| anyhow!("hasher {} {:?}", DIGEST_SHA512_PREFIX, e))?
     } else {
         bail!("{}: {:?}", ERR_BAD_UNCOMPRESSED_DIGEST, diff_id);
     };
@@ -122,6 +86,7 @@ async fn channel_processing(
         let mut input = ChannelRead::new(rx);
 
         if let Err(e) = unpack(&mut input, destination.as_path()) {
+            // TODO
             fs::remove_dir_all(destination.as_path())
                 .context("Failed to roll back when unpacking")?;
             return Err(e);
@@ -182,8 +147,8 @@ mod tests {
         let layer_data = ar.into_inner().unwrap();
 
         let layer_digest = format!(
-            "{}:{:x}",
-            DIGEST_SHA256,
+            "{}{:x}",
+            DIGEST_SHA256_PREFIX,
             sha2::Sha256::digest(layer_data.as_slice())
         );
 
@@ -222,8 +187,8 @@ mod tests {
         let layer_data = ar.into_inner().unwrap();
 
         let layer_digest = format!(
-            "{}:{:x}",
-            DIGEST_SHA256,
+            "{}{:x}",
+            DIGEST_SHA256_PREFIX,
             sha2::Sha256::digest(layer_data.as_slice())
         );
 
@@ -238,8 +203,8 @@ mod tests {
         let tempdir = tempfile::tempdir().unwrap();
         let file_path = tempdir.path().join("layer1");
         let layer_digest = format!(
-            "{}:{:x}",
-            DIGEST_SHA512,
+            "{}{:x}",
+            DIGEST_SHA512_PREFIX,
             sha2::Sha512::digest(layer_data.as_slice())
         );
 
