@@ -16,13 +16,11 @@ use tokio::sync::Mutex;
 
 use crate::decoder::Compression;
 use crate::decrypt::Decryptor;
+use crate::digest::{DIGEST_SHA256_PREFIX, DIGEST_SHA512_PREFIX};
 use crate::image::LayerMeta;
 use crate::meta_store::MetaStore;
 use crate::stream::stream_processing;
 use crate::unpack::unpack;
-
-const DIGEST_SHA256: &str = "sha256";
-const DIGEST_SHA512: &str = "sha512";
 
 const ERR_NO_DECRYPT_CFG: &str = "decrypt_config is None";
 const ERR_BAD_UNCOMPRESSED_DIGEST: &str = "unsupported uncompressed digest format";
@@ -164,16 +162,16 @@ impl<'a> PullClient<'a> {
         layer_meta.decoder = Compression::try_from(media_type_str)?;
 
         if layer_meta.decoder == Compression::Uncompressed {
-            let digest = if diff_id.starts_with(DIGEST_SHA256) {
+            let digest = if diff_id.starts_with(DIGEST_SHA256_PREFIX) {
                 format!(
-                    "{}:{:x}",
-                    DIGEST_SHA256,
+                    "{}{:x}",
+                    DIGEST_SHA256_PREFIX,
                     sha2::Sha256::digest(plaintext_layer.as_slice())
                 )
-            } else if diff_id.starts_with(DIGEST_SHA512) {
+            } else if diff_id.starts_with(DIGEST_SHA512_PREFIX) {
                 format!(
-                    "{}:{:x}",
-                    DIGEST_SHA512,
+                    "{}{:x}",
+                    DIGEST_SHA512_PREFIX,
                     sha2::Sha512::digest(plaintext_layer.as_slice())
                 )
             } else {
@@ -188,12 +186,12 @@ impl<'a> PullClient<'a> {
                 .decoder
                 .decompress(plaintext_layer.as_slice(), &mut out)?;
 
-            if diff_id.starts_with(DIGEST_SHA256) {
+            if diff_id.starts_with(DIGEST_SHA256_PREFIX) {
                 layer_meta.uncompressed_digest =
-                    format!("{DIGEST_SHA256}:{:x}", sha2::Sha256::digest(&out));
-            } else if diff_id.starts_with(DIGEST_SHA512) {
+                    format!("{DIGEST_SHA256_PREFIX}{:x}", sha2::Sha256::digest(&out));
+            } else if diff_id.starts_with(DIGEST_SHA512_PREFIX) {
                 layer_meta.uncompressed_digest =
-                    format!("{DIGEST_SHA512}:{:x}", sha2::Sha512::digest(&out));
+                    format!("{DIGEST_SHA512_PREFIX}{:x}", sha2::Sha512::digest(&out));
             } else {
                 bail!("{}: {:?}", ERR_BAD_COMPRESSED_DIGEST, diff_id);
             }
