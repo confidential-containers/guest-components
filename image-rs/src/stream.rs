@@ -7,6 +7,7 @@ use sha2::Digest;
 use std::fs;
 use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
+use std::sync::mpsc::{channel, Receiver};
 use tokio::io::{AsyncRead, AsyncReadExt};
 
 use crate::digest::{DigestHasher, LayerDigestHasher, DIGEST_SHA256_PREFIX, DIGEST_SHA512_PREFIX};
@@ -15,16 +16,16 @@ use crate::unpack::unpack;
 const CAPACITY: usize = 32768;
 const ERR_BAD_UNCOMPRESSED_DIGEST: &str = "unsupported uncompressed digest format";
 
-// Wrap a flume channel with [`Read`](std::io::Read) support.
+// Wrap a channel with [`Read`](std::io::Read) support.
 // This can bridge the [`AsyncRead`](tokio::io::AsyncRead) from
 // decrypt/decompress and impl Read for unpack.
 struct ChannelRead {
-    rx: flume::Receiver<Vec<u8>>,
+    rx: Receiver<Vec<u8>>,
     current: Cursor<Vec<u8>>,
 }
 
 impl ChannelRead {
-    fn new(rx: flume::Receiver<Vec<u8>>) -> ChannelRead {
+    fn new(rx: Receiver<Vec<u8>>) -> ChannelRead {
         ChannelRead {
             rx,
             current: Cursor::new(vec![]),
@@ -75,7 +76,7 @@ async fn channel_processing(
     mut hasher: LayerDigestHasher,
     destination: PathBuf,
 ) -> Result<String> {
-    let (tx, rx) = flume::unbounded();
+    let (tx, rx) = channel();
     let unpack_thread = std::thread::spawn(move || {
         let mut input = ChannelRead::new(rx);
 
@@ -101,8 +102,7 @@ async fn channel_processing(
 
         buffer.resize(n, 0);
         hasher.digest_update(&buffer);
-        tx.send_async(buffer)
-            .await
+        tx.send(buffer)
             .map_err(|e| anyhow!("channel: send failed {:?}", e))?;
     }
 
