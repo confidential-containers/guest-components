@@ -12,9 +12,9 @@ use tokio::io::{AsyncRead, AsyncReadExt};
 
 use crate::digest::{DigestHasher, LayerDigestHasher, DIGEST_SHA256_PREFIX, DIGEST_SHA512_PREFIX};
 use crate::unpack::unpack;
+use crate::ERR_BAD_UNCOMPRESSED_DIGEST;
 
 const CAPACITY: usize = 32768;
-const ERR_BAD_UNCOMPRESSED_DIGEST: &str = "unsupported uncompressed digest format";
 
 // Wrap a channel with [`Read`](std::io::Read) support.
 // This can bridge the [`AsyncRead`](tokio::io::AsyncRead) from
