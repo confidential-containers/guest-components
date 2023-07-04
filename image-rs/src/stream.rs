@@ -89,8 +89,8 @@ async fn channel_processing(
         Result::<()>::Ok(())
     });
 
-    let mut buffer = [0; CAPACITY];
     loop {
+        let mut buffer = vec![0u8; CAPACITY];
         let n = layer_reader
             .read(&mut buffer)
             .await
@@ -99,8 +99,9 @@ async fn channel_processing(
             break;
         }
 
-        hasher.digest_update(&buffer[..n]);
-        tx.send_async(buffer[..n].to_vec())
+        buffer.resize(n, 0);
+        hasher.digest_update(&buffer);
+        tx.send_async(buffer)
             .await
             .map_err(|e| anyhow!("channel: send failed {:?}", e))?;
     }
