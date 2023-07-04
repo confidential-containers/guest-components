@@ -57,23 +57,17 @@ pub async fn stream_processing(
     destination: &Path,
 ) -> Result<String> {
     let dest = destination.to_path_buf();
-    let digest_str = if diff_id.starts_with(DIGEST_SHA256_PREFIX) {
-        let hasher = LayerDigestHasher::Sha256(sha2::Sha256::new());
-
-        channel_processing(layer_reader, hasher, dest)
-            .await
-            .map_err(|e| anyhow!("hasher {} {:?}", DIGEST_SHA256_PREFIX, e))?
+    let hasher = if diff_id.starts_with(DIGEST_SHA256_PREFIX) {
+        LayerDigestHasher::Sha256(sha2::Sha256::new())
     } else if diff_id.starts_with(DIGEST_SHA512_PREFIX) {
-        let hasher = LayerDigestHasher::Sha512(sha2::Sha512::new());
-
-        channel_processing(layer_reader, hasher, dest)
-            .await
-            .map_err(|e| anyhow!("hasher {} {:?}", DIGEST_SHA512_PREFIX, e))?
+        LayerDigestHasher::Sha512(sha2::Sha512::new())
     } else {
         bail!("{}: {:?}", ERR_BAD_UNCOMPRESSED_DIGEST, diff_id);
     };
 
-    Ok(digest_str)
+    channel_processing(layer_reader, hasher, dest)
+        .await
+        .map_err(|e| anyhow!("hasher {} {:?}", DIGEST_SHA256_PREFIX, e))
 }
 
 async fn channel_processing(
