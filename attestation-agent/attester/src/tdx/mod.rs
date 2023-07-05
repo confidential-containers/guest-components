@@ -5,14 +5,18 @@
 
 use super::Attester;
 use anyhow::*;
+use raw_cpuid::cpuid;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use tdx_attest_rs;
 
 const CCEL_PATH: &str = "/sys/firmware/acpi/tables/data/CCEL";
 
 pub fn detect_platform() -> bool {
-    Path::new("/dev/tdx-attest").exists() || Path::new("/dev/tdx-guest").exists()
+    const TDX_CPUID_LEAF: u32 = 0x21;
+    let c = cpuid!(TDX_CPUID_LEAF, 0);
+    let tdbytes = [c.ebx, c.edx, c.ecx].map(|x| x.to_le_bytes()).concat();
+    let tdstring = String::from_utf8_lossy(&tdbytes);
+    tdstring == "IntelTDX    "
 }
 
 #[derive(Serialize, Deserialize)]
