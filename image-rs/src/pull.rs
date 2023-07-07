@@ -29,7 +29,7 @@ const ERR_BAD_COMPRESSED_DIGEST: &str = "unsupported compressed digest format";
 /// The PullClient connects to remote OCI registry, pulls the container image,
 /// and save the image layers under data_dir and return the layer meta info.
 pub struct PullClient<'a> {
-    /// `oci-distribuion` client to talk with remote OCI registry.
+    /// `oci-distribution` client to talk with remote OCI registry.
     pub client: Client,
 
     /// OCI registry auth info.
@@ -115,12 +115,12 @@ impl<'a> PullClient<'a> {
         diff_id: String,
         decrypt_config: &Option<&str>,
         meta_store: Arc<Mutex<MetaStore>>,
-    ) -> Result<Vec<LayerMeta>> {
+    ) -> Result<LayerMeta> {
         let layer_metas = self
-            .pull_layers(vec![bootstrap_desc], &[diff_id], decrypt_config, meta_store)
+            .async_pull_layers(vec![bootstrap_desc], &[diff_id], decrypt_config, meta_store)
             .await?;
         match layer_metas.get(0) {
-            Some(b) => Ok(vec![b.clone()]),
+            Some(b) => Ok(b.clone()),
             None => Err(anyhow!("Failed to  download this bootstrap layer")),
         }
     }
