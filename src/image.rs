@@ -2,19 +2,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Context, bail, Result};
-use log::{warn, info};
+use anyhow::{anyhow, bail, Result};
+use log::warn;
 use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
 use oci_spec::image::{ImageConfiguration, Os};
 use serde::Deserialize;
 use std::collections::{BTreeSet, HashMap};
 use std::convert::TryFrom;
-use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
-
 
 use tokio::sync::Mutex;
 
@@ -239,8 +236,6 @@ impl ImageClient {
             &auth,
             self.config.max_concurrent_download,
         )?;
-
-
         let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
 
         let id = image_manifest.config.digest.clone();
@@ -345,19 +340,6 @@ impl ImageClient {
 
         Ok(image_id)
     }
-}
-
-fn create_example_file(path: &PathBuf) -> Result<()> {
-    // Open the file in write mode, creating it if it doesn't exist
-    let mut file = File::create(path)
-        .with_context(|| format!("Failed to create file: {:?}", path))?;
-
-    // Write "hello world!" to the file
-    file.write_all(b"hello world!")
-        .with_context(|| format!("Failed to write to file: {:?}", path))?;
-
-    Ok(())
-
 }
 
 fn create_bundle(

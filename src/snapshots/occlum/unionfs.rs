@@ -167,30 +167,12 @@ impl Snapshotter for Unionfs {
 
         info!("Moving to create file here");
         read_files_in_home_dir();
-        let file_create_path_1 = mount_path.join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
-        //let file_create_path_2 = mount_path.join("sefs").join("lower").join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
-        let file_create_path_3 = Path::new("/etc").join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
-        create_example_file(&PathBuf::from(&file_create_path_1))
+        let file_create_path = Path::new("/etc").join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
+        create_example_file(&PathBuf::from(&file_create_path))
             .map_err(|e| {
                 anyhow!(
                 "failed to write file {:?} with error: {}",
-                file_create_path_1,
-                e
-            )
-            })?;
-        // create_example_file(&PathBuf::from(&file_create_path_2))
-        //     .map_err(|e| {
-        //         anyhow!(
-        //         "failed to write file {:?} with error: {}",
-        //         file_create_path_2,
-        //         e
-        //     )
-        //     })?;
-        create_example_file(&PathBuf::from(&file_create_path_3))
-            .map_err(|e| {
-                anyhow!(
-                "failed to write file {:?} with error: {}",
-                file_create_path_3,
+                file_create_path,
                 e
             )
             })?;
@@ -225,7 +207,7 @@ impl Snapshotter for Unionfs {
             })?;
 
         // clear the mount_path if there is something
-        // clear_path(mount_path)?;
+        clear_path(mount_path)?;
 
         // copy dirs to the specified mount directory
         let mut layer_path_vec = layer_path.to_vec();
