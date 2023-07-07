@@ -24,3 +24,4 @@ pub mod signature;
 pub mod snapshots;
 pub mod stream;
 pub mod unpack;
+pub mod verity;
