@@ -63,23 +63,6 @@ fn create_example_file(path: &PathBuf) -> Result<()> {
 
 }
 
-fn read_files_in_home_dir() {
-    let paths = fs::read_dir("/").unwrap();
-    let paths1 = fs::read_dir("/root").unwrap();
-    let paths2 = fs::read_dir("/run").unwrap();
-
-    for path in paths {
-        println!("Name in /: {}", path.unwrap().path().display())
-    }
-    for path in paths1 {
-        println!("Name in /root: {}", path.unwrap().path().display())
-    }
-    for path in paths2 {
-        println!("Name in /run: {}", path.unwrap().path().display())
-    }
-
-}
-
 fn create_environment(mount_path: &Path) -> Result<()> {
     let mut from_paths = Vec::new();
     let mut copy_options = dir::CopyOptions::new();
@@ -88,8 +71,6 @@ fn create_environment(mount_path: &Path) -> Result<()> {
     // copy the libs required by occlum to the mount path
     let path_lib64 = mount_path.join("lib64");
     create_dir(&path_lib64)?;
-
-
 
     let lib64_libs = vec![LD_LIB];
     let ori_path_lib64 = Path::new("/lib64");
@@ -166,7 +147,6 @@ impl Snapshotter for Unionfs {
         let unionfs_upperdir = sefs_base.join("upper");
 
         info!("Moving to create file here");
-        read_files_in_home_dir();
         let file_create_path = Path::new("/etc").join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
         create_example_file(&PathBuf::from(&file_create_path))
             .map_err(|e| {
@@ -197,14 +177,14 @@ impl Snapshotter for Unionfs {
             flags,
             Some(options.as_str()),
         )
-            .map_err(|e| {
-                anyhow!(
+        .map_err(|e| {
+            anyhow!(
                 "failed to mount {:?} to {:?}, with error: {}",
                 source,
                 mount_path,
                 e
             )
-            })?;
+        })?;
 
         // clear the mount_path if there is something
         clear_path(mount_path)?;
