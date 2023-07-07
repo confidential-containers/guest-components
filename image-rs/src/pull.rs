@@ -273,72 +273,58 @@ impl<'a> PullClient<'a> {
         ms: Arc<Mutex<MetaStore>>,
     ) -> Result<LayerMeta> {
         let layer_db = &ms.lock().await.layer_db;
-
         if let Some(layer_meta) = layer_db.get(&layer.digest) {
             return Ok(layer_meta.clone());
         }
 
-        let mut layer_meta = LayerMeta::default();
-        let mut media_type_str: &str = layer.media_type.as_str();
-
-        let store_path = format!(
-            "{}/{}",
-            self.data_dir.display(),
-            &layer.digest.to_string().replace(':', "_")
-        );
-
-        let destination = Path::new(&store_path);
+        let blob_id = layer.digest.to_string().replace(':', "_");
+        let destination = self.data_dir.join(blob_id);
+        let mut layer_meta = LayerMeta {
+            compressed_digest: layer.digest.clone(),
+            store_path: destination.display().to_string(),
+            ..Default::default()
+        };
 
         let decryptor = Decryptor::from_media_type(&layer.media_type);
-
-        let uncompressed_digest;
-
         if decryptor.is_encrypted() {
             if let Some(dc) = decrypt_config {
                 let decrypt_key = decryptor
                     .get_decrypt_key(&layer, dc)
                     .map_err(|e| anyhow!("failed to get decrypt key {}", e.to_string()))?;
-
                 let plaintext_layer = decryptor
                     .async_get_plaintext_layer(layer_reader, &layer, &decrypt_key)
                     .map_err(|e| anyhow!("failed to async_get_plaintext_layer: {:?}", e))?;
-
-                layer_meta.encrypted = true;
-                media_type_str = decryptor.media_type.as_str();
-                uncompressed_digest = self
+                layer_meta.uncompressed_digest = self
                     .async_decompress_unpack_layer(
                         plaintext_layer,
                         &diff_id,
-                        media_type_str,
-                        destination,
+                        &decryptor.media_type,
+                        &destination,
                     )
                     .await?;
+                layer_meta.encrypted = true;
             } else {
                 bail!(ERR_NO_DECRYPT_CFG);
             }
         } else {
-            uncompressed_digest = self
-                .async_decompress_unpack_layer(layer_reader, &diff_id, media_type_str, destination)
+            layer_meta.uncompressed_digest = self
+                .async_decompress_unpack_layer(
+                    layer_reader,
+                    &diff_id,
+                    &layer.media_type,
+                    &destination,
+                )
                 .await?;
         }
 
-        layer_meta.compressed_digest = layer.digest.clone();
-        layer_meta.uncompressed_digest = uncompressed_digest;
-
         // uncompressed digest should equal to the diff_ids in image_config.
         if layer_meta.uncompressed_digest != diff_id {
-            println!(
-                "unequal uncompressed digest {:?} config diff_id {:?}",
-                layer_meta.uncompressed_digest, diff_id
-            );
             bail!(
                 "unequal uncompressed digest {:?} config diff_id {:?}",
                 layer_meta.uncompressed_digest,
                 diff_id
             );
         }
-
-        layer_meta.store_path = destination.display().to_string();
 
         Ok(layer_meta)
     }
