@@ -76,11 +76,6 @@ jobs:
         run: |
           sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-openssl,keywrap-grpc,snapshot-overlayfs,signature-cosign-native,signature-simple,getresource,oci-distribution/native-tls,keywrap-jwe
 
-      - name: Prepare for ttrpc test
-        run: |
-          sudo mkdir -p /opt/confidential-containers/attestation-agent/
-          if test -f "scripts/attestation-agent"; then rm scripts/attestation-agent; fi
-
       - name: Run cargo test - kata-cc (rust-tls version) with keywrap-ttrpc (default) + keywrap-jwe
         run: |
           sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-rustls-tls,keywrap-jwe

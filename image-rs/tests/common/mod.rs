@@ -59,29 +59,39 @@ pub async fn clean() {
 
 pub async fn start_attestation_agent() -> Result<Child> {
     let script_dir = format!("{}/{}", std::env!("CARGO_MANIFEST_DIR"), "scripts");
-    let aa_path = format!("{}/{}", script_dir, "attestation-agent");
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "keywrap-ttrpc")] {
+            let aa_path = format!("{}/ttrpc/{}", script_dir, "attestation-agent");
+        } else {
+            let aa_path = format!("{}/grpc/{}", script_dir, "attestation-agent");
+        }
+    };
+    println!("aa_path: {}", aa_path);
+    println!("script_dir: {}", script_dir);
 
     if !Path::new(&aa_path).exists() {
         let script_path = format!("{}/{}", script_dir, "build_attestation_agent.sh");
         cfg_if::cfg_if! {
             if #[cfg(feature = "keywrap-ttrpc")] {
-                Command::new(script_path)
+                let output = Command::new(script_path)
                     .env("TTRPC", "1")
                     .output()
                     .await
                     .expect("Failed to build attestation-agent");
+                println!("build ttrpc attestation-agent: {:?}", output);
             } else {
                 let output = Command::new(script_path)
                     .output()
                     .await
                     .expect("Failed to build attestation-agent");
+                println!("build grpc attestation-agent: {:?}", output);
             }
         }
     }
 
     cfg_if::cfg_if! {
         if #[cfg(feature = "keywrap-ttrpc")] {
-            let mut aa = tokio::process::Command::new(aa_path)
+            let mut aa = Command::new(aa_path)
                 .kill_on_drop(true)
                 .args(&[
                     "--keyprovider_sock",
@@ -89,9 +99,10 @@ pub async fn start_attestation_agent() -> Result<Child> {
                     "--getresource_sock",
                     "unix:///run/confidential-containers/attestation-agent/getresource.sock"
                     ])
-                .spawn()?;
+                .spawn()
+                .expect("Failed to start ttrpc attestation-agent");
         } else {
-            let mut aa = tokio::process::Command::new(aa_path)
+            let mut aa = Command::new(aa_path)
                 .kill_on_drop(true)
                 .args(&[
                     "--keyprovider_sock",
@@ -99,7 +110,8 @@ pub async fn start_attestation_agent() -> Result<Child> {
                     "--getresource_sock",
                     "127.0.0.1:50001"
                     ])
-                .spawn()?;
+                .spawn()
+                .expect("Failed to start grpc attestation-agent");
         }
     };
 
