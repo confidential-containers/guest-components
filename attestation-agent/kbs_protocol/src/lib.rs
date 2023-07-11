@@ -45,8 +45,16 @@ pub struct NoAttester;
 pub struct KbsProtocolWrapperBuilder<T, A> {
     tee: T,
     attester: A,
+    kbs_certs: Vec<String>,
 }
 type WrapperBuilder<T, A> = KbsProtocolWrapperBuilder<T, A>;
+
+impl<T, A> WrapperBuilder<T, A> {
+    pub fn add_kbs_cert(mut self, cert_pem: String) -> Self {
+        self.kbs_certs.push(cert_pem);
+        self
+    }
+}
 
 impl WrapperBuilder<NoTee, NoAttester> {
     #[allow(clippy::new_without_default)]
@@ -54,6 +62,7 @@ impl WrapperBuilder<NoTee, NoAttester> {
         Self {
             tee: NoTee,
             attester: NoAttester,
+            kbs_certs: vec![],
         }
     }
 
@@ -61,6 +70,7 @@ impl WrapperBuilder<NoTee, NoAttester> {
         WrapperBuilder {
             tee,
             attester: self.attester,
+            kbs_certs: self.kbs_certs,
         }
     }
 }
@@ -70,6 +80,7 @@ impl WrapperBuilder<Tee, NoAttester> {
         WrapperBuilder {
             tee: self.tee,
             attester,
+            kbs_certs: self.kbs_certs,
         }
     }
 }
@@ -94,7 +105,7 @@ impl WrapperBuilder<Tee, BoxedAttester> {
 impl TryFrom<WrapperBuilder<Tee, BoxedAttester>> for KbsProtocolWrapper {
     type Error = Error;
     fn try_from(builder: WrapperBuilder<Tee, BoxedAttester>) -> Result<Self> {
-        let mut wrapper = Self::new()?;
+        let mut wrapper = Self::new(builder.kbs_certs)?;
         wrapper.tee = builder.tee.to_string();
         wrapper.attester = Some(builder.attester);
         Ok(wrapper)
@@ -102,7 +113,7 @@ impl TryFrom<WrapperBuilder<Tee, BoxedAttester>> for KbsProtocolWrapper {
 }
 
 impl KbsProtocolWrapper {
-    pub fn new() -> Result<KbsProtocolWrapper> {
+    pub fn new(kbs_root_certs_pem: Vec<String>) -> Result<KbsProtocolWrapper> {
         let tee_key = TeeKey::new().map_err(|e| anyhow!("Generate TEE key failed: {e}"))?;
         // Detect TEE type of the current platform.
         let tee_type = detect_tee_type();
@@ -111,22 +122,15 @@ impl KbsProtocolWrapper {
 
         Ok(KbsProtocolWrapper {
             tee: tee_type.to_string(),
-            tee_key: None,
-            nonce: String::default(),
             attester,
             tee_key,
             nonce: None,
-            http_client: build_http_client()?,
+            http_client: build_http_client(kbs_root_certs_pem)?,
             authenticated: false,
         })
     }
 
     fn generate_evidence(&self, tee_pubkey: TeePubKey) -> Result<Attestation> {
-        let attester = self
-            .attester
-            .as_ref()
-            .ok_or_else(|| anyhow!("TEE attester missed"))?;
-
         let nonce = self
             .nonce
             .to_owned()
@@ -183,9 +187,11 @@ impl KbsProtocolWrapper {
             Some(k) => pkcs1_pem_to_teepubkey(k)?,
             None => {
                 let key = TeeKey::new()?;
-                self.tee_key = Some(key.clone());
-                key.export_pubkey()
-                    .map_err(|e| anyhow!("Export TEE pubkey failed: {:?}", e))?
+                let key_exp = key
+                    .export_pubkey()
+                    .map_err(|e| anyhow!("Export TEE pubkey failed: {:?}", e))?;
+                self.tee_key = key;
+                key_exp
             }
         };
 
@@ -264,14 +270,44 @@ impl KbsRequest for KbsProtocolWrapper {
     }
 }
 
-fn build_http_client() -> Result<reqwest::Client> {
-    reqwest::Client::builder()
+fn build_http_client(kbs_root_certs_pem: Vec<String>) -> Result<reqwest::Client> {
+    let mut client_builder = reqwest::Client::builder()
         .cookie_store(true)
         .user_agent(format!(
             "attestation-agent-kbs-client/{}",
             env!("CARGO_PKG_VERSION")
         ))
-        .timeout(Duration::from_secs(KBS_REQ_TIMEOUT_SEC))
+        .timeout(Duration::from_secs(KBS_REQ_TIMEOUT_SEC));
+
+    for custom_root_cert in kbs_root_certs_pem.iter() {
+        let cert = reqwest::Certificate::from_pem(custom_root_cert.as_bytes())?;
+        client_builder = client_builder.add_root_certificate(cert);
+    }
+
+    client_builder
         .build()
         .map_err(|e| anyhow!("Build KBS http client failed: {:?}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_http_client() {
+        let test_certs = vec!["-----BEGIN CERTIFICATE-----
+MIIBzTCCAX+gAwIBAgIUOGdGRmt/IDSVIem7iFwsuxnV62AwBQYDK2VwMGkxCzAJ
+BgNVBAYTAkNOMREwDwYDVQQIDAhTaGFuZ2hhaTERMA8GA1UEBwwIU2hhbmdoYWkx
+EDAOBgNVBAoMB0FsaWJhYmExDzANBgNVBAsMBkFsaXl1bjERMA8GA1UEAwwIS0JT
+LXJvb3QwHhcNMjMwNzE0MDYzMzA1WhcNMjMwODEzMDYzMzA1WjBpMQswCQYDVQQG
+EwJDTjERMA8GA1UECAwIU2hhbmdoYWkxETAPBgNVBAcMCFNoYW5naGFpMRAwDgYD
+VQQKDAdBbGliYWJhMQ8wDQYDVQQLDAZBbGl5dW4xETAPBgNVBAMMCEtCUy1yb290
+MCowBQYDK2VwAyEAOo8z6/Ul3XvNBf2Oa7qDevljyhGSKyGMjV+4qneVNr+jOTA3
+MAkGA1UdEwQCMAAwCwYDVR0PBAQDAgXgMB0GA1UdDgQWBBREKNLFRe7fCBKRffTv
+x13TMfDeczAFBgMrZXADQQBpP6ABBkzVj3mF55nWUtP5vxwq3t91wqQJ6NyC7WsT
+3Z29bFfJn7C280JfkCqiqeSZjYV/JjTepATH659kktcA
+-----END CERTIFICATE-----"
+            .to_string()];
+        assert!(build_http_client(test_certs).is_ok());
+    }
 }
