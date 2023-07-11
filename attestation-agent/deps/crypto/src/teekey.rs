@@ -15,6 +15,7 @@ const NEW_PADDING: fn() -> PaddingScheme = PaddingScheme::new_pkcs1v15_encrypt;
 
 pub const RSA_ALGORITHM: &str = "RSA1_5";
 pub const AES_256_GCM_ALGORITHM: &str = "A256GCM";
+pub const KEY_TYPE: &str = "RSA";
 
 /// The key inside TEE to decrypt confidential data.
 #[derive(Debug, Clone)]
@@ -42,6 +43,7 @@ impl TeeKey {
         let k_exp = base64::encode(self.public_key.e().to_bytes_be());
 
         Ok(TeePubKey {
+            kty: KEY_TYPE.to_string(),
             alg: RSA_ALGORITHM.to_string(),
             k_mod,
             k_exp,
