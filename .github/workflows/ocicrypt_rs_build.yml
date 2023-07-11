@@ -11,6 +11,7 @@ on:
       - 'ocicrypt-rs/**'
       - '.github/workflows/ocicrypt_rs_build.yml'
   create:
+  workflow_dispatch:
 
 jobs:
   ci:

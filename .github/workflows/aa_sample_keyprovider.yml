@@ -11,6 +11,7 @@ on:
       - 'attestation-agent/coco_keyprovider/**'
       - '.github/workflows/aa_sample_keyprovider.yml'
   create:
+  workflow_dispatch:
 
 jobs:
   coco_keyprovider_ci:

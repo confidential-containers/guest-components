@@ -14,6 +14,7 @@ on:
       - 'attestation-agent/kbs_protocol/**'
       - '.github/workflows/aa_cc_kbc.yml'
   create:
+  workflow_dispatch:
 
 jobs:
   cc_kbc_ci:

@@ -12,6 +12,7 @@ on:
       - 'attestation-agent/deps/crypto/**'
       - '.github/workflows/aa_crypto.yml'
   create:
+  workflow_dispatch:
 
 jobs:
   crypto_ci:
