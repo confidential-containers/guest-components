@@ -1,6 +1,8 @@
 name: CC kbc build CI
 on:
   push:
+    branches:
+      - 'main'
     paths:
       - 'attestation-agent/attester/src/sgx_occlum'
       - 'attestation-agent/ci/occlum**'
