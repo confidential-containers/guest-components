@@ -1,5 +1,16 @@
 name: image-rs build
-on: [push, pull_request, create]
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'image-rs/**'
+      - '.github/workflows/image_rs_build.yml'
+  pull_request:
+    paths:
+      - 'image-rs/**'
+      - '.github/workflows/image_rs_build.yml'
+  create:
 
 jobs:
   ci:

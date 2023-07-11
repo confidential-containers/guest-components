@@ -1,5 +1,16 @@
 name: ocicrypt-rs build
-on: [push, pull_request, create]
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'ocicrypt-rs/**'
+      - '.github/workflows/ocicrypt_rs_build.yml'
+  pull_request:
+    paths:
+      - 'ocicrypt-rs/**'
+      - '.github/workflows/ocicrypt_rs_build.yml'
+  create:
 
 jobs:
   ci:
@@ -42,7 +53,7 @@ jobs:
           apt install -y protobuf-compiler libprotobuf-dev
 
       - name: Build and install rats-tls
-        run: | 
+        run: |
           PWD=$(pwd)
           cd /tmp
           apt-get install -y libcurl4-openssl-dev
@@ -166,4 +177,3 @@ jobs:
         with:
           command: clippy
           args: -p ocicrypt-rs --all-targets --all-features -- -D warnings -A clippy::derive_partial_eq_without_eq
-
