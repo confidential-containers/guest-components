@@ -1,4 +1,4 @@
-name: CC kbc build CI
+name: attestation-agent occlum_sgx tests
 on:
   push:
     branches:
@@ -15,7 +15,7 @@ on:
   create:
 
 jobs:
-  build-and-run-occlum:
+  occlum_sgx_ci:
     runs-on: self-hosted
     container:
       image: occlum/occlum:latest-ubuntu20.04

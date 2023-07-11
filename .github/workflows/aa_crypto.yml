@@ -1,4 +1,5 @@
-name: Crypto CI
+name: attestation-agent crypto tests
+
 on:
   push:
     branches:

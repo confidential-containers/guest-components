@@ -1,4 +1,5 @@
-name: CC kbc build CI
+name: attestation-agent cc_kbc tests
+
 on:
   push:
     branches:

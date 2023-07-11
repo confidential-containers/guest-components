@@ -1,4 +1,5 @@
-name: EAA kbc build CI
+name: attestation-agent eaa_kbc tests
+
 on:
   push:
     branches:
