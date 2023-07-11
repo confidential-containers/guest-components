@@ -62,7 +62,7 @@ impl Kbc {
         Ok(Kbc {
             kbs_uri: url,
             token: None,
-            kbs_protocol_wrapper: KbsProtocolWrapper::new().unwrap(),
+            kbs_protocol_wrapper: KbsProtocolWrapper::new(vec![]).unwrap(),
         })
     }
 

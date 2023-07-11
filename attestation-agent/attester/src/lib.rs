@@ -28,7 +28,7 @@ pub mod snp;
 /// - AzSnpVtpm: SEV-SNP TEE for Azure CVMs.
 /// - Snp: SEV-SNP TEE.
 /// - Sample: A dummy TEE that used to test/demo the KBC functionalities.
-#[derive(Debug, EnumString, Display)]
+#[derive(Debug, EnumString, Display, Clone, Copy)]
 #[strum(ascii_case_insensitive, serialize_all = "lowercase")]
 pub enum Tee {
     Tdx,
