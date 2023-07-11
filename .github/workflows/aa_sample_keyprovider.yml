@@ -1,13 +1,15 @@
-name: Coco Keyprovider CI
+name: attestation-agent coco_keyprovider tests
 on:
   push:
     branches:
       - 'main'
     paths:
       - 'attestation-agent/coco_keyprovider/**'
+      - '.github/workflows/aa_sample_keyprovider.yml'
   pull_request:
     paths:
       - 'attestation-agent/coco_keyprovider/**'
+      - '.github/workflows/aa_sample_keyprovider.yml'
   create:
 
 jobs:

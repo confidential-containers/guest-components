@@ -1,4 +1,4 @@
-name: offline_sev_kbc build CI
+name: attestation-agent offline_sev_kbc tests
 on:
   push:
     branches:
