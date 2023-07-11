@@ -11,6 +11,7 @@ on:
       - 'attestation-agent/kbc/offline_sev_kbc/**'
       - 'attestation-agent/kbc/online_sev_kbc/**'
   create:
+  workflow_dispatch:
 
 jobs:
   offline_sev_kbc_ci:

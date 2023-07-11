@@ -12,6 +12,7 @@ on:
       - 'attestation-agent/kbc/eaa_kbc/**'
       - '.github/workflows/aa_eaa_kbc.yml'
   create:
+  workflow_dispatch:
 
 jobs:
   eaa_kbc_ci:

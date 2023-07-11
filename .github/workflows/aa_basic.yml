@@ -14,6 +14,7 @@ on:
       - '.github/workflows/aa_basic.yml'
       - 'Cargo.toml'
   create:
+  workflow_dispatch:
 
 jobs:
   basic_ci:

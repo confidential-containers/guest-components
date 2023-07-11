@@ -11,6 +11,7 @@ on:
       - 'image-rs/**'
       - '.github/workflows/image_rs_build.yml'
   create:
+  workflow_dispatch:
 
 jobs:
   ci:
