@@ -7,8 +7,8 @@ use anyhow::*;
 use async_trait::async_trait;
 use attester::{detect_tee_type, Attester, Tee};
 use core::time::Duration;
-use crypto::{hash_chunks, TeeKey};
-use kbs_types::{Attestation, ErrorInformation};
+use crypto::{hash_chunks, pkcs1_pem_to_teepubkey, TeeKey};
+use kbs_types::{Attestation, ErrorInformation, TeePubKey};
 use std::convert::TryFrom;
 use types::*;
 use url::Url;
@@ -25,7 +25,7 @@ pub trait KbsRequest {
     /// Get confidential resource
     async fn http_get(&mut self, resource_url: String) -> Result<Vec<u8>>;
     /// Attestation and get attestation results token (Base64 endcoded)
-    async fn attest(&mut self, host_url: String) -> Result<String>;
+    async fn attest(&mut self, url: String, tee_pubkey_pem: Option<String>) -> Result<String>;
 }
 
 type BoxedAttester = Box<dyn Attester + Send + Sync>;
@@ -111,6 +111,8 @@ impl KbsProtocolWrapper {
 
         Ok(KbsProtocolWrapper {
             tee: tee_type.to_string(),
+            tee_key: None,
+            nonce: String::default(),
             attester,
             tee_key,
             nonce: None,
@@ -119,11 +121,11 @@ impl KbsProtocolWrapper {
         })
     }
 
-    fn generate_evidence(&self) -> Result<Attestation> {
-        let tee_pubkey = self
-            .tee_key
-            .export_pubkey()
-            .map_err(|e| anyhow!("Export TEE pubkey failed: {:?}", e))?;
+    fn generate_evidence(&self, tee_pubkey: TeePubKey) -> Result<Attestation> {
+        let attester = self
+            .attester
+            .as_ref()
+            .ok_or_else(|| anyhow!("TEE attester missed"))?;
 
         let nonce = self
             .nonce
@@ -161,7 +163,11 @@ impl KbsProtocolWrapper {
         &mut self.http_client
     }
 
-    async fn attestation(&mut self, kbs_root_url: String) -> Result<String> {
+    async fn attestation(
+        &mut self,
+        kbs_root_url: String,
+        tee_pubkey_pem: Option<String>,
+    ) -> Result<String> {
         let challenge = self
             .http_client()
             .post(format!("{kbs_root_url}{KBS_PREFIX}/auth"))
@@ -173,11 +179,21 @@ impl KbsProtocolWrapper {
             .await?;
         self.nonce = Some(challenge.nonce.clone());
 
+        let pubkey = match tee_pubkey_pem {
+            Some(k) => pkcs1_pem_to_teepubkey(k)?,
+            None => {
+                let key = TeeKey::new()?;
+                self.tee_key = Some(key.clone());
+                key.export_pubkey()
+                    .map_err(|e| anyhow!("Export TEE pubkey failed: {:?}", e))?
+            }
+        };
+
         let attest_response = self
             .http_client()
             .post(format!("{kbs_root_url}{KBS_PREFIX}/attest"))
             .header("Content-Type", "application/json")
-            .json(&self.generate_evidence()?)
+            .json(&self.generate_evidence(pubkey)?)
             .send()
             .await?;
 
@@ -213,7 +229,7 @@ impl KbsRequest for KbsProtocolWrapper {
             log::info!("CC-KBC: trying to request KBS, attempt {attempt}");
 
             if !self.authenticated {
-                self.attestation(root_url.clone()).await?;
+                self.attestation(root_url.clone(), None).await?;
             }
 
             let res = self.http_client().get(&url_string).send().await?;
@@ -243,8 +259,8 @@ impl KbsRequest for KbsProtocolWrapper {
         bail!("Request KBS: Attested but KBS still return Unauthorized")
     }
 
-    async fn attest(&mut self, host_url: String) -> Result<String> {
-        self.attestation(host_url).await
+    async fn attest(&mut self, url: String, tee_pubkey_pem: Option<String>) -> Result<String> {
+        self.attestation(url, tee_pubkey_pem).await
     }
 }
 
