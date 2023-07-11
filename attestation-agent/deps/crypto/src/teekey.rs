@@ -8,7 +8,11 @@
 use anyhow::*;
 use base64::Engine;
 use kbs_types::TeePubKey;
-use rsa::{traits::PublicKeyParts, Pkcs1v15Encrypt, RsaPrivateKey, RsaPublicKey};
+use rsa::pkcs1::DecodeRsaPublicKey;
+use rsa::{
+    traits::PublicKeyParts, PaddingScheme, Pkcs1v15Encrypt, PublicKeyParts, RsaPrivateKey,
+    RsaPublicKey,
+};
 use sha2::{Digest, Sha384};
 
 const RSA_PUBKEY_LENGTH: usize = 2048;
@@ -68,4 +72,18 @@ pub fn hash_chunks(chunks: Vec<Vec<u8>>) -> Vec<u8> {
     }
 
     hasher.finalize().to_vec()
+}
+
+// Convert PKCS#1 PEM public key to TeePubKey
+pub fn pkcs1_pem_to_teepubkey(pem: String) -> Result<TeePubKey> {
+    let public_key = RsaPublicKey::from_pkcs1_pem(&pem)?;
+    let k_mod = base64::encode(public_key.n().to_bytes_be());
+    let k_exp = base64::encode(public_key.e().to_bytes_be());
+    let tee_pubkey = TeePubKey {
+        kty: RSA_KEY_TYPE.to_string(),
+        alg: RSA_ALGORITHM.to_string(),
+        k_mod,
+        k_exp,
+    };
+    Ok(tee_pubkey)
 }
