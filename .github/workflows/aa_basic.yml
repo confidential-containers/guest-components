@@ -16,7 +16,6 @@ on:
 
 jobs:
   basic_ci:
-    if: github.event_name == 'pull_request'
     name: Check
     defaults:
       run:
