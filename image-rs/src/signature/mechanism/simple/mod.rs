@@ -139,7 +139,7 @@ impl SignScheme for SimpleParameters {
 
     #[cfg(not(feature = "signature-simple"))]
     async fn allows_image(&self, _image: &mut Image, _auth: &RegistryAuth) -> Result<()> {
-        bail!("feature \"signature-simple\" not enabled.")
+        Err(anyhow!("feature \"signature-simple\" not enabled."))
     }
 }
 

@@ -52,7 +52,7 @@ pub trait KbcInterface: Send {
 
     /// Get resources managed by the attestation agent in asynchronous mode.
     async fn get_resource(&mut self, _rid: ResourceUri) -> Result<Vec<u8>> {
-        bail!("Get Resource API of this KBC is unimplement!")
+        Err(anyhow!("Get Resource API of this KBC is unimplement!"))
     }
 }
 
