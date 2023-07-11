@@ -7,8 +7,6 @@ on:
     paths:
       - 'attestation-agent/coco_keyprovider/**'
   create:
-    paths:
-      - 'attestation-agent/coco_keyprovider/**'
 
 jobs:
   coco_keyprovider_ci:
@@ -41,7 +39,7 @@ jobs:
         with:
           command: fmt
           args: --check --manifest-path attestation-agent/coco_keyprovider/Cargo.toml
-        
+
       - name: Rust clippy check
         uses: actions-rs/cargo@v1
         with:

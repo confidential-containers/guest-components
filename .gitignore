@@ -4,3 +4,4 @@ Cargo.lock
 .DS_Store
 
 image-rs/scripts/attestation-agent
+shell.nix

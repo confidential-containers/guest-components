@@ -9,9 +9,6 @@ on:
       - 'attestation-agent/deps/crypto/**'
       - '.github/workflows/aa_crypto.yml'
   create:
-    paths:
-      - 'attestation-agent/deps/crypto/**'
-      - '.github/workflows/aa_crypto.yml'
 
 jobs:
   crypto_ci:
@@ -54,10 +51,9 @@ jobs:
           command: clippy
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
           args: -p crypto --no-default-features --features ${{ matrix.suites }} -- -D warnings -A clippy::derive_partial_eq_without_eq
-      
+
       - name: Run cargo test (${{ matrix.suites }})
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: -p crypto --no-default-features --features ${{ matrix.suites }}
-
