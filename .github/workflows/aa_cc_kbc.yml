@@ -1,6 +1,8 @@
 name: CC kbc build CI
 on:
   push:
+    branches:
+      - 'main'
     paths:
       - 'attestation-agent/kbc/cc_kbc/**'
       - 'attestation-agent/kbs_protocol/**'

@@ -1,6 +1,8 @@
 name: Coco Keyprovider CI
 on:
   push:
+    branches:
+      - 'main'
     paths:
       - 'attestation-agent/coco_keyprovider/**'
   pull_request:

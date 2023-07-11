@@ -1,6 +1,8 @@
 name: attestation-agent basic build and unit tests
 on:
   push:
+    branches:
+      - "main"
     paths:
       - 'attestation-agent/**'
       - '.github/workflows/aa_**.yml'

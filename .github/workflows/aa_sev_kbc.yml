@@ -1,6 +1,8 @@
 name: offline_sev_kbc build CI
 on:
   push:
+    branches:
+      - 'main'
     paths:
       - 'attestation-agent/kbc/offline_sev_kbc/**'
       - 'attestation-agent/kbc/online_sev_kbc/**'
