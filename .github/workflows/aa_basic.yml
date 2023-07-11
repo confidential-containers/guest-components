@@ -11,10 +11,6 @@ on:
       - '.github/workflows/aa_**.yml'
       - 'Cargo.toml'
   create:
-    paths:
-      - 'attestation-agent/**'
-      - '.github/workflows/aa_**.yml'
-      - 'Cargo.toml'
 
 jobs:
   basic_ci:
@@ -22,7 +18,7 @@ jobs:
     name: Check
     defaults:
       run:
-        working-directory: ./attestation-agent      
+        working-directory: ./attestation-agent
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -66,7 +62,7 @@ jobs:
       - name: Musl build with default features
         run: |
           make LIBC=musl
-      
+
       - name: s390x build with offline_fs_kbc feature
         run:
           make ARCH=s390x KBC=offline_fs_kbc
@@ -89,4 +85,3 @@ jobs:
           command: clippy
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
           args: --workspace -- -D warnings -A clippy::derive-partial-eq-without-eq
-

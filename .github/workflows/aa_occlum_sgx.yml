@@ -11,10 +11,6 @@ on:
       - 'attestation-agent/ci/occlum**'
       - '.github/workflows/aa_occlum_sgx.yml'
   create:
-    paths:
-      - 'attestation-agent/attester/src/sgx_occlum'
-      - 'attestation-agent/ci/occlum**'
-      - '.github/workflows/aa_occlum_sgx.yml'
 
 jobs:
   build-and-run-occlum:
@@ -34,7 +30,7 @@ jobs:
 
       - name: Configure Cargo
         run: rustup default stable
- 
+
       - name: Compile Occlum Example
         run: cargo build --bin occlum-attester --no-default-features --features occlum
 
