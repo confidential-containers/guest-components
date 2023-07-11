@@ -24,9 +24,3 @@ pushd $AA_DIR
 make $parameters
 make DESTDIR="$SCRIPT_DIR" install
 popd
-
-cleanup() {
-  rm -rf "$AA_DIR"
-}
-
-trap cleanup EXIT
