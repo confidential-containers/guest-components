@@ -19,7 +19,7 @@ A tenant-side CoCo Key Broker System cluster includes:
 * CoCo Keyprovider: Component to encrypt the images following ocicrypt spec.
 
 We will use the Key Broker System cluster to encrypt the image.
-Follow the [instructions](https://github.com/confidential-containers/documentation/blob/main/quickstart.md#deploy-and-configure-tenant-side-coco-key-broker-system-cluster) to prepare CoCo Key Broker System.
+Follow the [instructions](https://github.com/confidential-containers/confidential-containers/blob/main/quickstart.md#deploy-and-configure-tenant-side-coco-key-broker-system-cluster) to prepare CoCo Key Broker System.
 
 ----
 

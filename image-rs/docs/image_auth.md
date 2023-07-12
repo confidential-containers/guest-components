@@ -84,7 +84,7 @@ This way is preferred, because it has low start-up latency of `image-rs`.
 
 There are two steps:
 
-- **Step 1** We set a hard-coded `ResourceDescriptor` for `auth.json` in the both `image-rs` side and [`attestation-agent`](https://github.com/confidential-containers/attestation-agent/blob/main/src/kbc_modules/mod.rs#L123) side. In this way we can test the ability of `auth.json`.
+- **Step 1** We set a hard-coded `ResourceDescriptor` for `auth.json` in the both `image-rs` side and `attestation-agent` side. In this way we can test the ability of `auth.json`.
 
 - **Step 2** We provide a configuration for `PullClient` of the `image-rs` crate, which will indicates what the `ResourceDescriptor` is.
 In this way, not only `auth.json` but also `policy.json` and other resources `image-rs` needs can be customized.

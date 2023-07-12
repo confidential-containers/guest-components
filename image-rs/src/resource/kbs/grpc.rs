@@ -23,7 +23,7 @@ mod get_resource {
 }
 
 /// Attestation Agent's GetResource gRPC address.
-/// It's given <https://github.com/confidential-containers/attestation-agent#run>
+/// It's given <https://github.com/confidential-containers/guest-components/tree/main/attestation-agent#run>
 pub const AA_GETRESOURCE_ADDR: &str = "http://127.0.0.1:50001";
 
 pub struct Grpc {

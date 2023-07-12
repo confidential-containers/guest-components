@@ -140,7 +140,7 @@ impl Protocol for SecureChannel {
     /// Get resource from using, using `resource_name` as `name` in a ResourceDescription,
     /// then save the gathered data into `path`
     ///
-    /// Please refer to https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md#get-resource-service
+    /// Please refer to https://github.com/confidential-containers/guest-components/blob/main/image-rs/docs/ccv1_image_security_design.md#get-resource-service
     /// for more information.
     async fn get_resource(&mut self, resource_uri: &str) -> Result<Vec<u8>> {
         if let Some(res) = self.check_local(resource_uri).await? {

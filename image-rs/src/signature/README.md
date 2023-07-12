@@ -6,15 +6,15 @@ is included in the policy processing.
 ## How is signature verification working?
 
 Up to now, all signature verification in image-rs happens due to
-the image security [policy](https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md#policy) 
+the image security [policy](../../docs/ccv1_image_security_design.md#policy) 
 file.
 
-The format of policy file is detailed [here](../docs/ccv1_image_security_design.md#policy).
+The format of policy file is detailed [here](../../docs/ccv1_image_security_design.md#policy).
 
-Whether the policy requirement is a signing scheme and which signing scheme it is is due to the `type` field in the
+Whether the policy requirement is a signing scheme and which signing scheme it is due to the `type` field in the
 [Policy Requirement](https://github.com/containers/image/blob/main/docs/containers-policy.json.5.md#policy-requirements).
 
-Here are some examples for [Simple Signing](src/mechanism/simple/README.md)
+Here are some examples for [Simple Signing](mechanism/simple/README.md)
 
 ```json
 {
@@ -29,7 +29,7 @@ is a Simple Signing requirement. The rest of the
 fields may be different due to different signing scheme. 
 
 For example,
-[Simple Signing](src/mechanism/simple/README.md) here requires fields
+[Simple Signing](mechanism/simple/README.md) here requires fields
 `keyType`, `keyPath`, `keyData`, and `signedIdentity`.
 
 ## How to add new Signing Scheme?
@@ -37,12 +37,12 @@ For example,
 For example, a new scheme called `new-sign-scheme` is to be added.
 Here are the positions must be modified.
 
-### `src/mechanism/new-sign-scheme` directory
-Create `src/mechanism/new-sign-scheme/mod.rs`
+### `mechanism/new-sign-scheme` directory
+Create `mechanism/new-sign-scheme/mod.rs`
 
-Add `pub mod new_sign_scheme` into  `src/mechanism/mod.rs`
+Add `pub mod new_sign_scheme` into  `mechanism/mod.rs`
 
-In `src/mechanism/new-sign-scheme/mod.rs`, define the unique parameters 
+In `mechanism/new-sign-scheme/mod.rs`, define the unique parameters 
 used in the `policy.json` by `new-sign-scheme`.
 For example, a field named `signature-path` should be included, like
 
@@ -54,7 +54,7 @@ For example, a field named `signature-path` should be included, like
 }
 ```
 
-Then the parameters' struct can be defined in `src/mechanism/new-sign-scheme/mod.rs`,
+Then the parameters' struct can be defined in `mechanism/new-sign-scheme/mod.rs`,
 like this
 
 ```rust
@@ -121,7 +121,7 @@ It can do initialization work for this scheme. This may include the following
 2. `allows_image()`: This function will do the verification. This
 function will be called on every check for a Policy Requirement of this signing scheme.
 
-### `src/policy/policy_requirement.rs`
+### `policy/policy_requirement.rs`
 
 Because every signing scheme for an image is recorded in
 a policy requirement, we should add here.
@@ -168,7 +168,5 @@ pub fn try_into_sign_scheme(&self) -> Option<&dyn SignScheme> {
 
 ## Supported Signatures
 
-|Sign Scheme|Readme|
-|---|---|
-|[Simple Signing](src/mechanism/simple)| [README](src/mechanism/simple/README.md) |
-|[Cosign](src/mechanism/cosign)| [README](src/mechanism/cosign/README.md)|
+- [Simple Signing](mechanism/simple/README.md)
+- [Cosign](mechanism/cosign/README.md)

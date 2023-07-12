@@ -15,7 +15,7 @@ const RESOURCE_ID_ERROR_INFO: &str =
 
 const SCHEME: &str = "kbs";
 
-/// Resource Id document <https://github.com/confidential-containers/attestation-agent/blob/main/docs/KBS_URI.md>
+/// Resource Id document <https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md>
 #[derive(Clone, Debug, PartialEq)]
 pub struct ResourceUri {
     pub kbs_addr: String,

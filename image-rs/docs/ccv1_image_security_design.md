@@ -3,16 +3,16 @@
 ## Backgrounds
 
 - [CC Security Solution Explained #1](https://github.com/confidential-containers/documentation/issues/18)
-- [Confidential Containers Trust Model](https://github.com/magowan/documentation/blob/TrustModel/TrustModel.md)
-- [Confidential Containers Threat Model](https://github.com/magowan/documentation/blob/ThreatModel/ThreatModel.md)
+- [Confidential Containers Trust Model](https://github.com/confidential-containers/confidential-containers/blob/main/trust_model.md)
+- [Confidential Containers Threat Model](https://github.com/confidential-containers/confidential-containers/blob/main/threats_overview.md)
 
 ## Components
 
 - image encryption and signing tools, such as [`skopeo`](https://github.com/containers/skopeo)
-- [`image-rs`](https://github.com/confidential-containers/image-rs)
-- [`ocicrypt-rs`](https://github.com/containers/ocicrypt-rs)
-- [`attestation-agent`](https://github.com/confidential-containers/`attestation-agent`)
-- Key Broker Service ([KBS](https://github.com/confidential-containers/`attestation-agent`/blob/main/docs/IMPLEMENTATION.md#kbs) for short) such as [`Verdictd`](https://github.com/alibaba/inclavare-containers/tree/master/verdictd)
+- [`image-rs`](..)
+- [`ocicrypt-rs`](../../ocicrypt-rs)
+- [`attestation-agent`](../../attestation-agent)
+- [Key Broker Service (KBS)](https://github.com/confidential-containers/kbs)
 
 # Production of protected container image
 
@@ -26,7 +26,7 @@ the signed object is actually the encrypted container image.
 (if not so, there is a large window of opportunity for someone to potentially modify the image)
 
 Container image encryption/decryption and signing are currently [under development](https://github.com/opencontainers/image-spec/pull/775).
-For encryption/decryption, we will rely on the Rust implementation of [`ocicrypt`](https://github.com/containers/ocicrypt), [`ocicrypt-rs`](https://github.com/containers/ocicrypt-rs),
+For encryption/decryption, we will rely on the Rust implementation of [`ocicrypt`](https://github.com/containers/ocicrypt), [`ocicrypt-rs`](../../ocicrypt-rs),
 which itself is supposed to be compatible with `ocicrypt`.
 For signing, we will rely on the standard [image library](https://github.com/containers/image) or aim to be compatible with it.
 
@@ -112,9 +112,9 @@ such as the ID of the owner's key, for example:
 
 The specific format of the annotation packet can be determined by the customized key provider program used by the owner,
 but it is necessary to ensure that the key provider program used by the decryptor
-(i.e. the `attestation-agent` integrated with the specified [Key Broker Client](https://github.com/confidential-containers/`attestation-agent`/blob/main/docs/IMPLEMENTATION.md#kbc))
+(i.e. the `attestation-agent` integrated with the specified [Key Broker Client](../../attestation-agent/docs/IMPLEMENTATION.md#kbc))
 supports parsing annotation packets of the same format.
-(In CCv1, when decrypting the image, the decryption of `PrivateLayerBlockCipherOptions` will be carried out by `ocicrypt-rs` through the [key provider protocol with the `attestation-agent`](https://github.com/confidential-containers/attestation-agent/blob/main/docs/IMPLEMENTATION.md#keyprovider-protocol) (as a key provider program).)
+(In CCv1, when decrypting the image, the decryption of `PrivateLayerBlockCipherOptions` will be carried out by `ocicrypt-rs` through the [key provider protocol with the `attestation-agent`](../../attestation-agent/docs/IMPLEMENTATION.md#keyprovider-protocol) (as a key provider program).)
 
 #### Update manifest
 
@@ -157,7 +157,7 @@ From its `layers` field, we can see the changes we stated above.
 There are multiple image signing and verification protocols/solutions in the field.
 
 The signing scheme is specified by `type` field by the owner of the image
-security [policy file](https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md#policy) distributed to image-rs.
+security [policy file](ccv1_image_security_design.md#policy) distributed to image-rs.
 
 When verifying the signature, image-rs can select the appropriate scheme for signature verification according to this field.
 
@@ -374,7 +374,7 @@ reads the symmetric key used to decrypt the container image layer from it, then 
 
 # Attestation Agent
 
-The [`attestation-agent`](https://github.com/confidential-containers/`attestation-agent`) is an indispensable core component in the confidential containers architecture.
+The [`attestation-agent`](../../attestation-agent) is an indispensable core component in the confidential containers architecture.
 It undertakes the trust distribution function of the confidential container.
 In the process of signature verification and decryption of the protected image,
 the `attestation-agent` serves as the source of the owner's confidential information,

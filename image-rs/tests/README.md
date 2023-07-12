@@ -1,7 +1,7 @@
 # Integration Test for Image-rs
 
 This integration test has two main sub-type test sets:
-* Image decryption using [ocicrypt-rs](https://github.com/confidential-containers/ocicrypt-rs)
+* Image decryption using [ocicrypt-rs](../../ocicrypt-rs)
 * Image signature verification.
 
 And both of test set will use the following key broker client:
@@ -25,7 +25,7 @@ encrypted using Key Encryption Key (KEK for short). KEK is stored in KBS.
 Different KBCs use different protocol format, so different KBSs are needed to
 encrypt the images. To genetate KBS encrypted image, please refer to the following link:
 
-* [Using Offline-fs-kbs](https://github.com/confidential-containers/attestation-agent/tree/main/sample_keyprovider/src/enc_mods/offline_fs_kbs/README.md)
+* [Using Offline-fs-kbs](../../attestation-agent/kbc/src/offline_fs_kbc/README.md)
 
 ## Image Signature Verification
 

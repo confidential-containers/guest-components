@@ -22,7 +22,7 @@ This section shows how to sign an image, and enable signature verification of sp
 
 Both encrypted and unencrypted image can be signed.
 
-We need to install `cosign` to sign images. Detailed work process behind `cosign` can be found in [this doc](https://github.com/confidential-containers/image-rs/tree/main/signature/src/mechanism/cosign).
+We need to install `cosign` to sign images. Detailed work process behind `cosign` can be found in [this doc](../../src/signature/mechanism/cosign).
 Follow [the guide here](https://github.com/sigstore/cosign#installation) to install `cosign`:
 
 After installing `cosign`, we need to generate a key pair to sign images and verify related signatures.
@@ -57,19 +57,19 @@ To learn more about cosign, please refer to [the github repository](https://gith
 
 ### Enable cosign image signature verification and retrieve public key via KBC channel
 
-Take [offline file system key broker](https://github.com/confidential-containers/attestation-agent/tree/64c12fbecfe90ba974d5fe4896bf997308df298d/src/kbc_modules/offline_fs_kbc) (Offline-Fs-KBC for short) for example.
+Take [offline file system key broker](../../../attestation-agent/kbc/src/offline_fs_kbc) (Offline-FS-KBC for short) for example.
 
-#### Prepare Attestation-Agent and Offline-Fs-KBC
+#### Prepare Attestation-Agent and Offline-FS-KBC
 
 Clone the repository.
 
 ```
-git clone https://github.com/confidential-containers/attestation-agent.git
+git clone https://github.com/confidential-containers/guest-components
 ```
 
 Build Offline-Fs-KBC & AA
 ```
-cd attestation-agent
+cd guest-components/attestation-agent
 make KBC=offline_fs_kbc
 
 install_dir=/path/to/be/installed

@@ -2,9 +2,9 @@
 
 ## Introduction
 
-As stated in [CCv0 image security design](https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md), CoCo uses image encryption machanism compatible with [ocicrypt](https://github.com/containers/ocicrypt) and [ocicrypt-rs](https://github.com/confidential-containers/ocicrypt-rs).
+As stated in [CCv0 image security design](../../image-rs/docs/ccv1_image_security_design.md), CoCo uses image encryption machanism compatible with [ocicrypt](https://github.com/containers/ocicrypt) and [ocicrypt-rs](../../ocicrypt-rs).
 
-Attestation-Agent as a [Key Provider](https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md#update-manifest) implements API `unwrapkey`, which works together
+Attestation-Agent as a [Key Provider](../../image-rs/docs/ccv1_image_security_design.md#update-manifest) implements API `unwrapkey`, which works together
 with the [Sample Key Provider](../coco_keyprovider/) who implements API `wrapkey`.
 
 This document will describe how Attestation-Agent and Sample Key Provider play a role in image encryption. Together, some specifications will also be defined.
@@ -16,8 +16,8 @@ This document will describe how Attestation-Agent and Sample Key Provider play a
 `wrapkey` API is directly related to image encryption. Let's see how image encryption occurs, for example, in `ocicrypt-rs`. The principle behind `ocicrypt` is the same.
 Suppose there is a user wanting to encrypt an image layer `L`.
 
-1. `ocicrypt-rs` randomly [generates a symmetric key](https://github.com/confidential-containers/ocicrypt-rs/blob/main/src/blockcipher/mod.rs#L167). This key is called LEK (Layer Encryption Key, the key to encrypt the layer).
-2. `L` [gets encrypted by the LEK](https://github.com/confidential-containers/ocicrypt-rs/blob/main/src/blockcipher/mod.rs#L169)
+1. `ocicrypt-rs` randomly [generates a symmetric key](../../ocicrypt-rs/src/blockcipher/mod.rs#L167). This key is called LEK (Layer Encryption Key, the key to encrypt the layer).
+2. `L` [gets encrypted by the LEK](../../ocicrypt-rs/src/blockcipher/mod.rs#L169)
 3. The symmetric key together with other private information is contained in a struct named `PrivateLayerBlockCipherOptions`, s.t. [PLBCO](https://github.com/opencontainers/image-spec/pull/775/commits/bc0fcd698946be7e8bb1fa88f178ed2c66274aa2#diff-ecf63e7090e873922f62c4749c01f63f7eccd42912c1465fbee515cb7c4916c1R362).
 4. the plaintext of `PLBCO` will be sent over the gRPC call `wrapkey` to Sample Key Provider. Up to now, the step 1, 2, 3, 4 are standard behavior defined in `ocicrypt`. Then how to perform
 `wrapkey` API for Sample Key Provider is defined by CoCo, as to be mentioned in 5, 6.

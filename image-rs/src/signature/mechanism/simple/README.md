@@ -67,5 +67,5 @@ Here are the two KBS Resource Descriptions
 |`Sigstore Config`|Sigstore Config|
 |`GPG Keyring`| GPG Public key ring to verify the signature|
 
-Refer to [get-resource-service](https://github.com/confidential-containers/image-rs/blob/main/docs/ccv1_image_security_design.md#get-resource-service)
+Refer to [get-resource-service](../../../../docs/ccv1_image_security_design.md#get-resource-service)
 for more information.
