@@ -58,7 +58,7 @@ pub struct Response {
 
 impl Response {
     // Use TEE's private key to decrypt output of Response.
-    pub fn decrypt_output(&self, tee_key: TeeKey) -> Result<Vec<u8>> {
+    pub fn decrypt_output(&self, tee_key: &TeeKey) -> Result<Vec<u8>> {
         decrypt_response(self, tee_key)
     }
 }
@@ -71,7 +71,7 @@ struct ProtectedHeader {
     enc: String,
 }
 
-pub fn decrypt_response(response: &Response, tee_key: TeeKey) -> Result<Vec<u8>> {
+pub fn decrypt_response(response: &Response, tee_key: &TeeKey) -> Result<Vec<u8>> {
     // deserialize the jose header and check that the key type matches
     let protected: ProtectedHeader = serde_json::from_str(&response.protected)?;
     if protected.alg != RSA_ALGORITHM {

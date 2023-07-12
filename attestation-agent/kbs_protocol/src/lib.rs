@@ -5,7 +5,7 @@
 
 use anyhow::*;
 use async_trait::async_trait;
-use attester::{detect_tee_type, Attester};
+use attester::{detect_tee_type, Attester, Tee};
 use core::time::Duration;
 use crypto::{hash_chunks, TeeKey};
 use kbs_types::{Attestation, ErrorInformation};
@@ -27,55 +27,107 @@ pub trait KbsRequest {
     async fn attest(&mut self, host_url: String) -> Result<String>;
 }
 
+type BoxedAttester = Box<dyn Attester + Send + Sync>;
+
 pub struct KbsProtocolWrapper {
     tee: String,
-    tee_key: Option<TeeKey>,
-    nonce: String,
-    attester: Option<Box<dyn Attester + Send + Sync>>,
+    tee_key: TeeKey,
+    nonce: Option<String>,
+    attester: BoxedAttester,
     http_client: reqwest::Client,
     authenticated: bool,
+}
+
+struct NoTee;
+struct NoAttester;
+
+pub struct KbsProtocolWrapperBuilder<T, A> {
+    tee: T,
+    attester: A,
+}
+type WrapperBuilder<T, A> = KbsProtocolWrapperBuilder<T, A>;
+
+impl WrapperBuilder<NoTee, NoAttester> {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self {
+            tee: NoTee,
+            attester: NoAttester,
+        }
+    }
+
+    pub fn with_tee(self, tee: Tee) -> WrapperBuilder<Tee, NoAttester> {
+        WrapperBuilder {
+            tee,
+            attester: self.attester,
+        }
+    }
+}
+
+impl WrapperBuilder<Tee, NoAttester> {
+    pub fn with_attester(self, attester: BoxedAttester) -> WrapperBuilder<Tee, BoxedAttester> {
+        WrapperBuilder {
+            tee: self.tee,
+            attester,
+        }
+    }
+}
+
+impl WrapperBuilder<Tee, NoAttester> {
+    pub fn build(self) -> Result<KbsProtocolWrapper> {
+        let attester = self.tee.to_attester()?;
+        let wrapper = WrapperBuilder::new()
+            .with_tee(self.tee)
+            .with_attester(attester)
+            .build()?;
+        Ok(wrapper)
+    }
+}
+
+impl WrapperBuilder<Tee, BoxedAttester> {
+    pub fn build(self) -> Result<KbsProtocolWrapper> {
+        let tee_key = TeeKey::new().map_err(|e| anyhow!("Generate TEE key failed: {:?}", e))?;
+        let wrapper = KbsProtocolWrapper {
+            tee: self.tee.to_string(),
+            attester: self.attester,
+            tee_key,
+            nonce: None,
+            http_client: build_http_client()?,
+            authenticated: false,
+        };
+        Ok(wrapper)
+    }
 }
 
 impl KbsProtocolWrapper {
     pub fn new() -> Result<KbsProtocolWrapper> {
         // Detect TEE type of the current platform.
         let tee_type = detect_tee_type();
-        // Create attester instance.
-        let attester = tee_type.to_attester().ok();
-
-        Ok(KbsProtocolWrapper {
-            tee: tee_type.to_string(),
-            tee_key: TeeKey::new().ok(),
-            nonce: String::default(),
-            attester,
-            http_client: build_http_client().unwrap(),
-            authenticated: false,
-        })
+        let wrapper = WrapperBuilder::new().with_tee(tee_type).build()?;
+        Ok(wrapper)
     }
 
     fn generate_evidence(&self) -> Result<Attestation> {
-        let key = self
+        let tee_pubkey = self
             .tee_key
-            .as_ref()
-            .ok_or_else(|| anyhow!("Generate TEE key failed"))?;
-        let attester = self
-            .attester
-            .as_ref()
-            .ok_or_else(|| anyhow!("TEE attester missed"))?;
-
-        let tee_pubkey = key
             .export_pubkey()
             .map_err(|e| anyhow!("Export TEE pubkey failed: {:?}", e))?;
 
+        let nonce = self
+            .nonce
+            .to_owned()
+            .ok_or_else(|| anyhow!("Nonce is not set"))?;
+
         let ehd_chunks = vec![
-            self.nonce.clone().into_bytes(),
+            nonce.into_bytes(),
             tee_pubkey.k_mod.clone().into_bytes(),
             tee_pubkey.k_exp.clone().into_bytes(),
         ];
 
         let ehd = hash_chunks(ehd_chunks);
 
-        let tee_evidence = attester
+        let tee_evidence = self
+            .attester
             .get_evidence(ehd)
             .map_err(|e| anyhow!("Get TEE evidence failed: {:?}", e))?;
 
@@ -103,7 +155,7 @@ impl KbsProtocolWrapper {
             .await?
             .json::<Challenge>()
             .await?;
-        self.nonce = challenge.nonce.clone();
+        self.nonce = Some(challenge.nonce.clone());
 
         let attest_response = self
             .http_client()
@@ -153,11 +205,7 @@ impl KbsRequest for KbsProtocolWrapper {
             match res.status() {
                 reqwest::StatusCode::OK => {
                     let response = res.json::<Response>().await?;
-                    let key = self
-                        .tee_key
-                        .clone()
-                        .ok_or_else(|| anyhow!("TEE rsa key missing"))?;
-                    let payload_data = response.decrypt_output(key)?;
+                    let payload_data = response.decrypt_output(&self.tee_key)?;
                     return Ok(payload_data);
                 }
                 reqwest::StatusCode::UNAUTHORIZED => {
