@@ -9,8 +9,8 @@ and corresponding KBS, so as to obtain the trusted services or resources of KBS.
 
 Current consumers of AA include: 
 
-- [ocicrypt-rs](https://github.com/confidential-containers/ocicrypt-rs)
-- [image-rs](https://github.com/confidential-containers/image-rs)
+- [ocicrypt-rs](../ocicrypt-rs)
+- [image-rs](../image-rs)
 
 ## Components
 
@@ -23,7 +23,7 @@ which allows callers to call the services provided by AA through gRPC.
 Import AA in `Cargo.toml` of your project with specific KBC(s):
 
 ```toml
-attestation-agent = { git = "https://github.com/confidential-containers/attestation-agent", features = ["sample_kbc"] }
+attestation-agent = { git = "https://github.com/confidential-containers/guest-components", features = ["sample_kbc"] }
 ```
 
 **Note**: When the version is stable, we will release AA on https://crate.io.
@@ -37,8 +37,8 @@ Here are the steps of building and running gRPC application of AA:
 Build and install with default KBC modules:
 
 ```shell
-git clone https://github.com/containers/attestation-agent
-cd attestation-agent
+git clone https://github.com/confidential-containers/guest-components
+cd guest-components/attestation-agent
 make && make install
 ```
 

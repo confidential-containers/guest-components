@@ -47,10 +47,10 @@ Here is a sample resource file [`aa-offline_fs_kbc-resources.json`](aa-offline_f
 - [`cosign.pub`](../sample_kbc/cosign.pub)
 - [`auth.json`](../sample_kbc/auth.json)
     
-    Referrers
+Referrers
 
-      https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md
-      https://github.com/confidential-containers/image-rs/blob/main/docs/image_auth.md
+ - [containers-auth man page](https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md)
+ - [image-rs image authentication documentation](../../../../image-rs/docs/image_auth.md)
 
 AA with this KBC can be build and run with e.g.:
 ```bash

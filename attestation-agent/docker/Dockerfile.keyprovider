@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install protobuf-compiler -y && \
 
 COPY . .
 
-LABEL org.opencontainers.image.source="https://github.com/confidential-containers/image-rs"
+LABEL org.opencontainers.image.source="https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docker/Dockerfile.keyprovider"
 
 RUN cd attestation-agent/coco_keyprovider && cargo install --path .
 

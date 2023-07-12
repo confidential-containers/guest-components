@@ -17,7 +17,7 @@ use crate::native::*;
 use crate::rust::*;
 
 /// Supported WrapType, s.t. encryption algorithm using to encrypt the
-/// [PLBCO](https://github.com/confidential-containers/attestation-agent/blob/main/docs/IMPLEMENTATION.md#encryption-and-decryption-of-container-image).
+/// [PLBCO](https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/IMPLEMENTATION.md#encryption-and-decryption-of-container-image).
 /// TODO: Support more kinds of en/decryption schemes.
 #[derive(EnumString, AsRefStr)]
 pub enum WrapType {

@@ -37,7 +37,7 @@ cd inclavare-containers/eaa
 make && make install
 ```
 
-Refer to EAA KBS [readme](https://github.com/alibaba/inclavare-containers/blob/master/eaa/verdictd/README.md) to run verdictd and start the KBS service. 
+Refer to [EAA KBS readme](https://github.com/inclavare-containers/verdictd) to run verdictd and start the KBS service. 
 
 ## Usage
 

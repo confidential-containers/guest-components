@@ -13,7 +13,7 @@ project scope but it might be used in a more generic fashion.
 Currently the `image-rs` crate focuses on usage scenarios to run Confidential Containers on Kubernetes clusters with
 [Kata Containers](https://katacontainers.io/). It may also be enhanced to support other Confidential container runtimes
 on demand. So it implements the
-[CRI Image Service](https://github.com/kubernetes/cri-api/blob/master/pkg/apis/runtime/v1alpha2/api.proto#L119)
+[CRI Image Service](https://github.com/kubernetes/cri-api/blob/4d83b9bd4e13b76ae8cbb317f6515cb84effa5d2/pkg/apis/runtime/v1/api.proto#L137)
 interface to be easily integrated with the K8s ecosystem. Among the container image `Build`, `Ship` and `Run` stages,
 it focuses on the `Run` stage instead of `Build` and `Ship`. `Run` stage will mostly cover `Pull` and `Unpack`
 operations, which will provide interfaces to prepare container images for running in a confidential environment.
@@ -82,7 +82,7 @@ if needed. After image is unpacked, for support image caching inside the guest,
 the image format module can handle the format conversion between oci v1 and docker v2.
 
 The image pulling module cooperates with the
-[Attestation-agent](https://github.com/confidential-containers/attestation-agent)
+[Attestation-agent](../../attestation-agent)
 to fetch secrets for decryption/verification from the remote attestation and key management server.
 
 Snapshot module will prepare the rootfs together with the container

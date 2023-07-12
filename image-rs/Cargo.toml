@@ -2,7 +2,7 @@
 name = "image-rs"
 version = "0.1.0"
 description = "The OCI Images Rust Crate"
-repository = "https://github.com/confidential-containers/image-rs"
+repository = "https://github.com/confidential-containers/guest-components/tree/main/image-rs"
 readme = "README.md"
 license = "Apache-2.0"
 authors = ["The image-rs Authors"]
