@@ -80,7 +80,7 @@ pub async fn start_attestation_agent() -> Result<Child> {
                     .expect("Failed to build attestation-agent");
                 println!("build ttrpc attestation-agent: {:?}", output);
             } else {
-                let output = Command::new(script_path)
+                let _output = Command::new(script_path)
                     .output()
                     .await
                     .expect("Failed to build attestation-agent");

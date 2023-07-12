@@ -6,11 +6,13 @@
 
 //! Test for signature verification.
 
+#[cfg(feature = "getresource")]
 use image_rs::image::ImageClient;
+#[cfg(feature = "getresource")]
 use serial_test::serial;
 use strum_macros::{Display, EnumString};
 
-mod common;
+pub mod common;
 
 /// Name of different signing schemes.
 #[derive(EnumString, Display, Debug, PartialEq)]
@@ -78,8 +80,10 @@ const _TESTS: [_TestItem; _TEST_ITEMS] = [
     },
 ];
 
+#[cfg(feature = "getresource")]
 const POLICY_URI: &str = "kbs:///default/security-policy/test";
 
+#[cfg(feature = "getresource")]
 const SIGSTORE_CONFIG_URI: &str = "kbs:///default/sigstore-config/test";
 
 /// image-rs built without support for cosign image signing cannot use a policy that includes a type that

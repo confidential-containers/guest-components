@@ -6,16 +6,20 @@
 
 //! Test for decryption of image layers.
 
+#[cfg(all(feature = "getresource", feature = "encryption"))]
 use image_rs::image::ImageClient;
+#[cfg(all(feature = "getresource", feature = "encryption"))]
 use serial_test::serial;
 
-mod common;
+pub mod common;
 
 /// Ocicrypt-rs config for grpc
+#[cfg(all(feature = "getresource", feature = "encryption"))]
 #[cfg(not(feature = "keywrap-ttrpc"))]
 const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_grpc.conf";
 
 /// Ocicrypt-rs config for ttrpc
+#[cfg(all(feature = "getresource", feature = "encryption"))]
 #[cfg(feature = "keywrap-ttrpc")]
 const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_ttrpc.conf";
 
