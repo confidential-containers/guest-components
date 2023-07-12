@@ -36,7 +36,7 @@ async fn test_use_credential(#[case] image_ref: &str, #[case] auth_file_uri: &st
         .expect("Delete configs failed.");
 
     let work_dir = tempfile::tempdir().unwrap();
-    std::env::set_var("CC_IMAGE_WORK_DIR", &work_dir.path());
+    std::env::set_var("CC_IMAGE_WORK_DIR", work_dir.path());
 
     // a new client for every pulling, avoid effection
     // of cache of old client.
@@ -51,7 +51,7 @@ async fn test_use_credential(#[case] image_ref: &str, #[case] auth_file_uri: &st
     let bundle_dir = tempfile::tempdir().unwrap();
 
     let res = image_client
-        .pull_image(image_ref, bundle_dir.path(), &None, &Some(&aa_parameters))
+        .pull_image(image_ref, bundle_dir.path(), &None, &Some(aa_parameters))
         .await;
     if cfg!(all(feature = "snapshot-overlayfs",)) {
         assert!(res.is_ok(), "{:?}", res);

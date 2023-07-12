@@ -165,7 +165,7 @@ mod tests {
             }),
         };
 
-        let payload_serialize = serde_json::to_value(&payload).unwrap();
+        let payload_serialize = serde_json::to_value(payload).unwrap();
         assert_eq!(payload_serialize, json);
     }
 

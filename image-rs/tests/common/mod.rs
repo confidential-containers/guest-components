@@ -80,7 +80,7 @@ pub async fn start_attestation_agent() -> Result<Child> {
                     .expect("Failed to build attestation-agent");
                 println!("build ttrpc attestation-agent: {:?}", output);
             } else {
-                let _output = Command::new(script_path)
+                let output = Command::new(script_path)
                     .output()
                     .await
                     .expect("Failed to build attestation-agent");
@@ -93,7 +93,7 @@ pub async fn start_attestation_agent() -> Result<Child> {
         if #[cfg(feature = "keywrap-ttrpc")] {
             let mut aa = Command::new(aa_path)
                 .kill_on_drop(true)
-                .args(&[
+                .args([
                     "--keyprovider_sock",
                     "unix:///run/confidential-containers/attestation-agent/keyprovider.sock",
                     "--getresource_sock",
@@ -104,7 +104,7 @@ pub async fn start_attestation_agent() -> Result<Child> {
         } else {
             let mut aa = Command::new(aa_path)
                 .kill_on_drop(true)
-                .args(&[
+                .args([
                     "--keyprovider_sock",
                     "127.0.0.1:50000",
                     "--getresource_sock",
@@ -117,7 +117,7 @@ pub async fn start_attestation_agent() -> Result<Child> {
 
     // Leave some time to let fork-ed AA process to be ready
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    if let Some(_) = aa.try_wait()? {
+    if (aa.try_wait()?).is_some() {
         panic!("Attestation Agent failed to start");
     }
     Ok(aa)

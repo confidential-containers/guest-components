@@ -384,7 +384,7 @@ impl ImageClient {
                 self.meta_store.clone(),
             )
             .await?;
-        image_data.layer_metas = layer_metas;
+        image_data.layer_metas = vec![layer_metas];
         let layer_db: HashMap<String, LayerMeta> = image_data
             .layer_metas
             .iter()
@@ -511,10 +511,10 @@ mod tests {
     #[tokio::test]
     async fn test_pull_image() {
         let work_dir = tempfile::tempdir().unwrap();
-        std::env::set_var("CC_IMAGE_WORK_DIR", &work_dir.path());
+        std::env::set_var("CC_IMAGE_WORK_DIR", work_dir.path());
 
         // TODO test with more OCI image registries and fix broken registries.
-        let oci_images = vec![
+        let oci_images = [
             // image with duplicated layers
             "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master",
             // Alibaba Container Registry
@@ -554,9 +554,9 @@ mod tests {
     #[tokio::test]
     async fn test_nydus_image() {
         let work_dir = tempfile::tempdir().unwrap();
-        std::env::set_var("CC_IMAGE_WORK_DIR", &work_dir.path());
+        std::env::set_var("CC_IMAGE_WORK_DIR", work_dir.path());
 
-        let nydus_images = vec![
+        let nydus_images = [
             "eci-nydus-registry.cn-hangzhou.cr.aliyuncs.com/v6/java:latest-test_nydus",
             //"eci-nydus-registry.cn-hangzhou.cr.aliyuncs.com/test/ubuntu:latest_nydus",
             //"eci-nydus-registry.cn-hangzhou.cr.aliyuncs.com/test/python:latest_nydus",
@@ -581,7 +581,7 @@ mod tests {
     #[tokio::test]
     async fn test_image_reuse() {
         let work_dir = tempfile::tempdir().unwrap();
-        std::env::set_var("CC_IMAGE_WORK_DIR", &work_dir.path());
+        std::env::set_var("CC_IMAGE_WORK_DIR", work_dir.path());
 
         let image = "mcr.microsoft.com/hello-world";
 

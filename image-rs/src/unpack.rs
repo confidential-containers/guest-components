@@ -123,12 +123,12 @@ mod tests {
         assert!(unpack(data.as_slice(), destination).is_ok());
 
         let path = destination.join("file.txt");
-        let metadata = fs::metadata(&path).unwrap();
+        let metadata = fs::metadata(path).unwrap();
         let new_mtime = filetime::FileTime::from_last_modification_time(&metadata);
         assert_eq!(mtime, new_mtime);
 
         let path = destination.join("dir");
-        let metadata = fs::metadata(&path).unwrap();
+        let metadata = fs::metadata(path).unwrap();
         let new_mtime = filetime::FileTime::from_last_modification_time(&metadata);
         assert_eq!(mtime, new_mtime);
 

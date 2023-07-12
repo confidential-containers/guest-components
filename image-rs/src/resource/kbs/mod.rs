@@ -15,7 +15,7 @@
 
 use std::path::Path;
 
-#[cfg(not(features = "keywrap-native"))]
+#[cfg(not(feature = "keywrap-native"))]
 use anyhow::Context;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
@@ -78,19 +78,19 @@ impl SecureChannel {
 
             let client: Box<dyn Client> = {
                 cfg_if::cfg_if! {
-                    if #[cfg(feature = "keywrap-grpc")] {
-                        info!("secure channel uses gRPC");
-                        Box::new(grpc::Grpc::new().await.context("grpc client init failed")?)
-                    } else if #[cfg(feature = "keywrap-ttrpc")] {
-                        info!("secure channel uses ttrpc");
-                        Box::new(ttrpc::Ttrpc::new().context("ttrpc client init failed")?)
-                    } else if #[cfg(feature = "keywrap-native")] {
-                        info!("secure channel uses native-aa");
-                        Box::new(native::Native::default())
-                    } else {
-                        compile_error!("At last one feature of `keywrap-grpc`, `keywrap-ttrpc`, and `keywrap-native` must be enabled.");
+                        if #[cfg(feature = "keywrap-grpc")] {
+                            info!("secure channel uses gRPC");
+                            Box::new(grpc::Grpc::new().await.context("grpc client init failed")?)
+                        } else if #[cfg(feature = "keywrap-ttrpc")] {
+                            info!("secure channel uses ttrpc");
+                            Box::new(ttrpc::Ttrpc::new().context("ttrpc client init failed")?)
+                        } else if #[cfg(feature = "keywrap-native")] {
+                            info!("secure channel uses native-aa");
+                Box::<native::Native>::default()
+                        } else {
+                            compile_error!("At last one feature of `keywrap-grpc`, `keywrap-ttrpc`, and `keywrap-native` must be enabled.");
+                        }
                     }
-                }
             };
 
             fs::create_dir_all(STORAGE_PATH).await?;

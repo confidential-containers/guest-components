@@ -217,14 +217,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_pull_client() {
-        let oci_images = vec![
+        let oci_images = [
             "docker.io/arronwang/busybox_gzip",
             "docker.io/arronwang/busybox_zstd",
         ];
 
         for image_url in oci_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
-            let image = Reference::try_from(image_url.clone()).expect("create reference failed");
+            let image =
+                Reference::try_from(image_url.to_string()).expect("create reference failed");
             let mut client = PullClient::new(
                 image,
                 tempdir.path(),
@@ -253,11 +254,12 @@ mod tests {
     #[cfg(all(feature = "encryption", feature = "keywrap-grpc"))]
     #[tokio::test]
     async fn test_pull_client_encrypted() {
-        let oci_images = vec!["docker.io/arronwang/busybox_encrypted"];
+        let oci_images = ["docker.io/arronwang/busybox_encrypted"];
 
         for image_url in oci_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
-            let image = Reference::try_from(image_url.clone()).expect("create reference failed");
+            let image =
+                Reference::try_from(image_url.to_string()).expect("create reference failed");
             let mut client = PullClient::new(
                 image,
                 tempdir.path(),
@@ -294,14 +296,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_async_pull_client() {
-        let oci_images = vec![
+        let oci_images = [
             "docker.io/arronwang/busybox_gzip",
             "docker.io/arronwang/busybox_zstd",
         ];
 
         for image_url in oci_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
-            let image = Reference::try_from(image_url.clone()).expect("create reference failed");
+            let image =
+                Reference::try_from(image_url.to_string()).expect("create reference failed");
             let mut client = PullClient::new(
                 image,
                 tempdir.path(),
@@ -330,11 +333,12 @@ mod tests {
     #[cfg(all(feature = "encryption", feature = "keywrap-jwe"))]
     #[tokio::test]
     async fn test_async_pull_client_encrypted() {
-        let oci_images = vec!["docker.io/arronwang/busybox_encrypted"];
+        let oci_images = ["docker.io/arronwang/busybox_encrypted"];
 
         for image_url in oci_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
-            let image = Reference::try_from(image_url.clone()).expect("create reference failed");
+            let image =
+                Reference::try_from(image_url.to_string()).expect("create reference failed");
             let mut client = PullClient::new(
                 image,
                 tempdir.path(),
@@ -494,7 +498,7 @@ mod tests {
     #[tokio::test]
     async fn test_pull_nydus_bootstrap() {
         let nydus_images =
-            vec!["eci-nydus-registry.cn-hangzhou.cr.aliyuncs.com/v6/java:latest-test_nydus"];
+            ["eci-nydus-registry.cn-hangzhou.cr.aliyuncs.com/v6/java:latest-test_nydus"];
 
         for image_url in nydus_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();

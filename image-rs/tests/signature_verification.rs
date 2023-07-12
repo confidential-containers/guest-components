@@ -107,7 +107,7 @@ async fn signature_verification() {
 
         // Init tempdirs
         let work_dir = tempfile::tempdir().unwrap();
-        std::env::set_var("CC_IMAGE_WORK_DIR", &work_dir.path());
+        std::env::set_var("CC_IMAGE_WORK_DIR", work_dir.path());
 
         // a new client for every pulling, avoid effection
         // of cache of old client.
