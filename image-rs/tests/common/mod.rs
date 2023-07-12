@@ -71,7 +71,7 @@ pub async fn start_attestation_agent() -> Result<Child> {
                     .await
                     .expect("Failed to build attestation-agent");
             } else {
-                let output = Command::new(script_path)
+                let _output = Command::new(script_path)
                     .output()
                     .await
                     .expect("Failed to build attestation-agent");

@@ -3,11 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#[cfg(feature = "getresource")]
 use image_rs::image::ImageClient;
+#[cfg(feature = "getresource")]
 use rstest::rstest;
+#[cfg(feature = "getresource")]
 use serial_test::serial;
 
-mod common;
+pub mod common;
 
 #[cfg(feature = "getresource")]
 #[rstest]
