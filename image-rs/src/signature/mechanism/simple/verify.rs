@@ -255,7 +255,7 @@ mod tests {
         let sig_payload_verified =
             verify_sig_and_extract_payload(&keyring_bytes_case_1, sig_bytes_case_1).unwrap();
 
-        let sig_payload_verified = serde_json::to_value(&sig_payload_verified).unwrap();
+        let sig_payload_verified = serde_json::to_value(sig_payload_verified).unwrap();
 
         assert_eq!(sig_payload_parsed, sig_payload_verified);
     }

@@ -42,7 +42,7 @@ async fn test_decrypt_layers(#[case] image: &str) {
     std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
 
     let work_dir = tempfile::tempdir().unwrap();
-    std::env::set_var("CC_IMAGE_WORK_DIR", &work_dir.path());
+    std::env::set_var("CC_IMAGE_WORK_DIR", work_dir.path());
     let bundle_dir = tempfile::tempdir().unwrap();
 
     // clean former test files, which is needed to prevent
