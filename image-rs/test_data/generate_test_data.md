@@ -25,9 +25,5 @@ $ skopeo copy  --dest-compress-format zstd docker://busybox:latest docker://user
 $ skopeo copy --encryption-key jwe:public_key_for_tests.pem docker://busybox:latest docker://user/busybox_encrypted
 ```
 
-### Create KBS encrypted container image
-Follow the [README](https://github.com/confidential-containers/attestation-agent/blob/main/sample_kbs/README.md)
-of attestation agent sample KBS to encrypt the container image and push to remote registry.
-```shell
-$ OCICRYPT_KEYPROVIDER_CONFIG=ocicrypt_keyprovider.conf skopeo copy --insecure-policy --encryption-key provider:attestation-agent:test docker://busybox:latest docker://user/busybox_encrypted_kbs
-```
+### Create CoCo-Keyprovider encrypted container image
+Follow the [README](https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/coco_keyprovider/README.md)
