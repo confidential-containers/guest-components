@@ -86,6 +86,7 @@ impl SignScheme for SimpleParameters {
 
     #[cfg(feature = "signature-simple")]
     async fn allows_image(&self, image: &mut Image, _auth: &RegistryAuth) -> Result<()> {
+        use base64::Engine;
         // FIXME: only support "GPGKeys" type now.
         //
         // refer to https://github.com/confidential-containers/image-rs/issues/14
@@ -99,7 +100,7 @@ impl SignScheme for SimpleParameters {
         let pubkey_ring = match (&self.key_path, &self.key_data) {
             (None, None) => bail!("Neither keyPath or keyData specified."),
             (Some(_), Some(_)) => bail!("Both keyPath and keyData specified."),
-            (None, Some(key_data)) => base64::decode(key_data)?,
+            (None, Some(key_data)) => base64::engine::general_purpose::STANDARD.decode(key_data)?,
             (Some(key_path), None) => {
                 crate::resource::get_resource(key_path).await.map_err(|e| {
                     anyhow!("Read SignedBy keyPath failed: {:?}, path: {}", e, key_path)
