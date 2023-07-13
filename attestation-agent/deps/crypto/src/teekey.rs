@@ -6,6 +6,7 @@
 //! Implementations of the TeeKey
 
 use anyhow::*;
+use base64::Engine;
 use kbs_types::TeePubKey;
 use rsa::{traits::PublicKeyParts, Pkcs1v15Encrypt, RsaPrivateKey, RsaPublicKey};
 use sha2::{Digest, Sha384};
@@ -38,10 +39,9 @@ impl TeeKey {
 
     // Export TEE public key as JWK, as defined in RFC 7517.
     pub fn export_pubkey(&self) -> Result<TeePubKey> {
-        let k_mod =
-            base64::encode_config(self.public_key.n().to_bytes_be(), base64::URL_SAFE_NO_PAD);
-        let k_exp =
-            base64::encode_config(self.public_key.e().to_bytes_be(), base64::URL_SAFE_NO_PAD);
+        let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+        let k_mod = engine.encode(self.public_key.n().to_bytes_be());
+        let k_exp = engine.encode(self.public_key.e().to_bytes_be());
 
         Ok(TeePubKey {
             kty: RSA_KEY_TYPE.to_string(),

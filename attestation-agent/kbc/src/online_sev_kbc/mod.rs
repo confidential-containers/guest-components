@@ -52,8 +52,8 @@ impl KbcInterface for OnlineSevKbc {
         let key = self.get_key_from_kbs(annotation_packet.kid).await?;
         let plain_payload = crypto::decrypt(
             key,
-            base64::decode(annotation_packet.wrapped_data)?,
-            base64::decode(annotation_packet.iv)?,
+            base64::engine::general_purpose::STANDARD.decode(annotation_packet.wrapped_data)?,
+            base64::engine::general_purpose::STANDARD.decode(annotation_packet.iv)?,
             &annotation_packet.wrap_type,
         )?;
 
@@ -109,9 +109,11 @@ impl OnlineSevKbc {
 
         let response = client.get_online_secret(request).await?.into_inner();
         let decrypted_payload = crypto::decrypt(
-            Zeroizing::new(base64::decode(connection.key.clone())?),
-            base64::decode(response.payload)?,
-            base64::decode(response.iv)?,
+            Zeroizing::new(
+                base64::engine::general_purpose::STANDARD.decode(connection.key.clone())?,
+            ),
+            base64::engine::general_purpose::STANDARD.decode(response.payload)?,
+            base64::engine::general_purpose::STANDARD.decode(response.iv)?,
             WrapType::Aes256Gcm.as_ref(),
         )?;
 

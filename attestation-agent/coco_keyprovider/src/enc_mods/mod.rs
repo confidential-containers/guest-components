@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 
 use anyhow::*;
+use base64::Engine;
 use jwt_simple::prelude::Ed25519KeyPair;
 use log::{debug, info};
 use rand::RngCore;
@@ -211,10 +212,11 @@ pub async fn enc_optsdata_gen_anno(
         }
     }
 
+    let engine = base64::engine::general_purpose::STANDARD;
     let annotation = AnnotationPacket {
         kid: format!("{KBS_RESOURCE_URL_PREFIX}{kbs_addr}/{k_path}"),
-        wrapped_data: base64::encode(encrypt_optsdata),
-        iv: base64::encode(iv),
+        wrapped_data: engine.encode(encrypt_optsdata),
+        iv: engine.encode(iv),
         wrap_type: algorithm.to_string(),
     };
 

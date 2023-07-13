@@ -6,6 +6,7 @@
 use crate::{KbcCheckInfo, KbcInterface};
 use anyhow::*;
 use async_trait::async_trait;
+use base64::Engine;
 use log::*;
 use resource_uri::ResourceUri;
 use std::collections::HashMap;
@@ -61,9 +62,9 @@ impl KbcInterface for EAAKbc {
         debug!("start decrypt...");
 
         let decrypted_payload = self.kbs_decrypt_payload(
-            base64::decode(annotation_packet.wrapped_data)?,
+            base64::engine::general_purpose::STANDARD.decode(annotation_packet.wrapped_data)?,
             annotation_packet.kid.resource_path(),
-            base64::decode(annotation_packet.iv)?,
+            base64::engine::general_purpose::STANDARD.decode(annotation_packet.iv)?,
             annotation_packet.wrap_type,
         )?;
         debug!("decrypted success");
@@ -137,12 +138,13 @@ impl EAAKbc {
         iv: Vec<u8>,
         wrap_type: String,
     ) -> Result<Vec<u8>> {
+        let engine = base64::engine::general_purpose::STANDARD;
         let blob = Blob {
             kid: key_id,
-            encrypted_data: base64::encode(&encrypted_payload),
+            encrypted_data: engine.encode(&encrypted_payload),
             algorithm: wrap_type,
             key_length: 256,
-            iv: base64::encode(iv),
+            iv: engine.encode(iv),
         };
         let request = DecryptionRequest::new(blob);
         let trans_json = serde_json::to_string(&request)?;
@@ -166,11 +168,11 @@ impl EAAKbc {
         };
 
         if let Some(hashmap_content) = payload_hashmap {
-            let encrypted_payload_string = base64::encode(&encrypted_payload);
+            let encrypted_payload_string = engine.encode(&encrypted_payload);
             let decrypted_payload_string = hashmap_content.get(&encrypted_payload_string).ok_or_else(|| anyhow!(
                 "There is no field matching the encrypted payload in the data field of DecryptionResponse"
             ))?;
-            let decrypted_payload = base64::decode(decrypted_payload_string)?;
+            let decrypted_payload = engine.decode(decrypted_payload_string)?;
             Ok(decrypted_payload)
         } else {
             Err(anyhow!(
@@ -195,7 +197,7 @@ impl EAAKbc {
         let recv_string: String =
             self.kbs_trans_and_recv(trans_data, buffer_size, "Get Resource")?;
 
-        let data_bytes = base64::decode(recv_string)?;
+        let data_bytes = base64::engine::general_purpose::STANDARD.decode(recv_string)?;
 
         if let Result::Ok(data_str) = std::str::from_utf8(&data_bytes) {
             if let Result::Ok(err_info) = serde_json::from_str::<GetResourceErrorInfo>(data_str) {

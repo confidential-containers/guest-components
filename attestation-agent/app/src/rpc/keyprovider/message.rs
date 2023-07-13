@@ -4,6 +4,7 @@
 //
 
 use anyhow::{anyhow, Result};
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -205,7 +206,7 @@ impl KeyUnwrapParams {
 
     #[must_use]
     pub fn with_annotation(self, annotation: String) -> Self {
-        self.with_base64_annotation(base64::encode(annotation))
+        self.with_base64_annotation(base64::engine::general_purpose::STANDARD.encode(annotation))
     }
 }
 
@@ -247,7 +248,6 @@ pub struct KeyUnwrapResults {
 mod tests {
     use super::*;
     use crate::rpc::AGENT_NAME;
-    use base64::encode;
 
     #[test]
     fn test_key_wrap_params_valid() {
@@ -341,7 +341,7 @@ mod tests {
 
         let annotation_value = format!("{}::{}", kbc_name, kbs_uri);
 
-        let annotation_base64 = encode(annotation_value);
+        let annotation_base64 = base64::engine::general_purpose::STANDARD.encode(annotation_value);
 
         let mut valid_dc: Dc = Dc::default();
         valid_dc
