@@ -26,7 +26,7 @@ Suppose there is a user wanting to encrypt an image layer `L`.
     * the `wrap type`, s.t. the encryption scheme used to encrypt the `PLBCO`. The specification of this field will be stated in [section specs](#specs).
     * `iv` of this encryption
     * `key id`, s.t. the identity of the key used to encrypt the `PLBCO`. This key is also called `KEK` (Key Encryption Key, s.t. the key to encryption LEK).
-6. The `AnnotationPacket` will be returned to `ocicrypt-rs` and `ocicrypt-rs` will include the base64-encoded `AnnotationPacket` in the encrypted layer's annotation with key `org.opencontainers.image.enc.keys.provider.attestation-agent`.
+6. The `AnnotationPacket` will be returned to `ocicrypt-rs` and `ocicrypt-rs` will include the base64-encoded (Standard) `AnnotationPacket` in the encrypted layer's annotation with key `org.opencontainers.image.enc.keys.provider.attestation-agent`.
 
 ### Decryption
 
@@ -52,7 +52,7 @@ In CoCo scenerios, the annotation's key should be `org.opencontainers.image.enc.
 
 ### Annotation Packet
 
-An `Annotation Packet` is the value of `org.opencontainers.image.enc.keys.provider.attestation-agent` annotation of the encrypted layer's [OciDescriptor](https://github.com/opencontainers/image-spec/blob/main/descriptor.md) (the value is base64-encoded). The format of `Annotation Packet` influences
+An `Annotation Packet` is the value of `org.opencontainers.image.enc.keys.provider.attestation-agent` annotation of the encrypted layer's [OciDescriptor](https://github.com/opencontainers/image-spec/blob/main/descriptor.md) (the value is standard-base64-encoded). The format of `Annotation Packet` influences
 * How CoCo's Key Provider wrap the LEK.
 * How AA unwrap the LEK.
 * How different KBCes can be compatible with each other.
@@ -61,8 +61,8 @@ We define the format of `Annotation Packet` as following
 ```json
 {
     "kid": "<identity of the KEK>",
-    "wrapped_data": "<encrypted LEK (base64-encoded)>",
-    "iv": "<initialisation vector for the encryption scheme (base64-encoded)>",
+    "wrapped_data": "<encrypted LEK (standard-base64-encoded)>",
+    "iv": "<initialisation vector for the encryption scheme (standard-base64-encoded)>",
     "wrap_type": "<encryption scheme used to encrypt LEK>"
 }
 ```
