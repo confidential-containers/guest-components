@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::io::Read;
 
 use anyhow::{anyhow, Result};
+use base64::Engine;
 use base64_serde::base64_serde_type;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -20,7 +21,7 @@ pub type LayerCipherType = String;
 /// The default cipher algorithm for image layer encryption/decryption.
 pub const AES256CTR: &str = "AES_256_CTR_HMAC_SHA256";
 
-base64_serde_type!(Base64Vec, base64::STANDARD);
+base64_serde_type!(Base64Vec, base64::engine::general_purpose::STANDARD);
 
 fn base64_hashmap_s<S>(value: &HashMap<String, Vec<u8>>, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -28,7 +29,12 @@ where
 {
     let b64_encoded: HashMap<_, _> = value
         .iter()
-        .map(|(k, v)| (k.clone(), base64::encode_config(v, base64::STANDARD)))
+        .map(|(k, v)| {
+            (
+                k.clone(),
+                base64::engine::general_purpose::STANDARD.encode(v),
+            )
+        })
         .collect();
     b64_encoded.serialize(serializer)
 }
@@ -43,7 +49,9 @@ where
         .map(|(k, v)| -> Result<(String, Vec<u8>), D::Error> {
             Ok((
                 k.clone(),
-                base64::decode_config(v, base64::STANDARD).map_err(de::Error::custom)?,
+                base64::engine::general_purpose::STANDARD
+                    .decode(v)
+                    .map_err(de::Error::custom)?,
             ))
         })
         .collect()

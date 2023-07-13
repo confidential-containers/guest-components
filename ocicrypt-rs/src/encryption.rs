@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::io::Read;
 
 use anyhow::{anyhow, Result};
+use base64::Engine;
 
 use crate::blockcipher::{
     EncryptionFinalizer, LayerBlockCipherHandler, LayerBlockCipherOptions,
@@ -67,7 +68,7 @@ impl EncLayerFinalizer {
 
         new_annotations.insert(
             "org.opencontainers.image.enc.pubopts".to_string(),
-            base64::encode(pub_opts),
+            base64::engine::general_purpose::STANDARD.encode(pub_opts),
         );
 
         Ok(new_annotations)
@@ -87,7 +88,7 @@ fn pre_wrap_key(
         return Err(anyhow!("new annotations is empty!"));
     }
 
-    let b64_new_annotation = base64::encode(new_annotation);
+    let b64_new_annotation = base64::engine::general_purpose::STANDARD.encode(new_annotation);
     if b64_annotations.is_empty() {
         return Ok(b64_new_annotation);
     }
@@ -111,7 +112,7 @@ fn pre_unwrap_key(
 
     let mut errs = String::new();
     for b64_annotation in b64_annotations.split(',') {
-        let annotation = base64::decode(b64_annotation)?;
+        let annotation = base64::engine::general_purpose::STANDARD.decode(b64_annotation)?;
 
         match keywrapper.unwrap_keys(dc, &annotation) {
             Err(e) => {
@@ -132,7 +133,7 @@ fn pre_unwrap_key(
 
 fn get_layer_pub_opts(annotations: &HashMap<String, String>) -> Result<Vec<u8>> {
     if let Some(pub_opts) = annotations.get("org.opencontainers.image.enc.pubopts") {
-        return Ok(base64::decode(pub_opts)?);
+        return Ok(base64::engine::general_purpose::STANDARD.decode(pub_opts)?);
     }
 
     Ok(

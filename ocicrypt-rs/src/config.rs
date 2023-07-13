@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::BufReader;
 
 use anyhow::{anyhow, Result};
+use base64::Engine;
 use serde::{de, Deserializer, Serialize, Serializer};
 
 /// OCICRYPT_ENVVARNAME is the environment name for ocicrypt provider config file,
@@ -16,7 +17,7 @@ pub const OCICRYPT_ENVVARNAME: &str = "OCICRYPT_KEYPROVIDER_CONFIG";
 fn base64_enc(val: &[Vec<u8>]) -> Vec<String> {
     let mut res_vec = vec![];
     for x in val {
-        res_vec.push(base64::encode_config(x, base64::STANDARD));
+        res_vec.push(base64::engine::general_purpose::STANDARD.encode(x));
     }
 
     res_vec
@@ -39,7 +40,7 @@ where
 fn base64_dec(val: &[String]) -> Result<Vec<Vec<u8>>, base64::DecodeError> {
     let mut res_vec = vec![];
     for x in val {
-        res_vec.push(base64::decode_config(x, base64::STANDARD)?);
+        res_vec.push(base64::engine::general_purpose::STANDARD.decode(x)?);
     }
 
     Ok(res_vec)
