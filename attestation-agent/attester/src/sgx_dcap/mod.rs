@@ -5,6 +5,7 @@
 
 use super::Attester;
 use anyhow::{anyhow, bail, Result};
+use base64::Engine;
 use occlum_dcap::{sgx_report_data_t, DcapQuote};
 use serde::{Deserialize, Serialize};
 
@@ -76,7 +77,7 @@ impl Attester for SgxDcapAttester {
         };
 
         let evidence = SgxDcapAttesterEvidence {
-            quote: base64::encode(quote),
+            quote: base64::engine::general_purpose::STANDARD.encode(quote),
         };
 
         serde_json::to_string(&evidence)

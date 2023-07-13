@@ -5,6 +5,7 @@
 
 use anyhow::*;
 use attestation_agent::AttestationAPIs;
+use base64::Engine;
 use log::*;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -300,7 +301,8 @@ fn get_annotation(kpi: &KeyProviderInput) -> Result<String> {
         .as_ref()
         .ok_or_else(|| anyhow!(ERR_ANNOTATION_EMPTY))?;
 
-    let vec_annotation = base64::decode(base64_annotation)
+    let vec_annotation = base64::engine::general_purpose::STANDARD
+        .decode(base64_annotation)
         .map_err(|e| anyhow!("{}: {:?}", ERR_ANNOTATION_NOT_BASE64, e))?;
 
     let annotation: &str = str::from_utf8(&vec_annotation)?;
@@ -326,7 +328,8 @@ fn get_kbc_kbs_pair(kpi: &KeyProviderInput) -> Result<(String, String)> {
             return Err(anyhow!(ERR_DC_EMPTY));
         };
 
-        let kbc_kbs_pair_byte = base64::decode(value.clone())
+        let kbc_kbs_pair_byte = base64::engine::general_purpose::STANDARD
+            .decode(value.clone())
             .map_err(|e| anyhow!("{}: {:?}", ERR_KBC_KBS_NOT_BASE64, e))?;
 
         let kbc_kbs_value = std::str::from_utf8(&kbc_kbs_pair_byte)?;
@@ -359,7 +362,6 @@ mod tests {
     use crate::rpc::keyprovider::message::{
         ERR_INVALID_OP, ERR_MISSING_OP, ERR_UNSUPPORTED_OP, ERR_UNWRAP_PARAMS_NO_DC,
     };
-    use base64::encode;
 
     #[test]
     fn test_get_annotation() {
@@ -370,7 +372,7 @@ mod tests {
         }
 
         let valid_annotation = "valid annotation";
-        let encoded_annotation = base64::encode(valid_annotation);
+        let encoded_annotation = base64::engine::general_purpose::STANDARD.encode(valid_annotation);
 
         let tests = &[
             TestData {
@@ -438,7 +440,8 @@ mod tests {
         let kbs_uri = "https://kbs.uri.com";
 
         let annotation_value = format!("{}::{}", kbc_name, kbs_uri);
-        let annotation_base64 = encode(annotation_value.clone());
+        let annotation_base64 =
+            base64::engine::general_purpose::STANDARD.encode(annotation_value.clone());
 
         let mut invalid_dc_not_base64: Dc = Dc::default();
         invalid_dc_not_base64
@@ -534,7 +537,7 @@ mod tests {
 
         let annotation_value = format!("{}::{}", kbc_name, kbs_uri);
 
-        let annotation_base64 = encode(annotation_value);
+        let annotation_base64 = base64::engine::general_purpose::STANDARD.encode(annotation_value);
 
         valid_dc
             .parameters
@@ -652,7 +655,7 @@ mod tests {
 
         let annotation_value = format!("{}::{}", kbc_name, kbs_uri);
 
-        let annotation_base64 = encode(annotation_value);
+        let annotation_base64 = base64::engine::general_purpose::STANDARD.encode(annotation_value);
 
         let mut valid_dc: Dc = Dc::default();
 

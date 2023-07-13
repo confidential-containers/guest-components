@@ -11,6 +11,7 @@ use kbs_protocol::{KbsProtocolWrapper, KbsRequest, KBS_PREFIX};
 use super::AnnotationPacket;
 use anyhow::*;
 use async_trait::async_trait;
+use base64::Engine;
 use resource_uri::ResourceUri;
 use url::Url;
 use zeroize::Zeroizing;
@@ -35,8 +36,8 @@ impl KbcInterface for Kbc {
 
         decrypt(
             key,
-            base64::decode(annotation_packet.wrapped_data)?,
-            base64::decode(annotation_packet.iv)?,
+            base64::engine::general_purpose::STANDARD.decode(annotation_packet.wrapped_data)?,
+            base64::engine::general_purpose::STANDARD.decode(annotation_packet.iv)?,
             &annotation_packet.wrap_type,
         )
     }

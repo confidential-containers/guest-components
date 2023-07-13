@@ -4,6 +4,7 @@
 //
 
 use crate::{KbcCheckInfo, KbcInterface};
+use base64::Engine;
 use crypto::{decrypt, WrapType};
 use resource_uri::ResourceUri;
 
@@ -63,10 +64,11 @@ impl KbcInterface for SampleKbc {
 
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
         let key = Zeroizing::new(HARDCODED_KEY.to_vec());
+        let engine = base64::engine::general_purpose::STANDARD;
         let plain_text = decrypt(
             key,
-            base64::decode(annotation_packet.wrapped_data)?,
-            base64::decode(annotation_packet.iv)?,
+            engine.decode(annotation_packet.wrapped_data)?,
+            engine.decode(annotation_packet.iv)?,
             WrapType::Aes256Gcm.as_ref(),
         )?;
 

@@ -4,7 +4,7 @@
 //
 
 use anyhow::{anyhow, Result};
-use base64::decode;
+use base64::Engine;
 use std::collections::HashMap;
 use std::fs;
 
@@ -18,10 +18,12 @@ pub fn load_keys(keyfile_name: &str) -> Result<Keys> {
         serde_json::from_str(&keys_json).map_err(|_| anyhow!("Failed to parse keys JSON file"))?;
     encoded_keys
         .iter()
-        .map(|(k, v)| match decode(v) {
-            Ok(key) => Ok((k.clone(), key)),
-            Err(_) => Err(anyhow!("Failed to decode key")),
-        })
+        .map(
+            |(k, v)| match base64::engine::general_purpose::STANDARD.decode(v) {
+                Ok(key) => Ok((k.clone(), key)),
+                Err(_) => Err(anyhow!("Failed to decode key")),
+            },
+        )
         .collect()
 }
 
@@ -31,19 +33,23 @@ pub fn load_resources(resources_file_name: &str) -> Result<Resources> {
         .map_err(|_| anyhow!("Failed to parse resources JSON file"))?;
     encoded_resources
         .iter()
-        .map(|(k, v)| match decode(v) {
-            Ok(resource) => Ok((k.clone(), resource)),
-            Err(e) => Err(anyhow!(
-                "Failed to decode resource for {}: {}",
-                k,
-                e.to_string()
-            )),
-        })
+        .map(
+            |(k, v)| match base64::engine::general_purpose::STANDARD.decode(v) {
+                Ok(resource) => Ok((k.clone(), resource)),
+                Err(e) => Err(anyhow!(
+                    "Failed to decode resource for {}: {}",
+                    k,
+                    e.to_string()
+                )),
+            },
+        )
         .collect()
 }
 
 pub mod tests {
     use crate::tests::ResourcePath;
+
+    use base64::Engine;
 
     pub use super::*;
     pub use base64;
@@ -88,7 +94,7 @@ pub mod tests {
     \"{}\": \"{}\"
 }}",
                 KID,
-                base64::encode(KEY),
+                base64::engine::general_purpose::STANDARD.encode(KEY),
             ),
         )
         .unwrap();
@@ -98,11 +104,11 @@ pub mod tests {
     #[allow(dead_code)]
     pub fn create_resources_file(resources_file_path: &Path) {
         let resources_file_content = serde_json::json!({
-            resource_path!(ResourcePath::Policy): base64::encode(POLICYJSON.as_bytes()),
-            resource_path!(ResourcePath::SigstoreConfig): base64::encode(SIGSTORECONFIG.as_bytes()),
-            resource_path!(ResourcePath::GPGPublicKey): base64::encode(PUBKEY.as_bytes()),
-            resource_path!(ResourcePath::CosignVerificationKey): base64::encode(COSIGNKEY.as_bytes()),
-            resource_path!(ResourcePath::Credential): base64::encode(CREDENTIAL.as_bytes()),
+            resource_path!(ResourcePath::Policy): base64::engine::general_purpose::STANDARD.encode(POLICYJSON.as_bytes()),
+            resource_path!(ResourcePath::SigstoreConfig): base64::engine::general_purpose::STANDARD.encode(SIGSTORECONFIG.as_bytes()),
+            resource_path!(ResourcePath::GPGPublicKey): base64::engine::general_purpose::STANDARD.encode(PUBKEY.as_bytes()),
+            resource_path!(ResourcePath::CosignVerificationKey): base64::engine::general_purpose::STANDARD.encode(COSIGNKEY.as_bytes()),
+            resource_path!(ResourcePath::Credential): base64::engine::general_purpose::STANDARD.encode(CREDENTIAL.as_bytes()),
         });
 
         fs::write(

@@ -5,6 +5,7 @@
 
 use crate::enc_mods;
 use anyhow::*;
+use base64::Engine;
 use jwt_simple::prelude::Ed25519KeyPair;
 use log::*;
 use reqwest::Url;
@@ -68,6 +69,8 @@ impl KeyProviderService for KeyProvider {
             .keywrapparams
             .optsdata
             .ok_or_else(|| Status::invalid_argument("illegal keywrapparams without optsdata"))?;
+
+        let engine = base64::engine::general_purpose::STANDARD;
         let params: Vec<String> = input
             .keywrapparams
             .ec
@@ -83,7 +86,8 @@ impl KeyProviderService for KeyProvider {
             // this Vec will only have one element anyways, but let's decode all elements of it
             // just to be sure.
             .filter_map(|p| {
-                base64::decode(p)
+                engine
+                    .decode(p)
                     .ok()
                     .and_then(|st| String::from_utf8(st).ok())
             })
@@ -91,7 +95,9 @@ impl KeyProviderService for KeyProvider {
 
         let annotation: String = enc_mods::enc_optsdata_gen_anno(
             (&self.kbs, &self.auth_private_key),
-            &base64::decode(optsdata).map_err(|_| Status::aborted("base64 decode"))?,
+            &engine
+                .decode(optsdata)
+                .map_err(|_| Status::aborted("base64 decode"))?,
             params,
         )
         .await

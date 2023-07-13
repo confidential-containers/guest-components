@@ -5,6 +5,7 @@
 
 use super::Attester;
 use anyhow::*;
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tdx_attest_rs;
@@ -39,8 +40,9 @@ impl Attester for TdxAttester {
             d: report_data.as_slice().try_into()?,
         };
 
+        let engine = base64::engine::general_purpose::STANDARD;
         let quote = match tdx_attest_rs::tdx_att_get_quote(Some(&tdx_report_data), None, None, 0) {
-            (tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS, Some(q)) => base64::encode(q),
+            (tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS, Some(q)) => engine.encode(q),
             (error_code, _) => {
                 return Err(anyhow!(
                     "TDX Attester: Failed to get TD quote. Error code: {:?}",
@@ -50,7 +52,7 @@ impl Attester for TdxAttester {
         };
 
         let cc_eventlog = match std::fs::read(CCEL_PATH) {
-            Result::Ok(el) => Some(base64::encode(el)),
+            Result::Ok(el) => Some(engine.encode(el)),
             Result::Err(e) => {
                 log::warn!("Read CC Eventlog failed: {:?}", e);
                 None
