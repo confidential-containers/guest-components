@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug};
 
 use anyhow::{anyhow, bail, Result};
+use base64::Engine;
 use serde::Serialize;
 
 use crate::config::{DecryptConfig, EncryptConfig, KeyProviderAttrs};
@@ -526,7 +527,7 @@ impl KeyWrapper for KeyProviderKeyWrapper {
             .map_err(|_| anyhow!("keyprovider: can not convert json data to string"))?;
         let key_unwrap_params = KeyUnwrapParams {
             dc: Some(dc_config.clone()),
-            annotation: Some(base64::encode(annotation_str)),
+            annotation: Some(base64::engine::general_purpose::STANDARD.encode(annotation_str)),
         };
         let input = KeyProviderKeyWrapProtocolInput {
             op: OpKey::Unwrap.to_string(),
@@ -673,9 +674,12 @@ mod tests {
                     )
                     .unwrap();
                 let plain_optsdata = key_wrap_input.key_wrap_params.opts_data.unwrap();
-                if let Ok(wrapped_key_result) =
-                    encrypt_key(&base64::decode(plain_optsdata).unwrap(), unsafe { ENC_KEY })
-                {
+                if let Ok(wrapped_key_result) = encrypt_key(
+                    &base64::engine::general_purpose::STANDARD
+                        .decode(plain_optsdata)
+                        .unwrap(),
+                    unsafe { ENC_KEY },
+                ) {
                     let ap = AnnotationPacket {
                         key_url: "https://key-provider/key-uuid".to_string(),
                         wrapped_key: wrapped_key_result,
@@ -708,7 +712,9 @@ mod tests {
                     )
                     .unwrap();
                 let base64_annotation = key_wrap_input.key_unwrap_params.annotation.unwrap();
-                let vec_annotation = base64::decode(base64_annotation).unwrap();
+                let vec_annotation = base64::engine::general_purpose::STANDARD
+                    .decode(base64_annotation)
+                    .unwrap();
                 let str_annotation: &str = std::str::from_utf8(&vec_annotation).unwrap();
                 let annotation_packet: AnnotationPacket =
                     serde_json::from_str(str_annotation).unwrap();
@@ -778,9 +784,12 @@ mod tests {
                 let key_wrap_input: super::super::KeyProviderKeyWrapProtocolInput =
                     serde_json::from_slice(&req.KeyProviderKeyWrapProtocolInput).unwrap();
                 let plain_optsdata = key_wrap_input.key_wrap_params.opts_data.unwrap();
-                if let Ok(wrapped_key_result) =
-                    encrypt_key(&base64::decode(plain_optsdata).unwrap(), unsafe { ENC_KEY })
-                {
+                if let Ok(wrapped_key_result) = encrypt_key(
+                    &base64::engine::general_purpose::STANDARD
+                        .decode(plain_optsdata)
+                        .unwrap(),
+                    unsafe { ENC_KEY },
+                ) {
                     let ap = AnnotationPacket {
                         key_url: "https://key-provider/key-uuid".to_string(),
                         wrapped_key: wrapped_key_result,
@@ -813,7 +822,9 @@ mod tests {
                     serde_json::from_slice(&req.KeyProviderKeyWrapProtocolInput).unwrap();
 
                 let base64_annotation = key_wrap_input.key_unwrap_params.annotation.unwrap();
-                let vec_annotation = base64::decode(base64_annotation).unwrap();
+                let vec_annotation = base64::engine::general_purpose::STANDARD
+                    .decode(base64_annotation)
+                    .unwrap();
                 let str_annotation: &str = std::str::from_utf8(&vec_annotation).unwrap();
                 let annotation_packet: AnnotationPacket =
                     serde_json::from_str(str_annotation).unwrap();
@@ -898,7 +909,9 @@ mod tests {
                         serde_json::from_slice(input.as_ref()).unwrap();
                     let plain_optsdata = key_wrap_input.key_wrap_params.opts_data.unwrap();
                     let wrapped_key = self::cmd_grpc::encrypt_key(
-                        &base64::decode(plain_optsdata).unwrap(),
+                        &base64::engine::general_purpose::STANDARD
+                            .decode(plain_optsdata)
+                            .unwrap(),
                         unsafe { self::cmd_grpc::ENC_KEY },
                     )
                     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
@@ -918,7 +931,9 @@ mod tests {
                     let key_wrap_input: KeyProviderKeyWrapProtocolInput =
                         serde_json::from_slice(input.as_ref()).unwrap();
                     let base64_annotation = key_wrap_input.key_unwrap_params.annotation.unwrap();
-                    let vec_annotation = base64::decode(base64_annotation).unwrap();
+                    let vec_annotation = base64::engine::general_purpose::STANDARD
+                        .decode(base64_annotation)
+                        .unwrap();
                     let str_annotation: &str = std::str::from_utf8(&vec_annotation).unwrap();
                     let annotation_packet: AnnotationPacket =
                         serde_json::from_str(str_annotation).unwrap();
@@ -971,7 +986,9 @@ mod tests {
 
         // Prepare for mock encryption config
         let opts_data = b"symmetric_key";
-        let b64_opts_data = base64::encode(opts_data).into_bytes();
+        let b64_opts_data = base64::engine::general_purpose::STANDARD
+            .encode(opts_data)
+            .into_bytes();
         let mut ec = crate::keywrap::EncryptConfig::default();
         let mut dc = crate::keywrap::DecryptConfig::default();
         let mut ec_params = vec![];
@@ -1033,7 +1050,9 @@ mod tests {
             Some(Box::new(test_runner)),
         );
 
-        let b64_opts_data = base64::encode(b"symmetric_key").into_bytes();
+        let b64_opts_data = base64::engine::general_purpose::STANDARD
+            .encode(b"symmetric_key")
+            .into_bytes();
         let mut ec = crate::keywrap::EncryptConfig::default();
         ec_params.push("keyprovider1".to_string().into_bytes());
         assert!(ec.encrypt_with_key_provider(ec_params).is_ok());
@@ -1116,7 +1135,9 @@ mod tests {
 
         // Prepare encryption config params
         let opts_data = b"symmetric_key";
-        let b64_opts_data = base64::encode(opts_data).into_bytes();
+        let b64_opts_data = base64::engine::general_purpose::STANDARD
+            .encode(opts_data)
+            .into_bytes();
         let mut ec = crate::keywrap::EncryptConfig::default();
         let mut dc = crate::keywrap::DecryptConfig::default();
         let mut ec_params = vec![];
@@ -1165,7 +1186,9 @@ mod tests {
 
         // Prepare encryption config params
         let opts_data = b"symmetric_key";
-        let b64_opts_data = base64::encode(opts_data).into_bytes();
+        let b64_opts_data = base64::engine::general_purpose::STANDARD
+            .encode(opts_data)
+            .into_bytes();
         let mut ec = crate::keywrap::EncryptConfig::default();
         let mut dc = crate::keywrap::DecryptConfig::default();
         let mut ec_params = vec![];
@@ -1214,7 +1237,9 @@ mod tests {
 
         // Prepare encryption config params
         let opts_data = b"symmetric_key";
-        let b64_opts_data = base64::encode(opts_data).into_bytes();
+        let b64_opts_data = base64::engine::general_purpose::STANDARD
+            .encode(opts_data)
+            .into_bytes();
         let mut ec = EncryptConfig::default();
         let mut dc = DecryptConfig::default();
         let mut ec_params = vec![];
