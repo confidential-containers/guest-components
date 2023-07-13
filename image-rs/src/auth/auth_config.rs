@@ -9,6 +9,7 @@
 use std::collections::HashMap;
 
 use anyhow::*;
+use base64::Engine;
 use oci_distribution::{secrets::RegistryAuth, Reference};
 
 use super::DockerAuthConfig;
@@ -85,7 +86,7 @@ fn normalize_registry(registry: &str) -> &str {
 /// return (`<username>`, `<password>`). We support both
 /// `<username>` and `<password>` are in utf8
 fn decode_auth(auth: &str) -> Result<(String, String)> {
-    let decoded = base64::decode(auth)?;
+    let decoded = base64::engine::general_purpose::STANDARD.decode(auth)?;
     let auth = String::from_utf8(decoded)?;
     let (username, password) = auth
         .split_once(':')
