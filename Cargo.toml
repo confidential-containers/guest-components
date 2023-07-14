@@ -29,7 +29,7 @@ prost = "0.11"
 resource_uri = { path = "attestation-agent/deps/resource_uri" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-strum = { version = "0.24.0", features = ["derive"] }
+strum = { version = "0.24", features = ["derive"] }
 tokio = "1.0"
 url = "2.3.1"
 zeroize = "1.5.7"
