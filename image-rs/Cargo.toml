@@ -39,7 +39,7 @@ sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "69e8f33
 strum = { version = "0.24", features = ["derive"] }
 strum_macros = "0.24"
 tar = "0.4.37"
-tokio = "1.0"
+tokio.workspace = true
 tonic = { version = "0.8", optional = true }
 ttrpc = { version = "0.7.1", features = [ "async" ], optional = true }
 url = "2.2.2"
@@ -65,7 +65,7 @@ strum = "0.24"
 strum_macros = "0.24"
 tempfile = "3.2"
 test-utils = { path = "libs/test-utils" }
-tokio = { version = "1", features = ["process"] }
+tokio = { workspace = true, features = ["process"] }
 
 # Remove nested workspace.
 # Unclear if test-utils is needed as a member or not.

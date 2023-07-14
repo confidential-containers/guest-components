@@ -29,7 +29,7 @@ ring = { version = "0.16.20", optional = true}
 serde = { version = ">=1.0", features = ["derive"] }
 serde_json = ">=1.0"
 sha2 = { version = ">=0.10", optional = true }
-tokio = { version = "1.17.0", features = ["rt-multi-thread"], optional = true }
+tokio = { workspace = true, features = ["rt-multi-thread"], optional = true }
 tonic = { version = ">=0.8.0", optional = true }
 ttrpc = { version = "0.7.1", features = ["async"], default-features = false, optional = true }
 
@@ -40,7 +40,7 @@ ttrpc-codegen = { version = "0.4.1", optional = true }
 [dev-dependencies]
 aes-gcm = { version = "0.10" }
 openssl = { version = ">=0.10", features = ["vendored"]}
-tokio = { version = "1.17.0", features = ["time", "signal"] }
+tokio = { workspace = true, features = ["time", "signal"] }
 
 [features]
 default = ["block-cipher-openssl", "keywrap-jwe", "keywrap-keyprovider-cmd"]
