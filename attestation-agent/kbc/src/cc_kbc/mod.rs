@@ -66,7 +66,7 @@ impl Kbc {
     }
 
     fn kbs_uri(&self) -> &str {
-        self.kbs_uri.as_str()
+        self.kbs_uri.as_str().trim_end_matches('/')
     }
 
     fn kbs_protocol_wrapper(&mut self) -> &mut KbsProtocolWrapper {
@@ -93,7 +93,7 @@ impl Kbc {
             );
         }
 
-        let kbs_addr = &self.kbs_uri();
+        let kbs_addr = self.kbs_uri();
         let repo = &resource.repository;
         let r#type = &resource.r#type;
         let tag = &resource.tag;
