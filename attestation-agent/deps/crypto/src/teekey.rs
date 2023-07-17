@@ -62,15 +62,13 @@ impl TeeKey {
     }
 }
 
-// Returns a base64 of the sha384 of all chunks.
-pub fn hash_chunks(chunks: Vec<Vec<u8>>) -> String {
+// Returns a sha384 of all chunks.
+pub fn hash_chunks(chunks: Vec<Vec<u8>>) -> Vec<u8> {
     let mut hasher = Sha384::new();
 
     for chunk in chunks.iter() {
         hasher.update(chunk);
     }
 
-    let res = hasher.finalize();
-
-    base64::encode(res)
+    hasher.finalize().to_vec()
 }

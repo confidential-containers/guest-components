@@ -25,10 +25,10 @@ struct SampleQuote {
 pub struct SampleAttester {}
 
 impl Attester for SampleAttester {
-    fn get_evidence(&self, report_data: String) -> Result<String> {
+    fn get_evidence(&self, report_data: Vec<u8>) -> Result<String> {
         let evidence = SampleQuote {
             svn: "1".to_string(),
-            report_data,
+            report_data: base64::encode(report_data),
         };
 
         serde_json::to_string(&evidence).map_err(|_| anyhow!("Serialize sample evidence failed"))
