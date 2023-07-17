@@ -9,7 +9,7 @@ authors = ["The ocicrypt Authors"]
 edition = "2018"
 
 [dependencies]
-anyhow = ">=1.0"
+anyhow.workspace = true
 aes = { workspace = true, optional = true }
 async-trait = { version = "0.1.61", optional = true }
 attestation_agent = { path = "../attestation-agent/lib", optional = true  }
