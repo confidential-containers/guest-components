@@ -10,25 +10,25 @@ edition = "2018"
 
 [dependencies]
 anyhow = ">=1.0"
-aes = { version = ">=0.8", optional = true }
+aes = { workspace = true, optional = true }
 async-trait = { version = "0.1.61", optional = true }
 attestation_agent = { path = "../attestation-agent/lib", optional = true  }
 base64 = "0.13"
 base64-serde = { version = "0.6", optional = true }
 cfg-if = "1.0.0"
-ctr = { version = ">=0.9", optional = true }
-hmac = { version = ">=0.12", optional = true }
+ctr = { workspace = true, optional = true }
+hmac = { workspace = true, optional = true }
 josekit = { version = ">=0.7", optional = true }
 kbc = { path = "../attestation-agent/kbc", optional = true  }
 lazy_static = ">=1.4"
-openssl = { version = ">=0.10", features = ["vendored"], optional = true }
+openssl = { workspace = true, features = ["vendored"], optional = true }
 pin-project-lite = { version = "0.2.9", optional = true }
 protobuf = { workspace = true, optional = true }
 prost = { workspace = true, optional = true }
-ring = { version = "0.16.20", optional = true}
+ring = { workspace = true, optional = true}
 serde = { version = ">=1.0", features = ["derive"] }
 serde_json = ">=1.0"
-sha2 = { version = ">=0.10", optional = true }
+sha2 = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["rt-multi-thread"], optional = true }
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], default-features = false, optional = true }
@@ -38,8 +38,8 @@ tonic-build = { workspace = true, optional = true }
 ttrpc-codegen = { workspace = true, optional = true }
 
 [dev-dependencies]
-aes-gcm = { version = "0.10" }
-openssl = { version = ">=0.10", features = ["vendored"]}
+aes-gcm.workspace = true
+openssl = { workspace = true, features = ["vendored"]}
 tokio = { workspace = true, features = ["time", "signal"] }
 
 [features]

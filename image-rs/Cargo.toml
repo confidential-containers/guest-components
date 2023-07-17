@@ -34,7 +34,7 @@ sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["co
 serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
 serde_yaml = { version = "0.9", optional = true }
-sha2 = ">=0.10"
+sha2.workspace = true
 sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "69e8f33", default-features = false, optional = true}
 strum.workspace = true
 strum_macros = "0.24"
@@ -58,7 +58,7 @@ ttrpc-codegen = { workspace = true, optional = true }
 cfg-if = "1.0.0"
 filetime = "0.2"
 nix = "0.26"
-openssl = "0.10.44"
+openssl.workspace = true
 rstest = "0.17.0"
 serial_test = "2.0.0"
 strum.workspace = true
