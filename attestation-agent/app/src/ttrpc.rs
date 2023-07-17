@@ -5,6 +5,7 @@
 
 use super::*;
 use ::ttrpc::asynchronous::Server;
+use clap::{arg, command, Parser};
 use const_format::concatcp;
 use std::path::Path;
 use tokio::{
@@ -30,54 +31,51 @@ lazy_static! {
         Arc::new(Mutex::new(AttestationAgent::new()));
 }
 
+#[derive(Debug, Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// KeyProvider ttRPC Unix socket addr.
+    ///
+    /// This Unix socket address which the KeyProvider ttRPC service
+    /// will listen to, for example:
+    ///
+    /// `--keyprovider_sock unix:///tmp/aa_keyprovider`
+    #[arg(default_value_t = DEFAULT_KEYPROVIDER_SOCKET_ADDR.to_string(), short, long)]
+    keyprovider_sock: String,
+
+    /// GetResource ttRPC Unix socket addr.
+    ///
+    /// This Unix socket address which the GetResource ttRPC service
+    /// will listen to, for example:
+    ///
+    /// `--getresource_sock unix:///tmp/aa_getresource`
+    #[arg(default_value_t = DEFAULT_GETRESOURCE_SOCKET_ADDR.to_string(), short, long)]
+    getresource_sock: String,
+}
+
 pub async fn ttrpc_main() -> Result<()> {
-    let app_matches = App::new(rpc::AGENT_NAME)
-            .version(env!("CARGO_PKG_VERSION"))
-            .about(rpc::ABOUT.as_str())
-            .arg(
-                Arg::with_name("KeyProvider ttRPC Unix socket addr")
-                    .long("keyprovider_sock")
-                    .takes_value(true)
-                    .help("This Unix socket address which the KeyProvider ttRPC service will listen to, for example: --keyprovider_sock unix:///tmp/aa_keyprovider",
-                    ),
-            )
-            .arg(
-                Arg::with_name("GetResource ttRPC Unix socket addr")
-                    .long("getresource_sock")
-                    .takes_value(true)
-                    .help("This Unix socket address which the GetResource ttRPC service will listen to, for example: --getresource_sock unix:///tmp/aa_getresource",
-                    ),
-            )
-            .get_matches();
+    let cli = Cli::parse();
 
     if !Path::new(DEFAULT_UNIX_SOCKET_DIR).exists() {
         std::fs::create_dir_all(DEFAULT_UNIX_SOCKET_DIR).expect("Create unix socket dir failed");
     }
 
-    let keyprovider_socket = app_matches
-        .value_of("KeyProvider ttRPC Unix socket addr")
-        .unwrap_or(DEFAULT_KEYPROVIDER_SOCKET_ADDR);
-
-    let getresource_socket = app_matches
-        .value_of("GetResource ttRPC Unix socket addr")
-        .unwrap_or(DEFAULT_GETRESOURCE_SOCKET_ADDR);
-
-    clean_previous_sock_file(keyprovider_socket)
+    clean_previous_sock_file(&cli.keyprovider_sock)
         .context("clean previous keyprovider socket file")?;
-    clean_previous_sock_file(getresource_socket)
+    clean_previous_sock_file(&cli.getresource_sock)
         .context("clean previous getresource socket file")?;
 
     let kp = rpc::keyprovider::ttrpc::start_ttrpc_service()?;
     let gs = rpc::getresource::ttrpc::start_ttrpc_service()?;
     let mut kps = Server::new()
-        .bind(getresource_socket)
+        .bind(&cli.getresource_sock)
         .context("cannot bind getresource ttrpc service")?
         .register_service(gs);
 
     kps.start().await?;
 
     let mut gss = Server::new()
-        .bind(keyprovider_socket)
+        .bind(&cli.keyprovider_sock)
         .context("cannot bind keyprovider ttrpc service")?
         .register_service(kp);
 
@@ -85,11 +83,11 @@ pub async fn ttrpc_main() -> Result<()> {
 
     debug!(
         "KeyProvider ttRPC service listening on: {:?}",
-        keyprovider_socket
+        cli.keyprovider_sock
     );
     debug!(
         "GetResource ttRPC service listening on: {:?}",
-        getresource_socket
+        cli.getresource_sock
     );
 
     let mut interrupt = signal(SignalKind::interrupt())?;
