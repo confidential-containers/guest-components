@@ -45,13 +45,12 @@ struct SgxDcapAttesterEvidence {
 pub struct SgxDcapAttester {}
 
 impl Attester for SgxDcapAttester {
-    fn get_evidence(&self, report_data: String) -> Result<String> {
-        let mut report_data_bin = base64::decode(report_data)?;
-        if report_data_bin.len() != 48 {
+    fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
+        if report_data.len() > 64 {
             bail!("SGX Attester: Report data should be SHA384 base64 String");
         }
 
-        report_data_bin.extend([0; 16]);
+        report_data.resize(64, 0);
 
         let quote = match get_libos_type() {
             SgxLibOsType::Invalid => unimplemented!("empty quote"),
@@ -64,14 +63,14 @@ impl Attester for SgxDcapAttester {
 
                 match handler.generate_quote(
                     occlum_quote.as_mut_ptr(),
-                    report_data_bin.as_ptr() as *const sgx_report_data_t,
+                    report_data.as_ptr() as *const sgx_report_data_t,
                 ) {
                     Ok(_) => occlum_quote,
                     Err(e) => bail!("generate quote: {e}"),
                 }
             }
             SgxLibOsType::Gramine => {
-                std::fs::write("/dev/attestation/user_report_data", report_data_bin)?;
+                std::fs::write("/dev/attestation/user_report_data", report_data)?;
                 std::fs::read("/dev/attestation/quote")?
             }
         };
@@ -94,9 +93,8 @@ mod tests {
     fn test_sgx_get_evidence() {
         let attester = SgxDcapAttester::default();
         let report_data: Vec<u8> = vec![0; 48];
-        let report_data_base64 = base64::encode(report_data);
 
-        let evidence = attester.get_evidence(report_data_base64);
+        let evidence = attester.get_evidence(report_data);
         assert!(evidence.is_ok());
     }
 }

@@ -28,17 +28,15 @@ struct TdxEvidence {
 pub struct TdxAttester {}
 
 impl Attester for TdxAttester {
-    fn get_evidence(&self, report_data: String) -> Result<String> {
-        let mut report_data_bin = base64::decode(report_data)?;
-        if report_data_bin.len() != 48 {
-            return Err(anyhow!(
-                "TDX Attester: Report data should be SHA384 base64 String"
-            ));
+    fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
+        if report_data.len() > 64 {
+            bail!("TDX Attester: Report data must be no more than 64 bytes");
         }
-        report_data_bin.extend([0; 16]);
+
+        report_data.resize(64, 0);
 
         let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
-            d: report_data_bin.as_slice().try_into()?,
+            d: report_data.as_slice().try_into()?,
         };
 
         let quote = match tdx_attest_rs::tdx_att_get_quote(Some(&tdx_report_data), None, None, 0) {
@@ -75,9 +73,8 @@ mod tests {
     fn test_tdx_get_evidence() {
         let attester = TdxAttester::default();
         let report_data: Vec<u8> = vec![0; 48];
-        let report_data_base64 = base64::encode(report_data);
 
-        let evidence = attester.get_evidence(report_data_base64);
+        let evidence = attester.get_evidence(report_data);
         assert!(evidence.is_ok());
     }
 }
