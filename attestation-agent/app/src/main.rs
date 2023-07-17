@@ -8,7 +8,6 @@ extern crate lazy_static;
 
 use anyhow::*;
 use attestation_agent::AttestationAgent;
-use clap::{App, Arg};
 use log::*;
 use std::sync::Arc;
 

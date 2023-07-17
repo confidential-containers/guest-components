@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use clap::Parser;
+
 use super::*;
 use std::net::SocketAddr;
 
@@ -14,43 +16,42 @@ lazy_static! {
         Arc::new(tokio::sync::Mutex::new(AttestationAgent::new()));
 }
 
+#[derive(Debug, Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// KeyProvider gRPC socket addr.
+    ///
+    /// This socket address which the KeyProvider gRPC service
+    /// will listen to, for example:
+    ///
+    /// `--keyprovider_sock 127.0.0.1:11223`
+    #[arg(default_value_t = DEFAULT_KEYPROVIDER_ADDR.to_string(), short, long)]
+    keyprovider_sock: String,
+
+    /// GetResource ttRPC Unix socket addr.
+    ///
+    /// This socket address which the GetResource gRPC service
+    /// will listen to, for example:
+    ///
+    /// `--getresource_sock 127.0.0.1:11223`
+    #[arg(default_value_t = DEFAULT_GETRESOURCE_ADDR.to_string(), short, long)]
+    getresource_sock: String,
+}
+
 pub async fn grpc_main() -> Result<()> {
-    let app_matches = App::new(rpc::AGENT_NAME)
-        .version(env!("CARGO_PKG_VERSION"))
-        .about(rpc::ABOUT.as_str())
-        .arg(
-            Arg::with_name("KeyProvider gRPC socket addr")
-                .long("keyprovider_sock")
-                .takes_value(true)
-                .help("This socket address which the KeyProvider gRPC service will listen to, for example: --keyprovider_sock 127.0.0.1:11223",
-                ),
-        )
-        .arg(
-            Arg::with_name("GetResource gRPC socket addr")
-                .long("getresource_sock")
-                .takes_value(true)
-                .help("This socket address which the GetResource gRPC service will listen to, for example: --getresource_sock 127.0.0.1:11223",
-                ),
-        )
-        .get_matches();
+    let cli = Cli::parse();
 
-    let keyprovider_socket = app_matches
-        .value_of("KeyProvider gRPC socket addr")
-        .unwrap_or(DEFAULT_KEYPROVIDER_ADDR)
-        .parse::<SocketAddr>()?;
+    let keyprovider_socket = cli.keyprovider_sock.parse::<SocketAddr>()?;
 
-    let getresource_socket = app_matches
-        .value_of("GetResource gRPC socket addr")
-        .unwrap_or(DEFAULT_GETRESOURCE_ADDR)
-        .parse::<SocketAddr>()?;
+    let getresource_socket = cli.getresource_sock.parse::<SocketAddr>()?;
 
     debug!(
         "KeyProvider gRPC service listening on: {:?}",
-        keyprovider_socket
+        cli.keyprovider_sock
     );
     debug!(
         "GetResource gRPC service listening on: {:?}",
-        getresource_socket
+        cli.getresource_sock
     );
 
     let keyprovider_server = rpc::keyprovider::grpc::start_grpc_service(keyprovider_socket);

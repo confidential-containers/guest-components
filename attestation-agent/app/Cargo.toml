@@ -11,7 +11,7 @@ async-trait.workspace = true
 attestation_agent = { path = "../lib", default-features = false }
 base64.workspace = true
 cfg-if.workspace = true
-clap.workspace = true
+clap = { workspace = true, features = ["derive"] }
 const_format.workspace = true
 env_logger.workspace = true
 lazy_static.workspace = true
