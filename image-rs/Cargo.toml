@@ -40,7 +40,7 @@ strum.workspace = true
 strum_macros = "0.24"
 tar = "0.4.37"
 tokio.workspace = true
-tonic = { version = "0.8", optional = true }
+tonic = { workspace = true, optional = true }
 ttrpc = { version = "0.7.1", features = [ "async" ], optional = true }
 url = "2.2.2"
 walkdir = "2"
@@ -51,7 +51,7 @@ nydus-service = { version = "0.3.0", features = ["coco"], optional = true}
 
 [build-dependencies]
 anyhow = "1"
-tonic-build = { version = "0.8", optional = true }
+tonic-build = { workspace = true, optional = true }
 ttrpc-codegen = { version = "0.4.1", optional = true }
 
 [dev-dependencies]

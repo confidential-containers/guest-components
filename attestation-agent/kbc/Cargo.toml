@@ -21,7 +21,7 @@ serde_json.workspace = true
 sev = { path = "../deps/sev", optional = true }
 strum.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"], optional = true }
-tonic = { version = "0.8.0", optional = true }
+tonic = { workspace = true, optional = true }
 url.workspace = true
 uuid = { version = "1.1.2", features = ["serde", "v4"], optional = true }
 zeroize.workspace = true
