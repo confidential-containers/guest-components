@@ -31,8 +31,8 @@ ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = ["
 prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
 sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"], optional = true }
-serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
-serde_json = ">=1.0.9"
+serde = { workspace = true, features = ["serde_derive", "rc"] }
+serde_json.workspace = true
 serde_yaml = { version = "0.9", optional = true }
 sha2.workspace = true
 sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "69e8f33", default-features = false, optional = true}
