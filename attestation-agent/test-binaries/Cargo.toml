@@ -10,7 +10,7 @@ name = "occlum-attester"
 required-features = ["occlum"]
 
 [dependencies]
-anyhow = "1.0"
+anyhow.workspace = true
 attester = { path = "../attester", default-features = false, optional = true }
 
 [features]

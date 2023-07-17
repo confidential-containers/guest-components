@@ -9,7 +9,7 @@ authors = ["The image-rs Authors"]
 edition = "2018"
 
 [dependencies]
-anyhow = "1"
+anyhow.workspace = true
 async-compression = { version = "0.3.15", features = ["futures-io", "tokio", "gzip", "zstd"] }
 async-trait = "0.1.56"
 attestation_agent = { path = "../attestation-agent/lib", optional = true }
@@ -50,7 +50,7 @@ nydus-api = { version = "0.3.0", optional = true}
 nydus-service = { version = "0.3.0", features = ["coco"], optional = true}
 
 [build-dependencies]
-anyhow = "1"
+anyhow.workspace = true
 tonic-build = { workspace = true, optional = true }
 ttrpc-codegen = { workspace = true, optional = true }
 
