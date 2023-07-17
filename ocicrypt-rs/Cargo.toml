@@ -20,7 +20,7 @@ ctr = { workspace = true, optional = true }
 hmac = { workspace = true, optional = true }
 josekit = { version = ">=0.7", optional = true }
 kbc = { path = "../attestation-agent/kbc", optional = true  }
-lazy_static = ">=1.4"
+lazy_static.workspace = true
 openssl = { workspace = true, features = ["vendored"], optional = true }
 pin-project-lite = { version = "0.2.9", optional = true }
 protobuf = { workspace = true, optional = true }
