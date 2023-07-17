@@ -96,7 +96,7 @@ impl KbsProtocolWrapper {
     async fn attestation(&mut self, kbs_root_url: String) -> Result<String> {
         let challenge = self
             .http_client()
-            .post(format!("{kbs_root_url}/{KBS_PREFIX}/auth"))
+            .post(format!("{kbs_root_url}{KBS_PREFIX}/auth"))
             .header("Content-Type", "application/json")
             .json(&Request::new(self.tee().to_string()))
             .send()
@@ -107,7 +107,7 @@ impl KbsProtocolWrapper {
 
         let attest_response = self
             .http_client()
-            .post(format!("{kbs_root_url}/{KBS_PREFIX}/attest"))
+            .post(format!("{kbs_root_url}{KBS_PREFIX}/attest"))
             .header("Content-Type", "application/json")
             .json(&self.generate_evidence()?)
             .send()
