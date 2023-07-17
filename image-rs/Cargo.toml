@@ -29,7 +29,7 @@ oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", r
 oci-spec = "0.5.8"
 ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = ["async-io"], optional = true }
 prost = { workspace = true, optional = true }
-protobuf = { version = "3.2.0", optional = true }
+protobuf = { workspace = true, optional = true }
 sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"], optional = true }
 serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
@@ -41,7 +41,7 @@ strum_macros = "0.24"
 tar = "0.4.37"
 tokio.workspace = true
 tonic = { workspace = true, optional = true }
-ttrpc = { version = "0.7.1", features = [ "async" ], optional = true }
+ttrpc = { workspace = true, features = [ "async" ], optional = true }
 url = "2.2.2"
 walkdir = "2"
 zstd = "0.12"
@@ -52,7 +52,7 @@ nydus-service = { version = "0.3.0", features = ["coco"], optional = true}
 [build-dependencies]
 anyhow = "1"
 tonic-build = { workspace = true, optional = true }
-ttrpc-codegen = { version = "0.4.1", optional = true }
+ttrpc-codegen = { workspace = true, optional = true }
 
 [dev-dependencies]
 cfg-if = "1.0.0"
