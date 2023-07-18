@@ -36,6 +36,10 @@ jobs:
           override: true
           components: rustfmt, clippy
 
+      - name: Install protoc
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
       - name: Rust fmt check
         uses: actions-rs/cargo@v1
         with:
