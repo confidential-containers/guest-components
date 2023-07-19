@@ -6,7 +6,7 @@ repository = "https://github.com/containers/ocicrypt-rs"
 readme = "README.md"
 license = "Apache-2.0"
 authors = ["The ocicrypt Authors"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
@@ -31,7 +31,7 @@ serde_json.workspace = true
 sha2 = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["rt-multi-thread"], optional = true }
 tonic = { workspace = true, optional = true }
-ttrpc = { workspace = true, features = ["async"], default-features = false, optional = true }
+ttrpc = { workspace = true, features = ["async"], optional = true }
 
 [build-dependencies]
 tonic-build = { workspace = true, optional = true }
