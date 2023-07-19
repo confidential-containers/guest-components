@@ -25,7 +25,8 @@ const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_ttrpc.conf";
 
 #[cfg(all(feature = "getresource", feature = "encryption"))]
 #[rstest::rstest]
-#[case("docker.io/xynnn007/busybox:encrypted-uri-key")]
+#[case("ghcr.io/confidential-containers/test-container:unencrypted")]
+#[case("ghcr.io/confidential-containers/test-container:encrypted")]
 #[tokio::test]
 #[serial]
 async fn test_decrypt_layers(#[case] image: &str) {
