@@ -40,7 +40,7 @@ struct Cli {
     /// will listen to, for example:
     ///
     /// `--keyprovider_sock unix:///tmp/aa_keyprovider`
-    #[arg(default_value_t = DEFAULT_KEYPROVIDER_SOCKET_ADDR.to_string(), short, long)]
+    #[arg(default_value_t = DEFAULT_KEYPROVIDER_SOCKET_ADDR.to_string(), short, long = "keyprovider_sock")]
     keyprovider_sock: String,
 
     /// GetResource ttRPC Unix socket addr.
@@ -49,7 +49,7 @@ struct Cli {
     /// will listen to, for example:
     ///
     /// `--getresource_sock unix:///tmp/aa_getresource`
-    #[arg(default_value_t = DEFAULT_GETRESOURCE_SOCKET_ADDR.to_string(), short, long)]
+    #[arg(default_value_t = DEFAULT_GETRESOURCE_SOCKET_ADDR.to_string(), short, long = "getresource_sock")]
     getresource_sock: String,
 }
 
