@@ -6,7 +6,7 @@ repository = "https://github.com/confidential-containers/guest-components/tree/m
 readme = "README.md"
 license = "Apache-2.0"
 authors = ["The image-rs Authors"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
