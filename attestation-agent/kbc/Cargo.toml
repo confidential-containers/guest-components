@@ -51,5 +51,5 @@ online_sev_kbc = ["tonic", "sev", "prost", "uuid", "bincode", "tokio"]
 gen-proto = ["tonic-build"]
 
 # Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
-rust-crypto = ["crypto/rust-crypto", "kbs_protocol/rust-crypto"]
-openssl = ["crypto/openssl", "kbs_protocol/openssl"]
+rust-crypto = ["crypto/rust-crypto", "kbs_protocol?/rust-crypto"]
+openssl = ["crypto/openssl", "kbs_protocol?/openssl"]
