@@ -45,8 +45,9 @@ struct SgxDcapAttesterEvidence {
 #[derive(Debug, Default)]
 pub struct SgxDcapAttester {}
 
+#[async_trait::async_trait]
 impl Attester for SgxDcapAttester {
-    fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
         if report_data.len() > 64 {
             bail!("SGX Attester: Report data should be SHA384 base64 String");
         }
@@ -90,12 +91,12 @@ mod tests {
     use super::*;
 
     #[ignore]
-    #[test]
-    fn test_sgx_get_evidence() {
+    #[tokio::test]
+    async fn test_sgx_get_evidence() {
         let attester = SgxDcapAttester::default();
         let report_data: Vec<u8> = vec![0; 48];
 
-        let evidence = attester.get_evidence(report_data);
+        let evidence = attester.get_evidence(report_data).await;
         assert!(evidence.is_ok());
     }
 }

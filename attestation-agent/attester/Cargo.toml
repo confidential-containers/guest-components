@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
+async-trait.workspace = true
 az-snp-vtpm = { git = "https://github.com/kinvolk/azure-cvm-tooling", rev = "2c2e411", default-features = false, features = ["attester"], optional = true }
 base64.workspace = true
 log.workspace = true
@@ -16,6 +17,9 @@ serde_json.workspace = true
 sev = { git = "https://github.com/virtee/sev", version = "1.2", default-features = false, features = ["snp"], optional = true }
 strum.workspace = true
 tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.16", optional = true }
+
+[dev-dependencies]
+tokio.workspace = true
 
 [features]
 default = ["all-attesters"]

@@ -57,11 +57,12 @@ impl Tee {
     }
 }
 
+#[async_trait::async_trait]
 pub trait Attester {
     /// Call the hardware driver to get the Hardware specific evidence.
     /// The parameter `report_data` will be used as the user input of the
     /// evidence to avoid reply attack.
-    fn get_evidence(&self, report_data: Vec<u8>) -> Result<String>;
+    async fn get_evidence(&self, report_data: Vec<u8>) -> Result<String>;
 }
 
 // Detect which TEE platform the KBC running environment is.

@@ -130,7 +130,7 @@ impl KbsProtocolWrapper {
         })
     }
 
-    fn generate_evidence(&self, tee_pubkey: TeePubKey) -> Result<Attestation> {
+    async fn generate_evidence(&self, tee_pubkey: TeePubKey) -> Result<Attestation> {
         let nonce = self
             .nonce
             .to_owned()
@@ -151,6 +151,7 @@ impl KbsProtocolWrapper {
 
         let tee_evidence = attester
             .get_evidence(ehd)
+            .await
             .map_err(|e| anyhow!("Get TEE evidence failed: {:?}", e))?;
 
         Ok(Attestation {
@@ -199,7 +200,7 @@ impl KbsProtocolWrapper {
             .http_client()
             .post(format!("{kbs_root_url}{KBS_PREFIX}/attest"))
             .header("Content-Type", "application/json")
-            .json(&self.generate_evidence(pubkey)?)
+            .json(&self.generate_evidence(pubkey).await?)
             .send()
             .await?;
 
