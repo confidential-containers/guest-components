@@ -8,6 +8,7 @@
 use std::str::FromStr;
 
 use anyhow::*;
+use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
 #[cfg(feature = "openssl")]
@@ -19,15 +20,17 @@ use crate::rust::*;
 /// Supported WrapType, s.t. encryption algorithm using to encrypt the
 /// [PLBCO](https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/IMPLEMENTATION.md#encryption-and-decryption-of-container-image).
 /// TODO: Support more kinds of en/decryption schemes.
-#[derive(EnumString, AsRefStr)]
+#[derive(EnumString, AsRefStr, Serialize, Deserialize, PartialEq, Debug)]
 pub enum WrapType {
     /// The serialized name follows 5.2.6 section
     /// <https://www.rfc-editor.org/rfc/inline-errata/rfc7518.html>
     #[strum(serialize = "A256GCM")]
+    #[serde(rename = "A256GCM")]
     Aes256Gcm,
 
     /// This type is not recommended as it is not AEAD.
     #[strum(serialize = "A256CTR")]
+    #[serde(rename = "A256CTR")]
     Aes256Ctr,
 }
 
