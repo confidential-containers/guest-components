@@ -25,8 +25,9 @@ struct SampleQuote {
 #[derive(Debug, Default)]
 pub struct SampleAttester {}
 
+#[async_trait::async_trait]
 impl Attester for SampleAttester {
-    fn get_evidence(&self, report_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, report_data: Vec<u8>) -> Result<String> {
         let evidence = SampleQuote {
             svn: "1".to_string(),
             report_data: base64::engine::general_purpose::STANDARD.encode(report_data),

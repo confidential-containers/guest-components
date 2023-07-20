@@ -28,8 +28,9 @@ struct TdxEvidence {
 #[derive(Debug, Default)]
 pub struct TdxAttester {}
 
+#[async_trait::async_trait]
 impl Attester for TdxAttester {
-    fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
         if report_data.len() > 64 {
             bail!("TDX Attester: Report data must be no more than 64 bytes");
         }
@@ -71,12 +72,12 @@ mod tests {
     use super::*;
 
     #[ignore]
-    #[test]
-    fn test_tdx_get_evidence() {
+    #[tokio::test]
+    async fn test_tdx_get_evidence() {
         let attester = TdxAttester::default();
         let report_data: Vec<u8> = vec![0; 48];
 
-        let evidence = attester.get_evidence(report_data);
+        let evidence = attester.get_evidence(report_data).await;
         assert!(evidence.is_ok());
     }
 }
