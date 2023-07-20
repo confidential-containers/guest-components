@@ -38,8 +38,8 @@ pub struct KbsProtocolWrapper {
     authenticated: bool,
 }
 
-struct NoTee;
-struct NoAttester;
+pub struct NoTee;
+pub struct NoAttester;
 
 pub struct KbsProtocolWrapperBuilder<T, A> {
     tee: T,
