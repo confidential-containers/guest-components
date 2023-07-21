@@ -1,0 +1,11 @@
+[package]
+name = "tdm"
+version = "0.1.0"
+description = "A TEE-IO device manager for confidential guests"
+repository = "https://github.com/confidential-containers/guest-components/tree/main/tdm"
+readme = "README.md"
+license = "Apache-2.0"
+authors = ["The Trusted Device Manager Authors"]
+edition = "2021"
+
+[dependencies]

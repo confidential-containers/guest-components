@@ -19,6 +19,7 @@ members = [
     "confidential-data-hub/storage",
     "image-rs",
     "ocicrypt-rs",
+    "tdm"
 ]
 
 [workspace.dependencies]
