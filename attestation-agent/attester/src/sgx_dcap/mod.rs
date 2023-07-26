@@ -56,8 +56,8 @@ impl Attester for SgxDcapAttester {
         let quote = match get_libos_type() {
             SgxLibOsType::Invalid => unimplemented!("empty quote"),
             SgxLibOsType::Occlum => {
-                let mut handler = DcapQuote::new();
-                let quote_size = handler.get_quote_size() as usize;
+                let mut handler = DcapQuote::new()?;
+                let quote_size = handler.get_quote_size()? as usize;
                 let mut occlum_quote = Vec::new();
 
                 occlum_quote.resize(quote_size, b'\0');
