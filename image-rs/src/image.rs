@@ -628,16 +628,16 @@ mod tests {
         let default_hash_size: u64 = 4096;
         let default_resize_size: u64 = data_device_size * 4;
         let data = vec![0u8; data_device_size as usize];
-        fs::write(&file_name, &data)
+        fs::write(&file_name, data)
             .unwrap_or_else(|err| panic!("Failed to write to file: {}", err));
         Command::new("mkfs")
-            .args(&["-t", "ext4", file_name.to_str().unwrap()])
+            .args(["-t", "ext4", file_name.to_str().unwrap()])
             .output()
             .map_err(|err| format!("Failed to format disk image: {}", err))
             .unwrap_or_else(|err| panic!("{}", err));
 
         Command::new("truncate")
-            .args(&[
+            .args([
                 "-s",
                 default_resize_size.to_string().as_str(),
                 file_name.to_str().unwrap(),
@@ -679,7 +679,7 @@ mod tests {
             .copied()
             .unwrap_or_else(|| panic!("Veritysetup path not found"));
         let output = Command::new(veritysetup_bin)
-            .args(&[
+            .args([
                 "format",
                 "--no-superblock",
                 "--format=1",

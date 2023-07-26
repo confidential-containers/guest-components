@@ -269,7 +269,7 @@ mod tests {
             },
         ];
         for d in tests.iter() {
-            let result = check_verity_options(&d);
+            let result = check_verity_options(d);
             assert!(result.is_err());
         }
         let test_data = DmVerityOption {
@@ -289,7 +289,7 @@ mod tests {
         let work_dir = tempfile::tempdir().unwrap();
         let file_name: std::path::PathBuf = work_dir.path().join("test.file");
         let data = vec![0u8; 1048576];
-        fs::write(&file_name, &data)
+        fs::write(&file_name, data)
             .unwrap_or_else(|err| panic!("Failed to write to file: {}", err));
 
         let loop_control = loopdev::LoopControl::open().unwrap_or_else(|err| panic!("{}", err));

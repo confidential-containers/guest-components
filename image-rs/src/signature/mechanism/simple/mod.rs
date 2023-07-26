@@ -198,7 +198,6 @@ impl SimpleParameters {
     }
 
     pub async fn get_signatures(&self, image: &mut Image) -> Result<Vec<Vec<u8>>> {
-        use std::convert::TryInto;
         // Get image digest (manifest digest)
         let image_digest = if !image.manifest_digest.is_empty() {
             image.manifest_digest.clone()
