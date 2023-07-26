@@ -140,7 +140,7 @@ async fn signature_verification() {
                 test.allow,
                 "Test: {}, Signing scheme: {}, {:?}",
                 test.description,
-                test.signing_scheme.to_string(),
+                test.signing_scheme,
                 _res
             );
         }
