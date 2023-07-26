@@ -14,7 +14,7 @@ aes = { workspace = true, optional = true }
 async-trait = { workspace = true, optional = true }
 attestation_agent = { path = "../attestation-agent/lib", optional = true  }
 base64.workspace = true
-base64-serde = { version = "0.6", optional = true }
+base64-serde = { workspace = true, optional = true }
 cfg-if.workspace = true
 ctr = { workspace = true, optional = true }
 hmac = { workspace = true, optional = true }
