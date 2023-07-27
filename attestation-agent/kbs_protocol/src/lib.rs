@@ -9,6 +9,7 @@ use attester::{detect_tee_type, Attester, Tee};
 use core::time::Duration;
 use crypto::{hash_chunks, TeeKey};
 use kbs_types::{Attestation, ErrorInformation};
+use std::convert::TryFrom;
 use types::*;
 use url::Url;
 
@@ -33,7 +34,7 @@ pub struct KbsProtocolWrapper {
     tee: String,
     tee_key: TeeKey,
     nonce: Option<String>,
-    attester: BoxedAttester,
+    attester: Option<BoxedAttester>,
     http_client: reqwest::Client,
     authenticated: bool,
 }
@@ -86,25 +87,36 @@ impl WrapperBuilder<Tee, NoAttester> {
 
 impl WrapperBuilder<Tee, BoxedAttester> {
     pub fn build(self) -> Result<KbsProtocolWrapper> {
-        let tee_key = TeeKey::new().map_err(|e| anyhow!("Generate TEE key failed: {:?}", e))?;
-        let wrapper = KbsProtocolWrapper {
-            tee: self.tee.to_string(),
-            attester: self.attester,
-            tee_key,
-            nonce: None,
-            http_client: build_http_client()?,
-            authenticated: false,
-        };
+        self.try_into()
+    }
+}
+
+impl TryFrom<WrapperBuilder<Tee, BoxedAttester>> for KbsProtocolWrapper {
+    type Error = Error;
+    fn try_from(builder: WrapperBuilder<Tee, BoxedAttester>) -> Result<Self> {
+        let mut wrapper = Self::new()?;
+        wrapper.tee = builder.tee.to_string();
+        wrapper.attester = Some(builder.attester);
         Ok(wrapper)
     }
 }
 
 impl KbsProtocolWrapper {
     pub fn new() -> Result<KbsProtocolWrapper> {
+        let tee_key = TeeKey::new().map_err(|e| anyhow!("Generate TEE key failed: {e}"))?;
         // Detect TEE type of the current platform.
         let tee_type = detect_tee_type();
-        let wrapper = WrapperBuilder::new().with_tee(tee_type).build()?;
-        Ok(wrapper)
+        // Create attester instance.
+        let attester = tee_type.to_attester().ok();
+
+        Ok(KbsProtocolWrapper {
+            tee: tee_type.to_string(),
+            attester,
+            tee_key,
+            nonce: None,
+            http_client: build_http_client()?,
+            authenticated: false,
+        })
     }
 
     fn generate_evidence(&self) -> Result<Attestation> {
@@ -126,8 +138,12 @@ impl KbsProtocolWrapper {
 
         let ehd = hash_chunks(ehd_chunks);
 
-        let tee_evidence = self
+        let attester = self
             .attester
+            .as_ref()
+            .ok_or_else(|| anyhow!("Attester is not set"))?;
+
+        let tee_evidence = attester
             .get_evidence(ehd)
             .map_err(|e| anyhow!("Get TEE evidence failed: {:?}", e))?;
 
