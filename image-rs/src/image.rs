@@ -22,14 +22,13 @@ use crate::config::{ImageConfig, CONFIGURATION_FILE_PATH};
 use crate::decoder::Compression;
 use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
-use crate::verity;
+use crate::snapshots::{SnapshotType, Snapshotter};
+use crate::verity::{self, DmVerityOption};
 
 #[cfg(feature = "snapshot-unionfs")]
 use crate::snapshots::occlum::unionfs::Unionfs;
 #[cfg(feature = "snapshot-overlayfs")]
 use crate::snapshots::overlay::OverlayFs;
-
-use crate::snapshots::{SnapshotType, Snapshotter};
 
 #[cfg(feature = "nydus")]
 use crate::nydus::{service, utils};
@@ -444,7 +443,7 @@ pub fn mount_image_block_with_integrity(
     mount_path: &Path,
     mount_type: &str,
 ) -> Result<String> {
-    let parsed_data = verity::decode_verity_options(verity_options)?;
+    let parsed_data = DmVerityOption::try_from(verity_options)?;
     let verity_device_path = verity::create_verity_device(&parsed_data, source_device_path)?;
 
     nix::mount::mount(
@@ -462,7 +461,7 @@ pub fn umount_image_block_with_integrity(
     verity_device_name: String,
 ) -> Result<()> {
     nix::mount::umount(mount_path)?;
-    verity::close_verity_device(verity_device_name)?;
+    verity::destroy_verity_device(verity_device_name)?;
     Ok(())
 }
 
@@ -614,6 +613,7 @@ mod tests {
             nydus_images.len()
         );
     }
+
     #[tokio::test]
     async fn test_mount_and_umount_image_block_with_integrity() {
         const VERITYSETUP_PATH: &[&str] = &["/sbin/veritysetup", "/usr/sbin/veritysetup"];
@@ -663,7 +663,7 @@ mod tests {
             .to_str()
             .unwrap_or_else(|| panic!("failed to get path string"));
 
-        let mut verity_option = verity::DmVerityOption {
+        let mut verity_option = DmVerityOption {
             hashtype: default_hash_type.to_string(),
             blocksize: default_data_block_size,
             hashsize: default_hash_size,
@@ -726,6 +726,7 @@ mod tests {
         };
         assert!(umount_image_block_with_integrity(mount_dir.path(), verity_device_name).is_ok());
     }
+
     #[tokio::test]
     async fn test_image_reuse() {
         let work_dir = tempfile::tempdir().unwrap();

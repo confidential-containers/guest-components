@@ -2,30 +2,106 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Error, Result};
 use base64::Engine;
 use devicemapper::{DevId, DmFlags, DmName, DmOptions, DM};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::path::Path;
 
-const SECTOR_SHIFT: u64 = 9;
-const HASH_ALGORITHMS: &[&str] = &["sha1", "sha224", "sha256", "sha384", "sha512", "ripemd160"];
-
+/// Configuration information for DmVerity device.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DmVerityOption {
     /// Hash algorithm for dm-verity.
     pub hashtype: String,
+    /// Root hash for device verification or activation.
+    pub hash: String,
+    /// Size of data device used in verification.
+    pub blocknum: u64,
     /// Used block size for the data device.
     pub blocksize: u64,
     /// Used block size for the hash device.
     pub hashsize: u64,
-    /// Size of data device used in verification.
-    pub blocknum: u64,
     /// Offset of hash area/superblock on hash_device.
     pub offset: u64,
-    /// Root hash for device verification or activation.
-    pub hash: String,
+}
+
+impl DmVerityOption {
+    /// Validate configuration information for DmVerity device.
+    pub fn validate(&self) -> Result<()> {
+        match self.hashtype.to_lowercase().as_str() {
+            "sha256" => {
+                if self.hash.len() != 64 || hex::decode(&self.hash).is_err() {
+                    bail!(
+                        "Invalid hash value sha256:{} for DmVerity device with sha256",
+                        self.hash,
+                    );
+                }
+            }
+            // TODO: support ["sha1", "sha224", "sha384", "sha512", "ripemd160"];
+            _ => {
+                bail!(
+                    "Unsupported hash algorithm {} for DmVerity device {}",
+                    self.hashtype,
+                    self.hash,
+                );
+            }
+        }
+
+        if self.blocknum == 0 || self.blocknum > u32::MAX as u64 {
+            bail!("Zero block count for DmVerity device {}", self.hash);
+        }
+        if !Self::is_valid_block_size(self.blocksize) || !Self::is_valid_block_size(self.hashsize) {
+            bail!(
+                "Unsupported verity block size: data_block_size = {},hash_block_size = {}",
+                self.blocksize,
+                self.hashsize
+            );
+        }
+        if self.offset % self.hashsize != 0 || self.offset < self.blocksize * self.blocknum {
+            bail!(
+                "Invalid hashvalue offset {} for DmVerity device {}",
+                self.offset,
+                self.hash
+            );
+        }
+
+        Ok(())
+    }
+
+    fn is_valid_block_size(block_size: u64) -> bool {
+        for order in 9..20 {
+            if block_size == 1 << order {
+                return true;
+            }
+        }
+        false
+    }
+}
+
+// Parse `DmVerityOption` object from plaintext or base64 encoded json string.
+impl TryFrom<&str> for DmVerityOption {
+    type Error = Error;
+
+    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
+        let option;
+        if let Ok(v) = serde_json::from_str::<DmVerityOption>(value) {
+            option = v;
+        } else {
+            let decoded = base64::engine::general_purpose::STANDARD.decode(value)?;
+            option = serde_json::from_slice::<DmVerityOption>(&decoded)?;
+        }
+        option.validate()?;
+        Ok(option)
+    }
+}
+
+impl TryFrom<&String> for DmVerityOption {
+    type Error = Error;
+
+    fn try_from(value: &String) -> std::result::Result<Self, Self::Error> {
+        Self::try_from(value.as_str())
+    }
 }
 
 /// Creates a mapping with <name> backed by data_device <source_device_path>
@@ -82,61 +158,28 @@ pub fn create_verity_device(
     dm.device_create(verity_name, None, opts)?;
     dm.table_load(&id, verity_table.as_slice(), opts)?;
     dm.device_suspend(&id, opts)?;
-    Ok(format!("{}{}", "/dev/mapper/", &verity_option.hash))
+
+    Ok(format!("/dev/mapper/{}", &verity_option.hash))
 }
 
-pub fn get_verity_device_name(verity_options: &str) -> Result<String> {
-    let parsed_data = decode_verity_options(verity_options)?;
-    Ok(parsed_data.hash)
-}
-pub fn check_verity_options(option: &DmVerityOption) -> Result<()> {
-    if !HASH_ALGORITHMS.contains(&option.hashtype.as_str()) {
-        bail!("Unsupported hash algorithm: {}", option.hashtype);
-    }
-    if verity_block_size_ok(option.blocksize) || verity_block_size_ok(option.hashsize) {
-        bail!(
-            "Unsupported verity block size: data_block_size = {},hash_block_size = {}",
-            option.blocksize,
-            option.hashsize
-        );
-    }
-    if misaligned_512(option.offset) {
-        bail!("Unsupported verity hash offset: {}", option.offset);
-    }
-    if option.blocknum == 0 || option.offset != option.blocksize * option.blocknum {
-        bail!(
-            "Offset is not equal to blocksize * blocknum and blocknum can not be set 0: offset = {}, blocknum = {},blocksize*blocknum = {}",
-            option.offset,
-            option.blocknum,
-            option.blocksize * option.blocknum
-        );
-    }
-
-    Ok(())
-}
-pub fn decode_verity_options(verity_options: &str) -> Result<DmVerityOption> {
-    let decoded = base64::engine::general_purpose::STANDARD.decode(verity_options)?;
-    let parsed_data = serde_json::from_slice::<DmVerityOption>(&decoded)?;
-    match check_verity_options(&parsed_data) {
-        Ok(()) => Ok(parsed_data),
-        Err(e) => bail!("check_verity_options error: {}", e),
-    }
-}
-
-pub fn close_verity_device(verity_device_name: String) -> Result<()> {
+/// Destroy a DmVerity device with specified name.
+pub fn destroy_verity_device(verity_device_name: String) -> Result<()> {
     let dm = devicemapper::DM::new()?;
     let name = devicemapper::DmName::new(&verity_device_name)?;
+
     dm.device_remove(
         &devicemapper::DevId::Name(name),
         devicemapper::DmOptions::default(),
-    )?;
+    )
+    .context(format!("remove DmverityDevice {}", verity_device_name))?;
+
     Ok(())
 }
-fn verity_block_size_ok(block_size: u64) -> bool {
-    (block_size) % 512 != 0 || !(512..=(512 * 1024)).contains(&(block_size))
-}
-fn misaligned_512(offset: u64) -> bool {
-    (offset) & ((1 << SECTOR_SHIFT) - 1) != 0
+
+/// Get the DmVerity device name from option string.
+pub fn get_verity_device_name(verity_options: &str) -> Result<String> {
+    let option = DmVerityOption::try_from(verity_options)?;
+    Ok(option.hash)
 }
 
 #[cfg(test)]
@@ -154,9 +197,18 @@ mod tests {
             offset: 8388608,
             hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174".to_string(),
         };
-        let encoded = base64::engine::general_purpose::STANDARD
-            .encode(serde_json::to_string(&verity_option).unwrap());
-        let decoded = decode_verity_options(&encoded).unwrap_or_else(|err| panic!("{}", err));
+        let json_option = serde_json::to_string(&verity_option).unwrap();
+        let encoded = base64::engine::general_purpose::STANDARD.encode(&json_option);
+
+        let decoded = DmVerityOption::try_from(&encoded).unwrap_or_else(|err| panic!("{}", err));
+        assert_eq!(decoded.hashtype, verity_option.hashtype);
+        assert_eq!(decoded.blocksize, verity_option.blocksize);
+        assert_eq!(decoded.hashsize, verity_option.hashsize);
+        assert_eq!(decoded.blocknum, verity_option.blocknum);
+        assert_eq!(decoded.offset, verity_option.offset);
+        assert_eq!(decoded.hash, verity_option.hash);
+
+        let decoded = DmVerityOption::try_from(&json_option).unwrap();
         assert_eq!(decoded.hashtype, verity_option.hashtype);
         assert_eq!(decoded.blocksize, verity_option.blocksize);
         assert_eq!(decoded.hashsize, verity_option.hashsize);
@@ -263,14 +315,13 @@ mod tests {
                 blocksize: 512,
                 hashsize: 512,
                 blocknum: 16384,
-                offset: 8389120, // Invalid offset, it must be equal to blocksize * blocknum.
+                offset: 8388608 - 4096, // Invalid offset, it must be equal to blocksize * blocknum.
                 hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
                     .to_string(),
             },
         ];
         for d in tests.iter() {
-            let result = check_verity_options(d);
-            assert!(result.is_err());
+            d.validate().unwrap_err();
         }
         let test_data = DmVerityOption {
             hashtype: "sha256".to_string(),
@@ -280,8 +331,7 @@ mod tests {
             offset: 8388608,
             hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174".to_string(),
         };
-        let result = check_verity_options(&test_data);
-        assert!(result.is_ok());
+        test_data.validate().unwrap();
     }
 
     #[tokio::test]
@@ -319,9 +369,9 @@ mod tests {
             verity_device_path,
             "/dev/mapper/fc65e84aa2eb12941aeaa29b000bcf1d9d4a91190bd9b10b5f51de54892952c6"
         );
-        assert!(close_verity_device(
-            "fc65e84aa2eb12941aeaa29b000bcf1d9d4a91190bd9b10b5f51de54892952c6".to_string()
+        destroy_verity_device(
+            "fc65e84aa2eb12941aeaa29b000bcf1d9d4a91190bd9b10b5f51de54892952c6".to_string(),
         )
-        .is_ok());
+        .unwrap();
     }
 }
