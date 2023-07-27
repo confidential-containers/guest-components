@@ -38,7 +38,15 @@ impl DmVerityOption {
                     );
                 }
             }
-            // TODO: support ["sha1", "sha224", "sha384", "sha512", "ripemd160"];
+            "sha1" => {
+                if self.hash.len() != 40 || hex::decode(&self.hash).is_err() {
+                    bail!(
+                        "Invalid hash value sha1:{} for DmVerity device with sha1",
+                        self.hash,
+                    );
+                }
+            }
+            // TODO: support ["sha224", "sha384", "sha512", "ripemd160"];
             _ => {
                 bail!(
                     "Unsupported hash algorithm {} for DmVerity device {}",
@@ -153,7 +161,12 @@ pub fn create_verity_device(
     // <size> is size of device in sectors, and one sector is equal to 512 bytes.
     // <target_name> is name of mapping target, here "verity" for dm-verity
     // <target_params> are parameters for verity target
-    let verity_table = vec![(0, verity_option.blocknum, "verity".into(), verity_params)];
+    let verity_table = vec![(
+        0,
+        verity_option.blocknum * verity_option.blocksize / 512,
+        "verity".into(),
+        verity_params,
+    )];
 
     dm.device_create(verity_name, None, opts)?;
     dm.table_load(&id, verity_table.as_slice(), opts)?;
@@ -355,23 +368,30 @@ mod tests {
             .path()
             .unwrap_or_else(|| panic!("failed to get loop device path"));
 
-        let verity_option = DmVerityOption {
-            hashtype: "sha256".to_string(),
-            blocksize: 512,
-            hashsize: 4096,
-            blocknum: 1024,
-            offset: 524288,
-            hash: "fc65e84aa2eb12941aeaa29b000bcf1d9d4a91190bd9b10b5f51de54892952c6".to_string(),
-        };
-        let verity_device_path = create_verity_device(&verity_option, &loop_device_path)
-            .unwrap_or_else(|err| panic!("{}", err));
-        assert_eq!(
-            verity_device_path,
-            "/dev/mapper/fc65e84aa2eb12941aeaa29b000bcf1d9d4a91190bd9b10b5f51de54892952c6"
-        );
-        destroy_verity_device(
-            "fc65e84aa2eb12941aeaa29b000bcf1d9d4a91190bd9b10b5f51de54892952c6".to_string(),
-        )
-        .unwrap();
+        let tests = &[
+            DmVerityOption {
+                hashtype: "sha256".to_string(),
+                blocksize: 512,
+                hashsize: 4096,
+                blocknum: 1024,
+                offset: 524288,
+                hash: "fc65e84aa2eb12941aeaa29b000bcf1d9d4a91190bd9b10b5f51de54892952c6"
+                    .to_string(),
+            },
+            DmVerityOption {
+                hashtype: "sha1".to_string(),
+                blocksize: 512,
+                hashsize: 1024,
+                blocknum: 1024,
+                offset: 524288,
+                hash: "e889164102360c7b0f56cbef6880c4ae75f552cf".to_string(),
+            },
+        ];
+        for d in tests.iter() {
+            let verity_device_path =
+                create_verity_device(d, &loop_device_path).unwrap_or_else(|err| panic!("{}", err));
+            assert_eq!(verity_device_path, format!("/dev/mapper/{}", d.hash));
+            destroy_verity_device(d.hash.clone()).unwrap();
+        }
     }
 }
