@@ -1,0 +1,12 @@
+[package]
+name = "kms"
+version = "0.1.0"
+authors = ["The Confidential Container Authors"]
+publish = false
+edition = "2021"
+
+[dependencies]
+async-trait.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]

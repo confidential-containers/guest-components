@@ -11,6 +11,7 @@ members = [
     "attestation-agent/coco_keyprovider",
     "attestation-agent/test-binaries",
     "confidential-datahub/hub",
+    "confidential-datahub/kms",
     "confidential-datahub/secret",
     "image-rs",
     "ocicrypt-rs",
