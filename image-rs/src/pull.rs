@@ -218,8 +218,8 @@ mod tests {
     #[tokio::test]
     async fn test_pull_client() {
         let oci_images = [
-            "docker.io/arronwang/busybox_gzip",
-            "docker.io/arronwang/busybox_zstd",
+            "ghcr.io/confidential-containers/test-container-image-rs:busybox-gzip",
+            "ghcr.io/confidential-containers/test-container-image-rs:busybox-zstd",
         ];
 
         for image_url in oci_images.iter() {
@@ -254,7 +254,8 @@ mod tests {
     #[cfg(all(feature = "encryption", feature = "keywrap-grpc"))]
     #[tokio::test]
     async fn test_pull_client_encrypted() {
-        let oci_images = ["docker.io/arronwang/busybox_encrypted"];
+        let oci_images =
+            ["ghcr.io/confidential-containers/test-container-image-rs:busybox-encrypted-jwe"];
 
         for image_url in oci_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
@@ -297,8 +298,8 @@ mod tests {
     #[tokio::test]
     async fn test_async_pull_client() {
         let oci_images = [
-            "docker.io/arronwang/busybox_gzip",
-            "docker.io/arronwang/busybox_zstd",
+            "ghcr.io/confidential-containers/test-container-image-rs:busybox-gzip",
+            "ghcr.io/confidential-containers/test-container-image-rs:busybox-zstd",
         ];
 
         for image_url in oci_images.iter() {
@@ -333,7 +334,8 @@ mod tests {
     #[cfg(all(feature = "encryption", feature = "keywrap-jwe"))]
     #[tokio::test]
     async fn test_async_pull_client_encrypted() {
-        let oci_images = ["docker.io/arronwang/busybox_encrypted"];
+        let oci_images =
+            ["ghcr.io/confidential-containers/test-container-image-rs:busybox-encrypted-jwe"];
 
         for image_url in oci_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
@@ -377,8 +379,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_async_handle_layer() {
-        let oci_image = Reference::try_from("docker.io/arronwang/busybox_gzip")
-            .expect("create reference failed");
+        let oci_image = Reference::try_from(
+            "ghcr.io/confidential-containers/test-container-image-rs:busybox-gzip",
+        )
+        .expect("create reference failed");
 
         let bad_media_err = format!("{}: {}", ERR_BAD_MEDIA_TYPE, IMAGE_CONFIG_MEDIA_TYPE);
 
