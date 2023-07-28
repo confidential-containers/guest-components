@@ -28,7 +28,7 @@ zeroize.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
-rstest = "0.16.0"
+rstest.workspace = true
 
 [build-dependencies]
 tonic-build = { version = "0.9.2", optional = true }

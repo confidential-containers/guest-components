@@ -30,6 +30,6 @@ shadow-rs = "0.5.25"
 tonic-build.workspace = true
 
 [dev-dependencies]
-rstest = "0.17.0"
+rstest.workspace = true
 
 [features]
