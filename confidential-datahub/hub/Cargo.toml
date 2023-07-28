@@ -11,4 +11,4 @@ async-trait.workspace = true
 clap = { workspace = true, features = [ "derive" ] }
 log.workspace = true
 thiserror.workspace = true
-tokio = { version = "1", features = [ "rt-multi-thread", "macros" ] }
+tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
