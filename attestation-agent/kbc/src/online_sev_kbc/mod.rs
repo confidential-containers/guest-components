@@ -50,11 +50,12 @@ impl KbcInterface for OnlineSevKbc {
 
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
         let key = self.get_key_from_kbs(annotation_packet.kid).await?;
+        let wrap_type = WrapType::try_from(&annotation_packet.wrap_type[..])?;
         let plain_payload = crypto::decrypt(
             key,
             base64::engine::general_purpose::STANDARD.decode(annotation_packet.wrapped_data)?,
             base64::engine::general_purpose::STANDARD.decode(annotation_packet.iv)?,
-            &annotation_packet.wrap_type,
+            wrap_type,
         )?;
 
         Ok(plain_payload)
@@ -114,7 +115,7 @@ impl OnlineSevKbc {
             ),
             base64::engine::general_purpose::STANDARD.decode(response.payload)?,
             base64::engine::general_purpose::STANDARD.decode(response.iv)?,
-            WrapType::Aes256Gcm.as_ref(),
+            WrapType::Aes256Gcm,
         )?;
 
         let payload_dict: HashMap<String, Vec<u8>> = bincode::deserialize(&decrypted_payload)?;

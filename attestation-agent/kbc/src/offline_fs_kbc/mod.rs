@@ -11,6 +11,7 @@ use common::*;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use base64::Engine;
+use crypto::WrapType;
 use resource_uri::ResourceUri;
 use std::collections::HashMap;
 use zeroize::Zeroizing;
@@ -39,11 +40,12 @@ impl KbcInterface for OfflineFsKbc {
 
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
         let key = self.get_key(&annotation_packet.kid.resource_path()).await?;
+        let wrap_type = WrapType::try_from(&annotation_packet.wrap_type[..])?;
         let plain_payload = crypto::decrypt(
             key,
             base64::engine::general_purpose::STANDARD.decode(annotation_packet.wrapped_data)?,
             base64::engine::general_purpose::STANDARD.decode(annotation_packet.iv)?,
-            &annotation_packet.wrap_type,
+            wrap_type,
         )?;
 
         Ok(plain_payload)
