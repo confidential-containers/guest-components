@@ -10,3 +10,6 @@ pub mod aes256gcm;
 
 pub use aes256ctr::*;
 pub use aes256gcm::*;
+
+pub mod rsa;
+pub use self::rsa::*;
