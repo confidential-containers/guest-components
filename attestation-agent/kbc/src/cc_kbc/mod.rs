@@ -4,9 +4,7 @@
 //
 
 use crate::{KbcCheckInfo, KbcInterface};
-use crypto::decrypt;
-
-use kbs_protocol::{KbsProtocolWrapper, KbsRequest, KBS_PREFIX};
+use crypto::{decrypt, WrapType};
 
 use super::AnnotationPacket;
 use anyhow::*;
@@ -34,11 +32,12 @@ impl KbcInterface for Kbc {
         let key_data = self.kbs_protocol_wrapper().http_get(key_url).await?;
         let key = Zeroizing::new(key_data);
 
+        let wrap_type = WrapType::try_from(&annotation_packet.wrap_type[..])?;
         decrypt(
             key,
             base64::engine::general_purpose::STANDARD.decode(annotation_packet.wrapped_data)?,
             base64::engine::general_purpose::STANDARD.decode(annotation_packet.iv)?,
-            &annotation_packet.wrap_type,
+            wrap_type,
         )
     }
 

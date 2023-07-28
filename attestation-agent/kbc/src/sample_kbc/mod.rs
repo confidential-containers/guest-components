@@ -69,7 +69,7 @@ impl KbcInterface for SampleKbc {
             key,
             engine.decode(annotation_packet.wrapped_data)?,
             engine.decode(annotation_packet.iv)?,
-            WrapType::Aes256Gcm.as_ref(),
+            WrapType::Aes256Gcm,
         )?;
 
         Ok(plain_text)

@@ -5,9 +5,7 @@
 
 //! APIs for symmetric keys
 
-use std::str::FromStr;
-
-use anyhow::*;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
@@ -20,7 +18,7 @@ use crate::rust::*;
 /// Supported WrapType, s.t. encryption algorithm using to encrypt the
 /// [PLBCO](https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/IMPLEMENTATION.md#encryption-and-decryption-of-container-image).
 /// TODO: Support more kinds of en/decryption schemes.
-#[derive(EnumString, AsRefStr, Serialize, Deserialize, PartialEq, Debug)]
+#[derive(EnumString, AsRefStr, Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub enum WrapType {
     /// The serialized name follows 5.2.6 section
     /// <https://www.rfc-editor.org/rfc/inline-errata/rfc7518.html>
@@ -42,12 +40,8 @@ pub fn decrypt(
     key: Zeroizing<Vec<u8>>,
     ciphertext: Vec<u8>,
     iv: Vec<u8>,
-    wrap_type: &str,
+    wrap_type: WrapType,
 ) -> Result<Vec<u8>> {
-    let wrap_type = WrapType::from_str(wrap_type).context(format!(
-        "Unsupported wrap type {wrap_type} when decrypt image layer",
-    ))?;
-
     match wrap_type {
         WrapType::Aes256Gcm => aes256gcm::decrypt(&ciphertext, &key, &iv),
         WrapType::Aes256Ctr => aes256ctr::decrypt(&ciphertext, &key, &iv),
@@ -62,12 +56,8 @@ pub fn encrypt(
     key: Zeroizing<Vec<u8>>,
     plaintext: Vec<u8>,
     iv: Vec<u8>,
-    wrap_type: &str,
+    wrap_type: WrapType,
 ) -> Result<Vec<u8>> {
-    let wrap_type = WrapType::from_str(wrap_type).context(format!(
-        "Unsupported wrap type {wrap_type} when decrypt image layer",
-    ))?;
-
     match wrap_type {
         WrapType::Aes256Gcm => aes256gcm::encrypt(&plaintext, &key, &iv),
         WrapType::Aes256Ctr => aes256ctr::encrypt(&plaintext, &key, &iv),
