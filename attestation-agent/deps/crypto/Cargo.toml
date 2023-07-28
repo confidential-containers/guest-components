@@ -13,7 +13,7 @@ ctr = { workspace = true, optional = true }
 kbs-types.workspace = true
 openssl = { workspace = true, features = ["vendored"], optional = true}
 rand.workspace = true
-rsa.workspace = true
+rsa = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
@@ -25,5 +25,5 @@ rstest.workspace = true
 
 [features]
 default = ["rust-crypto"]
-rust-crypto = ["dep:aes-gcm", "ctr"]
+rust-crypto = ["dep:aes-gcm", "ctr", "rsa"]
 openssl = ["dep:openssl"]
