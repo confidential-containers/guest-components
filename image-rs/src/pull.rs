@@ -319,15 +319,17 @@ mod tests {
             let image_config = ImageConfiguration::from_reader(image_config.as_bytes()).unwrap();
             let diff_ids = image_config.rootfs().diff_ids();
 
-            assert!(client
+            if let Err(e) = client
                 .async_pull_layers(
                     image_manifest.layers.clone(),
                     diff_ids,
                     &None,
-                    Arc::new(Mutex::new(MetaStore::default()))
+                    Arc::new(Mutex::new(MetaStore::default())),
                 )
                 .await
-                .is_ok());
+            {
+                panic!("failed to download image: {}", e);
+            }
         }
     }
 
