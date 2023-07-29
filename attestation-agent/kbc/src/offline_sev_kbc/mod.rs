@@ -4,6 +4,7 @@
 //
 
 use crate::{KbcCheckInfo, KbcInterface};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use crypto::WrapType;
 use sev::*;
 
@@ -39,8 +40,8 @@ impl KbcInterface for OfflineSevKbc {
         let wrap_type = WrapType::try_from(&annotation_packet.wrap_type[..])?;
         let plain_payload = crypto::decrypt(
             key,
-            base64::engine::general_purpose::STANDARD.decode(annotation_packet.wrapped_data)?,
-            base64::engine::general_purpose::STANDARD.decode(annotation_packet.iv)?,
+            STANDARD.decode(annotation_packet.wrapped_data)?,
+            STANDARD.decode(annotation_packet.iv)?,
             wrap_type,
         )?;
 
@@ -87,7 +88,7 @@ fn load_keys(keyfile_name: &str) -> Result<Keys> {
 
     encoded_keys
         .iter()
-        .map(|(k, v)| match decode(v) {
+        .map(|(k, v)| match STANDARD.decode(v) {
             Ok(key) => Ok((k.clone(), key)),
             Err(_) => Err(anyhow!("Failed to decode key")),
         })

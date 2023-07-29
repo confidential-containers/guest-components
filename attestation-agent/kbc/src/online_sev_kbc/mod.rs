@@ -5,6 +5,7 @@
 
 use crate::{KbcCheckInfo, KbcInterface};
 use ::sev::*;
+use base64::Engine;
 use crypto::WrapType;
 use resource_uri::ResourceUri;
 
