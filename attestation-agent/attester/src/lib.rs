@@ -3,10 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#[macro_use]
-extern crate strum;
-
 use anyhow::*;
+use kbs_types::Tee;
 
 pub mod sample;
 
@@ -22,38 +20,26 @@ pub mod sgx_dcap;
 #[cfg(feature = "snp-attester")]
 pub mod snp;
 
-/// The supported TEE types:
-/// - Tdx: TDX TEE.
-/// - Sgx: SGX TEE with a LibOS.
-/// - AzSnpVtpm: SEV-SNP TEE for Azure CVMs.
-/// - Snp: SEV-SNP TEE.
-/// - Sample: A dummy TEE that used to test/demo the KBC functionalities.
-#[derive(Debug, EnumString, Display, Clone, Copy)]
-#[strum(ascii_case_insensitive, serialize_all = "lowercase")]
-pub enum Tee {
-    Tdx,
-    #[strum(serialize = "sgx")]
-    Sgx,
-    AzSnpVtpm,
-    Snp,
-    Sample,
-    Unknown,
-}
+pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
 
-impl Tee {
-    pub fn to_attester(&self) -> Result<Box<dyn Attester + Send + Sync>> {
-        match self {
-            Tee::Sample => Ok(Box::<sample::SampleAttester>::default()),
+impl TryFrom<Tee> for BoxedAttester {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Tee) -> Result<Self> {
+        let attester: Box<dyn Attester + Send + Sync> = match value {
+            Tee::Sample => Box::<sample::SampleAttester>::default(),
             #[cfg(feature = "tdx-attester")]
-            Tee::Tdx => Ok(Box::<tdx::TdxAttester>::default()),
+            Tee::Tdx => Box::<tdx::TdxAttester>::default(),
             #[cfg(feature = "sgx-attester")]
-            Tee::Sgx => Ok(Box::<sgx_dcap::SgxDcapAttester>::default()),
+            Tee::Sgx => Box::<sgx_dcap::SgxDcapAttester>::default(),
             #[cfg(feature = "az-snp-vtpm-attester")]
-            Tee::AzSnpVtpm => Ok(Box::<az_snp_vtpm::AzSnpVtpmAttester>::default()),
+            Tee::AzSnpVtpm => Box::<az_snp_vtpm::AzSnpVtpmAttester>::default(),
             #[cfg(feature = "snp-attester")]
-            Tee::Snp => Ok(Box::<snp::SnpAttester>::default()),
+            Tee::Snp => Box::<snp::SnpAttester>::default(),
             _ => bail!("TEE is not supported!"),
-        }
+        };
+
+        Ok(attester)
     }
 }
 
@@ -66,29 +52,30 @@ pub trait Attester {
 }
 
 // Detect which TEE platform the KBC running environment is.
-pub fn detect_tee_type() -> Tee {
+pub fn detect_tee_type() -> Result<Tee> {
     if sample::detect_platform() {
-        return Tee::Sample;
+        return Ok(Tee::Sample);
     }
 
     #[cfg(feature = "tdx-attester")]
     if tdx::detect_platform() {
-        return Tee::Tdx;
+        return Ok(Tee::Tdx);
     }
 
     #[cfg(feature = "sgx-attester")]
     if sgx_dcap::detect_platform() {
-        return Tee::Sgx;
+        return Ok(Tee::Sgx);
     }
 
     #[cfg(feature = "az-snp-vtpm-attester")]
     if az_snp_vtpm::detect_platform() {
-        return Tee::AzSnpVtpm;
+        return Ok(Tee::AzSnpVtpm);
     }
 
     #[cfg(feature = "snp-attester")]
     if snp::detect_platform() {
-        return Tee::Snp;
+        return Ok(Tee::Snp);
     }
-    Tee::Unknown
+
+    bail!("Unknown tee type!");
 }
