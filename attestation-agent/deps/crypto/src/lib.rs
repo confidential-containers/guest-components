@@ -29,8 +29,5 @@ mod rust;
 mod symmetric;
 pub use symmetric::*;
 
-mod teekey;
-pub use teekey::*;
-
 mod asymmetric;
 pub use asymmetric::*;
