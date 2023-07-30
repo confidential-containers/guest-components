@@ -20,7 +20,7 @@ prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
-tokio = { workspace = true, default-features = false, features = ["rt-multi-thread", "rt", "sync", "signal"]}
+tokio = { workspace = true, features = ["rt-multi-thread", "rt", "sync", "signal"]}
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 
