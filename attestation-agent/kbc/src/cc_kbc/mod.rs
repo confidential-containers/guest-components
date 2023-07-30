@@ -5,19 +5,22 @@
 
 use crate::{KbcCheckInfo, KbcInterface};
 use crypto::{decrypt, WrapType};
+use kbs_protocol::{
+    client::KbsClient,
+    evidence_provider::{EvidenceProvider, NativeEvidenceProvider},
+    KbsClientBuilder, KbsClientCapabilities,
+};
 
 use super::AnnotationPacket;
 use anyhow::*;
 use async_trait::async_trait;
 use base64::Engine;
 use resource_uri::ResourceUri;
-use url::Url;
 use zeroize::Zeroizing;
 
 pub struct Kbc {
-    kbs_uri: Url,
     token: Option<String>,
-    kbs_protocol_wrapper: KbsProtocolWrapper,
+    kbs_client: KbsClient<Box<dyn EvidenceProvider>>,
 }
 
 #[async_trait]
@@ -27,9 +30,7 @@ impl KbcInterface for Kbc {
     }
 
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
-        let key_url = self.resource_to_kbs_uri(&annotation_packet.kid)?;
-
-        let key_data = self.kbs_protocol_wrapper().http_get(key_url).await?;
+        let key_data = self.kbs_client.get_resource(annotation_packet.kid).await?;
         let key = Zeroizing::new(key_data);
 
         let wrap_type = WrapType::try_from(&annotation_packet.wrap_type[..])?;
@@ -41,10 +42,8 @@ impl KbcInterface for Kbc {
         )
     }
 
-    #[allow(unused_assignments)]
     async fn get_resource(&mut self, desc: ResourceUri) -> Result<Vec<u8>> {
-        let resource_url = self.resource_to_kbs_uri(&desc)?;
-        let data = self.kbs_protocol_wrapper().http_get(resource_url).await?;
+        let data = self.kbs_client.get_resource(desc).await?;
 
         Ok(data)
     }
@@ -52,54 +51,15 @@ impl KbcInterface for Kbc {
 
 impl Kbc {
     pub fn new(kbs_uri: String) -> Result<Kbc> {
-        // Check the KBS URI validity
-        let url = Url::parse(&kbs_uri).map_err(|e| anyhow!("Invalid URI {kbs_uri}: {e}"))?;
-        if !url.has_host() {
-            bail!("{kbs_uri} is missing a host");
-        }
-
+        let kbs_client = KbsClientBuilder::with_evidence_provider(
+            Box::new(NativeEvidenceProvider::new()?),
+            &kbs_uri,
+        )
+        .build()?;
         Ok(Kbc {
-            kbs_uri: url,
             token: None,
-            kbs_protocol_wrapper: KbsProtocolWrapper::new(vec![]).unwrap(),
+            kbs_client,
         })
-    }
-
-    fn kbs_uri(&self) -> &str {
-        self.kbs_uri.as_str().trim_end_matches('/')
-    }
-
-    fn kbs_protocol_wrapper(&mut self) -> &mut KbsProtocolWrapper {
-        &mut self.kbs_protocol_wrapper
-    }
-
-    /// Convert a [`ResourceUri`] to a KBS URL.
-    pub fn resource_to_kbs_uri(&self, resource: &ResourceUri) -> Result<String> {
-        let kbs_host = self
-            .kbs_uri
-            .host_str()
-            .ok_or_else(|| anyhow!("Invalid URL: {}", self.kbs_uri))?;
-
-        let kbs_addr = if let Some(port) = self.kbs_uri.port() {
-            format!("{kbs_host}:{port}")
-        } else {
-            kbs_host.to_string()
-        };
-
-        if !resource.kbs_addr.is_empty() && resource.kbs_addr != kbs_addr {
-            bail!(
-                "The resource KBS host {} differs from the KBS URL one {kbs_addr}",
-                resource.kbs_addr
-            );
-        }
-
-        let kbs_addr = self.kbs_uri();
-        let repo = &resource.repository;
-        let r#type = &resource.r#type;
-        let tag = &resource.tag;
-        Ok(format!(
-            "{kbs_addr}{KBS_PREFIX}/resource/{repo}/{type}/{tag}"
-        ))
     }
 }
 
