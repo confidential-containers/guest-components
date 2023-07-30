@@ -11,21 +11,32 @@ async-trait.workspace = true
 attester = { path = "../attester", default-features = false }
 base64.workspace = true
 crypto = { path = "../deps/crypto", default-features = false }
+jwt-simple.workspace = true
 kbs-types.workspace = true
 log.workspace = true
-reqwest = { workspace = true, default-features = false, features = ["cookies", "json"], optional = true }
+reqwest = { workspace = true, features = ["cookies", "json"], optional = true }
+resource_uri.path = "../deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 url.workspace = true
 zeroize.workspace = true
 
+[dev-dependencies]
+rstest.workspace = true
+tokio = { workspace = true, features = [ "rt", "macros" ]}
+
 [features]
-default = ["all-attesters", "rust-crypto"]
+default = ["background_check", "passport", "rust-crypto"]
+
+passport = []
+
+background_check = ["all-attesters"]
 all-attesters = ["attester/all-attesters"]
 tdx-attester = ["attester/tdx-attester"]
 sgx-attester = ["attester/sgx-attester"]
 az-snp-vtpm-attester = ["attester/az-snp-vtpm-attester"]
 snp-attester = ["attester/snp-attester"]
 
-rust-crypto = ["reqwest", "reqwest?/rustls-tls", "crypto/rust-crypto"]
-openssl = ["reqwest", "reqwest?/native-tls-vendored", "crypto/openssl"]
+rust-crypto = ["reqwest/rustls-tls", "crypto/rust-crypto"]
+openssl = ["reqwest/native-tls-vendored", "crypto/openssl"]
