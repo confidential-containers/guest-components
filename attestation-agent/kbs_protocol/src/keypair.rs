@@ -14,7 +14,7 @@ use kbs_types::{Response, TeePubKey};
 use serde::Deserialize;
 use zeroize::Zeroizing;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TeeKeyPair {
     keypair: RSAKeyPair,
 }
