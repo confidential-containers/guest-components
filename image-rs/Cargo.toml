@@ -64,7 +64,7 @@ openssl.workspace = true
 rstest.workspace = true
 serial_test = "2.0.0"
 strum.workspace = true
-tempfile = "3.2"
+tempfile.workspace = true
 test-utils = { path = "libs/test-utils" }
 tokio = { workspace = true, features = ["process"] }
 

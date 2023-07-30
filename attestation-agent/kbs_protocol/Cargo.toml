@@ -24,7 +24,10 @@ zeroize.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true
-tokio = { workspace = true, features = [ "rt", "macros" ]}
+serial_test.workspace = true
+tempfile.workspace = true
+testcontainers.workspace = true
+tokio = { workspace = true, features = [ "rt", "macros", "fs", "process" ]}
 
 [features]
 default = ["background_check", "passport", "rust-crypto"]

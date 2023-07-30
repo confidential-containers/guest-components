@@ -25,7 +25,7 @@ pub trait TokenProvider: Send + Sync {
     async fn get_token(&self) -> Result<(Token, TeeKeyPair)>;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Token {
     pub content: String,
     exp: Option<UnixTimeStamp>,
