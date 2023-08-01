@@ -40,7 +40,8 @@ mod tests {
     #[case(include_str!("../../test/envelope-1.json"), Secret {
         version: "0.1.0".into(),
         r#type: SecretContent::Envelope(Envelope {
-            provider: "ali".into(),
+            provider: "aliyun".into(),
+            provider_settings: ProviderSettings::default(),
             key_id: "xxx".into(),
             encrypted_key: "yyy".into(),
             encrypted_data: "zzz".into(),
@@ -52,8 +53,9 @@ mod tests {
     #[case(include_str!("../../test/vault-1.json"), Secret {
         version: "0.1.0".into(),
         r#type: SecretContent::Vault(VaultSecret {
-            provider: "ali".into(),
-            annotations: HashMap::new(),
+            provider: "aliyun".into(),
+            provider_settings: ProviderSettings::default(),
+            annotations: Annotations::default(),
             name: "xxx".into(),
         }),
     })]
