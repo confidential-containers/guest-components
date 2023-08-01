@@ -8,3 +8,6 @@ pub use api::*;
 
 pub mod error;
 pub use error::*;
+
+pub mod plugins;
+pub use plugins::new_decryptor;
