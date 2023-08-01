@@ -544,6 +544,8 @@ mod tests {
     use std::fs;
     use std::process::Command;
 
+    use test_utils::assert_retry;
+
     #[tokio::test]
     async fn test_pull_image() {
         let work_dir = tempfile::tempdir().unwrap();
@@ -572,12 +574,16 @@ mod tests {
         for image in oci_images.iter() {
             let bundle_dir = tempfile::tempdir().unwrap();
 
-            if let Err(e) = image_client
-                .pull_image(image, bundle_dir.path(), &None, &None)
-                .await
-            {
-                panic!("failed to download image: {}", e);
-            }
+            assert_retry!(
+                5,
+                1,
+                image_client,
+                pull_image,
+                image,
+                bundle_dir.path(),
+                &None,
+                &None
+            );
         }
 
         assert_eq!(
@@ -603,11 +609,18 @@ mod tests {
         for image in nydus_images.iter() {
             let bundle_dir = tempfile::tempdir().unwrap();
 
-            assert!(image_client
-                .pull_image(image, bundle_dir.path(), &None, &None)
-                .await
-                .is_ok());
+            assert_retry!(
+                5,
+                1,
+                image_client,
+                pull_image,
+                image,
+                bundle_dir.path(),
+                &None,
+                &None
+            );
         }
+
         assert_eq!(
             image_client.meta_store.lock().await.image_db.len(),
             nydus_images.len()

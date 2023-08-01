@@ -26,3 +26,37 @@ macro_rules! assert_result {
         }
     };
 }
+
+// Parameters:
+//
+// $limit: the maximum number of retries
+// $delay: the delay between retries (in seconds)
+// $obj: the object (struct instance)
+// $method: an identifier representing the method name
+// $(,$arg:expr)*: zero or more expressions representing the method arguments
+#[macro_export]
+macro_rules! assert_retry {
+    ($limit:expr, $delay:expr, $obj:expr, $method:ident $(,$arg:expr)*) => {{
+        let mut last_err = None;
+        for i in 0..$limit {
+            if let Err(e) = $obj.$method($($arg),*).await {
+                println!(
+                    "Got error on function call attempt {}. Will retry in 1s: {:?}",
+                    i, e
+                );
+                last_err.replace(e);
+
+                tokio::time::sleep(tokio::time::Duration::from_secs($delay)).await;
+            } else {
+                last_err = None;
+                break;
+            }
+        }
+
+        assert!(
+            last_err.is_none(),
+            "Function did not return Ok after retries: last_err {:?}",
+            last_err
+        );
+    }};
+}
