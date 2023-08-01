@@ -213,7 +213,7 @@ mod tests {
     use std::io::Write;
     use tempfile;
 
-    use test_utils::assert_result;
+    use test_utils::{assert_result, assert_retry};
 
     #[tokio::test]
     async fn test_async_pull_client() {
@@ -239,17 +239,16 @@ mod tests {
             let image_config = ImageConfiguration::from_reader(image_config.as_bytes()).unwrap();
             let diff_ids = image_config.rootfs().diff_ids();
 
-            if let Err(e) = client
-                .async_pull_layers(
-                    image_manifest.layers.clone(),
-                    diff_ids,
-                    &None,
-                    Arc::new(Mutex::new(MetaStore::default())),
-                )
-                .await
-            {
-                panic!("failed to download image: {}", e);
-            }
+            assert_retry!(
+                5,
+                1,
+                client,
+                async_pull_layers,
+                image_manifest.layers.clone(),
+                diff_ids,
+                &None,
+                Arc::new(Mutex::new(MetaStore::default()))
+            );
         }
     }
 
@@ -285,17 +284,16 @@ mod tests {
 
             std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
 
-            if let Err(e) = client
-                .async_pull_layers(
-                    image_manifest.layers.clone(),
-                    diff_ids,
-                    &Some(decrypt_config.to_str().unwrap()),
-                    Arc::new(Mutex::new(MetaStore::default())),
-                )
-                .await
-            {
-                panic!("failed to download encrypted image, {}", e);
-            }
+            assert_retry!(
+                5,
+                1,
+                client,
+                async_pull_layers,
+                image_manifest.layers.clone(),
+                diff_ids,
+                &Some(decrypt_config.to_str().unwrap()),
+                Arc::new(Mutex::new(MetaStore::default()))
+            );
         }
     }
 
