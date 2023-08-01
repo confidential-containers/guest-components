@@ -285,6 +285,10 @@ fn build_http_client(kbs_root_certs_pem: Vec<String>) -> Result<reqwest::Client>
         client_builder = client_builder.add_root_certificate(cert);
     }
 
+    if cfg!(feature = "rust-crypto") {
+        client_builder = client_builder.use_rustls_tls();
+    }
+
     client_builder
         .build()
         .map_err(|e| anyhow!("Build KBS http client failed: {:?}", e))
