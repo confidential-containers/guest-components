@@ -5,10 +5,9 @@
 
 //! This is a mocked token provider which only for tests
 
-use anyhow::*;
 use async_trait::async_trait;
 
-use crate::{TeeKeyPair, Token};
+use crate::{Error, Result, TeeKeyPair, Token};
 
 use super::TokenProvider;
 
@@ -21,8 +20,9 @@ const HARDCODED: &str = "eyJhbGciOiJFUzI1NiIsImtpZCI6InNpbXBsZSIsInR5cCI6IkpXVCJ
 #[async_trait]
 impl TokenProvider for TestTokenProvider {
     async fn get_token(&self) -> Result<(Token, TeeKeyPair)> {
-        let token = Token::new(HARDCODED.to_string())?;
-        let key = TeeKeyPair::new()?;
+        let token =
+            Token::new(HARDCODED.to_string()).map_err(|e| Error::GetTokenFailed(e.to_string()))?;
+        let key = TeeKeyPair::new().map_err(|e| Error::GenerateKeyPairFailed(e.to_string()))?;
         Ok((token, key))
     }
 }

@@ -19,6 +19,7 @@ resource_uri.path = "../deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+thiserror.workspace = true
 url.workspace = true
 zeroize.workspace = true
 

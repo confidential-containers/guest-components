@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Context};
 use async_trait::async_trait;
 use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response};
 use log::{debug, warn};
@@ -19,6 +19,7 @@ use crate::{
     evidence_provider::EvidenceProvider,
     keypair::TeeKeyPair,
     token_provider::Token,
+    Error, Result,
 };
 
 #[derive(Deserialize, Debug, Clone)]
@@ -35,10 +36,14 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
     pub async fn get_token(&mut self) -> Result<(Token, TeeKeyPair)> {
         if let Some(token) = &self.token {
             if token.check_valid().is_err() {
-                self.rcar_handshake().await?;
+                self.rcar_handshake()
+                    .await
+                    .map_err(|e| Error::RcarHandshake(e.to_string()))?;
             }
         } else {
-            self.rcar_handshake().await?;
+            self.rcar_handshake()
+                .await
+                .map_err(|e| Error::RcarHandshake(e.to_string()))?;
         }
 
         assert!(self.token.is_some());
@@ -53,7 +58,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
     ///
     /// Note: if RCAR succeeds, the http client will record the cookie with the kbs server,
     /// which means that this client can be then used to retrieve resources.
-    async fn rcar_handshake(&mut self) -> Result<()> {
+    async fn rcar_handshake(&mut self) -> anyhow::Result<()> {
         let auth_endpoint = format!("{}/{KBS_PREFIX}/auth", self.kbs_host_url);
         let tee = match &self._tee {
             ClientTee::Unitialized => bail!("tee not initialized"),
@@ -133,7 +138,8 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             .provider
             .get_evidence(ehd)
             .await
-            .context("Get TEE evidence failed")?;
+            .context("Get TEE evidence failed")
+            .map_err(|e| Error::GetEvidence(e.to_string()))?;
 
         Ok(tee_evidence)
     }
@@ -155,39 +161,62 @@ impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
         for attempt in 1..=KBS_GET_RESOURCE_MAX_ATTEMPT {
             debug!("KBS client: trying to request KBS, attempt {attempt}");
 
-            let res = self.http_client.get(&remote_url).send().await?;
+            let res = self
+                .http_client
+                .get(&remote_url)
+                .send()
+                .await
+                .map_err(|e| Error::HttpError(format!("get failed: {e}")))?;
 
             match res.status() {
                 reqwest::StatusCode::OK => {
-                    let response = res.json::<Response>().await?;
-                    let payload_data = self.tee_key.decrypt_response(response)?;
+                    let response = res
+                        .json::<Response>()
+                        .await
+                        .map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?;
+                    let payload_data = self
+                        .tee_key
+                        .decrypt_response(response)
+                        .map_err(|e| Error::DecryptResponseFailed(e.to_string()))?;
                     return Ok(payload_data);
                 }
                 reqwest::StatusCode::UNAUTHORIZED => {
                     warn!(
                         "Authenticating with KBS failed. Perform a new RCAR handshake: {:#?}",
-                        res.json::<ErrorInformation>().await?
+                        res.json::<ErrorInformation>()
+                            .await
+                            .map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?,
                     );
-                    self.rcar_handshake().await?;
+                    self.rcar_handshake()
+                        .await
+                        .map_err(|e| Error::RcarHandshake(e.to_string()))?;
 
                     continue;
                 }
                 reqwest::StatusCode::NOT_FOUND => {
-                    bail!(
+                    let errorinfo = format!(
                         "KBS resource Not Found (Error 404): {:#?}",
-                        res.json::<ErrorInformation>().await?
-                    )
+                        res.json::<ErrorInformation>()
+                            .await
+                            .map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?
+                    );
+
+                    return Err(Error::ResourceNotFound(errorinfo));
                 }
                 _ => {
-                    bail!(
+                    let errorinfo = format!(
                         "KBS Server Internal Failed, Response: {:#?}",
-                        res.json::<ErrorInformation>().await?
-                    )
+                        res.json::<ErrorInformation>()
+                            .await
+                            .map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?
+                    );
+
+                    return Err(Error::KbsInternalError(errorinfo));
                 }
             }
         }
 
-        bail!("Get resource failed. Unauthorized.")
+        Err(Error::UnAuthorized)
     }
 }
 

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::Result;
+use crate::Result;
 use async_trait::async_trait;
 pub use resource_uri::ResourceUri;
 
