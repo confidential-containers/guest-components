@@ -49,6 +49,7 @@ sgx-attester = ["attester/sgx-attester"]
 az-snp-vtpm-attester = ["attester/az-snp-vtpm-attester"]
 snp-attester = ["attester/snp-attester"]
 csv-attester = ["attester/csv-attester"]
+cca-attester = ["attester/cca-attester"]
 
 rust-crypto = ["reqwest/rustls-tls", "crypto/rust-crypto"]
 openssl = ["reqwest/native-tls-vendored", "crypto/openssl"]

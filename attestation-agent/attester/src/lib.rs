@@ -11,6 +11,9 @@ pub mod sample;
 #[cfg(feature = "az-snp-vtpm-attester")]
 pub mod az_snp_vtpm;
 
+#[cfg(feature = "cca-attester")]
+pub mod cca;
+
 #[cfg(feature = "tdx-attester")]
 pub mod tdx;
 
@@ -37,6 +40,8 @@ impl TryFrom<Tee> for BoxedAttester {
             Tee::Sgx => Box::<sgx_dcap::SgxDcapAttester>::default(),
             #[cfg(feature = "az-snp-vtpm-attester")]
             Tee::AzSnpVtpm => Box::<az_snp_vtpm::AzSnpVtpmAttester>::default(),
+            #[cfg(feature = "cca-attester")]
+            Tee::Cca => Box::<cca::CCAAttester>::default(),
             #[cfg(feature = "snp-attester")]
             Tee::Snp => Box::<snp::SnpAttester>::default(),
             #[cfg(feature = "csv-attester")]
@@ -85,6 +90,11 @@ pub fn detect_tee_type() -> Option<Tee> {
     #[cfg(feature = "csv-attester")]
     if csv::detect_platform() {
         return Some(Tee::Csv);
+    }
+
+    #[cfg(feature = "cca-attester")]
+    if cca::detect_platform() {
+        return Some(Tee::Cca);
     }
 
     None
