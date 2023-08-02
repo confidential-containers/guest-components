@@ -73,11 +73,13 @@
 pub mod api;
 pub mod builder;
 pub mod client;
+pub mod error;
 pub mod evidence_provider;
 pub mod keypair;
 pub mod token_provider;
 
 pub use api::*;
 pub use builder::KbsClientBuilder;
+pub use error::{Error, Result};
 pub use keypair::TeeKeyPair;
 pub use token_provider::Token;

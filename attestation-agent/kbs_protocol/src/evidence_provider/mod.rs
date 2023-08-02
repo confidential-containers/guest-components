@@ -9,7 +9,7 @@ pub use native::*;
 pub mod mock;
 pub use mock::*;
 
-use anyhow::*;
+use crate::Result;
 use async_trait::async_trait;
 use kbs_types::Tee;
 

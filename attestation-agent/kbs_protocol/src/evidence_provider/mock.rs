@@ -3,11 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::*;
 use async_trait::async_trait;
 use kbs_types::Tee;
 
 use super::EvidenceProvider;
+
+use crate::Result;
 
 #[derive(Default)]
 pub struct MockedEvidenceProvider {}

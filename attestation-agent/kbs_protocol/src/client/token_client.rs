@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{bail, Result};
 use async_trait::async_trait;
 use kbs_types::{ErrorInformation, Response};
 use log::{debug, warn};
@@ -13,11 +12,16 @@ use crate::{
     api::KbsClientCapabilities,
     client::{KbsClient, KBS_GET_RESOURCE_MAX_ATTEMPT, KBS_PREFIX},
     token_provider::TokenProvider,
+    Error, Result,
 };
 
 impl KbsClient<Box<dyn TokenProvider>> {
     async fn update_token(&mut self) -> Result<()> {
-        let (token, teekey) = self.provider.get_token().await?;
+        let (token, teekey) = self
+            .provider
+            .get_token()
+            .await
+            .map_err(|e| Error::GetTokenFailed(e.to_string()))?;
         self.token = Some(token);
         self.tee_key = teekey;
         Ok(())
@@ -44,38 +48,53 @@ impl KbsClientCapabilities for KbsClient<Box<dyn TokenProvider>> {
                 .get(&remote_url)
                 .bearer_auth(&token.content)
                 .send()
-                .await?;
+                .await
+                .map_err(|e| Error::HttpError(format!("get failed: {e}")))?;
 
             match res.status() {
                 reqwest::StatusCode::OK => {
-                    let response = res.json::<Response>().await?;
-                    let payload_data = self.tee_key.decrypt_response(response)?;
+                    let response = res
+                        .json::<Response>()
+                        .await
+                        .map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?;
+                    let payload_data = self
+                        .tee_key
+                        .decrypt_response(response)
+                        .map_err(|e| Error::DecryptResponseFailed(e.to_string()))?;
                     return Ok(payload_data);
                 }
                 reqwest::StatusCode::UNAUTHORIZED => {
                     warn!(
                         "Authenticating with KBS failed. Get a new token from the token provider: {:#?}",
-                        res.json::<ErrorInformation>().await?
+                        res.json::<ErrorInformation>().await.map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?
                     );
                     self.update_token().await?;
 
                     continue;
                 }
                 reqwest::StatusCode::NOT_FOUND => {
-                    bail!(
+                    let errorinfo = format!(
                         "KBS resource Not Found (Error 404): {:#?}",
-                        res.json::<ErrorInformation>().await?
-                    )
+                        res.json::<ErrorInformation>()
+                            .await
+                            .map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?
+                    );
+
+                    return Err(Error::ResourceNotFound(errorinfo));
                 }
                 _ => {
-                    bail!(
+                    let errorinfo = format!(
                         "KBS Server Internal Failed, Response: {:#?}",
-                        res.json::<ErrorInformation>().await?
-                    )
+                        res.json::<ErrorInformation>()
+                            .await
+                            .map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?
+                    );
+
+                    return Err(Error::KbsInternalError(errorinfo));
                 }
             }
         }
 
-        bail!("Get resource failed. Unauthorized.")
+        Err(Error::UnAuthorized)
     }
 }
