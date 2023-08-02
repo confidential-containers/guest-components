@@ -52,30 +52,30 @@ pub trait Attester {
 }
 
 // Detect which TEE platform the KBC running environment is.
-pub fn detect_tee_type() -> Result<Tee> {
+pub fn detect_tee_type() -> Option<Tee> {
     if sample::detect_platform() {
-        return Ok(Tee::Sample);
+        return Some(Tee::Sample);
     }
 
     #[cfg(feature = "tdx-attester")]
     if tdx::detect_platform() {
-        return Ok(Tee::Tdx);
+        return Some(Tee::Tdx);
     }
 
     #[cfg(feature = "sgx-attester")]
     if sgx_dcap::detect_platform() {
-        return Ok(Tee::Sgx);
+        return Some(Tee::Sgx);
     }
 
     #[cfg(feature = "az-snp-vtpm-attester")]
     if az_snp_vtpm::detect_platform() {
-        return Ok(Tee::AzSnpVtpm);
+        return Some(Tee::AzSnpVtpm);
     }
 
     #[cfg(feature = "snp-attester")]
     if snp::detect_platform() {
-        return Ok(Tee::Snp);
+        return Some(Tee::Snp);
     }
 
-    bail!("Unknown tee type!");
+    None
 }
