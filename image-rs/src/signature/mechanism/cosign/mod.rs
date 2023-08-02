@@ -123,7 +123,7 @@ impl CosignParameters {
     /// If succeeds, the payloads of the signature will be returned.
     async fn verify_signature_and_get_payload(
         &self,
-        image: &mut Image,
+        image: &Image,
         auth: &RegistryAuth,
     ) -> Result<Vec<SigPayload>> {
         // Get the pubkey
@@ -271,7 +271,7 @@ mod tests {
             .expect("Set manifest digest failed.");
         let res = parameter
             .verify_signature_and_get_payload(
-                &mut image,
+                &image,
                 &oci_distribution::secrets::RegistryAuth::Anonymous,
             )
             .await;

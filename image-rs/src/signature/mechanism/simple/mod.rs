@@ -197,7 +197,7 @@ impl SimpleParameters {
         Ok(())
     }
 
-    pub async fn get_signatures(&self, image: &mut Image) -> Result<Vec<Vec<u8>>> {
+    pub async fn get_signatures(&self, image: &Image) -> Result<Vec<Vec<u8>>> {
         // Get image digest (manifest digest)
         let image_digest = if !image.manifest_digest.is_empty() {
             image.manifest_digest.clone()
