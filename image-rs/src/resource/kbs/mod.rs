@@ -98,7 +98,7 @@ impl SecureChannel {
             let kbs_uri = match kbs_uri {
                 "null" => {
                     log::warn!("detected kbs uri `null`, use localhost to be placeholder");
-                    "localhost".into()
+                    "http://localhost".into()
                 }
                 uri => uri.into(),
             };
