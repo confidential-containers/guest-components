@@ -14,7 +14,8 @@ pub struct NativeEvidenceProvider(BoxedAttester);
 
 impl NativeEvidenceProvider {
     pub fn new() -> Result<Self> {
-        let tee = detect_tee_type()?;
+        let tee =
+            detect_tee_type().ok_or_else(|| anyhow!("failed to get a supported Tee type."))?;
         Ok(Self(tee.try_into()?))
     }
 }
@@ -26,6 +27,6 @@ impl EvidenceProvider for NativeEvidenceProvider {
     }
 
     async fn get_tee_type(&self) -> Result<Tee> {
-        detect_tee_type()
+        detect_tee_type().ok_or_else(|| anyhow!("failed to get a supported Tee type."))
     }
 }
