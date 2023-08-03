@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::collections::HashMap;
+pub use kms::Annotations;
 
 use crypto::WrapType;
 use serde::{Deserialize, Serialize};
@@ -37,5 +37,5 @@ pub struct Envelope {
     pub provider: String,
 
     /// KMS specific fields to locate the Key inside KMS
-    pub annotations: HashMap<String, String>,
+    pub annotations: Annotations,
 }

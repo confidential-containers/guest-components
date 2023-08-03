@@ -26,10 +26,9 @@ pub struct Secret {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use assert_json_diff::assert_json_eq;
     use crypto::WrapType;
+    use kms::Annotations;
     use rstest::rstest;
 
     use crate::secret::layout::{envelope::Envelope, vault::VaultSecret};
@@ -47,7 +46,7 @@ mod tests {
             encrypted_data: "zzz".into(),
             wrap_type: WrapType::Aes256Gcm,
             iv: "www".into(),
-            annotations: HashMap::new(),
+            annotations: Annotations::default(),
         }),
     })]
     #[case(include_str!("../../test/vault-1.json"), Secret {
