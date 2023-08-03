@@ -8,3 +8,5 @@ pub use error::*;
 
 pub mod api;
 pub use api::*;
+
+pub mod hub;

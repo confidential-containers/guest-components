@@ -8,4 +8,7 @@ use thiserror::Error;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
-pub enum Error {}
+pub enum Error {
+    #[error("unseal secret failed: {0}")]
+    UnsealSecret(String),
+}
