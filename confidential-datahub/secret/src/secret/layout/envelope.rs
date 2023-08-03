@@ -5,8 +5,12 @@
 
 pub use kms::Annotations;
 
+use base64::{engine::general_purpose::STANDARD, Engine};
 use crypto::WrapType;
 use serde::{Deserialize, Serialize};
+use zeroize::Zeroizing;
+
+use crate::{Error, Result};
 
 /// An Envelope is a secret encrypted by digital envelope mechanism.
 /// It can be described as
@@ -38,4 +42,35 @@ pub struct Envelope {
 
     /// KMS specific fields to locate the Key inside KMS
     pub annotations: Annotations,
+}
+
+impl Envelope {
+    pub(crate) async fn unseal(&self) -> Result<Vec<u8>> {
+        // get encryption key
+        let enc_dek = STANDARD.decode(&self.encrypted_key).map_err(|e| {
+            Error::UnsealEnvelopeFailed(format!("base64 decode encrypted_key failed: {e}"))
+        })?;
+        let mut provider = kms::new_decryptor(&self.provider, self.provider_settings.clone())
+            .await
+            .map_err(|e| Error::UnsealEnvelopeFailed(format!("create provider failed: {e}")))?;
+        let dek = Zeroizing::new(
+            provider
+                .decrypt(&enc_dek, &self.key_id, &self.annotations)
+                .await
+                .map_err(|e| {
+                    Error::UnsealEnvelopeFailed(format!("decrypt encryption key failed: {e}"))
+                })?,
+        );
+
+        // get plaintext of secret
+        let iv = STANDARD
+            .decode(&self.iv)
+            .map_err(|e| Error::UnsealEnvelopeFailed(format!("base64 decode iv failed: {e}")))?;
+        let encrypted_data = STANDARD.decode(&self.encrypted_data).map_err(|e| {
+            Error::UnsealEnvelopeFailed(format!("base64 decode encrypted_data failed: {e}"))
+        })?;
+        let plaintext = crypto::decrypt(dek, encrypted_data, iv, self.wrap_type.clone())
+            .map_err(|e| Error::UnsealEnvelopeFailed(format!("decrypt envelope failed: {e}")))?;
+        Ok(plaintext)
+    }
 }

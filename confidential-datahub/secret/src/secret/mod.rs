@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use self::layout::{envelope::Envelope, vault::VaultSecret};
 
+use crate::{Error, Result};
+
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum SecretContent {
@@ -22,6 +24,24 @@ pub struct Secret {
 
     #[serde(flatten)]
     pub r#type: SecretContent,
+}
+
+pub const VERSION: &str = "0.1.0";
+
+impl Secret {
+    pub async fn unseal(&self) -> Result<Vec<u8>> {
+        if self.version != VERSION {
+            return Err(Error::UnsealEnvelopeFailed(format!(
+                "Unsupported secret version {}. Only support {VERSION} now.",
+                self.version
+            )));
+        }
+
+        match &self.r#type {
+            SecretContent::Envelope(env) => env.unseal().await,
+            SecretContent::Vault(_) => todo!(),
+        }
+    }
 }
 
 #[cfg(test)]
