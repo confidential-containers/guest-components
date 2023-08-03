@@ -7,7 +7,7 @@ excludes the Kubernetes Control Plane and Host components from the
 Trusted Compute Base (TCB). With this stricter threat model, CoCo
 runtimes cannot take advantage of the existing infrastructure. to
 protect [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/),
-this document introduces Sealed Secrets that supports in-pod decryption.
+this document introduces Sealed Secrets that supports in-guest decryption.
 
 A Sealed Secret is a set of metadata to get the plaintext of the secret.
 A Sealed Secret will be unsealed inside the TEE pod transparently to users,
@@ -40,27 +40,29 @@ The format of the KMS type Sealed Secret is
 	"encrypted_data": "xxx",
 	"wrap_type": "A256GCM",
 	"iv": "xxx",
+	"provider_settings": {
+		...
+	},
 	"annotations": {
-		"region_id": "cn-hangzhou",
-		"endpoint": "xxx",
-		"signature_method": "xxx"
+		...
 	}
 }
 ```
 Here,
-- `version`: indicates the format version of the Sealed Secret. Currently `0.1.0`.
-- `type`: MUST be `envelope`, indicating this is a Envelope type Sealed Secret
-- `provider`: indicates the provider of the __sealing key__. This field determines
+- `version`: **REQUIRED**. indicates the format version of the Sealed Secret. Currently `0.1.0`.
+- `type`: **REQUIRED**. MUST be `envelope`, indicating this is a Envelope type Sealed Secret
+- `provider`: **REQUIRED**. indicates the provider of the __sealing key__. This field determines
 how to use the `annotations` field and `key_id` field to decrypt the `encrypted_key`
-- `key_id`: To uniquely distinguish the __sealing key__ used to encrypt the __encryption key__,
+- `key_id`: **REQUIRED**. To uniquely distinguish the __sealing key__ used to encrypt the __encryption key__,
 which is always used by the provider driver.
-- `encrypted_key`: Encrypted __encryption key__ by the `provider`. Base64 encoded.
-- `encrypted_data`: Encrypted __secret value__ by the `encrypted_key`. Base64 encoded.
-- `wrap_type`: The algorithm used by __encryption key__ to encrypt the __secret value__.
+- `encrypted_key`: **REQUIRED**. Encrypted __encryption key__ by the `provider`. Base64 encoded.
+- `encrypted_data`: **REQUIRED**. Encrypted __secret value__ by the `encrypted_key`. Base64 encoded.
+- `wrap_type`: **REQUIRED**. The algorithm used by __encryption key__ to encrypt the __secret value__.
 `A256GCM` (AES256-GCM) preferred.
-- `iv`: The Initial Vector used in the process of __encryption key__ encrypting __secret value__.
+- `iv`: **REQUIRED**. The Initial Vector used in the process of __encryption key__ encrypting __secret value__.
 Base64 encoded.
-- `annotations`: A key-value Map. Provider specific information used by the driver to
+- `provider_settings`: **REQUIRED**. A key-value map. Provider specific information to create the KMS client.
+- `annotations`: **OPTIONAL**. A key-value Map. Provider specific information used by the driver to	
 decrypt `encrypted_key` into a plaintext of __encryption key__.
 
 ### Vault
@@ -72,21 +74,24 @@ can be retrieved. The format is
 {
 	"version" : "0.1.0",
 	"type": "vault",
-	"provider": "ali",
+	"provider": "xxx",
 	"name": "xxx",
+	"provider_settings": {
+		...
+	},
 	"annotations": {
-		"version_id": "xxx",
-		"version_stage": "xxx"
+		...
 	}
 }
 ```
 Here,
-- `version`: indicates the format version of the Sealed Secret. Currently `0.1.0`.
-- `type`: MUST be `vault`, indicating this is a Vault type Sealed Secret.
-- `provider`: indicates the provider of the __secret value__. This field determines
+- `version`: **REQUIRED**. indicates the format version of the Sealed Secret. Currently `0.1.0`.
+- `type`: **REQUIRED**. MUST be `vault`, indicating this is a Vault type Sealed Secret.
+- `provider`: **REQUIRED**. indicates the provider of the __secret value__. This field determines
 how to use the `annotations` field and `name` field to get the plaintext of __secret value__.
-- `name`: To uniquely distinguish the __secret value__, which is always used by the provider driver.
-- `annotations`: A key-value Map. Vault specific information used by the provider driver to
+- `name`: **REQUIRED**. To uniquely distinguish the __secret value__, which is always used by the provider driver.
+- `provider_settings`: **REQUIRED**. A key-value map. Provider specific information to create the vault client.
+- `annotations`: **OPTIONAL**. A key-value Map. Vault specific information used by the provider driver to	
 get the plaintext of the __secret value__.
 
 ## Integrity Protection of Sealed Secret
@@ -109,29 +114,30 @@ When we get a Sealed Secret like the following
 ```json
 {
 	"version": "0.1.0",
-	"type": "kms",
+	"type": "envelope",
 	"provider": "xxx",
 	"key_id": "xxx",
 	"encrypted_key": "ab27dc=", 
 	"encrypted_data": "xxx",
 	"wrap_type": "A256GCM",
 	"iv": "xxx",
+	"provider_settings": {
+		...
+	},
 	"annotations": {
-		"region_id": "cn-hangzhou",
-		"endpoint": "xxx",
-		"signature_method": "xxx"
+		...
 	}
 }
 ```
 
 We can encode the payload in BASE64
 ```
-ewoJInZlcnNpb24iOiAiMC4xLjAiLAoJInR5cGUiOiAia21zIiwKCSJwcm92aWRlciI6ICJ4eHgiLAoJImtleV9pZCI6ICJ4eHgiLAoJImVuY3J5cHRlZF9rZXkiOiAiYWIyN2RjPSIsIAoJImVuY3J5cHRlZF9kYXRhIjogInh4eCIsCgkid3JhcF90eXBlIjogIkEyNTZHQ00iLAoJIml2IjogInh4eCIsCgkiYW5ub3RhdGlvbnMiOiB7CgkJInJlZ2lvbl9pZCI6ICJjbi1oYW5nemhvdSIsCgkJImVuZHBvaW50IjogInh4eCIsCiAgICAgICAgInNpZ25hdHVyZV9tZXRob2QiOiAieHh4IgoJfQp9Cg==
+ewoJInZlcnNpb24iOiAiMC4xLjAiLAoJInR5cGUiOiAiZW52ZWxvcGUiLAoJInByb3ZpZGVyIjogInh4eCIsCgkia2V5X2lkIjogInh4eCIsCgkiZW5jcnlwdGVkX2tleSI6ICJhYjI3ZGM9IiwgCgkiZW5jcnlwdGVkX2RhdGEiOiAieHh4IiwKCSJ3cmFwX3R5cGUiOiAiQTI1NkdDTSIsCgkiaXYiOiAieHh4IiwKCSJhbm5vdGF0aW9ucyI6IHsKCQkiY3J5cHRvX2NvbnRleHQiOiB7CgkJCSJhbGdvcml0aG0iOiAiQTI1NkdDTSIKCQl9LAoJCSJwcm92aWRlcl9zZXR0aW5nIjogewoJCQkia21zX2luc3RhbmNlX2lkIjogInh4eCIKCQl9Cgl9Cn0=
 ```
 Then add a prefix `sealed.`
 
 ```
-sealed.ewoJInZlcnNpb24iOiAiMC4xLjAiLAoJInR5cGUiOiAia21zIiwKCSJwcm92aWRlciI6ICJ4eHgiLAoJImtleV9pZCI6ICJ4eHgiLAoJImVuY3J5cHRlZF9rZXkiOiAiYWIyN2RjPSIsIAoJImVuY3J5cHRlZF9kYXRhIjogInh4eCIsCgkid3JhcF90eXBlIjogIkEyNTZHQ00iLAoJIml2IjogInh4eCIsCgkiYW5ub3RhdGlvbnMiOiB7CgkJInJlZ2lvbl9pZCI6ICJjbi1oYW5nemhvdSIsCgkJImVuZHBvaW50IjogInh4eCIsCiAgICAgICAgInNpZ25hdHVyZV9tZXRob2QiOiAieHh4IgoJfQp9Cg==
+sealed.ewoJInZlcnNpb24iOiAiMC4xLjAiLAoJInR5cGUiOiAiZW52ZWxvcGUiLAoJInByb3ZpZGVyIjogInh4eCIsCgkia2V5X2lkIjogInh4eCIsCgkiZW5jcnlwdGVkX2tleSI6ICJhYjI3ZGM9IiwgCgkiZW5jcnlwdGVkX2RhdGEiOiAieHh4IiwKCSJ3cmFwX3R5cGUiOiAiQTI1NkdDTSIsCgkiaXYiOiAieHh4IiwKCSJhbm5vdGF0aW9ucyI6IHsKCQkiY3J5cHRvX2NvbnRleHQiOiB7CgkJCSJhbGdvcml0aG0iOiAiQTI1NkdDTSIKCQl9LAoJCSJwcm92aWRlcl9zZXR0aW5nIjogewoJCQkia21zX2luc3RhbmNlX2lkIjogInh4eCIKCQl9Cgl9Cn0=
 ```
 
 Then we can use this in normal Kubernetes Secret. For example a Secret
