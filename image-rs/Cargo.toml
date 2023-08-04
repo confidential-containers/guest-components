@@ -28,7 +28,7 @@ log = "0.4.14"
 loopdev ="0.4.0"
 nix = { version = "0.26", optional = true }
 oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c", default-features = false, optional = true }
-oci-spec = "0.5.8"
+oci-spec = "0.6.2"
 ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = ["async-io"], optional = true }
 prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
