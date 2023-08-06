@@ -12,7 +12,7 @@ az-snp-vtpm = { git = "https://github.com/kinvolk/azure-cvm-tooling", rev = "2c2
 base64.workspace = true
 kbs-types.workspace = true
 log.workspace = true
-occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.6", optional = true }
+occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.7", optional = true }
 serde.workspace = true
 serde_json.workspace = true
 sev = { git = "https://github.com/virtee/sev", version = "1.2", default-features = false, features = ["snp"], optional = true }
