@@ -10,7 +10,7 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
-async-compression = { version = "0.3.15", features = ["futures-io", "tokio", "gzip", "zstd"] }
+async-compression = { version = "0.4.1", features = ["futures-io", "tokio", "gzip", "zstd"] }
 async-trait.workspace = true
 attestation_agent = { path = "../attestation-agent/lib", optional = true }
 base64.workspace = true
