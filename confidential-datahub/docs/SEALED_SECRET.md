@@ -154,4 +154,10 @@ stringData:
 
 When this sealed secret is transferred to TEE, Confidential DataHub will help to unseal.
 
+## Supported Providers
+
+| Provider Name      | README                                                              | Maintainer                |
+| ------------------ | ------------------------------------------------------------------- | ------------------------- |
+| aliyun       	     |  [aliyun](kms-providers/alibaba.md)                              	   | Alibaba                   |
+
 ## Sealing & Unsealing of the Secret (TODO)
