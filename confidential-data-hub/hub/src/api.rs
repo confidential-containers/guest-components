@@ -13,7 +13,7 @@ use crate::Result;
 #[async_trait]
 pub trait DataHub {
     /// Unseal the given sealed secret. The sealed secret format is defined
-    /// in <https://github.com/confidential-containers/guest-components/blob/main/confidential-datahub/docs/SEALED_SECRET.md>
+    /// in <https://github.com/confidential-containers/guest-components/blob/main/confidential-data-hub/docs/SEALED_SECRET.md>
     async fn unseal_secret(&self, secret: Vec<u8>) -> Result<Vec<u8>>;
 
     /// Unwrap the LEK inside the image annotation. This API is used in
