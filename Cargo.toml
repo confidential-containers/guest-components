@@ -10,9 +10,9 @@ members = [
     "attestation-agent/deps/sev",
     "attestation-agent/coco_keyprovider",
     "attestation-agent/test-binaries",
-    "confidential-datahub/hub",
-    "confidential-datahub/kms",
-    "confidential-datahub/secret",
+    "confidential-data-hub/hub",
+    "confidential-data-hub/kms",
+    "confidential-data-hub/secret",
     "image-rs",
     "ocicrypt-rs",
 ]
