@@ -101,7 +101,7 @@ keywrap-ttrpc = ["ocicrypt-rs/keywrap-keyprovider-ttrpc", "dep:ttrpc", "dep:prot
 keywrap-jwe = ["ocicrypt-rs/keywrap-jwe"]
 
 eaa-kbc = ["attestation_agent/eaa_kbc", "ocicrypt-rs/eaa_kbc"]
-cc-kbc-sgx = ["attestation_agent/cc_kbc", "ocicrypt-rs/cc_kbc_sgx"]
+cc-kbc-sgx = ["attestation_agent/cc_kbc", "attestation_agent/sgx-attester", "ocicrypt-rs/cc_kbc_sgx"]
 
 signature = ["hex"]
 signature-cosign = ["signature", "futures"]
