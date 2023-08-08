@@ -31,11 +31,11 @@ testcontainers.workspace = true
 tokio = { workspace = true, features = [ "rt", "macros", "fs", "process" ]}
 
 [features]
-default = ["background_check", "passport", "rust-crypto"]
+default = ["background_check", "passport", "rust-crypto", "all-attesters"]
 
 passport = []
 
-background_check = ["all-attesters"]
+background_check = []
 all-attesters = ["attester/all-attesters"]
 tdx-attester = ["attester/tdx-attester"]
 sgx-attester = ["attester/sgx-attester"]
