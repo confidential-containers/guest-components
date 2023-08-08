@@ -7,6 +7,7 @@ pub use kms::Annotations;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use crypto::WrapType;
+use kms::ProviderSettings;
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
@@ -39,6 +40,9 @@ pub struct Envelope {
 
     /// decryptor driver of the secret
     pub provider: String,
+
+    /// extra information to create a client
+    pub provider_settings: ProviderSettings,
 
     /// KMS specific fields to locate the Key inside KMS
     pub annotations: Annotations,

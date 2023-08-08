@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use kms::ProviderSettings;
 use serde::{Deserialize, Serialize};
 
 pub use kms::Annotations;
@@ -14,6 +15,9 @@ pub struct VaultSecret {
 
     /// decryptor driver of the secret
     pub provider: String,
+
+    /// extra information to create a client
+    pub provider_settings: ProviderSettings,
 
     /// Other fields used to fetch the secret
     pub annotations: Annotations,

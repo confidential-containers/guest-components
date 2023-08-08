@@ -48,7 +48,7 @@ impl Secret {
 mod tests {
     use assert_json_diff::assert_json_eq;
     use crypto::WrapType;
-    use kms::Annotations;
+    use kms::{Annotations, ProviderSettings};
     use rstest::rstest;
 
     use crate::secret::layout::{envelope::Envelope, vault::VaultSecret};
