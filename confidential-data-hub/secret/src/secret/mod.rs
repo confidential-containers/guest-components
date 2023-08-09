@@ -39,7 +39,7 @@ impl Secret {
 
         match &self.r#type {
             SecretContent::Envelope(env) => env.unseal().await,
-            SecretContent::Vault(_) => todo!(),
+            SecretContent::Vault(v) => v.unseal().await,
         }
     }
 }

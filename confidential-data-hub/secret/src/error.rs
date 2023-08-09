@@ -9,6 +9,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("unseal secret failed: {0}")]
+    #[error("unseal envelope secret failed: {0}")]
     UnsealEnvelopeFailed(String),
+
+    #[error("unseal vault secret failed: {0}")]
+    UnsealVaultFailed(String),
 }
