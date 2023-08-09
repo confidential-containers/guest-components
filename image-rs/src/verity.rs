@@ -85,6 +85,20 @@ impl DmVerityOption {
         }
         false
     }
+    fn parse_tarfs_options(source_option: &str) -> std::result::Result<DmVerityOption, Error> {
+        let mut parts: Vec<&str> = source_option.split(',').collect();
+        if parts.len() == 3 {
+            parts[2] = parts[2].trim_start_matches("sha256:");
+        }
+        Ok(DmVerityOption {
+            hashtype: "sha256".to_string(),
+            blocksize: 512, //default block size
+            hashsize: 4096, //default hash size
+            blocknum: parts[0].parse()?,
+            offset: parts[1].parse()?,
+            hash: parts[2].to_string(),
+        })
+    }
 }
 
 // Parse `DmVerityOption` object from plaintext or base64 encoded json string.
@@ -92,13 +106,15 @@ impl TryFrom<&str> for DmVerityOption {
     type Error = Error;
 
     fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
-        let option;
-        if let Ok(v) = serde_json::from_str::<DmVerityOption>(value) {
-            option = v;
+        let option = if value.contains("sha256:") {
+            Self::parse_tarfs_options(value)?
+        } else if let Ok(v) = serde_json::from_str::<DmVerityOption>(value) {
+            v
         } else {
             let decoded = base64::engine::general_purpose::STANDARD.decode(value)?;
-            option = serde_json::from_slice::<DmVerityOption>(&decoded)?;
-        }
+            serde_json::from_slice::<DmVerityOption>(&decoded)?
+        };
+
         option.validate()?;
         Ok(option)
     }
@@ -228,6 +244,19 @@ mod tests {
         assert_eq!(decoded.blocknum, verity_option.blocknum);
         assert_eq!(decoded.offset, verity_option.offset);
         assert_eq!(decoded.hash, verity_option.hash);
+
+        let verity_option =
+            "1024,524288,sha256:9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174";
+        let decoded = DmVerityOption::try_from(verity_option).unwrap();
+        assert_eq!(decoded.hashtype, "sha256");
+        assert_eq!(decoded.blocksize, 512);
+        assert_eq!(decoded.hashsize, 4096);
+        assert_eq!(decoded.blocknum, 1024);
+        assert_eq!(decoded.offset, 524288);
+        assert_eq!(
+            decoded.hash,
+            "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
+        );
     }
 
     #[tokio::test]
