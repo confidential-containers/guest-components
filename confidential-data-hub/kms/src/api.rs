@@ -63,4 +63,17 @@ pub trait Encrypter: Send + Sync {
     async fn encrypt(&mut self, _data: &[u8], _key_id: &str) -> Result<(Vec<u8>, Annotations)>;
 }
 
-// TODO: Define Vault's trait
+#[async_trait]
+pub trait Setter: Send + Sync {
+    /// Set secret. The `content` will be inserted with the key `name`.
+    ///
+    /// The returned [`Annotations`] is the parameters of the set operation.
+    async fn set_secret(&mut self, _content: Vec<u8>, _name: String) -> Result<Annotations>;
+}
+
+#[async_trait]
+pub trait Getter: Send + Sync {
+    /// Get secret. Different secret manager will use different parameters inside
+    /// `annotations`.
+    async fn get_secret(&mut self, name: &str, annotations: &Annotations) -> Result<Vec<u8>>;
+}
