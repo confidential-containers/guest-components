@@ -10,4 +10,6 @@ pub mod error;
 pub use error::*;
 
 pub mod plugins;
-pub use plugins::new_decryptor;
+pub use plugins::{new_decryptor, new_getter};
+
+mod utils;
