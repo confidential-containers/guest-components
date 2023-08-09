@@ -14,12 +14,14 @@ crypto = { path = "../deps/crypto", default-features = false }
 jwt-simple.workspace = true
 kbs-types.workspace = true
 log.workspace = true
+protobuf = { workspace = true, optional = true}
 reqwest = { workspace = true, features = ["cookies", "json"], optional = true }
 resource_uri.path = "../deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
+ttrpc = { workspace = true, optional = true}
 url.workspace = true
 zeroize.workspace = true
 
@@ -30,10 +32,15 @@ tempfile.workspace = true
 testcontainers.workspace = true
 tokio = { workspace = true, features = [ "rt", "macros", "fs", "process" ]}
 
+[build-dependencies]
+ttrpc-codegen = { workspace = true, optional = true }
+
 [features]
 default = ["background_check", "passport", "rust-crypto", "all-attesters"]
 
 passport = []
+# use a client of attestation-agent to get token for kbs
+aa_token = ["ttrpc-codegen", "passport", "ttrpc/async", "protobuf"]
 
 background_check = []
 all-attesters = ["attester/all-attesters"]

@@ -6,6 +6,11 @@
 pub mod test;
 pub use test::*;
 
+#[cfg(feature = "aa_token")]
+pub mod aa;
+#[cfg(feature = "aa_token")]
+pub use aa::*;
+
 use anyhow::*;
 use async_trait::async_trait;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
