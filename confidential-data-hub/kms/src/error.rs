@@ -13,6 +13,14 @@ pub enum Error {
     #[error("Aliyun KMS error: {0}")]
     AliyunKmsError(String),
 
+    #[cfg(any(feature = "kbs", feature = "sev"))]
+    #[error("Get kbs host failed: {0}")]
+    GetKbsHost(String),
+
+    #[cfg(feature = "kbs")]
+    #[error("KBS Client error: {0}")]
+    KbsClientError(String),
+
     #[error("Unsupported provider: {0}")]
     UnsupportedProvider(String),
 }
