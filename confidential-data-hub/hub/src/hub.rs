@@ -5,11 +5,15 @@
 
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
+use kms::{Annotations, ProviderSettings};
 use secret::secret::Secret;
 
 use crate::{DataHub, Error, Result};
 
-pub struct Hub {}
+pub struct Hub {
+    /// the get resource provider type. Semantically same as kbc.
+    get_resource_provider: String,
+}
 
 #[async_trait]
 impl DataHub for Hub {
@@ -43,7 +47,17 @@ impl DataHub for Hub {
         todo!()
     }
 
-    async fn get_resource(&self, _uri: String) -> Result<Vec<u8>> {
-        todo!()
+    async fn get_resource(&self, uri: String) -> Result<Vec<u8>> {
+        // to initialize a get_resource_provider client we do not need the ProviderSettings.
+        let mut client = kms::new_getter(&self.get_resource_provider, ProviderSettings::default())
+            .await
+            .map_err(|e| Error::GetResource(format!("create kbs client failed: {e}")))?;
+
+        // to get resource using a get_resource_provider client we do not need the Annotations.
+        let res = client
+            .get_secret(&uri, &Annotations::default())
+            .await
+            .map_err(|e| Error::GetResource(format!("get rersource failed: {e}")))?;
+        Ok(res)
     }
 }
