@@ -7,12 +7,41 @@ use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use kms::{Annotations, ProviderSettings};
 use secret::secret::Secret;
+use tokio::fs;
 
 use crate::{DataHub, Error, Result};
 
 pub struct Hub {
     /// the get resource provider type. Semantically same as kbc.
     get_resource_provider: String,
+}
+
+impl Hub {
+    pub async fn new() -> Result<Self> {
+        let get_resource_provider = Self::get_resource_provider().await?;
+        Ok(Self {
+            get_resource_provider,
+        })
+    }
+
+    async fn get_resource_provider() -> Result<String> {
+        let cmdline = fs::read_to_string("/proc/cmdline")
+            .await
+            .map_err(|e| Error::InitializationFailed(format!("read kernel cmdline failed: {e}")))?;
+        let resource_provider = cmdline
+            .split_ascii_whitespace()
+            .find(|para| para.starts_with("agent.aa_kbc_params="))
+            .ok_or(Error::InitializationFailed(
+                "no `agent.aa_kbc_params` provided in kernel commandline!".into(),
+            ))?
+            .split("::")
+            .next()
+            .ok_or(Error::InitializationFailed(
+                "illegal input `agent.aa_kbc_params` format".into(),
+            ))?
+            .to_string();
+        Ok(resource_provider)
+    }
 }
 
 #[async_trait]

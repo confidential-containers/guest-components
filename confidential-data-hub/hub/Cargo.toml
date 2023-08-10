@@ -10,9 +10,14 @@ edition = "2021"
 async-trait.workspace = true
 base64.workspace = true
 clap = { workspace = true, features = [ "derive" ] }
-kms = { path = "../kms", default-features = false, features = ["kbs"] }
+kms = { path = "../kms", default-features = false }
 log.workspace = true
 secret.path = "../secret"
 serde_json.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
+
+[features]
+default = ["kbs", "sev"]
+kbs = ["kms/kbs"]
+sev = ["kms/sev"]
