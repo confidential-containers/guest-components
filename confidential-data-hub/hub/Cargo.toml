@@ -19,6 +19,13 @@ thiserror.workspace = true
 tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
 
 [features]
-default = ["kbs", "sev"]
-kbs = ["kms/kbs"]
-sev = ["kms/sev", "dep:sev"]
+default = ["kbs"]
+
+# support aliyun stacks (KMS, ..)
+aliyun = ["secret/aliyun"]
+
+# support coco-KBS to provide confidential resources
+kbs = ["kms/kbs", "secret/kbs"]
+
+# support sev to provide confidential resources
+sev = ["kms/sev", "dep:sev", "secret/sev"]
