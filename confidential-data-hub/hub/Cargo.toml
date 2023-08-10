@@ -14,10 +14,11 @@ kms = { path = "../kms", default-features = false }
 log.workspace = true
 secret.path = "../secret"
 serde_json.workspace = true
+sev = { path = "../../attestation-agent/deps/sev", optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
 
 [features]
 default = ["kbs", "sev"]
 kbs = ["kms/kbs"]
-sev = ["kms/sev"]
+sev = ["kms/sev", "dep:sev"]
