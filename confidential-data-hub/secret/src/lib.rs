@@ -7,3 +7,5 @@ pub mod error;
 pub mod secret;
 
 pub use error::*;
+
+pub use kms::{Annotations, ProviderSettings};
