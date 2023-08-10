@@ -13,6 +13,9 @@ pub mod aliyun;
 #[cfg(feature = "kbs")]
 pub mod kbs;
 
+#[cfg(feature = "sev")]
+pub mod sev;
+
 /// Create a new [`Decrypter`] by given provider name and [`ProviderSettings`]
 pub async fn new_decryptor(
     provider: &str,
@@ -35,7 +38,8 @@ pub async fn new_getter(
     match provider {
         #[cfg(feature = "kbs")]
         "kbs" => Ok(Box::new(kbs::KbsClient::new().await?) as Box<dyn Getter>),
-        // TODO: Add sev-*-kbc series here
+        #[cfg(feature = "sev")]
+        "sev" => Ok(Box::new(sev::SevClient::new().await?) as Box<dyn Getter>),
         p => Err(Error::UnsupportedProvider(p.to_string())),
     }
 }

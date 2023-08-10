@@ -30,8 +30,14 @@ impl VaultSecret {
         let mut provider = kms::new_getter(&self.provider, self.provider_settings.clone())
             .await
             .map_err(|e| Error::UnsealVaultFailed(format!("create provider failed: {e}")))?;
+        let annotations = match &self.provider[..] {
+            "sev" => serde_json::from_str::<Annotations>(r#"{"secret_type":"key"}"#)
+                .expect("deserialize sev hardcode failed"),
+            _ => self.annotations.clone(),
+        };
+
         let secret = provider
-            .get_secret(&self.name, &self.annotations)
+            .get_secret(&self.name, &annotations)
             .await
             .map_err(|e| {
                 Error::UnsealVaultFailed(format!("get secret from provider failed: {e}"))
