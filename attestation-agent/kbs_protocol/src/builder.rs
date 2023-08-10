@@ -84,7 +84,8 @@ impl<T> KbsClientBuilder<T> {
             http_client_builder = http_client_builder.add_root_certificate(cert);
         }
 
-        if cfg!(feature = "rust-crypto") {
+        #[cfg(feature = "rust-crypto")]
+        {
             http_client_builder = http_client_builder.use_rustls_tls();
         }
 
