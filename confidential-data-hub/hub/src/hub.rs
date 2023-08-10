@@ -53,9 +53,15 @@ impl DataHub for Hub {
             .await
             .map_err(|e| Error::GetResource(format!("create kbs client failed: {e}")))?;
 
+        let annotations = match &self.get_resource_provider[..] {
+            "sev" => serde_json::from_str::<Annotations>(r#"{"secret_type":"resource"}"#)
+                .expect("deserialize sev hardcode failed"),
+            _ => Annotations::default(),
+        };
+
         // to get resource using a get_resource_provider client we do not need the Annotations.
         let res = client
-            .get_secret(&uri, &Annotations::default())
+            .get_secret(&uri, &annotations)
             .await
             .map_err(|e| Error::GetResource(format!("get rersource failed: {e}")))?;
         Ok(res)

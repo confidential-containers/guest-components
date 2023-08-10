@@ -9,20 +9,26 @@ edition = "2021"
 anyhow.workspace = true
 async-trait.workspace = true
 base64.workspace = true
+bincode = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 const_format.workspace = true
+crypto = { path = "../../attestation-agent/deps/crypto", optional = true }
 hex = { workspace = true, optional = true }
 kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = ["passport", "aa_token", "openssl"], optional = true }
 log.workspace = true
 openssl = { workspace = true, optional = true }
 prost = { workspace = true, optional = true }
+resource_uri = { path = "../../attestation-agent/deps/resource_uri", optional = true }
 sha2 = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
+sev = { path = "../../attestation-agent/deps/sev", optional = true }
 reqwest = { version = "0.11", optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, optional = true }
 tonic = { workspace = true, optional = true }
+uuid = { workspace = true, features = ["serde", "v4"], optional = true }
+zeroize = { workspace = true, optional = true}
 
 [dev-dependencies]
 rstest.workspace = true
@@ -37,3 +43,4 @@ default = ["aliyun", "kbs"]
 
 aliyun = ["chrono", "hex", "openssl", "prost", "reqwest", "sha2", "tokio/fs", "tonic"]
 kbs = ["kbs_protocol"]
+sev = ["bincode", "crypto", "dep:sev", "prost", "resource_uri", "tokio/fs", "tonic", "uuid", "zeroize"]

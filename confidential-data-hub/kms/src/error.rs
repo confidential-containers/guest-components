@@ -21,6 +21,10 @@ pub enum Error {
     #[error("KBS Client error: {0}")]
     KbsClientError(String),
 
+    #[cfg(feature = "sev")]
+    #[error("Sev Client (online-sev-kbc) error: {0}")]
+    SevClientError(String),
+
     #[error("Unsupported provider: {0}")]
     UnsupportedProvider(String),
 }

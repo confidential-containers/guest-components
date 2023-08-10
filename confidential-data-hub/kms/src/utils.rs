@@ -5,7 +5,7 @@
 
 use crate::{Error, Result};
 
-#[cfg(feature = "kbs")]
+#[cfg(any(feature = "kbs", feature = "sev"))]
 pub(crate) async fn get_kbs_host_from_cmdline() -> Result<String> {
     use tokio::fs;
     let cmdline = fs::read_to_string("/proc/cmdline")
