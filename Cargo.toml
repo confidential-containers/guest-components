@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "api-server-rest",
     "attestation-agent/app",
     "attestation-agent/lib",
     "attestation-agent/kbc",

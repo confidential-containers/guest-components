@@ -1,0 +1,12 @@
+[package]
+name = "api-server-rest"
+version = "0.1.0"
+authors = ["The Confidential Container Authors"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow.workspace = true
+clap = { workspace = true, features = ["derive"] }
+hyper = { version = "0.14.27", features = ["server", "http1", "runtime"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
