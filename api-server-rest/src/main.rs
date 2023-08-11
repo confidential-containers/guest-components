@@ -6,18 +6,24 @@
 use clap::Parser;
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::Server;
+use hyper::{Method, Server};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+mod cdh;
 mod router;
+mod ttrpc_proto;
 mod utils;
-use crate::router::Router;
+
+use cdh::{CDHClient, CDH_ROOT};
+use router::Router;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
 type Result<T> = std::result::Result<T, GenericError>;
 
+pub const TTRPC_TIMEOUT: i64 = 50 * 1000 * 1000 * 1000;
 const DEFAULT_BIND: &str = "127.0.0.1:8006";
+const CDH_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
 
 /// API Server arguments info.
 #[derive(Parser, Debug)]
@@ -26,6 +32,10 @@ struct Args {
     /// Bind address for API Server
     #[arg(default_value_t = DEFAULT_BIND.to_string(), short, long = "bind")]
     bind: String,
+
+    /// Listen address of CDH TTRPC Service
+    #[arg(default_value_t = CDH_ADDR.to_string(), short, long = "cdh_addr")]
+    cdh_addr: String,
 }
 
 #[tokio::main]
@@ -36,7 +46,13 @@ async fn main() -> Result<()> {
 
     let address: SocketAddr = args.bind.parse().expect("Failed to parse the address");
 
-    let router = Router::new();
+    let mut router = Router::new();
+
+    router.register_route(
+        CDH_ROOT,
+        Box::new(CDHClient::new(&args.cdh_addr, vec![Method::GET])?),
+    );
+
     let router = Arc::new(tokio::sync::Mutex::new(router));
 
     let api_service = make_service_fn(|conn: &AddrStream| {
