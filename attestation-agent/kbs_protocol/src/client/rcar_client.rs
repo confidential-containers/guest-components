@@ -60,8 +60,13 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
     /// which means that this client can be then used to retrieve resources.
     async fn rcar_handshake(&mut self) -> anyhow::Result<()> {
         let auth_endpoint = format!("{}/{KBS_PREFIX}/auth", self.kbs_host_url);
+
         let tee = match &self._tee {
-            ClientTee::Unitialized => bail!("tee not initialized"),
+            ClientTee::Unitialized => {
+                let tee = self.provider.get_tee_type().await?;
+                self._tee = ClientTee::Initializated(tee.clone());
+                tee
+            }
             ClientTee::Initializated(tee) => tee.clone(),
         };
 
@@ -152,11 +157,6 @@ impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
             "{}/{KBS_PREFIX}/resource/{}/{}/{}",
             self.kbs_host_url, resource_uri.repository, resource_uri.r#type, resource_uri.tag
         );
-
-        if let ClientTee::Unitialized = self._tee {
-            let tee = self.provider.get_tee_type().await?;
-            self._tee = ClientTee::Initializated(tee);
-        }
 
         for attempt in 1..=KBS_GET_RESOURCE_MAX_ATTEMPT {
             debug!("KBS client: trying to request KBS, attempt {attempt}");
