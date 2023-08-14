@@ -25,6 +25,11 @@ const DEFAULT_GETRESOURCE_SOCKET_ADDR: &str = concatcp!(
     DEFAULT_UNIX_SOCKET_DIR,
     "getresource.sock"
 );
+const DEFAULT_ATTESTATION_SOCKET_ADDR: &str = concatcp!(
+    UNIX_SOCKET_PREFIX,
+    DEFAULT_UNIX_SOCKET_DIR,
+    "attestation-agent.sock"
+);
 
 lazy_static! {
     pub static ref ASYNC_ATTESTATION_AGENT: Arc<Mutex<AttestationAgent>> =
@@ -51,6 +56,15 @@ struct Cli {
     /// `--getresource_sock unix:///tmp/aa_getresource`
     #[arg(default_value_t = DEFAULT_GETRESOURCE_SOCKET_ADDR.to_string(), short, long = "getresource_sock")]
     getresource_sock: String,
+
+    /// Attestation ttRPC Unix socket addr.
+    ///
+    /// This Unix socket address which the Attestation ttRPC service
+    /// will listen to, for example:
+    ///
+    /// `--attestation_sock unix:///tmp/attestation`
+    #[arg(default_value_t = DEFAULT_ATTESTATION_SOCKET_ADDR.to_string(), short, long = "attestation_sock")]
+    attestation_sock: String,
 }
 
 pub async fn ttrpc_main() -> Result<()> {
@@ -64,9 +78,13 @@ pub async fn ttrpc_main() -> Result<()> {
         .context("clean previous keyprovider socket file")?;
     clean_previous_sock_file(&cli.getresource_sock)
         .context("clean previous getresource socket file")?;
+    clean_previous_sock_file(&cli.attestation_sock)
+        .context("clean previous attestation socket file")?;
 
     let kp = rpc::keyprovider::ttrpc::start_ttrpc_service()?;
     let gs = rpc::getresource::ttrpc::start_ttrpc_service()?;
+    let att = rpc::attestation::ttrpc::start_ttrpc_service()?;
+
     let mut kps = Server::new()
         .bind(&cli.getresource_sock)
         .context("cannot bind getresource ttrpc service")?
@@ -81,6 +99,13 @@ pub async fn ttrpc_main() -> Result<()> {
 
     gss.start().await?;
 
+    let mut atts = Server::new()
+        .bind(&cli.attestation_sock)
+        .context("cannot bind attestation ttrpc service")?
+        .register_service(att);
+
+    atts.start().await?;
+
     debug!(
         "KeyProvider ttRPC service listening on: {:?}",
         cli.keyprovider_sock
@@ -88,6 +113,10 @@ pub async fn ttrpc_main() -> Result<()> {
     debug!(
         "GetResource ttRPC service listening on: {:?}",
         cli.getresource_sock
+    );
+    debug!(
+        "Attestation ttRPC service listening on: {:?}",
+        cli.attestation_sock
     );
 
     let mut interrupt = signal(SignalKind::interrupt())?;
