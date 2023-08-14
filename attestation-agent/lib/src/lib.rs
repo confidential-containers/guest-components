@@ -7,11 +7,16 @@
 #[macro_use]
 extern crate strum;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use kbc::{AnnotationPacket, KbcCheckInfo, KbcInstance, KbcModuleList};
 use resource_uri::ResourceUri;
 use std::collections::HashMap;
+
+#[cfg(feature = "cc_kbc")]
+mod token;
+#[cfg(feature = "cc_kbc")]
+use token::get_kbs_token;
 
 /// Attestation Agent (AA for short) is a rust library crate for attestation procedure
 /// in confidential containers. It provides kinds of service APIs that need to make
@@ -47,6 +52,8 @@ pub trait AttestationAPIs {
     /// The decryption method may be to obtain the key from KBS for decryption, or
     /// directly send the `annotation` to KBS for decryption, which depends on the
     /// specific implementation of each KBC module.
+    ///
+    /// TODO: move this API to Confidential Data Hub
     async fn decrypt_image_layer_annotation(
         &mut self,
         kbc_name: &str,
@@ -57,12 +64,17 @@ pub trait AttestationAPIs {
     /// Request KBS to obtain confidential resources, including confidential data or files.
     ///
     /// `resource_uri` is a KBS Resource URI pointing to a specific resource.
+    ///
+    /// TODO: remove this API
     async fn download_confidential_resource(
         &mut self,
         kbc_name: &str,
         resource_path: &str,
         kbs_uri: &str,
     ) -> Result<Vec<u8>>;
+
+    /// Get attestation Token
+    async fn get_token(&mut self, token_type: &str) -> Result<Vec<u8>>;
 }
 
 /// Attestation agent to provide attestation service.
@@ -149,5 +161,24 @@ impl AttestationAPIs for AttestationAgent {
             .ok_or_else(|| anyhow!("The KBC instance does not existing!"))?
             .get_resource(resource_uri)
             .await
+    }
+
+    async fn get_token(&mut self, _token_type: &str) -> Result<Vec<u8>> {
+        #[cfg(feature = "cc_kbc")]
+        {
+            let token = match _token_type {
+                "kbs" => get_kbs_token().await?,
+                typ => bail!("Unsupported token type {typ}"),
+            };
+
+            Ok(token)
+        }
+
+        // TODO: remove the feature flags after refactoring AA. Currently, kbs_host_url
+        // is only set by user in aa_kbc_params when cc_kbc is enabled.
+        #[cfg(not(feature = "cc_kbc"))]
+        {
+            bail!("unimplemented!");
+        }
     }
 }

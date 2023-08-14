@@ -11,11 +11,16 @@ fn main() -> std::io::Result<()> {
     {
         tonic_build::compile_protos("../protos/keyprovider.proto")?;
         tonic_build::compile_protos("../protos/getresource.proto")?;
+        tonic_build::compile_protos("../protos/attestation-agent.proto")?;
     }
 
     #[cfg(feature = "ttrpc")]
     {
-        let protos = vec!["../protos/keyprovider.proto", "../protos/getresource.proto"];
+        let protos = vec![
+            "../protos/keyprovider.proto",
+            "../protos/getresource.proto",
+            "../protos/attestation-agent.proto",
+        ];
         let protobuf_customized = ProtobufCustomize::default().gen_mod_rs(false);
 
         Codegen::new()
