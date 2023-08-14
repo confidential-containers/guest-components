@@ -18,6 +18,11 @@ impl Hub {
             Self::init_sev().await?;
         }
 
+        #[cfg(feature = "kbs")]
+        {
+            Self::init_kbs_resources().await?;
+        }
+
         Ok(())
     }
 }
