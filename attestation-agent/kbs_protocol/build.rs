@@ -29,8 +29,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         ttrpc_codegen::Codegen::new()
             .out_dir("src/token_provider/aa")
-            .include("protos")
-            .inputs(["protos/attestation-agent.proto"])
+            .include("../protos")
+            .inputs(["../protos/attestation-agent.proto"])
             .rust_protobuf()
             .customize(ttrpc_codegen::Customize {
                 async_all: true,
