@@ -19,13 +19,12 @@ pub struct Hub {
 impl Hub {
     pub async fn new() -> Result<Self> {
         let get_resource_provider = Self::get_resource_provider().await?;
-        #[cfg(feature = "sev")]
-        {
-            Self::init_sev().await?;
-        }
-        Ok(Self {
+        let mut hub = Self {
             get_resource_provider,
-        })
+        };
+
+        hub.init().await?;
+        Ok(hub)
     }
 
     async fn get_resource_provider() -> Result<String> {
@@ -45,17 +44,6 @@ impl Hub {
             ))?
             .to_string();
         Ok(resource_provider)
-    }
-
-    #[cfg(feature = "sev")]
-    async fn init_sev() -> Result<()> {
-        sev::mount_security_fs().map_err(|e| {
-            Error::InitializationFailed(format!("sev mount security fs failed: {e}"))
-        })?;
-        let _secret_module = sev::SecretKernelModule::new().map_err(|e| {
-            Error::InitializationFailed(format!("sev create SecretKernelModule failed: {e}"))
-        })?;
-        Ok(())
     }
 }
 

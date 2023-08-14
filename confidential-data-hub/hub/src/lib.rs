@@ -10,3 +10,5 @@ pub mod api;
 pub use api::*;
 
 pub mod hub;
+
+pub mod auth;
