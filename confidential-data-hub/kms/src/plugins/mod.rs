@@ -37,9 +37,9 @@ pub async fn new_getter(
 ) -> Result<Box<dyn Getter>> {
     match provider {
         #[cfg(feature = "kbs")]
-        "kbs" => Ok(Box::new(kbs::KbsClient::new().await?) as Box<dyn Getter>),
+        "kbs" | "cc_kbc" => Ok(Box::new(kbs::KbsClient::new().await?) as Box<dyn Getter>),
         #[cfg(feature = "sev")]
-        "sev" => Ok(Box::new(sev::SevClient::new().await?) as Box<dyn Getter>),
+        "sev" | "online_sev_kbc" => Ok(Box::new(sev::SevClient::new().await?) as Box<dyn Getter>),
         p => Err(Error::UnsupportedProvider(p.to_string())),
     }
 }

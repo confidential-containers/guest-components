@@ -98,8 +98,10 @@ impl DataHub for Hub {
             .map_err(|e| Error::GetResource(format!("create kbs client failed: {e}")))?;
 
         let annotations = match &self.get_resource_provider[..] {
-            "sev" => serde_json::from_str::<Annotations>(r#"{"secret_type":"resource"}"#)
-                .expect("deserialize sev hardcode failed"),
+            "online_sev_kbc" | "sev" => {
+                serde_json::from_str::<Annotations>(r#"{"secret_type":"resource"}"#)
+                    .expect("deserialize sev hardcode failed")
+            }
             _ => Annotations::default(),
         };
 
