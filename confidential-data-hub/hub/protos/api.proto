@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package api;
+
+message UnsealSecretInput {
+    bytes secret = 1;
+}
+
+message UnsealSecretOutput {
+    bytes plaintext = 1;
+}
+
+service SealedSecretService {
+    rpc UnsealSecret(UnsealSecretInput) returns (UnsealSecretOutput) {};
+}

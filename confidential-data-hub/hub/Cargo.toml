@@ -6,17 +6,27 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "confidential-data-hub"
+required-features = ["bin"]
+
 [dependencies]
+anyhow = { workspace = true, optional = true }
 async-trait.workspace = true
 base64.workspace = true
-clap = { workspace = true, features = [ "derive" ] }
+clap = { workspace = true, features = [ "derive" ], optional = true }
 kms = { path = "../kms", default-features = false }
 log.workspace = true
+protobuf = { workspace = true, optional = true }
 secret.path = "../secret"
 serde_json.workspace = true
 sev = { path = "../../attestation-agent/deps/sev", optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
+ttrpc = { workspace = true, features = ["async"], optional = true }
+
+[build-dependencies]
+ttrpc-codegen = { workspace = true, optional = true }
 
 [features]
 default = ["kbs"]
@@ -29,3 +39,5 @@ kbs = ["kms/kbs", "secret/kbs"]
 
 # support sev to provide confidential resources
 sev = ["kms/sev", "dep:sev", "secret/sev"]
+
+bin = ["anyhow", "clap", "protobuf", "tokio/signal", "ttrpc", "ttrpc-codegen"]
