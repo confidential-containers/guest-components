@@ -8,3 +8,5 @@
 mod client;
 
 pub use client::KbsClient;
+
+pub use resource_uri::ResourceUri;
