@@ -42,5 +42,5 @@ tonic-build.workspace = true
 default = ["aliyun", "kbs"]
 
 aliyun = ["chrono", "hex", "openssl", "prost", "reqwest", "sha2", "tokio/fs", "tonic"]
-kbs = ["kbs_protocol"]
+kbs = ["kbs_protocol", "resource_uri"]
 sev = ["bincode", "crypto", "dep:sev", "prost", "resource_uri", "tokio/fs", "tonic", "uuid", "zeroize"]
