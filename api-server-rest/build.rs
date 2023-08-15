@@ -1,7 +1,10 @@
 use ttrpc_codegen::{Codegen, Customize, ProtobufCustomize};
 
 fn main() -> std::io::Result<()> {
-    let protos = vec!["./protos/confidential_data_hub.proto"];
+    let protos = vec![
+        "./protos/confidential_data_hub.proto",
+        "./protos/attestation_agent.proto",
+    ];
     let protobuf_customized = ProtobufCustomize::default().gen_mod_rs(false);
 
     Codegen::new()

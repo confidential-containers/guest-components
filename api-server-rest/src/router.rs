@@ -38,6 +38,13 @@ pub trait ApiHandler: Send {
             .body(Body::from(json))?)
     }
 
+    // Build 400 Bad Request response.
+    fn bad_request(&self) -> Result<Response<Body>> {
+        Ok(Response::builder()
+            .status(StatusCode::BAD_REQUEST)
+            .body(Body::from("BAD REQUEST"))?)
+    }
+
     // Build 403 Forbidden response.
     fn forbidden(&self) -> Result<Response<Body>> {
         Ok(Response::builder()

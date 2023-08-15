@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package attestation_agent;
+
+message GetEvidenceRequest {
+    bytes RuntimeData = 1;
+}
+
+message GetEvidenceResponse {
+    bytes Evidence = 1;
+}
+
+message GetTokenRequest {
+    string TokenType = 1;
+}
+
+message GetTokenResponse {
+    bytes Token = 1;
+}
+
+service AttestationAgentService {
+    rpc GetEvidence(GetEvidenceRequest) returns (GetEvidenceResponse) {};
+    rpc GetToken(GetTokenRequest) returns (GetTokenResponse) {};
+}
