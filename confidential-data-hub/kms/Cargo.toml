@@ -15,17 +15,18 @@ const_format.workspace = true
 crypto = { path = "../../attestation-agent/deps/crypto", optional = true }
 hex = { workspace = true, optional = true }
 kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = ["passport", "aa_token", "openssl"], optional = true }
+lazy_static.workspace = true
 log.workspace = true
 openssl = { workspace = true, optional = true }
 prost = { workspace = true, optional = true }
-resource_uri = { path = "../../attestation-agent/deps/resource_uri", optional = true }
+resource_uri = { path = "../../attestation-agent/deps/resource_uri" }
 sha2 = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 sev = { path = "../../attestation-agent/deps/sev", optional = true }
 reqwest = { version = "0.11", optional = true }
 thiserror.workspace = true
-tokio = { workspace = true, optional = true }
+tokio = { workspace = true, features = ["fs"] }
 tonic = { workspace = true, optional = true }
 uuid = { workspace = true, features = ["serde", "v4"], optional = true }
 zeroize = { workspace = true, optional = true}
@@ -41,6 +42,6 @@ tonic-build.workspace = true
 [features]
 default = ["aliyun", "kbs"]
 
-aliyun = ["chrono", "hex", "openssl", "prost", "reqwest", "sha2", "tokio/fs", "tonic"]
-kbs = ["kbs_protocol", "resource_uri"]
-sev = ["bincode", "crypto", "dep:sev", "prost", "resource_uri", "tokio/fs", "tonic", "uuid", "zeroize"]
+aliyun = ["chrono", "hex", "openssl", "prost", "reqwest", "sha2", "tonic"]
+kbs = ["kbs_protocol"]
+sev = ["bincode", "crypto", "dep:sev", "prost", "tonic", "uuid", "zeroize"]

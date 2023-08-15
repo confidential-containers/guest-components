@@ -10,22 +10,22 @@ use kbs_protocol::{
     KbsClientCapabilities, ResourceUri,
 };
 
-use crate::{utils::get_kbs_host_from_cmdline, Annotations, Error, Getter, Result};
+use crate::{Error, Result};
 
-pub struct KbsClient {
+use super::Kbc;
+
+pub struct CcKbc {
     client: KbsProtocolClient<Box<dyn TokenProvider>>,
 }
 
-impl KbsClient {
-    pub async fn new() -> Result<Self> {
-        let kbs_host_url = get_kbs_host_from_cmdline().await?;
-
+impl CcKbc {
+    pub async fn new(kbs_host_url: &str) -> Result<Self> {
         let token_provider = AATokenProvider::new()
             .await
             .map_err(|e| Error::KbsClientError(format!("create AA token provider failed: {e}")))?;
         let client = kbs_protocol::KbsClientBuilder::with_token_provider(
             Box::new(token_provider),
-            &kbs_host_url,
+            kbs_host_url,
         )
         .build()
         .map_err(|e| Error::KbsClientError(format!("create kbs client failed: {e}")))?;
@@ -34,14 +34,11 @@ impl KbsClient {
 }
 
 #[async_trait]
-impl Getter for KbsClient {
-    async fn get_secret(&mut self, name: &str, _annotations: &Annotations) -> Result<Vec<u8>> {
-        let resource_uri = ResourceUri::try_from(name).map_err(|e| {
-            Error::KbsClientError(format!("get resource name must be a ResourceUri! {e}"))
-        })?;
+impl Kbc for CcKbc {
+    async fn get_resource(&mut self, rid: ResourceUri) -> Result<Vec<u8>> {
         let secret = self
             .client
-            .get_resource(resource_uri)
+            .get_resource(rid)
             .await
             .map_err(|e| Error::KbsClientError(format!("get resource failed: {e}")))?;
         Ok(secret)

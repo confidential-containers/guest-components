@@ -11,4 +11,4 @@ mod client;
 #[rustfmt::skip]
 mod keybroker;
 
-pub use client::SevClient;
+pub use client::OnlineSevKbc;

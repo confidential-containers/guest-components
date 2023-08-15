@@ -10,11 +10,7 @@ const IN_GUEST_DEFAULT_KEY_PATH: &str = "/run/confidential-containers/cdh/kms-cr
 #[cfg(feature = "aliyun")]
 pub mod aliyun;
 
-#[cfg(feature = "kbs")]
 pub mod kbs;
-
-#[cfg(feature = "sev")]
-pub mod sev;
 
 /// Create a new [`Decrypter`] by given provider name and [`ProviderSettings`]
 pub async fn new_decryptor(
@@ -36,10 +32,7 @@ pub async fn new_getter(
     _provider_settings: ProviderSettings,
 ) -> Result<Box<dyn Getter>> {
     match provider {
-        #[cfg(feature = "kbs")]
-        "kbs" | "cc_kbc" => Ok(Box::new(kbs::KbsClient::new().await?) as Box<dyn Getter>),
-        #[cfg(feature = "sev")]
-        "sev" | "online_sev_kbc" => Ok(Box::new(sev::SevClient::new().await?) as Box<dyn Getter>),
+        "kbs" => Ok(Box::new(kbs::KbcClient::new().await?) as Box<dyn Getter>),
         p => Err(Error::UnsupportedProvider(p.to_string())),
     }
 }

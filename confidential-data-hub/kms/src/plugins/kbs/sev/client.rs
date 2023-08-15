@@ -16,7 +16,7 @@ use tonic::transport::Uri;
 use uuid::Uuid;
 use zeroize::Zeroizing;
 
-use crate::{utils::get_kbs_host_from_cmdline, Annotations, Error, Getter, Result};
+use crate::{plugins::kbs::Kbc, Error, Result};
 
 use super::keybroker::{
     key_broker_service_client::KeyBrokerServiceClient, OnlineSecretRequest, RequestDetails,
@@ -30,32 +30,34 @@ struct Connection {
     key: String,
 }
 
-pub struct SevClient {
+pub struct OnlineSevKbc {
     client_id: Uuid,
     key: Vec<u8>,
     kbs_uri: Uri,
 }
 
-impl SevClient {
-    pub async fn new() -> Result<Self> {
+impl OnlineSevKbc {
+    pub async fn new(kbs_uri: &str) -> Result<Self> {
         let connection_json = fs::read_to_string(KEYS_PATH)
             .await
-            .map_err(|e| Error::SevClientError(format!("Read keys failed: {e}")))?;
+            .map_err(|e| Error::KbsClientError(format!("online-sev-kbc: Read keys failed: {e}")))?;
         fs::remove_file(KEYS_PATH)
             .await
             .expect("Failed to remove secret file");
 
-        let connection: Connection = serde_json::from_str(&connection_json)
-            .map_err(|e| Error::SevClientError(format!("deserialze keys failed: {e}")))?;
-
-        let key = STANDARD.decode(connection.key).map_err(|e| {
-            Error::SevClientError(format!("base64 decode connection key failed: {e}"))
+        let connection: Connection = serde_json::from_str(&connection_json).map_err(|e| {
+            Error::KbsClientError(format!("online-sev-kbc: deserialze keys failed: {e}"))
         })?;
 
-        let kbs_uri = get_kbs_host_from_cmdline().await?;
-        let kbs_uri = format!("http://{kbs_uri}")
-            .parse::<Uri>()
-            .map_err(|e| Error::SevClientError(format!("parse kbs uri failed: {e}")))?;
+        let key = STANDARD.decode(connection.key).map_err(|e| {
+            Error::KbsClientError(format!(
+                "online-sev-kbc: base64 decode connection key failed: {e}"
+            ))
+        })?;
+
+        let kbs_uri = format!("http://{kbs_uri}").parse::<Uri>().map_err(|e| {
+            Error::KbsClientError(format!("online-sev-kbc: parse kbs uri failed: {e}"))
+        })?;
         Ok(Self {
             client_id: connection.client_id,
             key,
@@ -87,28 +89,38 @@ impl SevClient {
         let response = client
             .get_online_secret(request)
             .await
-            .map_err(|e| Error::SevClientError(format!("sev get online secret failed: {e}")))?
+            .map_err(|e| {
+                Error::KbsClientError(format!("online-sev-kbc: sev get online secret failed: {e}"))
+            })?
             .into_inner();
         let decrypted_payload = crypto::decrypt(
             Zeroizing::new(self.key.clone()),
             STANDARD.decode(response.payload).map_err(|e| {
-                Error::SevClientError(format!("base64 decode response.payload failed: {e}"))
+                Error::KbsClientError(format!(
+                    "online-sev-kbc: base64 decode response.payload failed: {e}"
+                ))
             })?,
             STANDARD.decode(response.iv).map_err(|e| {
-                Error::SevClientError(format!("base64 decode response.iv failed: {e}"))
+                Error::KbsClientError(format!(
+                    "online-sev-kbc: base64 decode response.iv failed: {e}"
+                ))
             })?,
             WrapType::Aes256Gcm,
         )
-        .map_err(|e| Error::SevClientError(format!("decrypt payload failed: {e}")))?;
+        .map_err(|e| {
+            Error::KbsClientError(format!("online-sev-kbc: decrypt payload failed: {e}"))
+        })?;
 
         let payload_dict: HashMap<String, Vec<u8>> = bincode::deserialize(&decrypted_payload)
             .map_err(|e| {
-                Error::SevClientError(format!("deserailize payload dictionary failed: {e}"))
+                Error::KbsClientError(format!(
+                    "online-sev-kbc: deserailize payload dictionary failed: {e}"
+                ))
             })?;
         let res = payload_dict
             .get(&guid)
-            .ok_or(Error::SevClientError(format!(
-                "No guid {guid} found in the returned payload dictionary."
+            .ok_or(Error::KbsClientError(format!(
+                "online-sev-kbc: No guid {guid} found in the returned payload dictionary."
             )))?
             .to_vec();
 
@@ -117,25 +129,11 @@ impl SevClient {
 }
 
 #[async_trait]
-impl Getter for SevClient {
-    async fn get_secret(&mut self, name: &str, annotations: &Annotations) -> Result<Vec<u8>> {
-        let resource_uri = ResourceUri::try_from(name).map_err(|e| {
-            Error::SevClientError(format!("get resource name must be a ResourceUri! {e}"))
-        })?;
-
-        let secret_type = annotations
-            .get("secret_type")
-            .ok_or(Error::SevClientError(
-                "no `secret_type` field specified in annotations".into(),
-            ))?
-            .as_str()
-            .ok_or(Error::SevClientError(
-                "`secret_type` value must be a string".into(),
-            ))?;
-
-        match &resource_uri.r#type[..] {
+impl Kbc for OnlineSevKbc {
+    async fn get_resource(&mut self, rid: ResourceUri) -> Result<Vec<u8>> {
+        match &rid.r#type[..] {
             "client-id" => Ok(self.client_id.hyphenated().to_string().into_bytes()),
-            _ => self.get_resource_from_kbs(resource_uri, secret_type).await,
+            _ => self.get_resource_from_kbs(rid, "resource").await,
         }
     }
 }
