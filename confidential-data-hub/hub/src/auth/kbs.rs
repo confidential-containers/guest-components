@@ -21,7 +21,7 @@
 
 use std::path::PathBuf;
 
-use kms::{plugins::kbs::KbsClient, Annotations, Getter};
+use kms::{plugins::kbs::KbcClient, Annotations, Getter};
 use tokio::fs;
 
 use crate::{hub::Hub, Error, Result};
@@ -41,9 +41,9 @@ impl Hub {
             .filter(|s| !s.is_empty())
             .collect::<Vec<&str>>();
 
-        let mut kbs_client = KbcClient::new().await.map_err(|e| {
-            Error::InitializationFailed(format!("kbs client creation failed: {e}"))
-        })?;
+        let mut kbs_client = KbcClient::new()
+            .await
+            .map_err(|e| Error::InitializationFailed(format!("kbs client creation failed: {e}")))?;
 
         // for each `kbs://...::/...` string
         for resource_pair in kbs_resources {

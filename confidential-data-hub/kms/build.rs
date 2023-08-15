@@ -11,8 +11,8 @@ fn main() -> Result<()> {
     #[cfg(feature = "sev")]
     tonic_build::configure()
         .build_server(true)
-        .out_dir("./src/plugins/sev")
-        .compile(&["./src/plugins/sev/protos/getsecret.proto"], &[""])?;
+        .out_dir("./src/plugins/kbs/sev")
+        .compile(&["./src/plugins/kbs/sev/protos/getsecret.proto"], &[""])?;
 
     Ok(())
 }
