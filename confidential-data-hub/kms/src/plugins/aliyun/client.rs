@@ -19,7 +19,7 @@ use sha2::{Digest, Sha256};
 use tokio::fs;
 
 use crate::plugins::aliyun::client::dkms_api::{DecryptRequest, EncryptRequest};
-use crate::plugins::IN_GUEST_DEFAULT_KEY_PATH;
+use crate::plugins::_IN_GUEST_DEFAULT_KEY_PATH;
 use crate::{Annotations, Decrypter, Encrypter, ProviderSettings};
 use crate::{Error, Result};
 
@@ -37,7 +37,7 @@ pub struct AliyunKmsClient {
     endpoint: String,
 }
 
-const ALIYUN_IN_GUEST_DEFAULT_KEY_PATH: &str = concatcp!(IN_GUEST_DEFAULT_KEY_PATH, "/aliyun");
+const ALIYUN_IN_GUEST_DEFAULT_KEY_PATH: &str = concatcp!(_IN_GUEST_DEFAULT_KEY_PATH, "/aliyun");
 
 impl AliyunKmsClient {
     fn read_kms_instance_cert(cert_pem: &[u8]) -> Result<Certificate> {
