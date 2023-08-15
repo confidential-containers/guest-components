@@ -10,11 +10,13 @@ use hyper::{Method, Server};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+mod aa;
 mod cdh;
 mod router;
 mod ttrpc_proto;
 mod utils;
 
+use aa::{AAClient, AA_ROOT};
 use cdh::{CDHClient, CDH_ROOT};
 use router::Router;
 
@@ -24,6 +26,8 @@ type Result<T> = std::result::Result<T, GenericError>;
 pub const TTRPC_TIMEOUT: i64 = 50 * 1000 * 1000 * 1000;
 const DEFAULT_BIND: &str = "127.0.0.1:8006";
 const CDH_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
+const AA_ADDR: &str =
+    "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock";
 
 /// API Server arguments info.
 #[derive(Parser, Debug)]
@@ -33,9 +37,13 @@ struct Args {
     #[arg(default_value_t = DEFAULT_BIND.to_string(), short, long = "bind")]
     bind: String,
 
-    /// Listen address of CDH TTRPC Service
+    /// Listen address of confidential-data-hub TTRPC Service
     #[arg(default_value_t = CDH_ADDR.to_string(), short, long = "cdh_addr")]
     cdh_addr: String,
+
+    /// Listen address of attestation-agent TTRPC Service
+    #[arg(default_value_t = AA_ADDR.to_string(), short, long = "cdh_addr")]
+    aa_addr: String,
 }
 
 #[tokio::main]
@@ -53,6 +61,10 @@ async fn main() -> Result<()> {
         Box::new(CDHClient::new(&args.cdh_addr, vec![Method::GET])?),
     );
 
+    router.register_route(
+        AA_ROOT,
+        Box::new(AAClient::new(&args.aa_addr, vec![Method::GET])?),
+    );
     let router = Arc::new(tokio::sync::Mutex::new(router));
 
     let api_service = make_service_fn(|conn: &AddrStream| {

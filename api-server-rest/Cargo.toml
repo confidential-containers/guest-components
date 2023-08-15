@@ -9,6 +9,7 @@ license = "Apache-2.0"
 anyhow.workspace = true
 async-trait.workspace = true
 clap = { workspace = true, features = ["derive"] }
+form_urlencoded = "1.2.0"
 hyper = { version = "0.14.27", features = ["server", "http1", "runtime"] }
 protobuf = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
