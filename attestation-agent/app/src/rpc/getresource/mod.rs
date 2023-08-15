@@ -66,7 +66,7 @@ pub mod grpc {
 
     pub async fn start_grpc_service(socket: SocketAddr) -> Result<()> {
         let service = GetResource::default();
-        let _server = Server::builder()
+        Server::builder()
             .add_service(GetResourceServiceServer::new(service))
             .serve(socket)
             .await?;
