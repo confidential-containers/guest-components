@@ -9,6 +9,7 @@ extern crate strum;
 
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
+use attester::{detect_tee_type, BoxedAttester};
 use kbc::{AnnotationPacket, KbcCheckInfo, KbcInstance, KbcModuleList};
 use resource_uri::ResourceUri;
 use std::collections::HashMap;
@@ -75,6 +76,9 @@ pub trait AttestationAPIs {
 
     /// Get attestation Token
     async fn get_token(&mut self, token_type: &str) -> Result<Vec<u8>>;
+
+    /// Get TEE hardware signed evidence that includes the runtime data.
+    async fn get_evidence(&mut self, runtime_data: &[u8]) -> Result<Vec<u8>>;
 }
 
 /// Attestation agent to provide attestation service.
@@ -180,5 +184,13 @@ impl AttestationAPIs for AttestationAgent {
         {
             bail!("unimplemented!");
         }
+    }
+
+    /// Get TEE hardware signed evidence that includes the runtime data.
+    async fn get_evidence(&mut self, runtime_data: &[u8]) -> Result<Vec<u8>> {
+        let tee_type = detect_tee_type().ok_or(anyhow!("no supported tee type found!"))?;
+        let attester = TryInto::<BoxedAttester>::try_into(tee_type)?;
+        let evidence = attester.get_evidence(runtime_data.to_vec()).await?;
+        Ok(evidence.into_bytes())
     }
 }

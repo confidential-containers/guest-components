@@ -58,9 +58,31 @@ pub mod grpc {
 
         async fn get_evidence(
             &self,
-            _request: Request<GetEvidenceRequest>,
+            request: Request<GetEvidenceRequest>,
         ) -> Result<Response<GetEvidenceResponse>, Status> {
-            todo!()
+            let request = request.into_inner();
+
+            let attestation_agent_mutex_clone = Arc::clone(&ASYNC_ATTESTATION_AGENT);
+            let mut attestation_agent = attestation_agent_mutex_clone.lock().await;
+
+            debug!("Call AA to get evidence ...");
+
+            let evidence = attestation_agent
+                .get_evidence(&request.runtime_data)
+                .await
+                .map_err(|e| {
+                    error!("Call AA to get evidence failed: {}", e);
+                    Status::internal(format!(
+                        "[ERROR:{}] AA get evidence failed: {}",
+                        AGENT_NAME, e
+                    ))
+                })?;
+
+            debug!("Get evidence successfully!");
+
+            let reply = GetEvidenceResponse { evidence };
+
+            Result::Ok(Response::new(reply))
         }
     }
 
@@ -119,6 +141,38 @@ pub mod ttrpc {
 
             let mut reply = attestation_agent::GetTokenResponse::new();
             reply.Token = token;
+
+            ::ttrpc::Result::Ok(reply)
+        }
+
+        async fn get_evidence(
+            &self,
+            _ctx: &::ttrpc::r#async::TtrpcContext,
+            req: attestation_agent::GetEvidenceRequest,
+        ) -> ::ttrpc::Result<attestation_agent::GetEvidenceResponse> {
+            debug!("Call AA to get evidence ...");
+
+            let attestation_agent_mutex_clone = ASYNC_ATTESTATION_AGENT.clone();
+            let mut attestation_agent = attestation_agent_mutex_clone.lock().await;
+
+            let evidence = attestation_agent
+                .get_evidence(&req.RuntimeData)
+                .await
+                .map_err(|e| {
+                    error!("Call AA-KBC to get evidence failed: {}", e);
+                    let mut error_status = ::ttrpc::proto::Status::new();
+                    error_status.set_code(Code::INTERNAL);
+                    error_status.set_message(format!(
+                        "[ERROR:{}] AA-KBC get evidence failed: {}",
+                        AGENT_NAME, e
+                    ));
+                    ::ttrpc::Error::RpcStatus(error_status)
+                })?;
+
+            debug!("Get evidence successfully!");
+
+            let mut reply = attestation_agent::GetEvidenceResponse::new();
+            reply.Evidence = evidence;
 
             ::ttrpc::Result::Ok(reply)
         }
