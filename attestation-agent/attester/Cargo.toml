@@ -18,15 +18,22 @@ serde_json.workspace = true
 sev = { git = "https://github.com/virtee/sev", version = "1.2", default-features = false, features = ["snp"], optional = true }
 strum.workspace = true
 tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.16", optional = true }
+# TODO: change it to "0.1", once released.
+csv-rs = { git = "https://gitee.com/anolis/csv-rs", rev = "8a90aac", optional = true }
+codicon = { version = "3.0", optional = true }
+hyper = { version = "0.14", features = ["full"], optional = true }
+hyper-tls = { version = "0.5", optional = true }
+tokio = { version = "1", features = ["full"], optional = true }
 
 [dev-dependencies]
 tokio.workspace = true
 
 [features]
 default = ["all-attesters"]
-all-attesters = ["tdx-attester", "sgx-attester", "az-snp-vtpm-attester", "snp-attester"]
+all-attesters = ["tdx-attester", "sgx-attester", "az-snp-vtpm-attester", "snp-attester", "csv-attester"]
 
 tdx-attester = ["tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
 az-snp-vtpm-attester = ["az-snp-vtpm"]
 snp-attester = ["sev"]
+csv-attester = ["csv-rs", "codicon", "hyper", "hyper-tls", "tokio"]

@@ -20,6 +20,9 @@ pub mod sgx_dcap;
 #[cfg(feature = "snp-attester")]
 pub mod snp;
 
+#[cfg(feature = "csv-attester")]
+pub mod csv;
+
 pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
 
 impl TryFrom<Tee> for BoxedAttester {
@@ -36,6 +39,8 @@ impl TryFrom<Tee> for BoxedAttester {
             Tee::AzSnpVtpm => Box::<az_snp_vtpm::AzSnpVtpmAttester>::default(),
             #[cfg(feature = "snp-attester")]
             Tee::Snp => Box::<snp::SnpAttester>::default(),
+            #[cfg(feature = "csv-attester")]
+            Tee::Csv => Box::<csv::CsvAttester>::default(),
             _ => bail!("TEE is not supported!"),
         };
 
@@ -75,6 +80,11 @@ pub fn detect_tee_type() -> Option<Tee> {
     #[cfg(feature = "snp-attester")]
     if snp::detect_platform() {
         return Some(Tee::Snp);
+    }
+
+    #[cfg(feature = "csv-attester")]
+    if csv::detect_platform() {
+        return Some(Tee::Csv);
     }
 
     None
