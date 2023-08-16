@@ -1,3 +1,8 @@
+// Copyright (c) 2023 Intel Corporation
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
 use crate::router::ApiHandler;
 use crate::ttrpc_proto::confidential_data_hub::GetResourceRequest;
 use crate::ttrpc_proto::confidential_data_hub_ttrpc::GetResourceServiceClient;
