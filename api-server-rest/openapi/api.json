@@ -1,0 +1,148 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CoCo Restful API",
+    "description": "HTTP based API for CoCo containers to get resource/evidence/token from confidential-data-hub and attestation-agent.",
+    "contact": {
+      "name": "The Confidential Container Authors"
+    },
+    "license": {
+      "name": "Apache-2.0"
+    },
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8006",
+      "description": "CoCo Restful API"
+    }
+  ],
+  "paths": {
+    "/aa/evidence": {
+      "get": {
+        "tags": [
+          "crate"
+        ],
+        "operationId": "_evidence",
+        "parameters": [
+          {
+            "name": "runtime_data",
+            "in": "query",
+            "description": "Runtime Data",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "success response",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": {
+                  "report_data": "eHh4eA==",
+                  "svn": "1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request for invalid query param"
+          },
+          "403": {
+            "description": "forbid external access"
+          },
+          "404": {
+            "description": "resource not found"
+          },
+          "405": {
+            "description": "only Get method allowed"
+          }
+        }
+      }
+    },
+    "/aa/token": {
+      "get": {
+        "tags": [
+          "crate"
+        ],
+        "operationId": "_token",
+        "parameters": [
+          {
+            "name": "token_type",
+            "in": "query",
+            "description": "Token Type",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "success response",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": {
+                  "tee_keypair": "-----BEGIN RSA... ",
+                  "token": "eyJhbGciOiJFUzI1NiI..."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request for invalid token type"
+          },
+          "403": {
+            "description": "forbid external access"
+          },
+          "404": {
+            "description": "resource not found"
+          },
+          "405": {
+            "description": "only Get method allowed"
+          }
+        }
+      }
+    },
+    "/cdh/resource/{repository}/{type}/{tag}": {
+      "get": {
+        "tags": [
+          "crate"
+        ],
+        "operationId": "_resource",
+        "responses": {
+          "200": {
+            "description": "success response",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": {
+                  "123456": "value"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbid external access"
+          },
+          "404": {
+            "description": "resource not found"
+          },
+          "405": {
+            "description": "only Get method allowed"
+          }
+        }
+      }
+    }
+  }
+}

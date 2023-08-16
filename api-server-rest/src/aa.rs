@@ -1,3 +1,8 @@
+// Copyright (c) 2023 Intel Corporation
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
 use crate::router::ApiHandler;
 use crate::ttrpc_proto::attestation_agent::{GetEvidenceRequest, GetTokenRequest};
 use crate::ttrpc_proto::attestation_agent_ttrpc::AttestationAgentServiceClient;
