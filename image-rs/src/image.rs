@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, bail, Result};
+use base64::Engine;
 use log::warn;
 use nix::mount::MsFlags;
 use oci_distribution::manifest::{OciDescriptor, OciImageManifest};
@@ -465,6 +466,13 @@ pub fn umount_image_block_with_integrity(
     Ok(())
 }
 
+pub fn get_image_name_from_remote(image_url: &str) -> Result<String> {
+    let image_name = image_url.trim_start_matches("imageurl=");
+    let decoded = base64::engine::general_purpose::STANDARD.decode(image_name)?;
+
+    Ok(String::from_utf8_lossy(&decoded).to_string())
+}
+
 /// Create image meta object with the image info
 /// Return the image meta object, oci descriptors of the unique layers, and unique diff ids.
 fn create_image_meta(
@@ -776,5 +784,12 @@ mod tests {
 
         // Assert that image is pulled only once.
         assert_eq!(image_client.meta_store.lock().await.image_db.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_get_image_name_from_remote() {
+        let image_url = "imageurl=cmVnaXN0cnkuY24taGFuZ3pob3UuYWxpeXVuY3MuY29tL2dvb2dsZV9jb250YWluZXJzL3BhdXNlOjMuNg==";
+        let image_name = "registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6";
+        assert_eq!(get_image_name_from_remote(image_url).unwrap(), image_name);
     }
 }
