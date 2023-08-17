@@ -7,43 +7,17 @@ use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use kms::{Annotations, ProviderSettings};
 use secret::secret::Secret;
-use tokio::fs;
 
 use crate::{DataHub, Error, Result};
 
-pub struct Hub {
-    /// the get resource provider type. Semantically same as kbc.
-    get_resource_provider: String,
-}
+pub struct Hub {}
 
 impl Hub {
     pub async fn new() -> Result<Self> {
-        let get_resource_provider = Self::get_resource_provider().await?;
-        let mut hub = Self {
-            get_resource_provider,
-        };
+        let mut hub = Self {};
 
         hub.init().await?;
         Ok(hub)
-    }
-
-    async fn get_resource_provider() -> Result<String> {
-        let cmdline = fs::read_to_string("/proc/cmdline")
-            .await
-            .map_err(|e| Error::InitializationFailed(format!("read kernel cmdline failed: {e}")))?;
-        let resource_provider = cmdline
-            .split_ascii_whitespace()
-            .find(|para| para.starts_with("agent.aa_kbc_params="))
-            .ok_or(Error::InitializationFailed(
-                "no `agent.aa_kbc_params` provided in kernel commandline!".into(),
-            ))?
-            .split("::")
-            .next()
-            .ok_or(Error::InitializationFailed(
-                "illegal input `agent.aa_kbc_params` format".into(),
-            ))?
-            .to_string();
-        Ok(resource_provider)
     }
 }
 
@@ -81,21 +55,13 @@ impl DataHub for Hub {
 
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>> {
         // to initialize a get_resource_provider client we do not need the ProviderSettings.
-        let mut client = kms::new_getter(&self.get_resource_provider, ProviderSettings::default())
+        let mut client = kms::new_getter("kbs", ProviderSettings::default())
             .await
             .map_err(|e| Error::GetResource(format!("create kbs client failed: {e}")))?;
 
-        let annotations = match &self.get_resource_provider[..] {
-            "online_sev_kbc" | "sev" => {
-                serde_json::from_str::<Annotations>(r#"{"secret_type":"resource"}"#)
-                    .expect("deserialize sev hardcode failed")
-            }
-            _ => Annotations::default(),
-        };
-
         // to get resource using a get_resource_provider client we do not need the Annotations.
         let res = client
-            .get_secret(&uri, &annotations)
+            .get_secret(&uri, &Annotations::default())
             .await
             .map_err(|e| Error::GetResource(format!("get rersource failed: {e}")))?;
         Ok(res)
