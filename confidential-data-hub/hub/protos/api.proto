@@ -10,6 +10,18 @@ message UnsealSecretOutput {
     bytes plaintext = 1;
 }
 
+message GetResourceRequest {
+    string ResourcePath = 1;
+}
+
+message GetResourceResponse {
+    bytes Resource = 1;
+}
+
 service SealedSecretService {
     rpc UnsealSecret(UnsealSecretInput) returns (UnsealSecretOutput) {};
+}
+
+service GetResourceService {
+    rpc GetResource(GetResourceRequest) returns (GetResourceResponse) {};
 }
