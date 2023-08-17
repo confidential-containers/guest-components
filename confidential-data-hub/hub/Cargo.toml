@@ -16,6 +16,7 @@ async-trait.workspace = true
 base64.workspace = true
 clap = { workspace = true, features = [ "derive" ], optional = true }
 kms = { path = "../kms", default-features = false }
+lazy_static.workspace = true
 log.workspace = true
 protobuf = { workspace = true, optional = true }
 secret.path = "../secret"

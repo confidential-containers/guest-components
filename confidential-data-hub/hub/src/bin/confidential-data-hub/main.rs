@@ -6,7 +6,7 @@
 use std::{path::Path, sync::Arc};
 
 use anyhow::{Context, Result};
-use api_ttrpc::{create_sealed_secret_service, SealedSecretService};
+use api_ttrpc::create_sealed_secret_service;
 use clap::Parser;
 use log::info;
 use server::Server;
@@ -15,6 +15,8 @@ use tokio::{
     signal::unix::{signal, SignalKind},
 };
 use ttrpc::r#async::Server as TtrpcServer;
+
+use crate::api_ttrpc::create_get_resource_service;
 
 mod api;
 mod api_ttrpc;
@@ -35,6 +37,14 @@ struct Cli {
     socket: String,
 }
 
+macro_rules! ttrpc_service {
+    ($func: expr) => {{
+        let server = Server::new().await?;
+        let server = Arc::new(Box::new(server) as _);
+        $func(server)
+    }};
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -45,13 +55,13 @@ async fn main() -> Result<()> {
             .context("create unix socket dir failed")?;
     }
 
-    let server = Server::new().await?;
-    let server = Arc::new(Box::new(server) as Box<dyn SealedSecretService + Send + Sync>);
-    let service = create_sealed_secret_service(server);
+    let sealed_secret_service = ttrpc_service!(create_sealed_secret_service);
+    let get_resource_service = ttrpc_service!(create_get_resource_service);
     let mut server = TtrpcServer::new()
         .bind(&cli.socket)
         .context("cannot bind cdh ttrpc service")?
-        .register_service(service);
+        .register_service(sealed_secret_service)
+        .register_service(get_resource_service);
 
     server.start().await?;
 
