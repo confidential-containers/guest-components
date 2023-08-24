@@ -37,7 +37,7 @@ tonic-build = { version = "0.9.2", optional = true }
 default = ["sample_kbc", "rust-crypto"]
 
 cc_kbc = ["kbs_protocol/background_check"]
-all-attesters = ["kbs_protocol/all-attesters"]
+all-attesters = ["kbs_protocol?/all-attesters"]
 tdx-attester = ["kbs_protocol/tdx-attester"]
 sgx-attester = ["kbs_protocol/sgx-attester"]
 az-snp-vtpm-attester= ["kbs_protocol/az-snp-vtpm-attester"]
