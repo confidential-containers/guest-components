@@ -26,7 +26,7 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 default = ["sample_kbc", "rust-crypto", "all-attesters"]
 
 cc_kbc = ["kbc/cc_kbc", "kbs_protocol/background_check"]
-all-attesters = ["kbc/all-attesters", "kbs_protocol/all-attesters", "attester/all-attesters"]
+all-attesters = ["kbc/all-attesters", "kbs_protocol?/all-attesters", "attester/all-attesters"]
 tdx-attester = ["kbc/tdx-attester", "kbs_protocol/tdx-attester", "attester/tdx-attester"]
 sgx-attester = ["kbc/sgx-attester", "kbs_protocol/sgx-attester", "attester/sgx-attester"]
 az-snp-vtpm-attester = ["kbc/az-snp-vtpm-attester", "kbs_protocol/az-snp-vtpm-attester", "attester/az-snp-vtpm-attester"]
@@ -39,5 +39,5 @@ offline_sev_kbc = ["kbc/offline_sev_kbc"]
 online_sev_kbc = ["kbc/online_sev_kbc"]
 
 # Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
-rust-crypto = ["kbc/rust-crypto", "kbs_protocol/rust-crypto"]
-openssl = ["kbc/openssl", "kbs_protocol/openssl"]
+rust-crypto = ["kbc/rust-crypto", "kbs_protocol?/rust-crypto"]
+openssl = ["kbc/openssl", "kbs_protocol?/openssl"]
