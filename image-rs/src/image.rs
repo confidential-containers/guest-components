@@ -439,13 +439,12 @@ impl ImageClient {
 /// to <mount_path> with <mount_type>.
 /// It will return the verity device path if succeeds and return an error if fails .
 pub fn mount_image_block_with_integrity(
-    verity_options: &str,
+    verity_options: &DmVerityOption,
     source_device_path: &Path,
     mount_path: &Path,
     mount_type: &str,
 ) -> Result<String> {
-    let parsed_data = DmVerityOption::try_from(verity_options)?;
-    let verity_device_path = verity::create_verity_device(&parsed_data, source_device_path)?;
+    let verity_device_path = verity::create_verity_device(verity_options, source_device_path)?;
 
     nix::mount::mount(
         Some(verity_device_path.as_str()),
@@ -455,6 +454,15 @@ pub fn mount_image_block_with_integrity(
         None::<&str>,
     )?;
     Ok(verity_device_path)
+}
+pub fn mount_image_block_with_integrity_str(
+    verity_options: &str,
+    source_device_path: &Path,
+    mount_path: &Path,
+    mount_type: &str,
+) -> Result<String> {
+    let parsed_data = DmVerityOption::try_from(verity_options)?;
+    mount_image_block_with_integrity(&parsed_data, source_device_path, mount_path, mount_type)
 }
 /// umount_image_block_with_integrity umounts the filesystem and closes the verity device named verity_device_name.
 pub fn umount_image_block_with_integrity(
@@ -727,11 +735,21 @@ mod tests {
             let error_message = String::from_utf8_lossy(&output.stderr);
             panic!("Failed to create hash device: {}", error_message);
         }
-
+        let res = mount_image_block_with_integrity(
+            &verity_option,
+            &loop_device_path,
+            mount_dir.path(),
+            "ext4",
+        )
+        .unwrap_or_else(|err| panic!("Failed to mount image block with integrity {:?}", err));
+        assert!(res.contains("/dev/mapper"));
+        let verity_device_name =&verity_option.hash;
+        assert!(umount_image_block_with_integrity(mount_dir.path(), verity_device_name.to_string()).is_ok());
+        
         let serialized_option = serde_json::to_vec(&verity_option)
             .unwrap_or_else(|_| panic!("failed to serialize the options"));
         let encoded_option = base64::engine::general_purpose::STANDARD.encode(serialized_option);
-        let res = mount_image_block_with_integrity(
+        let res = mount_image_block_with_integrity_str(
             encoded_option.as_str(),
             &loop_device_path,
             mount_dir.path(),
@@ -746,6 +764,7 @@ mod tests {
             }
         };
         assert!(umount_image_block_with_integrity(mount_dir.path(), verity_device_name).is_ok());
+        
     }
 
     #[tokio::test]
