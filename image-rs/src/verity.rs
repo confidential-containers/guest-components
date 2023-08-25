@@ -11,7 +11,7 @@ use std::path::Path;
 
 /// Configuration information for DmVerity device.
 #[derive(Debug, Deserialize, Serialize)]
-pub struct DmVerityOption {
+pub struct DmVerityInfo {
     /// Hash algorithm for dm-verity.
     pub hashtype: String,
     /// Root hash for device verification or activation.
@@ -26,7 +26,7 @@ pub struct DmVerityOption {
     pub offset: u64,
 }
 
-impl DmVerityOption {
+impl DmVerityInfo {
     /// Validate configuration information for DmVerity device.
     pub fn validate(&self) -> Result<()> {
         match self.hashtype.to_lowercase().as_str() {
@@ -85,12 +85,12 @@ impl DmVerityOption {
         }
         false
     }
-    fn parse_tarfs_options(source_option: &str) -> std::result::Result<DmVerityOption, Error> {
+    fn parse_tarfs_options(source_option: &str) -> std::result::Result<DmVerityInfo, Error> {
         let mut parts: Vec<&str> = source_option.split(',').collect();
         if parts.len() == 3 {
             parts[2] = parts[2].trim_start_matches("sha256:");
         }
-        Ok(DmVerityOption {
+        Ok(DmVerityInfo {
             hashtype: "sha256".to_string(),
             blocksize: 512, //default block size
             hashsize: 4096, //default hash size
@@ -101,18 +101,18 @@ impl DmVerityOption {
     }
 }
 
-// Parse `DmVerityOption` object from plaintext or base64 encoded json string.
-impl TryFrom<&str> for DmVerityOption {
+// Parse `DmVerityInfo` object from plaintext or base64 encoded json string.
+impl TryFrom<&str> for DmVerityInfo {
     type Error = Error;
 
     fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
         let option = if value.contains("sha256:") {
             Self::parse_tarfs_options(value)?
-        } else if let Ok(v) = serde_json::from_str::<DmVerityOption>(value) {
+        } else if let Ok(v) = serde_json::from_str::<DmVerityInfo>(value) {
             v
         } else {
             let decoded = base64::engine::general_purpose::STANDARD.decode(value)?;
-            serde_json::from_slice::<DmVerityOption>(&decoded)?
+            serde_json::from_slice::<DmVerityInfo>(&decoded)?
         };
 
         option.validate()?;
@@ -120,7 +120,7 @@ impl TryFrom<&str> for DmVerityOption {
     }
 }
 
-impl TryFrom<&String> for DmVerityOption {
+impl TryFrom<&String> for DmVerityInfo {
     type Error = Error;
 
     fn try_from(value: &String) -> std::result::Result<Self, Self::Error> {
@@ -133,7 +133,7 @@ impl TryFrom<&String> for DmVerityOption {
 /// It will return the verity block device Path "/dev/mapper/<name>"
 /// Notes: the data device and the hash device are the same one.
 pub fn create_verity_device(
-    verity_option: &DmVerityOption,
+    verity_option: &DmVerityInfo,
     source_device_path: &Path,
 ) -> Result<String> {
     let dm = DM::new()?;
@@ -207,7 +207,7 @@ pub fn destroy_verity_device(verity_device_name: String) -> Result<()> {
 
 /// Get the DmVerity device name from option string.
 pub fn get_verity_device_name(verity_options: &str) -> Result<String> {
-    let option = DmVerityOption::try_from(verity_options)?;
+    let option = DmVerityInfo::try_from(verity_options)?;
     Ok(option.hash)
 }
 
@@ -218,7 +218,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_decode_verity_options() {
-        let verity_option = DmVerityOption {
+        let verity_option = DmVerityInfo {
             hashtype: "sha256".to_string(),
             blocksize: 512,
             hashsize: 512,
@@ -229,7 +229,7 @@ mod tests {
         let json_option = serde_json::to_string(&verity_option).unwrap();
         let encoded = base64::engine::general_purpose::STANDARD.encode(&json_option);
 
-        let decoded = DmVerityOption::try_from(&encoded).unwrap_or_else(|err| panic!("{}", err));
+        let decoded = DmVerityInfo::try_from(&encoded).unwrap_or_else(|err| panic!("{}", err));
         assert_eq!(decoded.hashtype, verity_option.hashtype);
         assert_eq!(decoded.blocksize, verity_option.blocksize);
         assert_eq!(decoded.hashsize, verity_option.hashsize);
@@ -237,7 +237,7 @@ mod tests {
         assert_eq!(decoded.offset, verity_option.offset);
         assert_eq!(decoded.hash, verity_option.hash);
 
-        let decoded = DmVerityOption::try_from(&json_option).unwrap();
+        let decoded = DmVerityInfo::try_from(&json_option).unwrap();
         assert_eq!(decoded.hashtype, verity_option.hashtype);
         assert_eq!(decoded.blocksize, verity_option.blocksize);
         assert_eq!(decoded.hashsize, verity_option.hashsize);
@@ -247,7 +247,7 @@ mod tests {
 
         let verity_option =
             "1024,524288,sha256:9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174";
-        let decoded = DmVerityOption::try_from(verity_option).unwrap();
+        let decoded = DmVerityInfo::try_from(verity_option).unwrap();
         assert_eq!(decoded.hashtype, "sha256");
         assert_eq!(decoded.blocksize, 512);
         assert_eq!(decoded.hashsize, 4096);
@@ -262,7 +262,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_verity_options() {
         let tests = &[
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "md5".to_string(), // "md5" is not a supported hash algorithm
                 blocksize: 512,
                 hashsize: 512,
@@ -271,7 +271,7 @@ mod tests {
                 hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
                     .to_string(),
             },
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "sha256".to_string(),
                 blocksize: 3000, // Invalid block size, not a power of 2.
                 hashsize: 512,
@@ -280,7 +280,7 @@ mod tests {
                 hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
                     .to_string(),
             },
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "sha256".to_string(),
                 blocksize: 0, // Invalid block size, less than 512.
                 hashsize: 512,
@@ -289,7 +289,7 @@ mod tests {
                 hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
                     .to_string(),
             },
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "sha256".to_string(),
                 blocksize: 524800, // Invalid block size, greater than 524288.
                 hashsize: 512,
@@ -298,7 +298,7 @@ mod tests {
                 hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
                     .to_string(),
             },
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "sha256".to_string(),
                 blocksize: 512,
                 hashsize: 3000, // Invalid hash block size, not a power of 2.
@@ -307,7 +307,7 @@ mod tests {
                 hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
                     .to_string(),
             },
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "sha256".to_string(),
                 blocksize: 512,
                 hashsize: 0, // Invalid hash block size, less than 512.
@@ -316,7 +316,7 @@ mod tests {
                 hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
                     .to_string(),
             },
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "sha256".to_string(),
                 blocksize: 512,
                 hashsize: 524800, // Invalid hash block size, greater than 524288.
@@ -325,7 +325,7 @@ mod tests {
                 hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
                     .to_string(),
             },
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "sha256".to_string(),
                 blocksize: 512,
                 hashsize: 512,
@@ -334,7 +334,7 @@ mod tests {
                 hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
                     .to_string(),
             },
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "sha256".to_string(),
                 blocksize: 512,
                 hashsize: 512,
@@ -343,7 +343,7 @@ mod tests {
                 hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
                     .to_string(),
             },
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "sha256".to_string(),
                 blocksize: 512,
                 hashsize: 512,
@@ -352,7 +352,7 @@ mod tests {
                 hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
                     .to_string(),
             },
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "sha256".to_string(),
                 blocksize: 512,
                 hashsize: 512,
@@ -365,7 +365,7 @@ mod tests {
         for d in tests.iter() {
             d.validate().unwrap_err();
         }
-        let test_data = DmVerityOption {
+        let test_data = DmVerityInfo {
             hashtype: "sha256".to_string(),
             blocksize: 512,
             hashsize: 512,
@@ -398,7 +398,7 @@ mod tests {
             .unwrap_or_else(|| panic!("failed to get loop device path"));
 
         let tests = &[
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "sha256".to_string(),
                 blocksize: 512,
                 hashsize: 4096,
@@ -407,7 +407,7 @@ mod tests {
                 hash: "fc65e84aa2eb12941aeaa29b000bcf1d9d4a91190bd9b10b5f51de54892952c6"
                     .to_string(),
             },
-            DmVerityOption {
+            DmVerityInfo {
                 hashtype: "sha1".to_string(),
                 blocksize: 512,
                 hashsize: 1024,

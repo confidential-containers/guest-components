@@ -24,7 +24,7 @@ use crate::decoder::Compression;
 use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
 use crate::snapshots::{SnapshotType, Snapshotter};
-use crate::verity::{self, DmVerityOption};
+use crate::verity::{self, DmVerityInfo};
 
 #[cfg(feature = "snapshot-unionfs")]
 use crate::snapshots::occlum::unionfs::Unionfs;
@@ -439,7 +439,7 @@ impl ImageClient {
 /// to <mount_path> with <mount_type>.
 /// It will return the verity device path if succeeds and return an error if fails .
 pub fn mount_image_block_with_integrity(
-    verity_options: &DmVerityOption,
+    verity_options: &DmVerityInfo,
     source_device_path: &Path,
     mount_path: &Path,
     mount_type: &str,
@@ -461,7 +461,7 @@ pub fn mount_image_block_with_integrity_str(
     mount_path: &Path,
     mount_type: &str,
 ) -> Result<String> {
-    let parsed_data = DmVerityOption::try_from(verity_options)?;
+    let parsed_data = DmVerityInfo::try_from(verity_options)?;
     mount_image_block_with_integrity(&parsed_data, source_device_path, mount_path, mount_type)
 }
 /// umount_image_block_with_integrity umounts the filesystem and closes the verity device named verity_device_name.
@@ -692,7 +692,7 @@ mod tests {
             .to_str()
             .unwrap_or_else(|| panic!("failed to get path string"));
 
-        let mut verity_option = DmVerityOption {
+        let mut verity_option = DmVerityInfo {
             hashtype: default_hash_type.to_string(),
             blocksize: default_data_block_size,
             hashsize: default_hash_size,
