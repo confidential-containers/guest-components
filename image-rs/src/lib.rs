@@ -24,4 +24,5 @@ pub mod signature;
 pub mod snapshots;
 pub mod stream;
 pub mod unpack;
+#[cfg(feature = "verity")]
 pub mod verity;
