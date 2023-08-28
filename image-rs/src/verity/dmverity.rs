@@ -85,6 +85,7 @@ impl DmVerityOption {
         }
         false
     }
+
     fn parse_tarfs_options(source_option: &str) -> std::result::Result<DmVerityOption, Error> {
         let mut parts: Vec<&str> = source_option.split(',').collect();
         if parts.len() == 3 {
