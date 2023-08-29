@@ -12,7 +12,7 @@ edition = "2021"
 anyhow.workspace = true
 async-compression = { version = "0.4.1", features = ["futures-io", "tokio", "gzip", "zstd"] }
 async-trait.workspace = true
-attestation_agent = { path = "../attestation-agent/lib", optional = true }
+attestation_agent = { path = "../attestation-agent/lib", default-features = false, optional = true }
 base64.workspace = true
 cfg-if = { workspace = true, optional = true }
 devicemapper = { version =  "0.33.5", optional = true }
