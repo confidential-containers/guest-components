@@ -15,7 +15,7 @@ log.workspace = true
 occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.7", optional = true }
 serde.workspace = true
 serde_json.workspace = true
-sev = { git = "https://github.com/virtee/sev", version = "1.2", default-features = false, features = ["snp"], optional = true }
+sev = { version = "1.2.0", default-features = false, features = ["snp"], optional = true }
 strum.workspace = true
 tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.16", optional = true }
 # TODO: change it to "0.1", once released.
