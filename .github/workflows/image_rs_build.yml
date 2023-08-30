@@ -24,8 +24,8 @@ jobs:
       fail-fast: false
       matrix:
         rust:
+          - 1.69.0
           - stable
-          - beta
           - nightly
     steps:
       - name: Code checkout
