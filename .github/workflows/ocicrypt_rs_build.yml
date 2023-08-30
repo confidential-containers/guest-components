@@ -21,8 +21,8 @@ jobs:
       fail-fast: false
       matrix:
         rust:
+          - 1.69.0
           - stable
-          - beta
           - nightly
 
     # Run all steps in the compilation testing containers
