@@ -23,7 +23,7 @@ tonic = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [features]
-default = ["sample_kbc", "rust-crypto", "all-attesters"]
+default = ["sample_kbc", "rust-crypto"]
 
 cc_kbc = ["kbc/cc_kbc", "kbs_protocol/background_check"]
 all-attesters = ["kbc/all-attesters", "kbs_protocol?/all-attesters", "attester/all-attesters"]
