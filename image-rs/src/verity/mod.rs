@@ -19,8 +19,7 @@ pub fn mount_image_block_with_integrity(
     mount_path: &Path,
     mount_type: &str,
 ) -> Result<String> {
-    let parsed_data = DmVerityOption::try_from(verity_options)?;
-    let verity_device_path = create_verity_device(&parsed_data, source_device_path)?;
+    let verity_device_path = create_dmverity_device(verity_options, source_device_path)?;
 
     nix::mount::mount(
         Some(verity_device_path.as_str()),
@@ -49,6 +48,10 @@ pub fn get_image_name_from_remote(image_url: &str) -> Result<String> {
     Ok(String::from_utf8_lossy(&decoded).to_string())
 }
 
+pub fn create_dmverity_device(verity_options: &str, source_device_path: &Path) -> Result<String> {
+    let parsed_data = DmVerityOption::try_from(verity_options)?;
+    create_verity_device(&parsed_data, source_device_path)
+}
 pub fn destroy_dmverity_device(verity_device_name: &str) -> Result<()> {
     destroy_verity_device(verity_device_name)
 }
