@@ -38,7 +38,7 @@ pub fn umount_image_block_with_integrity(
     verity_device_name: String,
 ) -> Result<()> {
     nix::mount::umount(mount_path)?;
-    cleanup_verity_device(verity_device_name)?;
+    destroy_dmverity_device(&verity_device_name)?;
     Ok(())
 }
 
@@ -49,7 +49,7 @@ pub fn get_image_name_from_remote(image_url: &str) -> Result<String> {
     Ok(String::from_utf8_lossy(&decoded).to_string())
 }
 
-pub fn cleanup_verity_device(verity_device_name: String) -> Result<()> {
+pub fn destroy_dmverity_device(verity_device_name: &str) -> Result<()> {
     destroy_verity_device(verity_device_name)
 }
 
