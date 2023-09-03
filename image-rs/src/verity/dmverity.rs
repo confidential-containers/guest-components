@@ -193,9 +193,9 @@ pub fn create_verity_device(
 }
 
 /// Destroy a DmVerity device with specified name.
-pub fn destroy_verity_device(verity_device_name: String) -> Result<()> {
+pub fn destroy_verity_device(verity_device_name: &str) -> Result<()> {
     let dm = devicemapper::DM::new()?;
-    let name = devicemapper::DmName::new(&verity_device_name)?;
+    let name = devicemapper::DmName::new(verity_device_name)?;
 
     dm.device_remove(
         &devicemapper::DevId::Name(name),
@@ -421,7 +421,7 @@ mod tests {
             let verity_device_path =
                 create_verity_device(d, &loop_device_path).unwrap_or_else(|err| panic!("{}", err));
             assert_eq!(verity_device_path, format!("/dev/mapper/{}", d.hash));
-            destroy_verity_device(d.hash.clone()).unwrap();
+            destroy_verity_device(&d.hash).unwrap();
         }
     }
 }
