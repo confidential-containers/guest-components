@@ -8,6 +8,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use image::AnnotationPacket;
 use kms::{Annotations, ProviderSettings};
 use secret::secret::Secret;
+use storage::volume_type::Storage;
 
 use crate::{DataHub, Error, Result};
 
@@ -71,6 +72,14 @@ impl DataHub for Hub {
             .get_secret(&uri, &Annotations::default())
             .await
             .map_err(|e| Error::GetResource(format!("get rersource failed: {e}")))?;
+        Ok(res)
+    }
+
+    async fn secure_mount(&self, storage: Storage) -> Result<String> {
+        let res = storage
+            .mount()
+            .await
+            .map_err(|e| Error::SecureMount(format!("mount failed: {e}")))?;
         Ok(res)
     }
 }

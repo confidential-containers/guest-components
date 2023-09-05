@@ -6,6 +6,7 @@
 use async_trait::async_trait;
 
 use crate::Result;
+use storage::volume_type::Storage;
 
 /// The APIs of the DataHub. See
 /// <https://github.com/confidential-containers/documentation/issues/131> for
@@ -26,4 +27,6 @@ pub trait DataHub {
     /// URI is defined in
     /// <https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md>
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>>;
+
+    async fn secure_mount(&self, storage: Storage) -> Result<String>;
 }
