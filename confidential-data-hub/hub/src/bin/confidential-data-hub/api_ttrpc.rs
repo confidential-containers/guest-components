@@ -165,3 +165,51 @@ pub fn create_key_provider_service(service: Arc<Box<dyn KeyProviderService + Sen
     ret.insert("api.KeyProviderService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
     ret
 }
+
+#[derive(Clone)]
+pub struct SecureMountServiceClient {
+    client: ::ttrpc::r#async::Client,
+}
+
+impl SecureMountServiceClient {
+    pub fn new(client: ::ttrpc::r#async::Client) -> Self {
+        SecureMountServiceClient {
+            client,
+        }
+    }
+
+    pub async fn secure_mount(&self, ctx: ttrpc::context::Context, req: &super::api::SecureMountRequest) -> ::ttrpc::Result<super::api::SecureMountResponse> {
+        let mut cres = super::api::SecureMountResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "api.SecureMountService", "SecureMount", cres);
+    }
+}
+
+struct SecureMountMethod {
+    service: Arc<Box<dyn SecureMountService + Send + Sync>>,
+}
+
+#[async_trait]
+impl ::ttrpc::r#async::MethodHandler for SecureMountMethod {
+    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
+        ::ttrpc::async_request_handler!(self, ctx, req, api, SecureMountRequest, secure_mount);
+    }
+}
+
+#[async_trait]
+pub trait SecureMountService: Sync {
+    async fn secure_mount(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::api::SecureMountRequest) -> ::ttrpc::Result<super::api::SecureMountResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/api.SecureMountService/SecureMount is not supported".to_string())))
+    }
+}
+
+pub fn create_secure_mount_service(service: Arc<Box<dyn SecureMountService + Send + Sync>>) -> HashMap<String, ::ttrpc::r#async::Service> {
+    let mut ret = HashMap::new();
+    let mut methods = HashMap::new();
+    let streams = HashMap::new();
+
+    methods.insert("SecureMount".to_string(),
+                    Box::new(SecureMountMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
+
+    ret.insert("api.SecureMountService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
+    ret
+}

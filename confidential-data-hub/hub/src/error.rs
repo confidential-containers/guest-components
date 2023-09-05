@@ -20,4 +20,7 @@ pub enum Error {
 
     #[error("unseal secret failed: {0}")]
     UnsealSecret(String),
+
+    #[error("secure mount failed: {0}")]
+    SecureMount(String),
 }
