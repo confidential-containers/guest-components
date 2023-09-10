@@ -15,6 +15,7 @@ anyhow = { workspace = true, optional = true }
 async-trait.workspace = true
 base64.workspace = true
 clap = { workspace = true, features = [ "derive" ], optional = true }
+image = { path = "../image", default-features = false }
 kms = { path = "../kms", default-features = false }
 lazy_static.workspace = true
 log.workspace = true
@@ -33,12 +34,12 @@ ttrpc-codegen = { workspace = true, optional = true }
 default = ["kbs"]
 
 # support aliyun stacks (KMS, ..)
-aliyun = ["secret/aliyun"]
+aliyun = ["image/aliyun", "secret/aliyun"]
 
 # support coco-KBS to provide confidential resources
-kbs = ["kms/kbs", "secret/kbs"]
+kbs = ["image/kbs", "kms/kbs", "secret/kbs"]
 
 # support sev to provide confidential resources
-sev = ["kms/sev", "dep:sev", "secret/sev"]
+sev = ["image/sev", "kms/sev", "dep:sev", "secret/sev"]
 
 bin = ["anyhow", "clap", "protobuf", "tokio/signal", "ttrpc", "ttrpc-codegen"]
