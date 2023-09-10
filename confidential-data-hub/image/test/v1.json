@@ -1,0 +1,6 @@
+{
+  "kid": "kbs:///kbs:///default/key/1",
+  "wrapped_data": "HRCsBgH/ueLcWlUqP8j8BTREOjQXSNQvjPejbSTQt8Nu4pve07TmkSqRzu2yR7l9WbbZ4O5PChsnjuNLzu6cHvOqVSSCu3aIDYVs8VUPJSO434G+K5sAvsCSJK454VMQEY9zW8y45BrYUYV5jEKSsKvR1iqFkpzcdwI8tjGTpRMlu1gGQ6mA1jgVZKgnK8hcihmgCu24oKPmdd0pMKfiFDbzmsnRw4CS+eRb1Dp3vgLD6hCMz5BV7abaq7VMWP7SKJtJJbpYzqlKiI5i0r1qO8U=",
+  "iv": "M02S5rumY5JybMLQ",
+  "wrap_type": "A256GCM"
+}
