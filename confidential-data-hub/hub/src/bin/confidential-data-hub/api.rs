@@ -513,16 +513,265 @@ impl ::protobuf::reflect::ProtobufValue for GetResourceResponse {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
+#[derive(PartialEq,Clone,Default,Debug)]
+// @@protoc_insertion_point(message:api.KeyProviderKeyWrapProtocolInput)
+pub struct KeyProviderKeyWrapProtocolInput {
+    // message fields
+    // @@protoc_insertion_point(field:api.KeyProviderKeyWrapProtocolInput.KeyProviderKeyWrapProtocolInput)
+    pub KeyProviderKeyWrapProtocolInput: ::std::vec::Vec<u8>,
+    // special fields
+    // @@protoc_insertion_point(special_field:api.KeyProviderKeyWrapProtocolInput.special_fields)
+    pub special_fields: ::protobuf::SpecialFields,
+}
+
+impl<'a> ::std::default::Default for &'a KeyProviderKeyWrapProtocolInput {
+    fn default() -> &'a KeyProviderKeyWrapProtocolInput {
+        <KeyProviderKeyWrapProtocolInput as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl KeyProviderKeyWrapProtocolInput {
+    pub fn new() -> KeyProviderKeyWrapProtocolInput {
+        ::std::default::Default::default()
+    }
+
+    fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
+        let mut fields = ::std::vec::Vec::with_capacity(1);
+        let mut oneofs = ::std::vec::Vec::with_capacity(0);
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "KeyProviderKeyWrapProtocolInput",
+            |m: &KeyProviderKeyWrapProtocolInput| { &m.KeyProviderKeyWrapProtocolInput },
+            |m: &mut KeyProviderKeyWrapProtocolInput| { &mut m.KeyProviderKeyWrapProtocolInput },
+        ));
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<KeyProviderKeyWrapProtocolInput>(
+            "KeyProviderKeyWrapProtocolInput",
+            fields,
+            oneofs,
+        )
+    }
+}
+
+impl ::protobuf::Message for KeyProviderKeyWrapProtocolInput {
+    const NAME: &'static str = "KeyProviderKeyWrapProtocolInput";
+
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
+        while let Some(tag) = is.read_raw_tag_or_eof()? {
+            match tag {
+                10 => {
+                    self.KeyProviderKeyWrapProtocolInput = is.read_bytes()?;
+                },
+                tag => {
+                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u64 {
+        let mut my_size = 0;
+        if !self.KeyProviderKeyWrapProtocolInput.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.KeyProviderKeyWrapProtocolInput);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
+        self.special_fields.cached_size().set(my_size as u32);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
+        if !self.KeyProviderKeyWrapProtocolInput.is_empty() {
+            os.write_bytes(1, &self.KeyProviderKeyWrapProtocolInput)?;
+        }
+        os.write_unknown_fields(self.special_fields.unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn special_fields(&self) -> &::protobuf::SpecialFields {
+        &self.special_fields
+    }
+
+    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
+        &mut self.special_fields
+    }
+
+    fn new() -> KeyProviderKeyWrapProtocolInput {
+        KeyProviderKeyWrapProtocolInput::new()
+    }
+
+    fn clear(&mut self) {
+        self.KeyProviderKeyWrapProtocolInput.clear();
+        self.special_fields.clear();
+    }
+
+    fn default_instance() -> &'static KeyProviderKeyWrapProtocolInput {
+        static instance: KeyProviderKeyWrapProtocolInput = KeyProviderKeyWrapProtocolInput {
+            KeyProviderKeyWrapProtocolInput: ::std::vec::Vec::new(),
+            special_fields: ::protobuf::SpecialFields::new(),
+        };
+        &instance
+    }
+}
+
+impl ::protobuf::MessageFull for KeyProviderKeyWrapProtocolInput {
+    fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("KeyProviderKeyWrapProtocolInput").unwrap()).clone()
+    }
+}
+
+impl ::std::fmt::Display for KeyProviderKeyWrapProtocolInput {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for KeyProviderKeyWrapProtocolInput {
+    type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
+}
+
+#[derive(PartialEq,Clone,Default,Debug)]
+// @@protoc_insertion_point(message:api.KeyProviderKeyWrapProtocolOutput)
+pub struct KeyProviderKeyWrapProtocolOutput {
+    // message fields
+    // @@protoc_insertion_point(field:api.KeyProviderKeyWrapProtocolOutput.KeyProviderKeyWrapProtocolOutput)
+    pub KeyProviderKeyWrapProtocolOutput: ::std::vec::Vec<u8>,
+    // special fields
+    // @@protoc_insertion_point(special_field:api.KeyProviderKeyWrapProtocolOutput.special_fields)
+    pub special_fields: ::protobuf::SpecialFields,
+}
+
+impl<'a> ::std::default::Default for &'a KeyProviderKeyWrapProtocolOutput {
+    fn default() -> &'a KeyProviderKeyWrapProtocolOutput {
+        <KeyProviderKeyWrapProtocolOutput as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl KeyProviderKeyWrapProtocolOutput {
+    pub fn new() -> KeyProviderKeyWrapProtocolOutput {
+        ::std::default::Default::default()
+    }
+
+    fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
+        let mut fields = ::std::vec::Vec::with_capacity(1);
+        let mut oneofs = ::std::vec::Vec::with_capacity(0);
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "KeyProviderKeyWrapProtocolOutput",
+            |m: &KeyProviderKeyWrapProtocolOutput| { &m.KeyProviderKeyWrapProtocolOutput },
+            |m: &mut KeyProviderKeyWrapProtocolOutput| { &mut m.KeyProviderKeyWrapProtocolOutput },
+        ));
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<KeyProviderKeyWrapProtocolOutput>(
+            "KeyProviderKeyWrapProtocolOutput",
+            fields,
+            oneofs,
+        )
+    }
+}
+
+impl ::protobuf::Message for KeyProviderKeyWrapProtocolOutput {
+    const NAME: &'static str = "KeyProviderKeyWrapProtocolOutput";
+
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
+        while let Some(tag) = is.read_raw_tag_or_eof()? {
+            match tag {
+                10 => {
+                    self.KeyProviderKeyWrapProtocolOutput = is.read_bytes()?;
+                },
+                tag => {
+                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u64 {
+        let mut my_size = 0;
+        if !self.KeyProviderKeyWrapProtocolOutput.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.KeyProviderKeyWrapProtocolOutput);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
+        self.special_fields.cached_size().set(my_size as u32);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
+        if !self.KeyProviderKeyWrapProtocolOutput.is_empty() {
+            os.write_bytes(1, &self.KeyProviderKeyWrapProtocolOutput)?;
+        }
+        os.write_unknown_fields(self.special_fields.unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn special_fields(&self) -> &::protobuf::SpecialFields {
+        &self.special_fields
+    }
+
+    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
+        &mut self.special_fields
+    }
+
+    fn new() -> KeyProviderKeyWrapProtocolOutput {
+        KeyProviderKeyWrapProtocolOutput::new()
+    }
+
+    fn clear(&mut self) {
+        self.KeyProviderKeyWrapProtocolOutput.clear();
+        self.special_fields.clear();
+    }
+
+    fn default_instance() -> &'static KeyProviderKeyWrapProtocolOutput {
+        static instance: KeyProviderKeyWrapProtocolOutput = KeyProviderKeyWrapProtocolOutput {
+            KeyProviderKeyWrapProtocolOutput: ::std::vec::Vec::new(),
+            special_fields: ::protobuf::SpecialFields::new(),
+        };
+        &instance
+    }
+}
+
+impl ::protobuf::MessageFull for KeyProviderKeyWrapProtocolOutput {
+    fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("KeyProviderKeyWrapProtocolOutput").unwrap()).clone()
+    }
+}
+
+impl ::std::fmt::Display for KeyProviderKeyWrapProtocolOutput {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for KeyProviderKeyWrapProtocolOutput {
+    type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\tapi.proto\x12\x03api\"+\n\x11UnsealSecretInput\x12\x16\n\x06secret\
     \x18\x01\x20\x01(\x0cR\x06secret\"2\n\x12UnsealSecretOutput\x12\x1c\n\tp\
     laintext\x18\x01\x20\x01(\x0cR\tplaintext\"8\n\x12GetResourceRequest\x12\
     \"\n\x0cResourcePath\x18\x01\x20\x01(\tR\x0cResourcePath\"1\n\x13GetReso\
-    urceResponse\x12\x1a\n\x08Resource\x18\x01\x20\x01(\x0cR\x08Resource2V\n\
+    urceResponse\x12\x1a\n\x08Resource\x18\x01\x20\x01(\x0cR\x08Resource\"k\
+    \n\x1fKeyProviderKeyWrapProtocolInput\x12H\n\x1fKeyProviderKeyWrapProtoc\
+    olInput\x18\x01\x20\x01(\x0cR\x1fKeyProviderKeyWrapProtocolInput\"n\n\
+    \x20KeyProviderKeyWrapProtocolOutput\x12J\n\x20KeyProviderKeyWrapProtoco\
+    lOutput\x18\x01\x20\x01(\x0cR\x20KeyProviderKeyWrapProtocolOutput2V\n\
     \x13SealedSecretService\x12?\n\x0cUnsealSecret\x12\x16.api.UnsealSecretI\
     nput\x1a\x17.api.UnsealSecretOutput2V\n\x12GetResourceService\x12@\n\x0b\
     GetResource\x12\x17.api.GetResourceRequest\x1a\x18.api.GetResourceRespon\
-    seb\x06proto3\
+    se2n\n\x12KeyProviderService\x12X\n\tUnWrapKey\x12$.api.KeyProviderKeyWr\
+    apProtocolInput\x1a%.api.KeyProviderKeyWrapProtocolOutputb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
@@ -540,11 +789,13 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
     file_descriptor.get(|| {
         let generated_file_descriptor = generated_file_descriptor_lazy.get(|| {
             let mut deps = ::std::vec::Vec::with_capacity(0);
-            let mut messages = ::std::vec::Vec::with_capacity(4);
+            let mut messages = ::std::vec::Vec::with_capacity(6);
             messages.push(UnsealSecretInput::generated_message_descriptor_data());
             messages.push(UnsealSecretOutput::generated_message_descriptor_data());
             messages.push(GetResourceRequest::generated_message_descriptor_data());
             messages.push(GetResourceResponse::generated_message_descriptor_data());
+            messages.push(KeyProviderKeyWrapProtocolInput::generated_message_descriptor_data());
+            messages.push(KeyProviderKeyWrapProtocolOutput::generated_message_descriptor_data());
             let mut enums = ::std::vec::Vec::with_capacity(0);
             ::protobuf::reflect::GeneratedFileDescriptor::new_generated(
                 file_descriptor_proto(),
