@@ -278,6 +278,7 @@ dependencies = [
  "hyper-tls",
  "kbs-types",
  "log",
+ "nix 0.26.4",
  "occlum_dcap",
  "serde",
  "serde_json",
@@ -5518,7 +5519,7 @@ checksum = "9d0e916b1148c8e263850e1ebcbd046f333e0683c724876bb0da63ea4373dc8a"
 [[package]]
 name = "tdx-attest-rs"
 version = "0.1.2"
-source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.16#71557c7d1d869b6bd6f95566c051cbd098549509"
+source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.18#6882afad8644c27db162b40994402c8ad2a7fb32"
 dependencies = [
  "tdx-attest-sys",
 ]
@@ -5526,7 +5527,7 @@ dependencies = [
 [[package]]
 name = "tdx-attest-sys"
 version = "0.1.0"
-source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.16#71557c7d1d869b6bd6f95566c051cbd098549509"
+source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.18#6882afad8644c27db162b40994402c8ad2a7fb32"
 dependencies = [
  "bindgen 0.59.2",
 ]
