@@ -79,7 +79,7 @@ impl DataHub for Hub {
         let res = storage
             .mount()
             .await
-            .map_err(|e| Error::SecureMount(format!("mount failed: {e}")))?;
+            .map_err(|e| Error::SecureMount(e.to_string()))?;
         Ok(res)
     }
 }

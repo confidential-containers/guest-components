@@ -1,0 +1,27 @@
+[package]
+name = "storage"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = "1"
+serde_json = "1"
+thiserror.workspace = true
+tokio = { workspace = true, features = ["fs"] }
+anyhow.workspace = true
+secret = { path = "../secret" }
+base64.workspace = true
+log.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+tokio = { workspace = true, features = ["rt", "macros" ] }
+
+[build-dependencies]
+anyhow.workspace = true
+
+[features]
+default = ["aliyun"]
+aliyun = []
