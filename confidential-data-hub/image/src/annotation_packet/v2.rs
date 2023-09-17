@@ -7,13 +7,13 @@
 //! the previous version.
 
 use base64::{engine::general_purpose::STANDARD, Engine};
-use kms::{plugins::VaultProvider, Annotations, ProviderSettings};
+use kms::{Annotations, ProviderSettings};
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
 use crate::{Error, Result};
 
-const DEFAULT_VERSION: &str = "0.1.0";
+pub const DEFAULT_VERSION: &str = "0.1.0";
 
 /// New version format of AnnotationPacket
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
@@ -57,7 +57,7 @@ fn default_version() -> String {
 }
 
 fn default_provider() -> String {
-    VaultProvider::Kbs.as_ref().to_string()
+    "kbs".to_string()
 }
 
 #[cfg(feature = "kbs")]
@@ -71,7 +71,7 @@ impl TryInto<super::v1::AnnotationPacket> for AnnotationPacketV2 {
             )));
         }
 
-        if self.provider != VaultProvider::Kbs.as_ref() {
+        if self.provider != "kbs" {
             return Err(Error::ConvertAnnotationPacketFailed(String::from(
                 "Provider must be `kbs`.",
             )));
