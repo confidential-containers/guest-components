@@ -23,7 +23,7 @@ use std::fs;
 use std::path::Path;
 use tokio::sync::Mutex;
 
-use crate::{Annotations, Error, Getter, Result};
+use crate::{Annotations, Error, Getter, PubkeyProvider, Result};
 
 const PEER_POD_CONFIG_PATH: &str = "/run/peerpod/daemon.json";
 
@@ -97,6 +97,13 @@ impl Getter for KbcClient {
             RealClient::Sev(c) => c.get_resource(resource_uri).await,
             RealClient::OfflineFs(c) => c.get_resource(resource_uri).await,
         }
+    }
+}
+
+#[async_trait]
+impl PubkeyProvider for KbcClient {
+    async fn get_public_key(&mut self, key_id: &str) -> Result<Vec<u8>> {
+        self.get_secret(key_id, &Annotations::new()).await
     }
 }
 
