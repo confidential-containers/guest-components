@@ -39,6 +39,14 @@ message SecureMountResponse {
     string mount_path = 1;
 }
 
+message GetPublicKeyRequest {
+    string KeyId = 1;
+}
+
+message GetPublicKeyResponse {
+    bytes PublicKeyPem = 1;
+}
+
 service SealedSecretService {
     rpc UnsealSecret(UnsealSecretInput) returns (UnsealSecretOutput) {};
 }
@@ -53,4 +61,8 @@ service KeyProviderService {
 
 service SecureMountService {
     rpc SecureMount(SecureMountRequest) returns (SecureMountResponse) {};
+}
+
+service GetPublicKeyService {
+    rpc GetPublicKey(GetPublicKeyRequest) returns (GetPublicKeyResponse) {};
 }

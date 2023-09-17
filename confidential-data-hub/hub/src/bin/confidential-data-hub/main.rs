@@ -7,8 +7,8 @@ use std::{path::Path, sync::Arc};
 
 use anyhow::{Context, Result};
 use api_ttrpc::{
-    create_get_resource_service, create_key_provider_service, create_sealed_secret_service,
-    create_secure_mount_service,
+    create_get_public_key_service, create_get_resource_service, create_key_provider_service,
+    create_sealed_secret_service, create_secure_mount_service,
 };
 use clap::Parser;
 use log::info;
@@ -60,13 +60,16 @@ async fn main() -> Result<()> {
     let get_resource_service = ttrpc_service!(create_get_resource_service);
     let key_provider_service = ttrpc_service!(create_key_provider_service);
     let secure_mount_service = ttrpc_service!(create_secure_mount_service);
+    let get_publickey_service = ttrpc_service!(create_get_public_key_service);
+
     let mut server = TtrpcServer::new()
         .bind(&cli.socket)
         .context("cannot bind cdh ttrpc service")?
         .register_service(sealed_secret_service)
         .register_service(get_resource_service)
         .register_service(secure_mount_service)
-        .register_service(key_provider_service);
+        .register_service(key_provider_service)
+        .register_service(get_publickey_service);
 
     server.start().await?;
 
