@@ -278,6 +278,7 @@ dependencies = [
  "hyper-tls",
  "kbs-types",
  "log",
+ "nix 0.26.4",
  "occlum_dcap",
  "serde",
  "serde_json",
