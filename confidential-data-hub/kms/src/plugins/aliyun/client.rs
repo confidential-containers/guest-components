@@ -18,9 +18,11 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tokio::fs;
 
-use crate::plugins::aliyun::client::dkms_api::{DecryptRequest, EncryptRequest};
+use crate::plugins::aliyun::client::dkms_api::{
+    DecryptRequest, EncryptRequest, GetPublicKeyRequest,
+};
 use crate::plugins::_IN_GUEST_DEFAULT_KEY_PATH;
-use crate::{Annotations, Decrypter, Encrypter, ProviderSettings};
+use crate::{Annotations, Decrypter, Encrypter, ProviderSettings, PubkeyProvider};
 use crate::{Error, Result};
 
 use super::annotations::{AliAnnotations, AliProviderSettings};
@@ -220,6 +222,40 @@ impl Decrypter for AliyunKmsClient {
             ))
         })?;
         Ok(decrypt_response.plaintext)
+    }
+}
+
+#[async_trait]
+impl PubkeyProvider for AliyunKmsClient {
+    /// a typical key id of aliyun KMS is like
+    /// `key-shh65012xxxmpi4oxtxxx`
+    async fn get_public_key(&mut self, key_id: &str) -> Result<Vec<u8>> {
+        let get_public_key_request = GetPublicKeyRequest {
+            key_id: key_id.into(),
+        };
+        let mut body = Vec::new();
+        get_public_key_request.encode(&mut body).map_err(|e| {
+            Error::AliyunKmsError(format!(
+                "encode get public key request using protobuf failed: {e}"
+            ))
+        })?;
+        let headers = self.build_headers("GetPublicKey", &body).map_err(|e| {
+            Error::AliyunKmsError(format!(
+                "build get public key request http header failed: {e}"
+            ))
+        })?;
+
+        let res = self
+            .do_request(body, headers)
+            .await
+            .map_err(|e| Error::AliyunKmsError(format!("do request to kms server failed: {e}")))?;
+
+        let decrypt_response = dkms_api::GetPublicKeyResponse::decode(&res[..]).map_err(|e| {
+            Error::AliyunKmsError(format!(
+                "decode decrypt response using protobuf failed: {e}"
+            ))
+        })?;
+        Ok(decrypt_response.public_key.into())
     }
 }
 

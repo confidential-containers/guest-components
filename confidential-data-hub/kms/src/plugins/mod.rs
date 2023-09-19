@@ -72,6 +72,9 @@ pub enum PublicKeyProvider {
     #[cfg(feature = "kbs")]
     #[strum(ascii_case_insensitive)]
     Kbs,
+    #[cfg(feature = "aliyun")]
+    #[strum(ascii_case_insensitive)]
+    Aliyun,
 }
 
 /// Create a new [`PubkeyProvider`] by given provider name
@@ -83,13 +86,18 @@ async fn new_public_key_provider(provider_name: &str) -> Result<Box<dyn PubkeyPr
         PublicKeyProvider::Kbs => {
             Ok(Box::new(kbs::KbcClient::new().await?) as Box<dyn PubkeyProvider>)
         }
+        #[cfg(feature = "aliyun")]
+        PublicKeyProvider::Aliyun => Ok(Box::new(
+            aliyun::AliyunKmsClient::from_provider_settings(&ProviderSettings::default()).await?,
+        ) as Box<dyn PubkeyProvider>),
     }
 }
 
 /// Get the public key due to the given `key_id`.
-/// For example:
+/// For example `key_id`:
 ///
-/// public key from KBS: `kbs:///default/key/1`
+/// - KBS: `kbs:///default/key/1`
+/// - Aliyun KMS: `aliyun://key-shh65012626mpi4oxxxxx`
 pub async fn get_public_key(key_id: &str) -> Result<Vec<u8>> {
     let (provider, keyid) = key_id
         .split_once("://")
