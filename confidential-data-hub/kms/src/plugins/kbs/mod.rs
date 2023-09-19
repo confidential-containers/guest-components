@@ -18,9 +18,14 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use lazy_static::lazy_static;
 pub use resource_uri::ResourceUri;
+use serde::Deserialize;
+use std::fs;
+use std::path::Path;
 use tokio::sync::Mutex;
 
 use crate::{Annotations, Error, Getter, Result};
+
+const PEER_POD_CONFIG_PATH: &str = "/peerpod/daemon.json";
 
 enum RealClient {
     #[cfg(feature = "kbs")]
@@ -32,7 +37,13 @@ enum RealClient {
 
 impl RealClient {
     async fn new() -> Result<Self> {
-        let (kbc, _kbs_host) = get_aa_params_from_cmdline().await?;
+        // Check for /peerpod/daemon.json to see if we are in a peer pod
+        // If so we need to read from the agent-config file, not /proc/cmdline
+        let (kbc, _kbs_host) = match Path::new(PEER_POD_CONFIG_PATH).exists() {
+            true => get_aa_params_from_config_file().await?,
+            false => get_aa_params_from_cmdline().await?,
+        };
+
         let c = match &kbc[..] {
             #[cfg(feature = "kbs")]
             "cc_kbc" => RealClient::Cc(cc_kbc::CcKbc::new(&_kbs_host).await?),
@@ -125,4 +136,38 @@ async fn get_aa_params_from_cmdline() -> Result<(String, String)> {
     }
 
     Ok((aa_kbc_params[0].to_string(), aa_kbc_params[1].to_string()))
+}
+
+async fn get_aa_params_from_config_file() -> Result<(String, String)> {
+    // We only care about the aa_kbc_params value at the moment
+    #[derive(Debug, Deserialize)]
+    struct AgentConfig {
+        aa_kbc_params: Option<String>,
+    }
+
+    // Hard-code agent config path to "/etc/agent-config.toml" as a workaround
+    let agent_config_str = fs::read_to_string("/etc/agent-config.toml").map_err(|e| {
+        Error::KbsClientError(format!("Failed to read /etc/agent-config.toml file: {e}"))
+    })?;
+
+    let agent_config: AgentConfig = toml::from_str(&agent_config_str).map_err(|e| {
+        Error::KbsClientError(format!("Failed to deserialize /etc/agent-config.toml: {e}"))
+    })?;
+
+    let aa_kbc_params = agent_config.aa_kbc_params.ok_or(Error::KbsClientError(
+        "no `aa_kbc_params` found in /etc/agent-config.toml".into(),
+    ))?;
+
+    let aa_kbc_params_vec = aa_kbc_params.split("::").collect::<Vec<&str>>();
+
+    if aa_kbc_params_vec.len() != 2 {
+        return Err(Error::KbsClientError(
+            "Illegal `aa_kbc_params` format provided in /etc/agent-config.toml.".to_string(),
+        ));
+    }
+
+    Ok((
+        aa_kbc_params_vec[0].to_string(),
+        aa_kbc_params_vec[1].to_string(),
+    ))
 }
