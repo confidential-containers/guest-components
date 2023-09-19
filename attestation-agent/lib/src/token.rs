@@ -3,10 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use kbs_protocol::{evidence_provider::NativeEvidenceProvider, KbsClientBuilder};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tokio::fs;
+
+const PEER_POD_CONFIG_PATH: &str = "/peerpod/daemon.json";
 
 #[derive(Serialize)]
 struct Message {
@@ -16,7 +18,14 @@ struct Message {
 
 pub(crate) async fn get_kbs_token() -> Result<Vec<u8>> {
     let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
-    let kbs_host_addr = get_kbs_host_from_cmdline().await?;
+
+    // Check for /peerpod/daemon.json to see if we are in a peer pod
+    // If so we need to read from the agent-config file, not /proc/cmdline
+    let kbs_host_addr = match Path::new(PEER_POD_CONFIG_PATH).exists() {
+        true => get_kbs_host_from_config_file().await?,
+        false => get_kbs_host_from_cmdline().await?,
+    };
+
     let mut client =
         KbsClientBuilder::with_evidence_provider(evidence_provider, &kbs_host_addr).build()?;
 
@@ -46,4 +55,23 @@ pub(crate) async fn get_kbs_host_from_cmdline() -> Result<String> {
         .to_string();
 
     Ok(kbs_host)
+}
+
+pub(crate) async fn get_kbs_host_from_config_file() -> Result<String> {
+    // We only care about the aa_kbc_params value at the moment
+    #[derive(Debug, Deserialize)]
+    struct AgentConfig {
+        aa_kbc_params: Option<String>,
+    }
+
+    // Hard-code agent config path to "/etc/agent-config.toml" as a workaround
+    let agent_config_str = fs::read_to_string("/etc/agent-config.toml")
+        .context("Failed to read /etc/agent-config.toml file")?;
+
+    let agent_config: AgentConfig = toml::from_str(&agent_config_str)
+        .context("Failed to deserialize /etc/agent-config.toml")?;
+
+    agent_config.aa_kbc_params.ok_or(anyhow!(
+        "no `aa_kbc_params` found in /etc/agent-config.toml!",
+    ))
 }
