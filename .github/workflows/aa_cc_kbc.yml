@@ -7,11 +7,13 @@ on:
     paths:
       - 'attestation-agent/kbc/cc_kbc/**'
       - 'attestation-agent/kbs_protocol/**'
+      - 'attestation-agent/lib/**'
       - '.github/workflows/aa_cc_kbc.yml'
   pull_request:
     paths:
       - 'attestation-agent/kbc/cc_kbc/**'
       - 'attestation-agent/kbs_protocol/**'
+      - 'attestation-agent/lib/**'
       - '.github/workflows/aa_cc_kbc.yml'
   create:
   workflow_dispatch:
