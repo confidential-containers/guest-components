@@ -3,9 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use kbs_protocol::{evidence_provider::NativeEvidenceProvider, KbsClientBuilder};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use tokio::fs;
 
 const PEER_POD_CONFIG_PATH: &str = "/peerpod/daemon.json";
@@ -66,10 +67,11 @@ pub(crate) async fn get_kbs_host_from_config_file() -> Result<String> {
 
     // Hard-code agent config path to "/etc/agent-config.toml" as a workaround
     let agent_config_str = fs::read_to_string("/etc/agent-config.toml")
-        .context("Failed to read /etc/agent-config.toml file")?;
+        .await
+        .map_err(|e| anyhow!("Failed to read /etc/agent-config.toml file: {e}"))?;
 
     let agent_config: AgentConfig = toml::from_str(&agent_config_str)
-        .context("Failed to deserialize /etc/agent-config.toml")?;
+        .map_err(|e| anyhow!("Failed to deserialize /etc/agent-config.toml: {e}"))?;
 
     agent_config.aa_kbc_params.ok_or(anyhow!(
         "no `aa_kbc_params` found in /etc/agent-config.toml!",
