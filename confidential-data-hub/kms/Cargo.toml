@@ -13,6 +13,7 @@ bincode = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 const_format.workspace = true
 crypto = { path = "../../attestation-agent/deps/crypto", optional = true }
+ehsm_client = {git = "https://github.com/intel/ehsm", rev = "f84688688e724dfd080c1dc491db3e58415cc5b7", optional = true }
 hex = { workspace = true, optional = true }
 kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = ["passport", "aa_token", "openssl"], optional = true }
 lazy_static.workspace = true
@@ -41,8 +42,9 @@ anyhow.workspace = true
 tonic-build.workspace = true
 
 [features]
-default = ["aliyun", "kbs"]
+default = ["aliyun", "kbs", "ehsm"]
 
 aliyun = ["chrono", "hex", "openssl", "prost", "reqwest", "sha2", "tonic"]
 kbs = ["kbs_protocol"]
+ehsm = ["ehsm_client"]
 sev = ["bincode", "crypto", "dep:sev", "prost", "tonic", "uuid", "zeroize"]

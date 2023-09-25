@@ -16,6 +16,10 @@ pub enum Error {
     #[error("Kbs client error: {0}")]
     KbsClientError(String),
 
+    #[cfg(feature = "ehsm")]
+    #[error("eHSM-KMS client error: {0}")]
+    EhsmKmsError(String),
+
     #[error("Unsupported provider: {0}")]
     UnsupportedProvider(String),
 }
