@@ -14,11 +14,17 @@ pub mod aliyun;
 
 pub mod kbs;
 
+#[cfg(feature = "ehsm")]
+pub mod ehsm;
+
 #[derive(AsRefStr, EnumString)]
 pub enum DecryptorProvider {
     #[cfg(feature = "aliyun")]
     #[strum(ascii_case_insensitive)]
     Aliyun,
+
+    #[cfg(feature = "ehsm")]
+    Ehsm,
 }
 
 /// Create a new [`Decrypter`] by given provider name and [`ProviderSettings`]
@@ -32,6 +38,11 @@ pub async fn new_decryptor(
         #[cfg(feature = "aliyun")]
         DecryptorProvider::Aliyun => Ok(Box::new(
             aliyun::AliyunKmsClient::from_provider_settings(&_provider_settings).await?,
+        ) as Box<dyn Decrypter>),
+
+        #[cfg(feature = "ehsm")]
+        DecryptorProvider::Ehsm => Ok(Box::new(
+            ehsm::EhsmKmsClient::from_provider_settings(&_provider_settings).await?,
         ) as Box<dyn Decrypter>),
     }
 }
