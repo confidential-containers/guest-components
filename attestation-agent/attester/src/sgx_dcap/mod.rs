@@ -48,10 +48,10 @@ pub struct SgxDcapAttester {}
 #[async_trait::async_trait]
 impl Attester for SgxDcapAttester {
     async fn get_evidence(&self, nonce: String, tee_data: String) -> Result<String> {
-        let mut report_data = hash_reportdata::<sha2::Sha384>(nonce, tee_data);
+        let mut report_data = hash_reportdata::<sha2::Sha256>(nonce, tee_data);
 
-        if report_data.len() > 64 {
-            bail!("SGX Attester: Report data should be SHA384 base64 String");
+        if report_data.len() != 32 {
+            bail!("SGX Attester: Report data should be a SHA256 hash");
         }
 
         report_data.resize(64, 0);

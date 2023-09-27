@@ -31,13 +31,11 @@ pub struct TdxAttester {}
 #[async_trait::async_trait]
 impl Attester for TdxAttester {
     async fn get_evidence(&self, nonce: String, tee_data: String) -> Result<String> {
-        let mut report_data = hash_reportdata::<sha2::Sha384>(nonce, tee_data);
+        let report_data = hash_reportdata::<sha2::Sha512>(nonce, tee_data);
 
-        if report_data.len() > 64 {
-            bail!("TDX Attester: Report data must be no more than 64 bytes");
+        if report_data.len() != 64 {
+            bail!("TDX Attester: Report data should be a SHA512 hash");
         }
-
-        report_data.resize(64, 0);
 
         let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
             d: report_data.as_slice().try_into()?,
