@@ -65,20 +65,18 @@ async fn unseal_secret(secret: Vec<u8>) -> Result<Vec<u8>> {
     let res = secret
         .unseal()
         .await
-        .map_err(|e| Error::SecureMountFailed(format!("unseal failed: {e}")))?;
+        .map_err(|e| Error::UnsealSecretFailed(format!("unseal failed: {e}")))?;
     Ok(res)
 }
 
-async fn get_plain(secret: &str) -> Result<String> {
+async fn get_plaintext_secret(secret: &str) -> Result<String> {
     if secret.starts_with("sealed.") {
         let tmp = secret
             .strip_prefix("sealed.")
             .ok_or(Error::SecureMountFailed(
                 "strip_prefix \"sealed.\" failed".to_string(),
             ))?;
-        let unsealed = unseal_secret(tmp.into())
-            .await
-            .map_err(|e| Error::SecureMountFailed(format!("unseal secret failed: {e}")))?;
+        let unsealed = unseal_secret(tmp.into()).await?;
 
         return String::from_utf8(unsealed)
             .map_err(|e| Error::SecureMountFailed(format!("convert to String failed: {e}")));
@@ -91,27 +89,23 @@ async fn get_plain(secret: &str) -> Result<String> {
 impl Oss {
     pub(crate) async fn mount(&self, source: String, mount_point: String) -> Result<String> {
         // unseal secret
-        let plain_ak_id = get_plain(&self.ak_id)
-            .await
-            .map_err(|e| Error::SecureMountFailed(format!("get_plain failed: {e}")))?;
-        let plain_ak_secret = get_plain(&self.ak_secret)
-            .await
-            .map_err(|e| Error::SecureMountFailed(format!("get_plain failed: {e}")))?;
+        let plain_ak_id = get_plaintext_secret(&self.ak_id).await?;
+        let plain_ak_secret = get_plaintext_secret(&self.ak_secret).await?;
 
         // create ossfs passwd file
         let mut ossfs_passwd = File::create(OSSFS_PASSWD_FILE)
-            .map_err(|e| Error::SecureMountFailed(format!("create file failed: {e}")))?;
+            .map_err(|e| Error::FileError(format!("create file failed: {e}")))?;
         let metadata = ossfs_passwd
             .metadata()
-            .map_err(|e| Error::SecureMountFailed(format!("create metadata failed: {e}")))?;
+            .map_err(|e| Error::FileError(format!("create metadata failed: {e}")))?;
         let mut permissions = metadata.permissions();
         permissions.set_mode(0o600);
         ossfs_passwd
             .set_permissions(permissions)
-            .map_err(|e| Error::SecureMountFailed(format!("set permissions failed: {e}")))?;
+            .map_err(|e| Error::FileError(format!("set permissions failed: {e}")))?;
         ossfs_passwd
             .write_all(format!("{}:{}:{}", self.bucket, plain_ak_id, plain_ak_secret).as_bytes())
-            .map_err(|e| Error::SecureMountFailed(format!("write file failed: {e}")))?;
+            .map_err(|e| Error::FileError(format!("write file failed: {e}")))?;
 
         // generate parameters for ossfs command, and execute
         let mut opts = self
@@ -141,16 +135,14 @@ impl Oss {
         // decrypt with gocryptfs if needed
         if self.encrypted == "gocryptfs" {
             // unseal secret
-            let plain_passwd = get_plain(&self.enc_passwd)
-                .await
-                .map_err(|e| Error::SecureMountFailed(format!("get_plain failed: {e}")))?;
+            let plain_passwd = get_plaintext_secret(&self.enc_passwd).await?;
 
             // create gocryptfs passwd file
             let mut gocryptfs_passwd = File::create(GOCRYPTFS_PASSWD_FILE)
-                .map_err(|e| Error::SecureMountFailed(format!("create file failed: {e}")))?;
+                .map_err(|e| Error::FileError(format!("create file failed: {e}")))?;
             gocryptfs_passwd
                 .write_all(plain_passwd.as_bytes())
-                .map_err(|e| Error::SecureMountFailed(format!("write file failed: {e}")))?;
+                .map_err(|e| Error::FileError(format!("write file failed: {e}")))?;
 
             // generate parameters for gocryptfs, and execute
             let parameters = vec![

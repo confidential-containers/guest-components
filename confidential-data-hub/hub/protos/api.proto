@@ -36,7 +36,7 @@ message SecureMountRequest {
 }
 
 message SecureMountResponse {
-    string mountPath = 1;
+    string mount_path = 1;
 }
 
 service SealedSecretService {
