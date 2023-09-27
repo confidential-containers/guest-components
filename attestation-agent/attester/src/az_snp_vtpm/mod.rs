@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::Attester;
+use super::{Attester, hash_reportdata};
 use anyhow::*;
 use az_snp_vtpm::{imds, vtpm};
 use log::debug;
@@ -29,7 +29,9 @@ struct Evidence {
 
 #[async_trait::async_trait]
 impl Attester for AzSnpVtpmAttester {
-    async fn get_evidence(&self, report_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, nonce: String, tee_data: String) -> Result<String> {
+        let report_data = hash_reportdata::<sha2::Sha384>(nonce, tee_data);
+
         let report = vtpm::get_report()?;
         let quote = vtpm::get_quote(&report_data)?;
         let certs = imds::get_certs()?;

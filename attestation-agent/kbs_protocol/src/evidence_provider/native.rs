@@ -27,9 +27,9 @@ impl NativeEvidenceProvider {
 
 #[async_trait]
 impl EvidenceProvider for NativeEvidenceProvider {
-    async fn get_evidence(&self, runtime_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, nonce: String, tee_data: String) -> Result<String> {
         self.0
-            .get_evidence(runtime_data)
+            .get_evidence(nonce, tee_data)
             .await
             .map_err(|e| Error::GetEvidence(e.to_string()))
     }

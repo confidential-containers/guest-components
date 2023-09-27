@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::Attester;
+use super::{Attester, hash_reportdata};
 use anyhow::*;
 use serde::{Deserialize, Serialize};
 use sev::firmware::guest::AttestationReport;
@@ -26,7 +26,9 @@ pub struct SnpAttester {}
 
 #[async_trait::async_trait]
 impl Attester for SnpAttester {
-    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, nonce: String, tee_data: String) -> Result<String> {
+        let mut report_data = hash_reportdata::<sha2::Sha384>(nonce, tee_data);
+
         if report_data.len() > 64 {
             bail!("SNP Attester: Report data must be no more than 64 bytes");
         }

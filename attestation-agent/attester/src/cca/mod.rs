@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::Attester;
+use super::{Attester, hash_reportdata};
 use anyhow::*;
 use base64::Engine;
 use nix::fcntl::{open, OFlag};
@@ -40,7 +40,9 @@ nix::ioctl_readwrite!(cca_attestation_request, b'A', 1, cca_ioctl_request);
 
 #[async_trait::async_trait]
 impl Attester for CCAAttester {
-    async fn get_evidence(&self, mut challenge: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, nonce: String, tee_data: String) -> Result<String> {
+        let mut challenge = hash_reportdata::<sha2::Sha384>(nonce, tee_data);
+
         challenge.resize(64, 0);
         let token = attestation(challenge)?;
         let evidence = CcaEvidence { token };
@@ -100,8 +102,7 @@ mod tests {
     #[tokio::test]
     async fn test_cca_get_evidence() {
         let attester = CCAAttester::default();
-        let report_data: Vec<u8> = vec![0; 48];
-        let evidence = attester.get_evidence(report_data).await;
+        let evidence = attester.get_evidence("nonce".to_string(), "tee_data".to_string()).await;
         assert!(evidence.is_ok());
     }
 }
