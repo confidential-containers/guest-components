@@ -973,8 +973,8 @@ impl ::protobuf::reflect::ProtobufValue for SecureMountRequest {
 // @@protoc_insertion_point(message:api.SecureMountResponse)
 pub struct SecureMountResponse {
     // message fields
-    // @@protoc_insertion_point(field:api.SecureMountResponse.mountPath)
-    pub mountPath: ::std::string::String,
+    // @@protoc_insertion_point(field:api.SecureMountResponse.mount_path)
+    pub mount_path: ::std::string::String,
     // special fields
     // @@protoc_insertion_point(special_field:api.SecureMountResponse.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
@@ -995,9 +995,9 @@ impl SecureMountResponse {
         let mut fields = ::std::vec::Vec::with_capacity(1);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
         fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
-            "mountPath",
-            |m: &SecureMountResponse| { &m.mountPath },
-            |m: &mut SecureMountResponse| { &mut m.mountPath },
+            "mount_path",
+            |m: &SecureMountResponse| { &m.mount_path },
+            |m: &mut SecureMountResponse| { &mut m.mount_path },
         ));
         ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<SecureMountResponse>(
             "SecureMountResponse",
@@ -1018,7 +1018,7 @@ impl ::protobuf::Message for SecureMountResponse {
         while let Some(tag) = is.read_raw_tag_or_eof()? {
             match tag {
                 10 => {
-                    self.mountPath = is.read_string()?;
+                    self.mount_path = is.read_string()?;
                 },
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
@@ -1032,8 +1032,8 @@ impl ::protobuf::Message for SecureMountResponse {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u64 {
         let mut my_size = 0;
-        if !self.mountPath.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.mountPath);
+        if !self.mount_path.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.mount_path);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
@@ -1041,8 +1041,8 @@ impl ::protobuf::Message for SecureMountResponse {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
-        if !self.mountPath.is_empty() {
-            os.write_string(1, &self.mountPath)?;
+        if !self.mount_path.is_empty() {
+            os.write_string(1, &self.mount_path)?;
         }
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1061,13 +1061,13 @@ impl ::protobuf::Message for SecureMountResponse {
     }
 
     fn clear(&mut self) {
-        self.mountPath.clear();
+        self.mount_path.clear();
         self.special_fields.clear();
     }
 
     fn default_instance() -> &'static SecureMountResponse {
         static instance: SecureMountResponse = SecureMountResponse {
-            mountPath: ::std::string::String::new(),
+            mount_path: ::std::string::String::new(),
             special_fields: ::protobuf::SpecialFields::new(),
         };
         &instance
@@ -1105,10 +1105,10 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     driver\x12%\n\x0edriver_options\x18\x02\x20\x03(\tR\rdriverOptions\x12\
     \x16\n\x06source\x18\x03\x20\x01(\tR\x06source\x12\x16\n\x06fstype\x18\
     \x04\x20\x01(\tR\x06fstype\x12\x18\n\x07options\x18\x05\x20\x03(\tR\x07o\
-    ptions\x12\x1f\n\x0bmount_point\x18\x06\x20\x01(\tR\nmountPoint\"3\n\x13\
-    SecureMountResponse\x12\x1c\n\tmountPath\x18\x01\x20\x01(\tR\tmountPath2\
-    V\n\x13SealedSecretService\x12?\n\x0cUnsealSecret\x12\x16.api.UnsealSecr\
-    etInput\x1a\x17.api.UnsealSecretOutput2V\n\x12GetResourceService\x12@\n\
+    ptions\x12\x1f\n\x0bmount_point\x18\x06\x20\x01(\tR\nmountPoint\"4\n\x13\
+    SecureMountResponse\x12\x1d\n\nmount_path\x18\x01\x20\x01(\tR\tmountPath\
+    2V\n\x13SealedSecretService\x12?\n\x0cUnsealSecret\x12\x16.api.UnsealSec\
+    retInput\x1a\x17.api.UnsealSecretOutput2V\n\x12GetResourceService\x12@\n\
     \x0bGetResource\x12\x17.api.GetResourceRequest\x1a\x18.api.GetResourceRe\
     sponse2n\n\x12KeyProviderService\x12X\n\tUnWrapKey\x12$.api.KeyProviderK\
     eyWrapProtocolInput\x1a%.api.KeyProviderKeyWrapProtocolOutput2V\n\x12Sec\

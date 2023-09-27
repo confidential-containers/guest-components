@@ -24,14 +24,14 @@ pub struct Storage {
 impl Storage {
     pub async fn mount(&self) -> Result<String> {
         for driver_option in &self.driver_options {
-            let (volumetype, metadata) =
+            let (volume_type, metadata) =
                 driver_option
                     .split_once('=')
                     .ok_or(Error::SecureMountFailed(
                         "split by \"=\" failed".to_string(),
                     ))?;
 
-            match volumetype {
+            match volume_type {
                 #[cfg(feature = "aliyun")]
                 "alibaba-cloud-oss" => {
                     let oss: Oss = serde_json::from_str(metadata).map_err(|e| {
@@ -44,7 +44,7 @@ impl Storage {
                         .await;
                 }
                 other => {
-                    warn!("skip mount info with unsupported volumetype: {other}");
+                    warn!("skip mount info with unsupported volume_type: {other}");
                 }
             };
         }

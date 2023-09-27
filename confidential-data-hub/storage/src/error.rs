@@ -11,4 +11,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("secure mount failed: {0}")]
     SecureMountFailed(String),
+
+    #[error("file error: {0}")]
+    FileError(String),
+
+    #[error("unseal secret failed: {0}")]
+    UnsealSecretFailed(String),
 }

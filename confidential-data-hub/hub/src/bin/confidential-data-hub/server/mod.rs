@@ -180,7 +180,7 @@ impl SecureMountService for Server {
         })?;
 
         let mut reply = SecureMountResponse::new();
-        reply.mountPath = resource;
+        reply.mount_path = resource;
         debug!("send back the resource");
         Ok(reply)
     }
