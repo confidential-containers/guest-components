@@ -190,7 +190,12 @@ impl AttestationAPIs for AttestationAgent {
     async fn get_evidence(&mut self, runtime_data: &[u8]) -> Result<Vec<u8>> {
         let tee_type = detect_tee_type().ok_or(anyhow!("no supported tee type found!"))?;
         let attester = TryInto::<BoxedAttester>::try_into(tee_type)?;
-        let evidence = attester.get_evidence(runtime_data.to_vec()).await?;
+        let evidence = attester
+            .get_evidence(
+                "".to_string(),
+                std::str::from_utf8(runtime_data)?.to_string(),
+            )
+            .await?;
         Ok(evidence.into_bytes())
     }
 }
