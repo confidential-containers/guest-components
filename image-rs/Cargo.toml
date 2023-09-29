@@ -32,6 +32,7 @@ oci-spec = "0.6.2"
 ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = ["async-io"], optional = true }
 prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
+reqwest = { workspace = true, features = ["json"], optional = true }
 sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"], optional = true }
 serde = { workspace = true, features = ["serde_derive", "rc"] }
 serde_json.workspace = true
@@ -111,6 +112,7 @@ signature-cosign-native = ["signature-cosign", "sigstore/cosign-native-tls"]
 oci-distribution-rustls = ["oci-distribution/rustls-tls"]
 oci-distribution-native = ["oci-distribution/native-tls"]
 
+signature-simple-xrss = ["signature-simple", "dep:reqwest"]
 signature-simple = ["signature", "sequoia-openpgp", "serde_yaml"]
 
 snapshot-overlayfs = ["nix"]

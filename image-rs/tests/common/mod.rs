@@ -18,9 +18,14 @@ const OFFLINE_FS_KBC_RESOURCE_SCRIPT: &str = "scripts/install_offline_fs_kbc_fil
 /// Attestation Agent Key Provider Parameter
 pub const AA_PARAMETER: &str = "provider:attestation-agent:offline_fs_kbc::null";
 
-const OFFLINE_FS_KBC_RESOURCE: &str = "aa-offline_fs_kbc-resources.json";
+/// Attestation Agent Offline Filesystem KBC resources file for general tests that use images stored in the quay.io registry
+pub const AA_OFFLINE_FS_KBC_RESOURCES_FILE: &str = "aa-offline_fs_kbc-resources.json";
 
-pub async fn prepare_test() {
+/// Attestation Agent Offline Filesystem KBC resources file for XRSS tests
+#[cfg(feature = "signature-simple-xrss")]
+pub const AA_OFFLINE_FS_KBC_RESOURCES_FILE_XRSS: &str = "aa-offline_fs_kbc-resources-for-icr.json";
+
+pub async fn prepare_test(offline_fs_kbc_resources: &str) {
     // Check whether is in root privilege
     assert!(
         nix::unistd::Uid::effective().is_root(),
@@ -36,7 +41,7 @@ pub async fn prepare_test() {
 
     Command::new(OFFLINE_FS_KBC_RESOURCE_SCRIPT)
         .arg("install")
-        .arg(OFFLINE_FS_KBC_RESOURCE)
+        .arg(offline_fs_kbc_resources)
         .output()
         .await
         .expect("Install offline-fs-kbcs's resources failed.");
