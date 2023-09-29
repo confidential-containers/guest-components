@@ -30,7 +30,7 @@ const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_ttrpc.conf";
 #[tokio::test]
 #[serial]
 async fn test_decrypt_layers(#[case] image: &str) {
-    common::prepare_test().await;
+    common::prepare_test(common::AA_OFFLINE_FS_KBC_RESOURCES_FILE).await;
     // Init AA
     let _aa = common::start_attestation_agent()
         .await

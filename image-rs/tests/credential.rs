@@ -19,7 +19,7 @@ pub mod common;
 #[tokio::test]
 #[serial]
 async fn test_use_credential(#[case] image_ref: &str, #[case] auth_file_uri: &str) {
-    common::prepare_test().await;
+    common::prepare_test(common::AA_OFFLINE_FS_KBC_RESOURCES_FILE).await;
 
     // Init AA
     let _aa = common::start_attestation_agent()
