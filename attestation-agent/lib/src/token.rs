@@ -22,13 +22,15 @@ pub(crate) async fn get_kbs_token() -> Result<Vec<u8>> {
 
     // Check for /peerpod/daemon.json to see if we are in a peer pod
     // If so we need to read from the agent-config file, not /proc/cmdline
-    let kbs_host_addr = match Path::new(PEER_POD_CONFIG_PATH).exists() {
-        true => get_kbs_host_from_config_file().await?,
-        false => get_kbs_host_from_cmdline().await?,
+    let kbc_params = match Path::new(PEER_POD_CONFIG_PATH).exists() {
+        true => get_kbc_params_from_config_file().await?,
+        false => get_kbc_params_from_cmdline().await?,
     };
 
+    let kbs_host_url = extract_kbs_host_url(&kbc_params)?;
+
     let mut client =
-        KbsClientBuilder::with_evidence_provider(evidence_provider, &kbs_host_addr).build()?;
+        KbsClientBuilder::with_evidence_provider(evidence_provider, &kbs_host_url).build()?;
 
     let (token, tee_keypair) = client.get_token().await?;
     let message = Message {
@@ -40,16 +42,8 @@ pub(crate) async fn get_kbs_token() -> Result<Vec<u8>> {
     Ok(res)
 }
 
-pub(crate) async fn get_kbs_host_from_cmdline() -> Result<String> {
-    let cmdline = fs::read_to_string("/proc/cmdline").await?;
-    let kbs_host = cmdline
-        .split_ascii_whitespace()
-        .find(|para| para.starts_with("agent.aa_kbc_params="))
-        .ok_or(anyhow!(
-            "no `agent.aa_kbc_params` provided in kernel commandline!",
-        ))?
-        .strip_prefix("agent.aa_kbc_params=")
-        .expect("must have one")
+fn extract_kbs_host_url(kbc_params: &str) -> Result<String> {
+    let kbs_host = kbc_params
         .split("::")
         .last()
         .ok_or(anyhow!("illegal input `agent.aa_kbc_params` format",))?
@@ -58,7 +52,21 @@ pub(crate) async fn get_kbs_host_from_cmdline() -> Result<String> {
     Ok(kbs_host)
 }
 
-pub(crate) async fn get_kbs_host_from_config_file() -> Result<String> {
+pub(crate) async fn get_kbc_params_from_cmdline() -> Result<String> {
+    let cmdline = fs::read_to_string("/proc/cmdline").await?;
+    let kbc_params = cmdline
+        .split_ascii_whitespace()
+        .find(|para| para.starts_with("agent.aa_kbc_params="))
+        .ok_or(anyhow!(
+            "no `agent.aa_kbc_params` provided in kernel commandline!",
+        ))?
+        .strip_prefix("agent.aa_kbc_params=")
+        .expect("must have one")
+        .to_string();
+    Ok(kbc_params)
+}
+
+pub(crate) async fn get_kbc_params_from_config_file() -> Result<String> {
     // We only care about the aa_kbc_params value at the moment
     #[derive(Debug, Deserialize)]
     struct AgentConfig {
