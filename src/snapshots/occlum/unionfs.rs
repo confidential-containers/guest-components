@@ -219,7 +219,8 @@ impl Snapshotter for Unionfs {
 
         // create environment for Occlum
         create_environment(mount_path)?;
-        for path in mount_path {
+        let mount_paths = fs::read_dir(mount_path).unwrap();
+        for path in mount_paths {
             info!("Name in mount_path {}", path.unwrap().path().display());
         }
         nix::mount::umount(mount_path)?;
