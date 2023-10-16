@@ -124,6 +124,7 @@ CC KBC supports different kinds of hardware TEE attesters, now
 | sgx-attester        | Intel SGX DCAP              |
 | snp-attester        | AMD SEV-SNP                 |
 | az-snp-vtpm-attester| Azure SEV-SNP CVM           |
+| az-tdx-vtpm-attester| Azure TDX CVM               |
 | cca-attester        | Arm Confidential Compute Architecture (CCA)  |
 
 To build cc kbc with all available attesters and install, use
