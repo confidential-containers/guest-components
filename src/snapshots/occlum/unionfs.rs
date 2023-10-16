@@ -160,9 +160,9 @@ impl Snapshotter for Unionfs {
         let paths = fs::read_dir("/").unwrap();
 
         for path in paths {
-            println!("Name: {}", path.unwrap().path().display())
+            info!("Name: {}", path.unwrap().path().display())
         }
-        fs::create_dir_all(Path::new("/keys").join(cid).join("key.txt"));
+        fs::create_dir_all(Path::new("/keys").join(cid));
         let file_create_path = Path::new("/keys").join(cid).join("key.txt");
         create_example_file(&PathBuf::from(&file_create_path))
             .map_err(|e| {
