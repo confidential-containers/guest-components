@@ -158,9 +158,6 @@ impl Snapshotter for Unionfs {
         //     })?;
         
 
-        for path in paths {
-                    info!("Name: {}", path.unwrap().path().display())
-                }
         // For mounting trusted UnionFS at runtime of occlum,
         // you can refer to https://github.com/occlum/occlum/blob/master/docs/runtime_mount.md#1-mount-trusted-unionfs-consisting-of-sefss.
         // "c7-32-b3-ed-44-df-ec-7b-25-2d-9a-32-38-8d-58-61" is a hardcode key used to encrypt or decrypt the FS currently,
@@ -205,6 +202,9 @@ impl Snapshotter for Unionfs {
 
         info!("Moving to create key file here");
         let paths = fs::read_dir("/").unwrap();
+        for path in paths {
+            info!("Name: {}", path.unwrap().path().display());
+        }
 
         fs::create_dir_all(mount_path.join("/keys").join(cid));
         let file_create_path = mount_path.join("/keys").join(cid).join("key.txt");
@@ -219,7 +219,9 @@ impl Snapshotter for Unionfs {
 
         // create environment for Occlum
         create_environment(mount_path)?;
-
+        for path in mount_path {
+            info!("Name in mount_path {}", path.unwrap().path().display());
+        }
         nix::mount::umount(mount_path)?;
 
         Ok(MountPoint {
