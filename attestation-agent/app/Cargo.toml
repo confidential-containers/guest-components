@@ -40,6 +40,7 @@ cc_kbc_all_attesters = ["cc_kbc", "attestation_agent/all-attesters"]
 cc_kbc_tdx = ["cc_kbc", "attestation_agent/tdx-attester"]
 cc_kbc_sgx = ["cc_kbc", "attestation_agent/sgx-attester"]
 cc_kbc_az_snp_vtpm = ["cc_kbc", "attestation_agent/az-snp-vtpm-attester"]
+cc_kbc_az_tdx_vtpm = ["cc_kbc", "attestation_agent/az-tdx-vtpm-attester"]
 cc_kbc_snp = ["cc_kbc", "attestation_agent/snp-attester"]
 
 eaa_kbc = ["attestation_agent/eaa_kbc"]
