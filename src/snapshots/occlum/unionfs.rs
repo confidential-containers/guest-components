@@ -156,23 +156,11 @@ impl Snapshotter for Unionfs {
         //         e
         //     )
         //     })?;
-        info!("Moving to create key file here");
-        let paths = fs::read_dir("/").unwrap();
+        
 
         for path in paths {
-            info!("Name: {}", path.unwrap().path().display())
-        }
-        fs::create_dir_all(Path::new("/keys").join(cid));
-        let file_create_path = Path::new("/keys").join(cid).join("key.txt");
-        create_example_file(&PathBuf::from(&file_create_path))
-            .map_err(|e| {
-                anyhow!(
-                "failed to write file {:?} with error: {}",
-                file_create_path,
-                e
-            )
-            })?;
-
+                    info!("Name: {}", path.unwrap().path().display())
+                }
         // For mounting trusted UnionFS at runtime of occlum,
         // you can refer to https://github.com/occlum/occlum/blob/master/docs/runtime_mount.md#1-mount-trusted-unionfs-consisting-of-sefss.
         // "c7-32-b3-ed-44-df-ec-7b-25-2d-9a-32-38-8d-58-61" is a hardcode key used to encrypt or decrypt the FS currently,
@@ -214,6 +202,20 @@ impl Snapshotter for Unionfs {
                 .ok_or(anyhow!("Pop() failed from Vec"))?;
             CopyBuilder::new(layer, &mount_path).overwrite(true).run()?;
         }
+
+        info!("Moving to create key file here");
+        let paths = fs::read_dir("/").unwrap();
+
+        fs::create_dir_all(mount_path.join("/keys").join(cid));
+        let file_create_path = mount_path.join("/keys").join(cid).join("key.txt");
+        create_example_file(&PathBuf::from(&file_create_path))
+            .map_err(|e| {
+                anyhow!(
+                "failed to write file {:?} with error: {}",
+                file_create_path,
+                e
+            )
+            })?;
 
         // create environment for Occlum
         create_environment(mount_path)?;
