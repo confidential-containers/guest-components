@@ -213,16 +213,16 @@ impl Snapshotter for Unionfs {
                 e
             )
             })?;
-
+        fs::create_dir_all("/keys")?;
         let fs_type_2 = String::from("hostfs");
-        let mount_path_2 = Path::new("/home");
+        let mount_path_2 = Path::new("/keys");
         let mountpoint_c = CString::new(mount_path_2.to_str().unwrap()).unwrap();
         nix::mount::mount(
             Some(fs_type_2.as_str()),
             mountpoint_c.as_c_str(),
             Some(fs_type_2.as_str()),
             flags,
-            Some("dir=/keys"),
+            Some("dir=/host"),
         ).unwrap_or_else(|e| panic!("mount failed: {e}"));
 
         // create environment for Occlum
