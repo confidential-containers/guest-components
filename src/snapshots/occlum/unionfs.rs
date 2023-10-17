@@ -213,11 +213,20 @@ impl Snapshotter for Unionfs {
                 e
             )
             })?;
+        
         fs::create_dir_all("/keys").unwrap();
+        let file_create_path_2 = Path::new("/keys").join("key.txt");
+        create_example_file(&PathBuf::from(&file_create_path_2))
+        .map_err(|e| {
+            anyhow!(
+            "failed to write file {:?} with error: {}",
+            file_create_path,
+            e
+        )
+        })?;
         let fs_type_2 = String::from("hostfs");
         let mount_path_2 = Path::new("/keys");
-        let paths = fs::read_dir("/");
-        for path in paths {
+        for path in fs::read_dir("/").unwrap() {
             info!("Name: {}", path.unwrap().path().display())
         }
         let mountpoint_c = CString::new(mount_path_2.to_str().unwrap()).unwrap();
