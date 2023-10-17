@@ -215,7 +215,7 @@ impl Snapshotter for Unionfs {
             })?;
 
         let fs_type_2 = String::from("hostfs");
-        let mount_path_2 = Path::new("/mnt");
+        let mount_path_2 = Path::new("/home");
         let mountpoint_c = CString::new(mount_path_2.to_str().unwrap()).unwrap();
         nix::mount::mount(
             Some(fs_type_2.as_str()),
