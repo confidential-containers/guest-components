@@ -9,6 +9,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{Error, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
+use std::ffi::CString;
 
 use anyhow::{anyhow, Context, Result};
 use dircpy::CopyBuilder;
