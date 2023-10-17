@@ -145,7 +145,6 @@ impl Snapshotter for Unionfs {
         let sefs_base = Path::new("/images").join(cid).join("sefs");
         let unionfs_lowerdir = sefs_base.join("lower");
         let unionfs_upperdir = sefs_base.join("upper");
-        info!("Cid : {}", cid.to_string_lossy().to_string());
 
         // info!("Moving to create file here");
         // let file_create_path = Path::new("/etc").join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
@@ -202,13 +201,9 @@ impl Snapshotter for Unionfs {
         }
 
         info!("Moving to create key file here");
-        let paths = fs::read_dir("/").unwrap();
-        for path in paths {
-            info!("Name: {}", path.unwrap().path().display());
-        }
 
         fs::create_dir_all(mount_path.join("/keys").join(cid))?;
-        let file_create_path = mount_path.join("/keys").join(cid).join("key.txt");
+        let file_create_path = mount_path.join("/keys").join("key.txt");
         create_example_file(&PathBuf::from(&file_create_path))
             .map_err(|e| {
                 anyhow!(
@@ -218,23 +213,19 @@ impl Snapshotter for Unionfs {
             )
             })?;
 
+        let fs_type_2 = String::from("hostfs");
+        let mount_path_2 = Path::new("/mnt");
+        let mountpoint_c = CString::new(mount_path_2.to_str().unwrap()).unwrap();
+        nix::mount::mount(
+            Some(fs_type_2.as_str()),
+            mountpoint_c.as_c_str(),
+            Some(fs_type_2.as_str()),
+            flags,
+            Some("dir=/keys"),
+        ).unwrap_or_else(|e| panic!("mount failed: {e}"));
+
         // create environment for Occlum
         create_environment(mount_path)?;
-        let mount_paths = fs::read_dir(mount_path).unwrap();
-        for path in mount_paths {
-            info!("Name in mount_path {}", path.unwrap().path().display());
-        }
-        let etc_file_create_path = Path::new("/etc").join("/keys").join(cid).join("etckey.txt");
-        let etc_paths = fs::read_dir("/etc").unwrap();
-        for path in etc_paths {
-            info!("Name in /etc {}", path.unwrap().path().display());
-        }
-
-        let images_file_create_path = Path::new("/images").join("imageskey.txt");
-        let etc_paths = fs::read_dir("/images").unwrap();
-        for path in etc_paths {
-            info!("Name in /images {}", path.unwrap().path().display());
-        }
         nix::mount::umount(mount_path)?;
 
         Ok(MountPoint {
