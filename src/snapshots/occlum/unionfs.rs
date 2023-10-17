@@ -145,6 +145,7 @@ impl Snapshotter for Unionfs {
         let sefs_base = Path::new("/images").join(cid).join("sefs");
         let unionfs_lowerdir = sefs_base.join("lower");
         let unionfs_upperdir = sefs_base.join("upper");
+        info!("Cid : {}", cid);
 
         // info!("Moving to create file here");
         // let file_create_path = Path::new("/etc").join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
@@ -206,7 +207,7 @@ impl Snapshotter for Unionfs {
             info!("Name: {}", path.unwrap().path().display());
         }
 
-        fs::create_dir_all(mount_path.join("/keys").join(cid));
+        fs::create_dir_all(mount_path.join("/keys").join(cid))?;
         let file_create_path = mount_path.join("/keys").join(cid).join("key.txt");
         create_example_file(&PathBuf::from(&file_create_path))
             .map_err(|e| {
@@ -222,6 +223,17 @@ impl Snapshotter for Unionfs {
         let mount_paths = fs::read_dir(mount_path).unwrap();
         for path in mount_paths {
             info!("Name in mount_path {}", path.unwrap().path().display());
+        }
+        let etc_file_create_path = Path::new("/etc").join("/keys").join(cid).join("etckey.txt");
+        let etc_paths = fs::read_dir("/etc").unwrap();
+        for path in etc_paths {
+            info!("Name in /etc {}", path.unwrap().path().display());
+        }
+
+        let images_file_create_path = Path::new("/images").join("imageskey.txt");
+        let etc_paths = fs::read_dir("/images").unwrap();
+        for path in etc_paths {
+            info!("Name in /images {}", path.unwrap().path().display());
         }
         nix::mount::umount(mount_path)?;
 
