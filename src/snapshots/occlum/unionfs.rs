@@ -203,18 +203,18 @@ impl Snapshotter for Unionfs {
 
         info!("Moving to create key file here");
 
-        fs::create_dir_all(mount_path.join("/keys").join(cid))?;
-        let file_create_path = mount_path.join("/keys").join("key.txt");
-        create_example_file(&PathBuf::from(&file_create_path))
-            .map_err(|e| {
-                anyhow!(
-                "failed to write file {:?} with error: {}",
-                file_create_path,
-                e
-            )
-            })?;
+        // fs::create_dir_all(mount_path.join("/keys").join(cid))?;
+        // let file_create_path = mount_path.join("/keys").join("key.txt");
+        // create_example_file(&PathBuf::from(&file_create_path))
+        //     .map_err(|e| {
+        //         anyhow!(
+        //         "failed to write file {:?} with error: {}",
+        //         file_create_path,
+        //         e
+        //     )
+        //     })?;
         
-        fs::create_dir_all("/keys").unwrap();
+        fs::create_dir_all("/keys")?;
         let file_create_path_2 = Path::new("/keys").join("key.txt");
         create_example_file(&PathBuf::from(&file_create_path_2))
         .map_err(|e| {
@@ -225,9 +225,13 @@ impl Snapshotter for Unionfs {
         )
         })?;
         let fs_type_2 = String::from("hostfs");
-        let mount_path_2 = Path::new("/keyzs");
+        let mount_path_2 = Path::new("/keys");
         for path in fs::read_dir("/").unwrap() {
             info!("Name: {}", path.unwrap().path().display())
+        }
+
+        for file in fs::read_dir("/keys").unwrap() {
+            info!("File in /keys: {}" file.unwrap().path().display())
         }
         let mountpoint_c = CString::new(mount_path_2.to_str().unwrap()).unwrap();
         nix::mount::mount(
@@ -235,8 +239,8 @@ impl Snapshotter for Unionfs {
             mountpoint_c.as_c_str(),
             Some(fs_type_2.as_str()),
             flags,
-            Some("dir=/images"),
-        ).unwrap_or_else(|e| info!("mount failed: {}", e));
+            Some("dir=/etc"),
+        ).unwrap_or_else(|e| error!("mount failed: {}", e));
 
         // create environment for Occlum
         create_environment(mount_path)?;
