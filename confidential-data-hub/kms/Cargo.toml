@@ -18,6 +18,7 @@ kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features
 lazy_static.workspace = true
 log.workspace = true
 openssl = { workspace = true, optional = true }
+p12 = { version = "0.6.3", optional = true }
 prost = { workspace = true, optional = true }
 resource_uri = { path = "../../attestation-agent/deps/resource_uri" }
 sha2 = { workspace = true, optional = true }
@@ -31,6 +32,7 @@ tokio = { workspace = true, features = ["fs"] }
 toml.workspace = true
 tonic = { workspace = true, optional = true }
 uuid = { workspace = true, features = ["serde", "v4"], optional = true }
+yasna = { version = "0.5.2", optional = true }
 zeroize = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -44,6 +46,6 @@ tonic-build.workspace = true
 [features]
 default = ["aliyun", "kbs"]
 
-aliyun = ["chrono", "hex", "openssl", "prost", "reqwest", "sha2", "tonic"]
+aliyun = ["chrono", "hex", "openssl", "p12", "prost", "reqwest", "sha2", "tonic", "yasna"]
 kbs = ["kbs_protocol"]
 sev = ["bincode", "crypto", "dep:sev", "prost", "tonic", "uuid", "zeroize"]
