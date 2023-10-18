@@ -58,6 +58,7 @@ impl AliyunKmsClient {
         let endpoint = format!("https://{kms_instance_id}.cryptoservice.kms.aliyuncs.com");
         let cert = Self::read_kms_instance_cert(cert_pem.as_bytes())?;
         let http_client = ClientBuilder::new()
+            .use_rustls_tls()
             .add_root_certificate(cert)
             .build()
             .map_err(|e| Error::AliyunKmsError(format!("build http client failed: {e}")))?;
