@@ -239,7 +239,7 @@ impl Snapshotter for Unionfs {
             mountpoint_c.as_c_str(),
             Some(fs_type_2.as_str()),
             flags,
-            Some("dir=/keys"),
+            Some("dir=/run/enclave-cc/containers/"),
         ).unwrap_or_else(|e| log::error!("mount failed: {}", e));
 
         // create environment for Occlum
