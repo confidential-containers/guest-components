@@ -220,7 +220,7 @@ impl Snapshotter for Unionfs {
         .map_err(|e| {
             anyhow!(
             "failed to write file {:?} with error: {}",
-            file_create_path,
+            file_create_path_2,
             e
         )
         })?;
@@ -231,7 +231,7 @@ impl Snapshotter for Unionfs {
         }
 
         for file in fs::read_dir("/keys").unwrap() {
-            info!("File in /keys: {}" file.unwrap().path().display())
+            info!("File in /keys: {}", file.unwrap().path().display())
         }
         let mountpoint_c = CString::new(mount_path_2.to_str().unwrap()).unwrap();
         nix::mount::mount(
@@ -240,7 +240,7 @@ impl Snapshotter for Unionfs {
             Some(fs_type_2.as_str()),
             flags,
             Some("dir=/etc"),
-        ).unwrap_or_else(|e| error!("mount failed: {}", e));
+        ).unwrap_or_else(|e| log::error!("mount failed: {}", e));
 
         // create environment for Occlum
         create_environment(mount_path)?;
