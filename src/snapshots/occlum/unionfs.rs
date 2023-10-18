@@ -235,7 +235,7 @@ impl Snapshotter for Unionfs {
             mountpoint_c.as_c_str(),
             Some(fs_type_2.as_str()),
             flags,
-            Some("dir=."),
+            Some("dir=/images"),
         ).unwrap_or_else(|e| info!("mount failed: {}", e));
 
         // create environment for Occlum
