@@ -55,7 +55,7 @@ impl AliyunKmsClient {
         let credential = Credential::new(client_key, password).map_err(|e| {
             Error::AliyunKmsError(format!("create credential of the kms instance failed: {e}"))
         })?;
-        let endpoint = format!("https://{kms_instance_id}.cryptoservice.kms.aliyuncs.com");
+        let endpoint = format!("{kms_instance_id}.cryptoservice.kms.aliyuncs.com");
         let cert = Self::read_kms_instance_cert(cert_pem.as_bytes())?;
         let http_client = ClientBuilder::new()
             .use_rustls_tls()
