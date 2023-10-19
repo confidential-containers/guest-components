@@ -215,7 +215,7 @@ impl Snapshotter for Unionfs {
         //     })?;
         
         fs::create_dir_all("/keys")?;
-        let file_create_path_2 = Path::new("/keys").join("key.txt");
+        let file_create_path_2 = Path::new("/keys").join(cid).join("key.txt");
         create_example_file(&PathBuf::from(&file_create_path_2))
         .map_err(|e| {
             anyhow!(
@@ -225,7 +225,7 @@ impl Snapshotter for Unionfs {
         )
         })?;
         let fs_type_2 = String::from("hostfs");
-        let mount_path_2 = Path::new("/etc");
+        let mount_path_2 = Path::new("/keys");
         for path in fs::read_dir("/").unwrap() {
             info!("Name: {}", path.unwrap().path().display())
         }
@@ -239,7 +239,7 @@ impl Snapshotter for Unionfs {
             mountpoint_c.as_c_str(),
             Some(fs_type_2.as_str()),
             flags,
-            Some("dir=/images"),
+            Some("dir=/keys"),
         ).unwrap_or_else(|e| log::error!("mount failed: {}", e));
 
         // create environment for Occlum
