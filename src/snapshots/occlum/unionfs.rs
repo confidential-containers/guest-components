@@ -214,7 +214,7 @@ impl Snapshotter for Unionfs {
         //     )
         //     })?;
         let keys_dir = Path::new("/keys").join(cid).join("keys");
-        fs::create_dir_all(keys_dir)?;
+        fs::create_dir_all(keys_dir.clone())?;
         let file_create_path_2 = keys_dir.join("key.txt");
         create_example_file(&PathBuf::from(&file_create_path_2))
         .map_err(|e| {
