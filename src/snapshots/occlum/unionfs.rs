@@ -57,7 +57,7 @@ fn create_example_file(path: &PathBuf) -> Result<()> {
         .with_context(|| format!("Failed to create file: {:?}", path))?;
 
     // Write "hello world!" to the file
-    file.write_all(b"hello world!")
+    file.write_all(b"c7-32-b3-ed-44-df-ec-7b-25-2d-9a-32-38-8d-58-61")
         .with_context(|| format!("Failed to write to file: {:?}", path))?;
 
     Ok(())
