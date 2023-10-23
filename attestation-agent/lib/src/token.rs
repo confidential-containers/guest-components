@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tokio::fs;
 
-const PEER_POD_CONFIG_PATH: &str = "/peerpod/daemon.json";
+const PEER_POD_CONFIG_PATH: &str = "/run/peerpod/daemon.json";
 
 #[derive(Serialize)]
 struct Message {
@@ -20,7 +20,7 @@ struct Message {
 pub(crate) async fn get_kbs_token() -> Result<Vec<u8>> {
     let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
 
-    // Check for /peerpod/daemon.json to see if we are in a peer pod
+    // Check for /run/peerpod/daemon.json to see if we are in a peer pod
     // If so we need to read from the agent-config file, not /proc/cmdline
     let kbc_params = match Path::new(PEER_POD_CONFIG_PATH).exists() {
         true => get_kbc_params_from_config_file().await?,
