@@ -25,7 +25,7 @@ use tokio::sync::Mutex;
 
 use crate::{Annotations, Error, Getter, Result};
 
-const PEER_POD_CONFIG_PATH: &str = "/peerpod/daemon.json";
+const PEER_POD_CONFIG_PATH: &str = "/run/peerpod/daemon.json";
 
 enum RealClient {
     #[cfg(feature = "kbs")]
@@ -37,7 +37,7 @@ enum RealClient {
 
 impl RealClient {
     async fn new() -> Result<Self> {
-        // Check for /peerpod/daemon.json to see if we are in a peer pod
+        // Check for /run/peerpod/daemon.json to see if we are in a peer pod
         // If so we need to read from the agent-config file, not /proc/cmdline
         let (kbc, _kbs_host) = match Path::new(PEER_POD_CONFIG_PATH).exists() {
             true => get_aa_params_from_config_file().await?,
