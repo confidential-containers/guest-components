@@ -192,6 +192,7 @@ impl Snapshotter for Unionfs {
         let sealing_keys_dir = Path::new("/keys").join(cid).join("keys");
         fs::create_dir_all(sealing_keys_dir.clone())?;
         let file_create_path_2 = sealing_keys_dir.join("key.txt");
+        pirntln!("Getting SGX key");
         let key = rsgx_get_key(rsgx_key_request_t::SGX_KEYSELECT_SEAL, None);
         match key {
             Ok(k) => {
@@ -200,7 +201,7 @@ impl Snapshotter for Unionfs {
                 println!("SGX Key: {:?}", sgx_key);
             },
             Err(err) => {
-                eprintln!("Error getting SGX key: {:?}", err);
+                println!("Error getting SGX key: {:?}", err);
             }   
         }
         let formatted_key: String = sgx_key.iter()
