@@ -17,6 +17,7 @@ use fs_extra;
 use fs_extra::dir;
 use log::{warn, info};
 use nix::mount::MsFlags;
+use sgx_tservice::rsgx_get_key;
 
 use crate::snapshots::{MountPoint, Snapshotter};
 
@@ -131,7 +132,6 @@ impl Snapshotter for Unionfs {
         // the source type of runtime mount is "unionfs".
         let fs_type = String::from("unionfs");
         let source = Path::new(&fs_type);
-        log::error!("mount_path {}", mount_path.display());
 
         if !mount_path.exists() {
             fs::create_dir_all(mount_path)?;
@@ -146,18 +146,6 @@ impl Snapshotter for Unionfs {
         let sefs_base = Path::new("/images").join(cid).join("sefs");
         let unionfs_lowerdir = sefs_base.join("lower");
         let unionfs_upperdir = sefs_base.join("upper");
-
-        // info!("Moving to create file here");
-        // let file_create_path = Path::new("/etc").join("foo.txt"); //Path::new("/tmp/coco/agent/rootfs/images/test/foo.txt");
-        // create_example_file(&PathBuf::from(&file_create_path))
-        //     .map_err(|e| {
-        //         anyhow!(
-        //         "failed to write file {:?} with error: {}",
-        //         file_create_path,
-        //         e
-        //     )
-        //     })?;
-        
 
         // For mounting trusted UnionFS at runtime of occlum,
         // you can refer to https://github.com/occlum/occlum/blob/master/docs/runtime_mount.md#1-mount-trusted-unionfs-consisting-of-sefss.
@@ -200,22 +188,26 @@ impl Snapshotter for Unionfs {
                 .ok_or(anyhow!("Pop() failed from Vec"))?;
             CopyBuilder::new(layer, &mount_path).overwrite(true).run()?;
         }
-
-        info!("Moving to create key file here");
-
-        // fs::create_dir_all(mount_path.join("/keys").join(cid))?;
-        // let file_create_path = mount_path.join("/keys").join("key.txt");
-        // create_example_file(&PathBuf::from(&file_create_path))
-        //     .map_err(|e| {
-        //         anyhow!(
-        //         "failed to write file {:?} with error: {}",
-        //         file_create_path,
-        //         e
-        //     )
-        //     })?;
-        let keys_dir = Path::new("/keys").join(cid).join("keys");
-        fs::create_dir_all(keys_dir.clone())?;
-        let file_create_path_2 = keys_dir.join("key.txt");
+        
+        let sealing_keys_dir = Path::new("/keys").join(cid).join("keys");
+        fs::create_dir_all(sealing_keys_dir.clone())?;
+        let file_create_path_2 = sealing_keys_dir.join("key.txt");
+        let key = rsgx_get_key(rsgx_key_request_t::SGX_KEYSELECT_SEAL, None);
+        match key {
+            Ok(k) => {
+                // The key contains the 128-bit SGX key
+                let sgx_key = k.key;
+                println!("SGX Key: {:?}", sgx_key);
+            },
+            Err(err) => {
+                eprintln!("Error getting SGX key: {:?}", err);
+            }   
+        }
+        let formatted_key: String = sgx_key.iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect::<Vec<_>>()
+            .join("-");
+        println!("SGX formatted Key: {}", formatted_key);
         create_example_file(&PathBuf::from(&file_create_path_2))
         .map_err(|e| {
             anyhow!(
@@ -224,20 +216,15 @@ impl Snapshotter for Unionfs {
             e
         )
         })?;
-        let fs_type_2 = String::from("hostfs");
-        let mount_path_2 = Path::new("/keys");
-        for path in fs::read_dir("/").unwrap() {
-            info!("Name: {}", path.unwrap().path().display())
-        }
+        
+        let hostfs_fstype = String::from("hostfs");
+        let keys_mount_path = Path::new("/keys");
 
-        for file in fs::read_dir("/keys").unwrap() {
-            info!("File in /keys: {}", file.unwrap().path().display())
-        }
-        let mountpoint_c = CString::new(mount_path_2.to_str().unwrap()).unwrap();
+        let mountpoint_c = CString::new(keys_mount_path.to_str().unwrap()).unwrap();
         nix::mount::mount(
-            Some(fs_type_2.as_str()),
+            Some(hostfs_fstype.as_str()),
             mountpoint_c.as_c_str(),
-            Some(fs_type_2.as_str()),
+            Some(hostfs_fstype.as_str()),
             flags,
             Some("dir=/keys"),
         ).unwrap_or_else(|e| log::error!("mount failed: {}", e));
