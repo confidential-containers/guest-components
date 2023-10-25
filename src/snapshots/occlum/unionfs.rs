@@ -17,7 +17,8 @@ use fs_extra;
 use fs_extra::dir;
 use log::{warn, info};
 use nix::mount::MsFlags;
-use sgx_tservice::rsgx_get_key;
+use rand::Rng;
+use std::fmt::Write;
 
 use crate::snapshots::{MountPoint, Snapshotter};
 
@@ -63,6 +64,23 @@ fn create_example_file(path: &PathBuf) -> Result<()> {
 
     Ok(())
 
+}
+
+fn generate_random_key() -> String {
+    let mut rng = rand::thread_rng();
+    let key: [u8; 16] = rng.gen();
+
+    // Format the key as a hexadecimal string
+    let mut formatted_key = String::with_capacity(35); // 2 characters for each byte + 15 hyphens
+
+    for byte in &key {
+        write!(formatted_key, "{:02x}-", byte).expect("Formatting failed");
+    }
+
+    // Remove the trailing hyphen
+    formatted_key.pop();
+
+    formatted_key
 }
 
 fn create_environment(mount_path: &Path) -> Result<()> {
@@ -151,11 +169,13 @@ impl Snapshotter for Unionfs {
         // you can refer to https://github.com/occlum/occlum/blob/master/docs/runtime_mount.md#1-mount-trusted-unionfs-consisting-of-sefss.
         // "c7-32-b3-ed-44-df-ec-7b-25-2d-9a-32-38-8d-58-61" is a hardcode key used to encrypt or decrypt the FS currently,
         // and it will be replaced with dynamic key in the near future.
+        let random_key = generate_random_key();
+        println!("Random 128-bit key: {}", random_key);
         let options = format!(
             "lowerdir={},upperdir={},key={}",
             unionfs_lowerdir.display(),
             unionfs_upperdir.display(),
-            "c7-32-b3-ed-44-df-ec-7b-25-2d-9a-32-38-8d-58-61"
+            random_key
         );
 
         let flags = MsFlags::empty();
@@ -192,23 +212,7 @@ impl Snapshotter for Unionfs {
         let sealing_keys_dir = Path::new("/keys").join(cid).join("keys");
         fs::create_dir_all(sealing_keys_dir.clone())?;
         let file_create_path_2 = sealing_keys_dir.join("key.txt");
-        pirntln!("Getting SGX key");
-        let key = rsgx_get_key(rsgx_key_request_t::SGX_KEYSELECT_SEAL, None);
-        match key {
-            Ok(k) => {
-                // The key contains the 128-bit SGX key
-                let sgx_key = k.key;
-                println!("SGX Key: {:?}", sgx_key);
-            },
-            Err(err) => {
-                println!("Error getting SGX key: {:?}", err);
-            }   
-        }
-        let formatted_key: String = sgx_key.iter()
-            .map(|byte| format!("{:02x}", byte))
-            .collect::<Vec<_>>()
-            .join("-");
-        println!("SGX formatted Key: {}", formatted_key);
+        
         create_example_file(&PathBuf::from(&file_create_path_2))
         .map_err(|e| {
             anyhow!(
