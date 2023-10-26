@@ -92,13 +92,13 @@ const _TESTS_XRSS: [_TestItem; _TEST_ITEMS_XRSS] = [
         description: "Deny pulling an unencrypted signed image with no local sigstore and a registry that does not support the X-R-S-S API extension",
     },
     _TestItem {
-        image_ref: "uk.icr.io/mattarno_image_push/busybox:signed-latest",
+        image_ref: "uk.icr.io/kata-containers/busybox:signed-latest",
         allow: true,
         signing_scheme: SigningName::SimpleSigning,
         description: "Allow pulling an unencrypted signed image from a protected registry that supports the X-R-S-S API extension with no local sigstore",
     },
     _TestItem {
-        image_ref: "uk.icr.io/mattarno_image_push/busybox:unsigned-1.35",
+        image_ref: "uk.icr.io/kata-containers/busybox:unsigned-1.35",
         allow: false,
         signing_scheme: SigningName::SimpleSigning,
         description: "Deny pulling an unencrypted and unsigned image from a protected registry that supports the X-R-S-S API extension with no local sigstore",
