@@ -89,7 +89,7 @@ Then, let's
 # define the parameters
 KEY_ID=$(cat kms-key-id.txt)
 KMS_INSTANCE_ID=$(cat kms-instance-id.txt)
-CLIENT_KEY_PASSWORD_FILE_PATH=$(pwd)/ClientKeyPassword.txt
+CLIENT_KEY_PASSWORD_FILE_PATH=$(pwd)/ClientKeyPassword.json
 CERT_PATH=$(pwd)/ca.pem
 CLIENT_KEY_FILE_PATH=$(pwd)/ClientKeyContent.json
 
