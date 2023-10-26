@@ -17,6 +17,7 @@ pub mod kbs;
 #[derive(AsRefStr, EnumString)]
 pub enum DecryptorProvider {
     #[cfg(feature = "aliyun")]
+    #[strum(ascii_case_insensitive)]
     Aliyun,
 }
 
