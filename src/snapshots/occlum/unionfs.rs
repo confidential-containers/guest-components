@@ -59,7 +59,7 @@ fn create_example_file(path: &PathBuf, key: &str) -> Result<()> {
         .with_context(|| format!("Failed to create file: {:?}", path))?;
 
     // Write "hello world!" to the file
-    file.write_all(key.as_bytes)
+    file.write_all(key.as_bytes())
         .with_context(|| format!("Failed to write to file: {:?}", path))?;
 
     Ok(())
@@ -74,7 +74,7 @@ fn generate_random_key() -> String {
     let mut formatted_key = String::with_capacity(35); // 2 characters for each byte + 15 hyphens
 
     for byte in &key {
-        FmtWrite.write!(formatted_key, "{:02x}-", byte).expect("Formatting failed");
+        std::Fmt::write!(formatted_key, "{:02x}-", byte).expect("Formatting failed");
     }
 
     // Remove the trailing hyphen
