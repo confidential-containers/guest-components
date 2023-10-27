@@ -15,7 +15,6 @@ use anyhow::{anyhow, Context, Result};
 use dircpy::CopyBuilder;
 use fs_extra;
 use fs_extra::dir;
-use log::{warn, info};
 use nix::mount::MsFlags;
 use rand::Rng;
 
@@ -219,7 +218,14 @@ impl Snapshotter for Unionfs {
             Some(hostfs_fstype.as_str()),
             flags,
             Some("dir=/keys"),
-        ).unwrap_or_else(|e| log::error!("mount failed: {}", e));
+        ).map_err(|e| {
+            anyhow!(
+                "failed to mount {:?} to {:?}, with error: {}",
+                hostfs_fstype.as_str(),
+                keys_mount_path,
+                e
+            )
+        })?;
 
         // create environment for Occlum
         create_environment(mount_path)?;
