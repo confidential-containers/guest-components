@@ -69,18 +69,9 @@ fn generate_random_key() -> String {
     let mut rng = rand::thread_rng();
     let key: [u8; 16] = rng.gen();
 
-    // Create a writer to format the key
-    let mut formatted_key = String::new();
+    let formatted_key = key.iter().map(|byte| format!("{:02x}", byte)).collect::<Vec<String>>().join("-");
 
-    // Format the key in the desired format
-    for byte in key.iter() {
-        write!(formatted_key, "{:02x}-", byte)?;
-    }
-
-    // Remove the trailing hyphen
-    formatted_key.pop();
-
-    println!("Formatted key: {}", formatted_key);
+    println!("Formatted key: {}", &formatted_key);
 
     formatted_key
 }
