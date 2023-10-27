@@ -18,7 +18,7 @@ use fs_extra::dir;
 use log::{warn, info};
 use nix::mount::MsFlags;
 use rand::Rng;
-use std::fmt::Write;
+use std::fmt::Write as FmtWrite;
 
 use crate::snapshots::{MountPoint, Snapshotter};
 
@@ -59,7 +59,7 @@ fn create_example_file(path: &PathBuf, key: &str) -> Result<()> {
         .with_context(|| format!("Failed to create file: {:?}", path))?;
 
     // Write "hello world!" to the file
-    file.write_all(b"{}", key)
+    file.write_all(key.as_bytes)
         .with_context(|| format!("Failed to write to file: {:?}", path))?;
 
     Ok(())
@@ -74,7 +74,7 @@ fn generate_random_key() -> String {
     let mut formatted_key = String::with_capacity(35); // 2 characters for each byte + 15 hyphens
 
     for byte in &key {
-        write!(formatted_key, "{:02x}-", byte).expect("Formatting failed");
+        FmtWrite.write!(formatted_key, "{:02x}-", byte).expect("Formatting failed");
     }
 
     // Remove the trailing hyphen
@@ -170,7 +170,7 @@ impl Snapshotter for Unionfs {
         // "c7-32-b3-ed-44-df-ec-7b-25-2d-9a-32-38-8d-58-61" is a hardcode key used to encrypt or decrypt the FS currently,
         // and it will be replaced with dynamic key in the near future.
         let random_key = generate_random_key();
-        println!("Random 128-bit key: {}", random_key);
+        println!("Random 128-bit key: {}", &random_key);
         let options = format!(
             "lowerdir={},upperdir={},key={}",
             unionfs_lowerdir.display(),
@@ -213,7 +213,7 @@ impl Snapshotter for Unionfs {
         fs::create_dir_all(sealing_keys_dir.clone())?;
         let file_create_path_2 = sealing_keys_dir.join("key.txt");
         
-        create_example_file(&PathBuf::from(&file_create_path_2), random_key)
+        create_example_file(&PathBuf::from(&file_create_path_2), &random_key)
         .map_err(|e| {
             anyhow!(
             "failed to write file {:?} with error: {}",
