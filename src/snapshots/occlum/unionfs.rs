@@ -53,13 +53,13 @@ fn create_dir(create_path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn create_example_file(path: &PathBuf) -> Result<()> {
+fn create_example_file(path: &PathBuf, key: &str) -> Result<()> {
     // Open the file in write mode, creating it if it doesn't exist
     let mut file = File::create(path)
         .with_context(|| format!("Failed to create file: {:?}", path))?;
 
     // Write "hello world!" to the file
-    file.write_all(b"c7-32-b3-ed-44-df-ec-7b-25-2d-9a-32-38-8d-58-61")
+    file.write_all(b"{}", key)
         .with_context(|| format!("Failed to write to file: {:?}", path))?;
 
     Ok(())
@@ -213,7 +213,7 @@ impl Snapshotter for Unionfs {
         fs::create_dir_all(sealing_keys_dir.clone())?;
         let file_create_path_2 = sealing_keys_dir.join("key.txt");
         
-        create_example_file(&PathBuf::from(&file_create_path_2))
+        create_example_file(&PathBuf::from(&file_create_path_2), random_key)
         .map_err(|e| {
             anyhow!(
             "failed to write file {:?} with error: {}",

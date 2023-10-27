@@ -31,7 +31,7 @@ oci-spec = "0.5.8"
 ocicrypt-rs = { git = "https://github.com/confidential-containers/ocicrypt-rs.git", rev = "bbbb95f", default-features = false, features = ["async-io"], optional = true }
 prost = { version = "0.11", optional = true }
 protobuf = { version = "3.2.0", optional = true }
-rand = "0.8"
+rand = "0.8.5"
 sequoia-openpgp = { version = "1.7.0", default-features = false, features = ["compression", "crypto-rust", "allow-experimental-crypto", "allow-variable-time-crypto"], optional = true }
 serde = { version = ">=1.0.27", features = ["serde_derive", "rc"] }
 serde_json = ">=1.0.9"
