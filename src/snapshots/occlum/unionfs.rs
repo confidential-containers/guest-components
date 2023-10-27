@@ -73,7 +73,7 @@ fn generate_random_key() -> String {
     let mut formatted_key = String::with_capacity(35); // 2 characters for each byte + 15 hyphens
 
     for byte in &key {
-        std::fmt::write!(formatted_key, "{:02x}-", byte).expect("Formatting failed");
+        std::fmt::write(formatted_key, "{:02x}-", byte).expect("Formatting failed");
     }
 
     // Remove the trailing hyphen
