@@ -6,7 +6,7 @@
 
 use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::{Error, ErrorKind, Write};
+use std::io::{Error, ErrorKind, self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
 use std::ffi::CString;
@@ -69,15 +69,18 @@ fn generate_random_key() -> String {
     let mut rng = rand::thread_rng();
     let key: [u8; 16] = rng.gen();
 
-    // Format the key as a hexadecimal string
-    let mut formatted_key = String::with_capacity(35); // 2 characters for each byte + 15 hyphens
+    // Create a writer to format the key
+    let mut formatted_key = String::new();
 
-    for byte in &key {
-        std::fmt::write(formatted_key, "{:02x}-", byte).expect("Formatting failed");
+    // Format the key in the desired format
+    for byte in key.iter() {
+        write!(formatted_key, "{:02x}-", byte)?;
     }
 
     // Remove the trailing hyphen
     formatted_key.pop();
+
+    println!("Formatted key: {}", formatted_key);
 
     formatted_key
 }
