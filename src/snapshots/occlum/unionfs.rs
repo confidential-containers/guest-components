@@ -52,26 +52,23 @@ fn create_dir(create_path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn create_example_file(path: &PathBuf, key: &str) -> Result<()> {
-    // Open the file in write mode, creating it if it doesn't exist
+fn create_key_file(path: &PathBuf, key: &str) -> Result<()> {
     let mut file = File::create(path)
         .with_context(|| format!("Failed to create file: {:?}", path))?;
 
-    // Write "hello world!" to the file
     file.write_all(key.as_bytes())
         .with_context(|| format!("Failed to write to file: {:?}", path))?;
 
     Ok(())
 
 }
-
+// returns randomly generted random 128 bit key
 fn generate_random_key() -> String {
+
     let mut rng = rand::thread_rng();
     let key: [u8; 16] = rng.gen();
 
     let formatted_key = key.iter().map(|byte| format!("{:02x}", byte)).collect::<Vec<String>>().join("-");
-
-    println!("Formatted key: {}", &formatted_key);
 
     formatted_key
 }
@@ -160,10 +157,7 @@ impl Snapshotter for Unionfs {
 
         // For mounting trusted UnionFS at runtime of occlum,
         // you can refer to https://github.com/occlum/occlum/blob/master/docs/runtime_mount.md#1-mount-trusted-unionfs-consisting-of-sefss.
-        // "c7-32-b3-ed-44-df-ec-7b-25-2d-9a-32-38-8d-58-61" is a hardcode key used to encrypt or decrypt the FS currently,
-        // and it will be replaced with dynamic key in the near future.
         let random_key = generate_random_key();
-        println!("Random 128-bit key: {}", &random_key);
         let options = format!(
             "lowerdir={},upperdir={},key={}",
             unionfs_lowerdir.display(),
@@ -204,13 +198,13 @@ impl Snapshotter for Unionfs {
         
         let sealing_keys_dir = Path::new("/keys").join(cid).join("keys");
         fs::create_dir_all(sealing_keys_dir.clone())?;
-        let file_create_path_2 = sealing_keys_dir.join("key.txt");
+        let key_file_create_path = sealing_keys_dir.join("key.txt");
         
-        create_example_file(&PathBuf::from(&file_create_path_2), &random_key)
+        create_key_file(&PathBuf::from(&key_file_create_path), &random_key)
         .map_err(|e| {
             anyhow!(
-            "failed to write file {:?} with error: {}",
-            file_create_path_2,
+            "failed to write key file {:?} with error: {}",
+            key_file_create_path,
             e
         )
         })?;
