@@ -38,7 +38,10 @@ endif
 ifdef PROVIDER
     features += $(PROVIDER)
 else
-    features += aliyun
+    ifneq ($(ARCH), s390x)
+        $(info INFO: Aliyun KMS plugins will be built in by default)
+        features += aliyun
+    endif
 endif
 
 ifeq ($(LIBC), musl)
