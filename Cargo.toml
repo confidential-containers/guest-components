@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
     "api-server-rest",
     "attestation-agent/app",
@@ -58,6 +59,7 @@ tempfile = "3.2"
 testcontainers = "0.14"
 thiserror = "1.0"
 tokio = "1.0"
+toml = "0.8.0"
 tonic = "0.9"
 tonic-build = "0.9"
 ttrpc = "0.8.0"

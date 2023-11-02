@@ -12,6 +12,7 @@ az-snp-vtpm = { git = "https://github.com/kinvolk/azure-cvm-tooling", rev = "2c2
 base64.workspace = true
 kbs-types.workspace = true
 log.workspace = true
+nix = {version = "0.26.2", optional = true }
 occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.7", optional = true }
 serde.workspace = true
 serde_json.workspace = true
@@ -30,10 +31,11 @@ tokio.workspace = true
 
 [features]
 default = ["all-attesters"]
-all-attesters = ["tdx-attester", "sgx-attester", "az-snp-vtpm-attester", "snp-attester", "csv-attester"]
+all-attesters = ["tdx-attester", "sgx-attester", "az-snp-vtpm-attester", "snp-attester", "csv-attester", "cca-attester"]
 
 tdx-attester = ["tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
 az-snp-vtpm-attester = ["az-snp-vtpm"]
 snp-attester = ["sev"]
 csv-attester = ["csv-rs", "codicon", "hyper", "hyper-tls", "tokio"]
+cca-attester = ["nix"]

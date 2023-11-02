@@ -21,6 +21,7 @@ serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
 ttrpc = { workspace = true, optional = true}
 url.workspace = true
 zeroize.workspace = true
@@ -42,13 +43,14 @@ passport = []
 # use a client of attestation-agent to get token for kbs
 aa_token = ["ttrpc-codegen", "passport", "ttrpc/async", "protobuf"]
 
-background_check = []
+background_check = ["tokio/time"]
 all-attesters = ["attester/all-attesters"]
 tdx-attester = ["attester/tdx-attester"]
 sgx-attester = ["attester/sgx-attester"]
 az-snp-vtpm-attester = ["attester/az-snp-vtpm-attester"]
 snp-attester = ["attester/snp-attester"]
 csv-attester = ["attester/csv-attester"]
+cca-attester = ["attester/cca-attester"]
 
 rust-crypto = ["reqwest/rustls-tls", "crypto/rust-crypto"]
 openssl = ["reqwest/native-tls-vendored", "crypto/openssl"]

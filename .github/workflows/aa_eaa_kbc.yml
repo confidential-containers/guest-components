@@ -1,16 +1,16 @@
 name: attestation-agent eaa_kbc tests
 
 on:
-  push:
-    branches:
-      - 'main'
-    paths:
-      - 'attestation-agent/kbc/eaa_kbc/**'
-      - '.github/workflows/aa_eaa_kbc.yml'
-  pull_request:
-    paths:
-      - 'attestation-agent/kbc/eaa_kbc/**'
-      - '.github/workflows/aa_eaa_kbc.yml'
+  # push:
+  #   branches:
+  #     - 'main'
+  #   paths:
+  #     - 'attestation-agent/kbc/eaa_kbc/**'
+  #     - '.github/workflows/aa_eaa_kbc.yml'
+  # pull_request:
+  #   paths:
+  #     - 'attestation-agent/kbc/eaa_kbc/**'
+  #     - '.github/workflows/aa_eaa_kbc.yml'
   create:
   workflow_dispatch:
 
@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Code checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
 

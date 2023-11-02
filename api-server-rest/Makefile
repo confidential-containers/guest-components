@@ -12,15 +12,13 @@ endif
 $(info DEBIANOS is: $(DEBIANOS))
 
 TARGET_DIR := ../target
-BIN_NAME := confidential-data-hub
+BIN_NAME := api-server-rest
 
 SOURCE_ARCH := $(shell uname -m)
 
 ARCH ?= $(shell uname -m)
 DEBUG ?=
 LIBC ?= gnu
-RESOURCE_PROVIDER ?=
-PROVIDER ?=
 DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
 features ?=
@@ -29,24 +27,9 @@ ifeq ($(SOURCE_ARCH), ppc64le)
   ARCH=powerpc64le
 endif
 
-ifdef RESOURCE_PROVIDER
-    features += $(RESOURCE_PROVIDER)
-else
-    features += kbs,sev
-endif
-
-ifdef PROVIDER
-    features += $(PROVIDER)
-else
-    ifneq ($(ARCH), s390x)
-        $(info INFO: Aliyun KMS plugins will be built in by default)
-        features += aliyun
-    endif
-endif
-
 ifeq ($(LIBC), musl)
     ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
-        $(error ERROR: Confidential Data Hub does not support building with the musl libc target for s390x and ppc64le architectures!)
+        $(error ERROR: API Rest Server does not support building with the musl libc target for s390x and ppc64le architectures!)
     endif
     MUSL_ADD := $(shell rustup target add ${ARCH}-unknown-linux-musl)
     ifeq ($(DEBIANOS), true)
@@ -92,7 +75,7 @@ ifneq ($(RUSTFLAGS_ARGS),)
 endif
 
 build:
-	cd hub && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features) bin" $(LIBC_FLAG)
+	$(RUST_FLAGS) cargo build $(release) $(LIBC_FLAG)
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)
 
@@ -107,5 +90,5 @@ clean:
 
 help:
 	@echo "==========================Help========================================="
-	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [RESOURCE_PROVIDER=(kbs/sev)] [PROVIDER=aliyun]"
+	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)]"
 	@echo "install: make install [DESTDIR=/path/to/target] [LIBC=(musl)]"

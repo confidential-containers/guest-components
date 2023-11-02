@@ -11,9 +11,14 @@ use strum_macros::Display;
 use strum_macros::EnumString;
 
 #[cfg(feature = "signature-simple")]
+use base64::Engine;
+
+#[cfg(feature = "signature-simple")]
 mod sigstore;
 #[cfg(feature = "signature-simple")]
 mod verify;
+#[cfg(feature = "signature-simple-xrss")]
+mod xrss;
 
 use crate::signature::{image::Image, mechanism::Paths, policy::ref_match::PolicyReqMatchType};
 
@@ -71,9 +76,16 @@ impl SignScheme for SimpleParameters {
     async fn init(&mut self, config: &Paths) -> Result<()> {
         prepare_runtime_dirs(crate::config::SIG_STORE_CONFIG_DIR).await?;
         self.initialize_sigstore_config().await?;
-        let sig_store_config_file = crate::resource::get_resource(&config.sigstore_config).await?;
+        let sig_store_config_file = crate::resource::get_resource(&config.sigstore_config).await;
+
+        #[cfg(feature = "signature-simple-xrss")]
+        if sig_store_config_file.is_err() {
+            // When using xrss extension a sigstore config file is optional
+            return Ok(());
+        }
+
         let sig_store_config_file =
-            serde_yaml::from_slice::<sigstore::SigstoreConfig>(&sig_store_config_file)?;
+            serde_yaml::from_slice::<sigstore::SigstoreConfig>(&sig_store_config_file?)?;
         self.sig_store_config_file
             .update_self(sig_store_config_file)?;
         Ok(())
@@ -86,7 +98,6 @@ impl SignScheme for SimpleParameters {
 
     #[cfg(feature = "signature-simple")]
     async fn allows_image(&self, image: &mut Image, _auth: &RegistryAuth) -> Result<()> {
-        use base64::Engine;
         // FIXME: only support "GPGKeys" type now.
         //
         // refer to https://github.com/confidential-containers/image-rs/issues/14
@@ -108,7 +119,7 @@ impl SignScheme for SimpleParameters {
             }
         };
 
-        let sigs = self.get_signatures(image).await?;
+        let sigs = self.get_signatures(image, _auth).await?;
         let mut reject_reasons: Vec<anyhow::Error> = Vec::new();
 
         for sig in sigs.iter() {
@@ -182,14 +193,6 @@ impl SimpleParameters {
     /// Set the content of sigstore config with files in
     /// [`crate::config::SIG_STORE_CONFIG_DIR`]
     pub async fn initialize_sigstore_config(&mut self) -> Result<()> {
-        // If the registry support `X-Registry-Supports-Signatures` API extension,
-        // try to get signatures from the registry first.
-        // Else, get signatures from "sigstore" according to the sigstore config file.
-        // (https://github.com/containers/image/issues/384)
-        //
-        // TODO: Add get signatures from registry X-R-S-S API extension.
-        //
-        // issue: https://github.com/confidential-containers/image-rs/issues/12
         let sigstore_config =
             sigstore::SigstoreConfig::new_from_configs(crate::config::SIG_STORE_CONFIG_DIR).await?;
         self.sig_store_config_file.update_self(sigstore_config)?;
@@ -197,7 +200,12 @@ impl SimpleParameters {
         Ok(())
     }
 
-    pub async fn get_signatures(&self, image: &Image) -> Result<Vec<Vec<u8>>> {
+    pub async fn get_signatures(
+        &self,
+        image: &Image,
+        _auth: &RegistryAuth,
+    ) -> Result<Vec<Vec<u8>>> {
+        let mut sigs: Vec<Vec<u8>> = Vec::new();
         // Get image digest (manifest digest)
         let image_digest = if !image.manifest_digest.is_empty() {
             image.manifest_digest.clone()
@@ -206,6 +214,22 @@ impl SimpleParameters {
         } else {
             bail!("Missing image digest");
         };
+
+        #[cfg(feature = "signature-simple-xrss")]
+        {
+            let registry_client = xrss::RegistryClient::new();
+            let mut registry_sigs = registry_client
+                .get_signatures_from_registry(image, &image_digest, _auth)
+                .await?;
+            sigs.append(&mut registry_sigs);
+            if self.sig_store_config_file == sigstore::SigstoreConfig::default() {
+                if sigs.is_empty() {
+                    bail!("Missing sigstore config file and no signatures in registry");
+                }
+
+                return Ok(sigs);
+            }
+        }
 
         // Format the sigstore name: `image-repository@digest-algorithm=digest-value`.
         let sigstore_name = sigstore::format_sigstore_name(&image.reference, image_digest);
@@ -219,7 +243,8 @@ impl SimpleParameters {
         let sigstore_uri = url::Url::parse(&sigstore)
             .map_err(|e| anyhow!("Failed to parse sigstore_uri: {:?}", e))?;
 
-        let sigs = sigstore::get_sigs_from_specific_sigstore(sigstore_uri).await?;
+        let mut sigstore_sigs = sigstore::get_sigs_from_specific_sigstore(sigstore_uri).await?;
+        sigs.append(&mut sigstore_sigs);
 
         Ok(sigs)
     }

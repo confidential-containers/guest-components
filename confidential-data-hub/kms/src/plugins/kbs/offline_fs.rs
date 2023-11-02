@@ -50,9 +50,14 @@ impl OfflineFsKbc {
     }
 
     async fn init_with_file(&mut self, path: &str) -> Result<()> {
-        let file = fs::read(path).await.map_err(|e| {
-            Error::KbsClientError(format!("offline-fs-kbc: read {path} failed: {e}"))
-        })?;
+        let file = match fs::read(path).await {
+            Ok(f) => f,
+            Err(e) => {
+                warn!("Failed to read file {path} to init offline-fs-kbc: {e}");
+                return Ok(());
+            }
+        };
+
         let map: HashMap<String, String> = serde_json::from_slice(&file).map_err(|e| {
             Error::KbsClientError(format!("offline-fs-kbc: illegal resource file {path}: {e}"))
         })?;

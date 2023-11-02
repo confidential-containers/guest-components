@@ -24,12 +24,12 @@ jobs:
       fail-fast: false
       matrix:
         rust:
-          - 1.69.0
+          - 1.72.0
           - stable
           - nightly
     steps:
       - name: Code checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
@@ -74,6 +74,7 @@ jobs:
           cargo clippy -p image-rs --all-targets --features=kata-cc-native-tls --no-default-features -- -D warnings
           cargo clippy -p image-rs --all-targets --features=enclave-cc-eaakbc-native-tls --no-default-features -- -D warnings
           cargo clippy -p image-rs --all-targets --features=enclave-cc-cckbc-native-tls --no-default-features -- -D warnings
+          cargo clippy -p image-rs --all-targets --features=kata-cc-native-tls,signature-simple-xrss --no-default-features -- -D warnings
 
       - name: Run cargo build
         uses: actions-rs/cargo@v1
@@ -100,3 +101,9 @@ jobs:
       - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe
         run: |
           sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-native-tls,keywrap-jwe
+
+      - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe and with signatures from XRSS registry extension
+        env:
+          AUTH_PASSWORD: ${{ secrets.SH_ICR_API_KEY }}
+        run: |
+          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-native-tls,keywrap-jwe,signature-simple-xrss

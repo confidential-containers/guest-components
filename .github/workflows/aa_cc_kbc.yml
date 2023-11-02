@@ -7,11 +7,13 @@ on:
     paths:
       - 'attestation-agent/kbc/cc_kbc/**'
       - 'attestation-agent/kbs_protocol/**'
+      - 'attestation-agent/lib/**'
       - '.github/workflows/aa_cc_kbc.yml'
   pull_request:
     paths:
       - 'attestation-agent/kbc/cc_kbc/**'
       - 'attestation-agent/kbs_protocol/**'
+      - 'attestation-agent/lib/**'
       - '.github/workflows/aa_cc_kbc.yml'
   create:
   workflow_dispatch:
@@ -36,7 +38,7 @@ jobs:
           - cc_kbc_snp
     steps:
       - name: Code checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
 

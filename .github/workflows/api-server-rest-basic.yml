@@ -1,0 +1,65 @@
+name: api-server-rest basic build and unit tests
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - 'api-server-rest/**'
+      - '.github/workflows/api-server-rest-basic.yml'
+      - 'Cargo.toml'
+  pull_request:
+    paths:
+      - 'api-server-rest/**'
+      - '.github/workflows/api-server-rest-basic.yml'
+      - 'Cargo.toml'
+  create:
+  workflow_dispatch:
+
+jobs:
+  basic_ci:
+    name: Check
+    defaults:
+      run:
+        working-directory: ./api-server-rest
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt, clippy
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Build and install with default features
+        run: |
+          make && make install
+
+      - name: Musl build with default features
+        run: |
+          make LIBC=musl
+
+      - name: s390x build
+        run:
+          make ARCH=s390x
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -p api-server-rest

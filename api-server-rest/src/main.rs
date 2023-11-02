@@ -47,7 +47,7 @@ struct Args {
     cdh_addr: String,
 
     /// Listen address of attestation-agent TTRPC Service
-    #[arg(default_value_t = AA_ADDR.to_string(), short, long = "cdh_addr")]
+    #[arg(default_value_t = AA_ADDR.to_string(), short, long = "aa_addr")]
     aa_addr: String,
 }
 

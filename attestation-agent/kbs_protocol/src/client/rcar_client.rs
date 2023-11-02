@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::time::Duration;
+
 use anyhow::{bail, Context};
 use async_trait::async_trait;
 use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response};
@@ -22,6 +24,13 @@ use crate::{
     Error, Result,
 };
 
+/// When executing get token, RCAR handshake should retry if failed to
+/// make the logic robust. This constant is the max retry times.
+const RCAR_MAX_ATTEMPT: i32 = 5;
+
+/// The interval (seconds) between RCAR handshake retries.
+const RCAR_RETRY_TIMEOUT_SECOND: u64 = 1;
+
 #[derive(Deserialize, Debug, Clone)]
 struct AttestationResponseData {
     // Attestation token in JWT format
@@ -36,14 +45,48 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
     pub async fn get_token(&mut self) -> Result<(Token, TeeKeyPair)> {
         if let Some(token) = &self.token {
             if token.check_valid().is_err() {
-                self.rcar_handshake()
-                    .await
-                    .map_err(|e| Error::RcarHandshake(e.to_string()))?;
+                let mut retry_times = 1;
+                loop {
+                    let res = self
+                        .rcar_handshake()
+                        .await
+                        .map_err(|e| Error::RcarHandshake(e.to_string()));
+                    match res {
+                        Ok(_) => break,
+                        Err(e) => {
+                            if retry_times >= RCAR_MAX_ATTEMPT {
+                                return Err(Error::RcarHandshake(format!("Get token failed because of RCAR handshake retried {RCAR_MAX_ATTEMPT} times.")));
+                            } else {
+                                warn!("RCAR handshake failed: {e}, retry {retry_times}...");
+                                retry_times += 1;
+                                tokio::time::sleep(Duration::from_secs(RCAR_RETRY_TIMEOUT_SECOND))
+                                    .await;
+                            }
+                        }
+                    }
+                }
             }
         } else {
-            self.rcar_handshake()
-                .await
-                .map_err(|e| Error::RcarHandshake(e.to_string()))?;
+            let mut retry_times = 1;
+            loop {
+                let res = self
+                    .rcar_handshake()
+                    .await
+                    .map_err(|e| Error::RcarHandshake(e.to_string()));
+                match res {
+                    Ok(_) => break,
+                    Err(e) => {
+                        if retry_times >= RCAR_MAX_ATTEMPT {
+                            return Err(Error::RcarHandshake(format!("Get token failed because of RCAR handshake retried {RCAR_MAX_ATTEMPT} times.")));
+                        } else {
+                            warn!("RCAR handshake failed: {e}, retry {retry_times}...");
+                            retry_times += 1;
+                            tokio::time::sleep(Duration::from_secs(RCAR_RETRY_TIMEOUT_SECOND))
+                                .await;
+                        }
+                    }
+                }
+            }
         }
 
         assert!(self.token.is_some());

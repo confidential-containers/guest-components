@@ -36,6 +36,9 @@ const _TEST_ITEMS: usize = cfg!(feature = "signature-cosign") as usize * 2
     + cfg!(feature = "signature-simple") as usize * 2
     + 2;
 
+#[cfg(feature = "signature-simple-xrss")]
+const _TEST_ITEMS_XRSS: usize = 3;
+
 /// Four test cases.
 const _TESTS: [_TestItem; _TEST_ITEMS] = [
     _TestItem {
@@ -80,6 +83,28 @@ const _TESTS: [_TestItem; _TEST_ITEMS] = [
     },
 ];
 
+#[cfg(feature = "signature-simple-xrss")]
+const _TESTS_XRSS: [_TestItem; _TEST_ITEMS_XRSS] = [
+    _TestItem {
+        image_ref: "quay.io/kata-containers/confidential-containers:signed",
+        allow: false,
+        signing_scheme: SigningName::SimpleSigning,
+        description: "Deny pulling an unencrypted signed image with no local sigstore and a registry that does not support the X-R-S-S API extension",
+    },
+    _TestItem {
+        image_ref: "uk.icr.io/mattarno_image_push/busybox:signed-latest",
+        allow: true,
+        signing_scheme: SigningName::SimpleSigning,
+        description: "Allow pulling an unencrypted signed image from a protected registry that supports the X-R-S-S API extension with no local sigstore",
+    },
+    _TestItem {
+        image_ref: "uk.icr.io/mattarno_image_push/busybox:unsigned-1.35",
+        allow: false,
+        signing_scheme: SigningName::SimpleSigning,
+        description: "Deny pulling an unencrypted and unsigned image from a protected registry that supports the X-R-S-S API extension with no local sigstore",
+    },
+];
+
 #[cfg(feature = "getresource")]
 const POLICY_URI: &str = "kbs:///default/security-policy/test";
 
@@ -93,13 +118,53 @@ const SIGSTORE_CONFIG_URI: &str = "kbs:///default/sigstore-config/test";
 #[tokio::test]
 #[serial]
 async fn signature_verification() {
-    common::prepare_test().await;
+    do_signature_verification_tests(&_TESTS, common::AA_OFFLINE_FS_KBC_RESOURCES_FILE, &None).await;
+}
+
+#[cfg(all(feature = "signature-simple-xrss", feature = "getresource"))]
+#[tokio::test]
+#[serial]
+async fn signature_verification_xrss() {
+    match std::env::var("AUTH_PASSWORD") {
+        Ok(auth_password) => match !auth_password.is_empty() {
+            true => {
+                let auth = format!("iamapikey:{}", auth_password);
+                let auth_info = &Some(auth.as_str());
+                do_signature_verification_tests(
+                    &_TESTS_XRSS,
+                    common::AA_OFFLINE_FS_KBC_RESOURCES_FILE_XRSS,
+                    auth_info,
+                )
+                .await;
+            }
+            false => {
+                println!("Skipping xrss test cases because the test cases require authentication and no AUTH is set in the environment");
+            }
+        },
+        Err(_) => {
+            println!("Skipping xrss test cases because the test cases require authentication and no AUTH is set in the environment");
+        }
+    }
+}
+
+#[cfg(feature = "getresource")]
+async fn do_signature_verification_tests(
+    tests: &[_TestItem<'_, '_>],
+    offline_fs_kbc_resources: &str,
+    auth_info: &Option<&str>,
+) {
+    common::prepare_test(offline_fs_kbc_resources).await;
     // Init AA
     let _aa = common::start_attestation_agent()
         .await
         .expect("Failed to start attestation agent!");
 
-    for test in &_TESTS {
+    for test in tests {
+        let mut test_auth_info = auth_info;
+        if test.image_ref.to_string().contains("quay") {
+            test_auth_info = &None;
+        }
+
         // clean former test files
         common::clean_configs()
             .await
@@ -130,7 +195,7 @@ async fn signature_verification() {
             .pull_image(
                 test.image_ref,
                 bundle_dir.path(),
-                &None,
+                test_auth_info,
                 &Some(common::AA_PARAMETER),
             )
             .await;
