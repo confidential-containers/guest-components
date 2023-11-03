@@ -1141,13 +1141,14 @@ dependencies = [
 [[package]]
 name = "csv-rs"
 version = "0.1.0"
-source = "git+https://gitee.com/anolis/csv-rs?rev=05fbacd#05fbacd8ffff3d48bb19319da1c9a84b763d9302"
+source = "git+https://gitee.com/anolis/csv-rs?rev=9d8882e#9d8882e005ab0f64f4e3802a37aebfc61bc4fe32"
 dependencies = [
  "bitfield",
  "codicon",
  "hyper",
  "hyper-tls",
  "iocuddle",
+ "libc",
  "openssl",
  "openssl-sys",
  "rand 0.8.5",
@@ -5570,7 +5571,7 @@ checksum = "9d0e916b1148c8e263850e1ebcbd046f333e0683c724876bb0da63ea4373dc8a"
 [[package]]
 name = "tdx-attest-rs"
 version = "0.1.2"
-source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.16#71557c7d1d869b6bd6f95566c051cbd098549509"
+source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.19#8a407331e0d38be89a64d9eac54ab764792fb490"
 dependencies = [
  "tdx-attest-sys",
 ]
@@ -5578,7 +5579,7 @@ dependencies = [
 [[package]]
 name = "tdx-attest-sys"
 version = "0.1.0"
-source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.16#71557c7d1d869b6bd6f95566c051cbd098549509"
+source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.19#8a407331e0d38be89a64d9eac54ab764792fb490"
 dependencies = [
  "bindgen 0.59.2",
 ]

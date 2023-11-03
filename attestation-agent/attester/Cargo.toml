@@ -18,7 +18,7 @@ serde.workspace = true
 serde_json.workspace = true
 sev = { version = "1.2.0", default-features = false, features = ["snp"], optional = true }
 strum.workspace = true
-tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.16", optional = true }
+tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.19", optional = true }
 # TODO: change it to "0.1", once released.
 csv-rs = { git = "https://gitee.com/anolis/csv-rs", rev = "9d8882e", optional = true }
 codicon = { version = "3.0", optional = true }
