@@ -192,7 +192,7 @@ impl KeyProviderKeyWrapProtocolOutput {
     #[cfg(feature = "keywrap-keyprovider-native")]
     fn from_native(annotation: &str, dc_config: &DecryptConfig) -> Result<Self> {
         let kbc_kbs_pair = if let Some(list) = dc_config.param.get("attestation-agent") {
-            list.get(0)
+            list.first()
                 .ok_or_else(|| anyhow!("keyprovider: empty kbc::kbs pair"))?
         } else {
             return Err(anyhow!("keyprovider: not supported attestation agent"));

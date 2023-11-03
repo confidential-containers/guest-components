@@ -77,7 +77,7 @@ impl<'a> PullClient<'a> {
         let layer_metas = self
             .async_pull_layers(vec![bootstrap_desc], &[diff_id], decrypt_config, meta_store)
             .await?;
-        match layer_metas.get(0) {
+        match layer_metas.first() {
             Some(b) => Ok(b.clone()),
             None => Err(anyhow!("Failed to  download this bootstrap layer")),
         }
