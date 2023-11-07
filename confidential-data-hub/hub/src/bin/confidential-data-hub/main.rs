@@ -6,7 +6,9 @@
 use std::{path::Path, sync::Arc};
 
 use anyhow::{Context, Result};
-use api_ttrpc::create_sealed_secret_service;
+use api_ttrpc::{
+    create_get_resource_service, create_key_provider_service, create_sealed_secret_service,
+};
 use clap::Parser;
 use log::info;
 use server::Server;
@@ -15,8 +17,6 @@ use tokio::{
     signal::unix::{signal, SignalKind},
 };
 use ttrpc::r#async::Server as TtrpcServer;
-
-use crate::api_ttrpc::create_get_resource_service;
 
 mod api;
 mod api_ttrpc;
@@ -57,11 +57,13 @@ async fn main() -> Result<()> {
 
     let sealed_secret_service = ttrpc_service!(create_sealed_secret_service);
     let get_resource_service = ttrpc_service!(create_get_resource_service);
+    let key_provider_service = ttrpc_service!(create_key_provider_service);
     let mut server = TtrpcServer::new()
         .bind(&cli.socket)
         .context("cannot bind cdh ttrpc service")?
         .register_service(sealed_secret_service)
-        .register_service(get_resource_service);
+        .register_service(get_resource_service)
+        .register_service(key_provider_service);
 
     server.start().await?;
 

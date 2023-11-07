@@ -51,6 +51,7 @@ pub async fn new_getter(
     let provider = VaultProvider::try_from(provider_name)
         .map_err(|_| Error::UnsupportedProvider(provider_name.to_string()))?;
     match provider {
+        #[cfg(feature = "kbs")]
         VaultProvider::Kbs => Ok(Box::new(kbs::KbcClient::new().await?) as Box<dyn Getter>),
     }
 }

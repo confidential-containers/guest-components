@@ -8,22 +8,29 @@ edition = "2021"
 [dependencies]
 aes-gcm.workspace = true
 anyhow.workspace = true
+async-trait.workspace = true
 base64.workspace = true
 clap = { workspace = true, features = ["derive"] }
+config = "0.13.3"
+crypto = { path = "../deps/crypto", default-features = false, optional = true }
 ctr.workspace = true
 env_logger = "0.10.0"
 futures = "0.3.5"
+image = { path = "../../confidential-data-hub/image", default-features = false }
 jwt-simple = "0.11.4"
+kms = { path = "../../confidential-data-hub/kms", default-features = false }
 log.workspace = true
 prost.workspace = true
 rand.workspace = true
 reqwest.workspace = true
+resource_uri = { path = "../deps/resource_uri", optional = true }
 serde.workspace = true
 serde_json.workspace = true
 strum.workspace = true
 tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
 tonic.workspace = true
 uuid = { workspace = true, features = ["fast-rng", "v4"] }
+zeroize.workspace = true
 
 [build-dependencies]
 shadow-rs = "0.23.0"
@@ -33,3 +40,7 @@ tonic-build.workspace = true
 rstest.workspace = true
 
 [features]
+default = ["kbs"]
+
+kbs = ["resource_uri", "crypto"]
+aliyun = ["kms/aliyun"]

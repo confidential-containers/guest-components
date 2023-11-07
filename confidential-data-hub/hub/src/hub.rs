@@ -5,6 +5,7 @@
 
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
+use image::AnnotationPacket;
 use kms::{Annotations, ProviderSettings};
 use secret::secret::Secret;
 
@@ -49,8 +50,14 @@ impl DataHub for Hub {
         Ok(res)
     }
 
-    async fn unwrap_key(&self, _annotation: &[u8]) -> Result<Vec<u8>> {
-        todo!()
+    async fn unwrap_key(&self, annotation_packet: &[u8]) -> Result<Vec<u8>> {
+        let annotation_packet: AnnotationPacket = serde_json::from_slice(annotation_packet)
+            .map_err(|e| Error::ImageDecryption(format!("illegal AnnotationPacket format: {e}")))?;
+        let lek = annotation_packet
+            .unwrap_key()
+            .await
+            .map_err(|e| Error::ImageDecryption(format!("unwrap key failed: {e}")))?;
+        Ok(lek)
     }
 
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>> {

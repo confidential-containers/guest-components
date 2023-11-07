@@ -3,20 +3,18 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::enc_mods;
 use anyhow::*;
 use base64::Engine;
-use jwt_simple::prelude::Ed25519KeyPair;
 use log::*;
-use reqwest::Url;
-use std::net::SocketAddr;
-use std::path::PathBuf;
-use tokio::fs;
+use std::env;
 use tonic::{transport::Server, Request, Response, Status};
 
 use key_provider::key_provider_service_server::{KeyProviderService, KeyProviderServiceServer};
 use key_provider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput};
 use protocol::keyprovider_structs::*;
+
+use crate::config::CoCoKeyproviderConfig;
+use crate::encrypt::enc_optsdata_gen_anno;
 
 pub mod protocol;
 pub mod key_provider {
@@ -26,22 +24,11 @@ pub mod key_provider {
     tonic::include_proto!("keyprovider");
 }
 
-pub struct KeyProvider {
-    auth_private_key: Option<Ed25519KeyPair>,
-    kbs: Option<Url>,
-}
+pub struct KeyProvider;
 
 impl KeyProvider {
-    pub fn new(auth_private_key: Option<Ed25519KeyPair>, kbs: Option<String>) -> Result<Self> {
-        let kbs = match kbs {
-            Some(addr) => addr.parse().ok(),
-            None => None,
-        };
-
-        Ok(Self {
-            auth_private_key,
-            kbs,
-        })
+    pub fn new() -> Result<Self> {
+        Ok(Self)
     }
 }
 
@@ -93,8 +80,7 @@ impl KeyProviderService for KeyProvider {
             })
             .collect();
 
-        let annotation: String = enc_mods::enc_optsdata_gen_anno(
-            (&self.kbs, &self.auth_private_key),
+        let annotation: String = enc_optsdata_gen_anno(
             &engine
                 .decode(optsdata)
                 .map_err(|_| Status::aborted("base64 decode"))?,
@@ -137,28 +123,21 @@ impl KeyProviderService for KeyProvider {
     }
 }
 
-pub async fn start_service(
-    socket: SocketAddr,
-    auth_private_key: Option<PathBuf>,
-    kbs: Option<String>,
-) -> Result<()> {
-    let auth_private_key = match auth_private_key {
-        Some(key_path) => {
-            let pem = fs::read_to_string(key_path)
-                .await
-                .context("open auth private key")?;
+pub async fn start_service(config: CoCoKeyproviderConfig) -> Result<()> {
+    #[cfg(feature = "kbs")]
+    {
+        use crate::plugins::kbs::{KBS_ADDR_ENV_KEY, KBS_PRIVATE_KEY_PATH_ENV_KEY};
 
-            Some(Ed25519KeyPair::from_pem(&pem)?)
-        }
-        None => None,
-    };
+        env::set_var(
+            KBS_PRIVATE_KEY_PATH_ENV_KEY,
+            config.kbs_config.private_key_path,
+        );
+        env::set_var(KBS_ADDR_ENV_KEY, config.kbs_config.kbs_addr);
+    }
 
     Server::builder()
-        .add_service(KeyProviderServiceServer::new(KeyProvider::new(
-            auth_private_key,
-            kbs,
-        )?))
-        .serve(socket)
+        .add_service(KeyProviderServiceServer::new(KeyProvider::new()?))
+        .serve(config.socket)
         .await?;
     Ok(())
 }
