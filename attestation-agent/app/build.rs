@@ -9,9 +9,17 @@ use ttrpc_codegen::{Codegen, Customize, ProtobufCustomize};
 fn main() -> std::io::Result<()> {
     #[cfg(feature = "grpc")]
     {
-        tonic_build::compile_protos("../protos/keyprovider.proto")?;
-        tonic_build::compile_protos("../protos/getresource.proto")?;
-        tonic_build::compile_protos("../protos/attestation-agent.proto")?;
+        tonic_build::configure()
+            .build_server(true)
+            .protoc_arg("--experimental_allow_proto3_optional")
+            .compile(
+                &[
+                    "../protos/keyprovider.proto",
+                    "../protos/getresource.proto",
+                    "../protos/attestation-agent.proto",
+                ],
+                &["../protos"],
+            )?;
     }
 
     #[cfg(feature = "ttrpc")]

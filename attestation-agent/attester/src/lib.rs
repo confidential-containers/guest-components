@@ -59,6 +59,16 @@ pub trait Attester {
     /// The parameter `report_data` will be used as the user input of the
     /// evidence to avoid reply attack.
     async fn get_evidence(&self, report_data: Vec<u8>) -> Result<String>;
+
+    /// Extend TEE specific dynamic measurement register
+    /// to enable dynamic measurement capabilities for input data at runtime.
+    async fn extend_runtime_measurement(
+        &self,
+        _events: Vec<Vec<u8>>,
+        _register_index: Option<u64>,
+    ) -> Result<()> {
+        bail!("Unimplemented")
+    }
 }
 
 // Detect which TEE platform the KBC running environment is.
