@@ -20,7 +20,10 @@ pub mod grpc {
     use attestation::attestation_agent_service_server::{
         AttestationAgentService, AttestationAgentServiceServer,
     };
-    use attestation::{GetEvidenceRequest, GetEvidenceResponse, GetTokenRequest, GetTokenResponse};
+    use attestation::{
+        ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse, GetEvidenceRequest,
+        GetEvidenceResponse, GetTokenRequest, GetTokenResponse,
+    };
     use std::net::SocketAddr;
     use tonic::{transport::Server, Request, Response, Status};
 
@@ -81,6 +84,35 @@ pub mod grpc {
             debug!("Get evidence successfully!");
 
             let reply = GetEvidenceResponse { evidence };
+
+            Result::Ok(Response::new(reply))
+        }
+
+        async fn extend_runtime_measurement(
+            &self,
+            request: Request<ExtendRuntimeMeasurementRequest>,
+        ) -> Result<Response<ExtendRuntimeMeasurementResponse>, Status> {
+            let request = request.into_inner();
+
+            let attestation_agent_mutex_clone = Arc::clone(&ASYNC_ATTESTATION_AGENT);
+            let mut attestation_agent = attestation_agent_mutex_clone.lock().await;
+
+            debug!("Call AA to extend runtime measurement ...");
+
+            attestation_agent
+                .extend_runtime_measurement(request.events, request.register_index)
+                .await
+                .map_err(|e| {
+                    error!("Call AA to extend runtime measurement failed: {}", e);
+                    Status::internal(format!(
+                        "[ERROR:{}] AA extend runtime measurement failed: {}",
+                        AGENT_NAME, e
+                    ))
+                })?;
+
+            debug!("Extend runtime measurement successfully!");
+
+            let reply = ExtendRuntimeMeasurementResponse {};
 
             Result::Ok(Response::new(reply))
         }
@@ -174,6 +206,34 @@ pub mod ttrpc {
             let mut reply = attestation_agent::GetEvidenceResponse::new();
             reply.Evidence = evidence;
 
+            ::ttrpc::Result::Ok(reply)
+        }
+
+        async fn extend_runtime_measurement(
+            &self,
+            _ctx: &::ttrpc::r#async::TtrpcContext,
+            req: attestation_agent::ExtendRuntimeMeasurementRequest,
+        ) -> ::ttrpc::Result<attestation_agent::ExtendRuntimeMeasurementResponse> {
+            debug!("Call AA to extend runtime measurement ...");
+
+            let attestation_agent_mutex_clone = ASYNC_ATTESTATION_AGENT.clone();
+            let mut attestation_agent = attestation_agent_mutex_clone.lock().await;
+
+            attestation_agent
+                .extend_runtime_measurement(req.Events, req.RegisterIndex)
+                .await
+                .map_err(|e| {
+                    error!("Call AA to extend runtime measurement failed: {}", e);
+                    let mut error_status = ::ttrpc::proto::Status::new();
+                    error_status.set_code(Code::INTERNAL);
+                    error_status.set_message(format!(
+                        "[ERROR:{}] AA extend runtime measurement failed: {}",
+                        AGENT_NAME, e
+                    ));
+                    ::ttrpc::Error::RpcStatus(error_status)
+                })?;
+
+            let reply = attestation_agent::ExtendRuntimeMeasurementResponse::new();
             ::ttrpc::Result::Ok(reply)
         }
     }

@@ -18,7 +18,15 @@ message GetTokenResponse {
     bytes Token = 1;
 }
 
+message ExtendRuntimeMeasurementRequest {
+    repeated bytes Events = 1;
+    optional uint64 RegisterIndex = 2;
+}
+
+message ExtendRuntimeMeasurementResponse {}
+
 service AttestationAgentService {
     rpc GetEvidence(GetEvidenceRequest) returns (GetEvidenceResponse) {};
     rpc GetToken(GetTokenRequest) returns (GetTokenResponse) {};
+    rpc ExtendRuntimeMeasurement(ExtendRuntimeMeasurementRequest) returns (ExtendRuntimeMeasurementResponse) {};
 }

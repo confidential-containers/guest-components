@@ -65,6 +65,28 @@ impl Attester for TdxAttester {
         serde_json::to_string(&evidence)
             .map_err(|e| anyhow!("Serialize TDX evidence failed: {:?}", e))
     }
+
+    async fn extend_runtime_measurement(
+        &self,
+        events: Vec<Vec<u8>>,
+        _register_index: Option<u64>,
+    ) -> Result<()> {
+        for event in events {
+            match tdx_attest_rs::tdx_att_extend(&event) {
+                tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
+                    log::debug!("TDX extend runtime measurement succeeded.")
+                }
+                error_code => {
+                    bail!(
+                        "TDX Attester: Failed to extend RTMR. Error code: {:?}",
+                        error_code
+                    );
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
