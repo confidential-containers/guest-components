@@ -9,7 +9,7 @@
 //!
 //! ## Protocol
 //!
-//! Please refer to <https://github.com/confidential-containers/kbs/blob/main/docs/kbs_attestation_protocol.md>
+//! Please refer to <https://github.com/confidential-containers/kbs/blob/main/kbs/docs/kbs_attestation_protocol.md>
 //!
 //! ## Usage
 //!
