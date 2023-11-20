@@ -317,9 +317,10 @@ mod tests {
 
     use crate::{plugins::aliyun::client::AliyunKmsClient, Decrypter, Encrypter};
 
-    #[ignore]
     #[rstest]
+    #[ignore]
     #[case(b"this is a test plaintext")]
+    #[ignore]
     #[case(b"this is a another test plaintext")]
     #[tokio::test]
     async fn key_lifetime(#[case] plaintext: &[u8]) {
