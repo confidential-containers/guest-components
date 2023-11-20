@@ -1,0 +1,78 @@
+name: confidential-data-hub basic build and unit tests
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - 'confidential-data-hub/**'
+      - '.github/workflows/cdh_basic.yml'
+      - 'Cargo.toml'
+  pull_request:
+    paths:
+      - 'confidential-data-hub/**'
+      - '.github/workflows/cdh_basic.yml'
+      - 'Cargo.toml'
+  create:
+  workflow_dispatch:
+
+jobs:
+  basic_ci:
+    name: Check
+    defaults:
+      run:
+        working-directory: ./confidential-data-hub
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt, clippy
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Build and install
+        run: |
+          make && make install
+
+      - name: Musl build
+        run: |
+          make LIBC=musl
+
+      - name: s390x build
+        run:
+          make ARCH=s390x
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features kbs,aliyun,sev,bin -p kms -p confidential-data-hub -p secret -p image
+
+      - name: Run cargo fmt check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -p kms -p confidential-data-hub -p secret -p image -- --check
+
+      - name: Run rust lint check
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
+          args: -p kms -p confidential-data-hub -p secret -p image -- -D warnings -A clippy::derive-partial-eq-without-eq 
