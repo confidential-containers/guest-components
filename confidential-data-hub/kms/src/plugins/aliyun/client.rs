@@ -224,9 +224,9 @@ impl Decrypter for AliyunKmsClient {
 }
 
 impl AliyunKmsClient {
-    const API_VERSION: &str = "dkms-gcs-0.2";
-    const SIGNATURE_METHOD: &str = "RSA_PKCS1_SHA_256";
-    const CONTENT_TYPE: &str = "application/x-protobuf";
+    const API_VERSION: &'static str = "dkms-gcs-0.2";
+    const SIGNATURE_METHOD: &'static str = "RSA_PKCS1_SHA_256";
+    const CONTENT_TYPE: &'static str = "application/x-protobuf";
 
     fn build_headers(&self, api_name: &str, body: &[u8]) -> anyhow::Result<HeaderMap> {
         let mut headers = HeaderMap::new();
