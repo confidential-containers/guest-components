@@ -881,11 +881,13 @@ dependencies = [
  "async-trait",
  "base64 0.21.4",
  "clap 4.2.7",
+ "image",
  "kms",
  "lazy_static",
  "log",
  "protobuf 3.2.0",
  "secret",
+ "serde",
  "serde_json",
  "sev 0.1.0",
  "thiserror",
@@ -1141,13 +1143,14 @@ dependencies = [
 [[package]]
 name = "csv-rs"
 version = "0.1.0"
-source = "git+https://gitee.com/anolis/csv-rs?rev=05fbacd#05fbacd8ffff3d48bb19319da1c9a84b763d9302"
+source = "git+https://gitee.com/anolis/csv-rs?rev=9d8882e#9d8882e005ab0f64f4e3802a37aebfc61bc4fe32"
 dependencies = [
  "bitfield",
  "codicon",
  "hyper",
  "hyper-tls",
  "iocuddle",
+ "libc",
  "openssl",
  "openssl-sys",
  "rand 0.8.5",
@@ -2440,6 +2443,21 @@ checksum = "7d20d6b07bfbc108882d88ed8e37d39636dcc260e15e30c45e6ba089610b917c"
 dependencies = [
  "unicode-bidi",
  "unicode-normalization",
+]
+
+[[package]]
+name = "image"
+version = "0.1.0"
+dependencies = [
+ "assert-json-diff",
+ "base64 0.21.4",
+ "crypto",
+ "kms",
+ "resource_uri",
+ "rstest",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]
