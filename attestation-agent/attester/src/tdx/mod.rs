@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::Attester;
+use super::{Attester, hash_reportdata};
 use anyhow::*;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
@@ -30,12 +30,12 @@ pub struct TdxAttester {}
 
 #[async_trait::async_trait]
 impl Attester for TdxAttester {
-    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
-        if report_data.len() > 64 {
-            bail!("TDX Attester: Report data must be no more than 64 bytes");
-        }
+    async fn get_evidence(&self, nonce: String, tee_data: String) -> Result<String> {
+        let report_data = hash_reportdata::<sha2::Sha512>(nonce, tee_data);
 
-        report_data.resize(64, 0);
+        if report_data.len() != 64 {
+            bail!("TDX Attester: Report data should be a SHA512 hash");
+        }
 
         let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
             d: report_data.as_slice().try_into()?,
@@ -75,9 +75,8 @@ mod tests {
     #[tokio::test]
     async fn test_tdx_get_evidence() {
         let attester = TdxAttester::default();
-        let report_data: Vec<u8> = vec![0; 48];
 
-        let evidence = attester.get_evidence(report_data).await;
+        let evidence = attester.get_evidence("nonce".to_string(), "tee_data".to_string()).await;
         assert!(evidence.is_ok());
     }
 }

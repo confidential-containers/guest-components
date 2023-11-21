@@ -56,9 +56,9 @@ impl TryFrom<Tee> for BoxedAttester {
 #[async_trait::async_trait]
 pub trait Attester {
     /// Call the hardware driver to get the Hardware specific evidence.
-    /// The parameter `report_data` will be used as the user input of the
-    /// evidence to avoid reply attack.
-    async fn get_evidence(&self, report_data: Vec<u8>) -> Result<String>;
+    /// `nonce` and `tee_data` will be used as the user input of the
+    /// evidence to avoid replay attack.
+    async fn get_evidence(&self, nonce: String, tee_data: String) -> Result<String>;
 }
 
 // Detect which TEE platform the KBC running environment is.
@@ -98,4 +98,12 @@ pub fn detect_tee_type() -> Option<Tee> {
     }
 
     None
+}
+
+fn hash_reportdata<D: sha2::Digest>(nonce: String, tee_data: String) -> Vec<u8> {
+    D::new()
+    .chain_update(nonce)
+    .chain_update(tee_data)
+    .finalize()
+    .to_vec()
 }

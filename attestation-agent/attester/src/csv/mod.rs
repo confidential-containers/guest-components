@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::Attester;
+use super::{Attester, hash_reportdata};
 use anyhow::{bail, Context, Ok, Result};
 use codicon::Decoder;
 use csv_rs::{
@@ -39,7 +39,9 @@ pub struct CsvAttester {}
 
 #[async_trait::async_trait]
 impl Attester for CsvAttester {
-    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, nonce: String, tee_data: String) -> Result<String> {
+        let mut report_data = hash_reportdata::<sha2::Sha384>(nonce, tee_data);
+
         if report_data.len() > 64 {
             bail!("CSV Attester: Report data must be no more than 64 bytes");
         }
@@ -99,9 +101,8 @@ mod tests {
     #[tokio::test]
     async fn test_csv_get_evidence() {
         let attester = CsvAttester::default();
-        let report_data: Vec<u8> = vec![0; 64];
 
-        let evidence = attester.get_evidence(report_data).await;
+        let evidence = attester.get_evidence("nonce".to_string(), "tee_data".to_string()).await;
         assert!(evidence.is_ok());
     }
 }
