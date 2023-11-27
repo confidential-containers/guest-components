@@ -12,6 +12,8 @@ use base64::Engine;
 use log::debug;
 use scroll::Pread;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha384};
+use std::mem;
 use std::path::Path;
 use tdx_attest_rs::tdx_report_t;
 
@@ -19,6 +21,7 @@ mod report;
 
 const TDX_REPORT_DATA_SIZE: usize = 64;
 const CCEL_PATH: &str = "/sys/firmware/acpi/tables/data/CCEL";
+const RUNTIME_MEASUREMENT_RTMR_INDEX: u64 = 2;
 
 pub fn detect_platform() -> bool {
     TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || tdx_getquote_ioctl_is_available()
@@ -99,7 +102,17 @@ impl Attester for TdxAttester {
         _register_index: Option<u64>,
     ) -> Result<()> {
         for event in events {
-            match tdx_attest_rs::tdx_att_extend(&event) {
+            let mut event_buffer = [0u8; mem::size_of::<tdx_attest_rs::tdx_rtmr_event_t>()];
+            let mut hasher = Sha384::new();
+            hasher.update(&event);
+            let hash = hasher.finalize().to_vec();
+            let rtmr_event = unsafe {
+                &mut *(event_buffer.as_mut_ptr() as *mut tdx_attest_rs::tdx_rtmr_event_t)
+            };
+            rtmr_event.version = 1;
+            rtmr_event.rtmr_index = RUNTIME_MEASUREMENT_RTMR_INDEX;
+            rtmr_event.extend_data.copy_from_slice(&hash);
+            match tdx_attest_rs::tdx_att_extend(&event_buffer) {
                 tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
                     log::debug!("TDX extend runtime measurement succeeded.")
                 }
