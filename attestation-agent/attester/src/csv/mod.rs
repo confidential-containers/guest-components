@@ -32,6 +32,8 @@ struct CertificateChain {
 struct CsvEvidence {
     attestation_report: AttestationReport,
     cert_chain: CertificateChain,
+    // Base64 Encoded CSV Serial Number (Used to identify HYGON chip ID)
+    serial_number: Vec<u8>,
 }
 
 #[derive(Debug, Default)]
@@ -59,6 +61,7 @@ impl Attester for CsvAttester {
         let evidence = CsvEvidence {
             attestation_report,
             cert_chain: CertificateChain { hsk, cek, pek },
+            serial_number: report_signer.sn.to_vec(),
         };
         serde_json::to_string(&evidence).context("Serialize CSV evidence failed")
     }
