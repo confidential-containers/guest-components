@@ -31,8 +31,8 @@ impl KbcInterface for Kbc {
 
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
         let key_data = self.kbs_client.get_resource(annotation_packet.kid).await?;
-        let key = Zeroizing::new(key_data);
-
+        let decoded_key = base64::engine::general_purpose::STANDARD.decode(key_data)?;
+        let key = Zeroizing::new(decoded_key);
         let wrap_type = WrapType::try_from(&annotation_packet.wrap_type[..])?;
         decrypt(
             key,
