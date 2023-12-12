@@ -11,6 +11,7 @@ use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response};
 use log::{debug, warn};
 use resource_uri::ResourceUri;
 use serde::Deserialize;
+use serde_json::json;
 use sha2::{Digest, Sha384};
 
 use crate::{
@@ -133,8 +134,13 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
 
         debug!("get challenge: {challenge:#?}");
         let tee_pubkey = self.tee_key.export_pubkey()?;
-        let materials = vec![tee_pubkey.k_mod.as_bytes(), tee_pubkey.k_exp.as_bytes()];
-        let evidence = self.generate_evidence(challenge.nonce, materials).await?;
+        let runtime_data = json!({
+            "tee-pubkey": tee_pubkey,
+            "nonce": challenge.nonce,
+        });
+        let runtime_data =
+            serde_json::to_string(&runtime_data).context("serialize runtime data failed")?;
+        let evidence = self.generate_evidence(runtime_data).await?;
         debug!("get evidence with challenge: {evidence}");
 
         let attest_endpoint = format!("{}/{KBS_PREFIX}/attest", self.kbs_host_url);
@@ -173,12 +179,9 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         Ok(())
     }
 
-    async fn generate_evidence(&self, nonce: String, key_materials: Vec<&[u8]>) -> Result<String> {
+    async fn generate_evidence(&self, runtime_data: String) -> Result<String> {
         let mut hasher = Sha384::new();
-        hasher.update(nonce.as_bytes());
-        key_materials
-            .iter()
-            .for_each(|key_material| hasher.update(key_material));
+        hasher.update(runtime_data);
 
         let ehd = hasher.finalize().to_vec();
 
