@@ -1163,6 +1163,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "crypto-mac"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58bcd97a54c7ca5ce2f6eb16f6bede5b0ab5f0055fedc17d2f0b4466e21671ca"
+dependencies = [
+ "generic-array",
+ "subtle",
+]
+
+[[package]]
 name = "csv-rs"
 version = "0.1.0"
 source = "git+https://gitee.com/anolis/csv-rs?rev=9d8882e#9d8882e005ab0f64f4e3802a37aebfc61bc4fe32"
@@ -1657,6 +1667,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "ehsm_client"
+version = "0.1.0"
+source = "git+https://github.com/intel/ehsm?rev=f84688688e724dfd080c1dc491db3e58415cc5b7#f84688688e724dfd080c1dc491db3e58415cc5b7"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64 0.13.1",
+ "hmac 0.9.0",
+ "rand 0.3.23",
+ "reqwest",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "sha2 0.9.9",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "either"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1941,6 +1970,12 @@ name = "fs_extra"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42703706b716c37f96a77aea830392ad231f44c9e9a67872fa5548707e11b11c"
+
+[[package]]
+name = "fuchsia-cprng"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a06f77d526c1a601b7c4cdd98f54b5eaabffc14d5f2f0296febdc7f357c6d3ba"
 
 [[package]]
 name = "fuse-backend-rs"
@@ -2235,7 +2270,17 @@ version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "791a029f6b9fc27657f6f188ec6e5e43f6911f6f878e0dc5501396e09809d437"
 dependencies = [
- "hmac",
+ "hmac 0.12.1",
+]
+
+[[package]]
+name = "hmac"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "deae6d9dbb35ec2c502d62b8f7b1c000a0822c3b0794ba36b3149c0a1c840dff"
+dependencies = [
+ "crypto-mac",
+ "digest 0.9.0",
 ]
 
 [[package]]
@@ -2716,7 +2761,7 @@ dependencies = [
  "base64 0.13.1",
  "crypto-common",
  "digest 0.10.7",
- "hmac",
+ "hmac 0.12.1",
  "serde",
  "serde_json",
  "sha2 0.10.8",
@@ -2791,8 +2836,9 @@ dependencies = [
 
 [[package]]
 name = "kbs-types"
-version = "0.4.0"
-source = "git+https://github.com/virtee/kbs-types?rev=c90df0e#c90df0eb6575a63df015d7e700e26227e646bd0a"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "40d90e19846fb37e6025740825dd10f65320d3e56f8e957b4bba021b85bc79d6"
 dependencies = [
  "serde",
  "serde_json",
@@ -2848,6 +2894,7 @@ dependencies = [
  "chrono",
  "const_format",
  "crypto",
+ "ehsm_client",
  "hex",
  "kbs_protocol",
  "lazy_static",
@@ -3516,7 +3563,7 @@ dependencies = [
  "base64-serde",
  "cfg-if",
  "ctr",
- "hmac",
+ "hmac 0.12.1",
  "josekit",
  "kbc",
  "lazy_static",
@@ -3637,7 +3684,7 @@ dependencies = [
  "cipher",
  "des",
  "getrandom 0.2.11",
- "hmac",
+ "hmac 0.12.1",
  "lazy_static",
  "rc2",
  "sha1",
@@ -3995,7 +4042,7 @@ dependencies = [
  "aes",
  "cbc",
  "der 0.6.1",
- "hmac",
+ "hmac 0.12.1",
  "pbkdf2",
  "scrypt",
  "sha2 0.10.8",
@@ -4347,6 +4394,29 @@ dependencies = [
 
 [[package]]
 name = "rand"
+version = "0.3.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64ac302d8f83c0c1974bf758f6b041c6c8ada916fbb44a609158ca8b064cc76c"
+dependencies = [
+ "libc",
+ "rand 0.4.6",
+]
+
+[[package]]
+name = "rand"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "552840b97013b1a26992c11eac34bdd778e464601a4c2054b5f0bff7c6761293"
+dependencies = [
+ "fuchsia-cprng",
+ "libc",
+ "rand_core 0.3.1",
+ "rdrand",
+ "winapi",
+]
+
+[[package]]
+name = "rand"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a6b1679d49b24bbfe0c803429aa1874472f50d9b363131f0e89fc356b544d03"
@@ -4388,6 +4458,21 @@ dependencies = [
  "ppv-lite86",
  "rand_core 0.6.4",
 ]
+
+[[package]]
+name = "rand_core"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a6fdeb83b075e8266dcc8762c22776f6877a63111121f5f8c7411e5be7eed4b"
+dependencies = [
+ "rand_core 0.4.2",
+]
+
+[[package]]
+name = "rand_core"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c33a3c44ca05fa6f1807d8e6743f3824e8509beca625669633be0acbdf509dc"
 
 [[package]]
 name = "rand_core"
@@ -4449,6 +4534,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62c64daa8e9438b84aaae55010a93f396f8e60e3911590fcba770d04643fc1dd"
 dependencies = [
  "cipher",
+]
+
+[[package]]
+name = "rdrand"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "678054eb77286b51581ba43620cc911abf02758c91f93f479767aed0f90458b2"
+dependencies = [
+ "rand_core 0.3.1",
 ]
 
 [[package]]
@@ -4588,7 +4682,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7743f17af12fa0b03b803ba12cd6a8d9483a587e89c69445e3909655c0b9fabb"
 dependencies = [
  "crypto-bigint 0.4.9",
- "hmac",
+ "hmac 0.12.1",
  "zeroize",
 ]
 
@@ -4598,7 +4692,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dd2a808d456c4a54e300a23e9f5a67e122c3024119acbfd73e3bf664491cb2"
 dependencies = [
- "hmac",
+ "hmac 0.12.1",
  "subtle",
 ]
 
@@ -4898,7 +4992,7 @@ version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f9e24d2b632954ded8ab2ef9fea0a0c769ea56ea98bddbafbad22caeeadf45d"
 dependencies = [
- "hmac",
+ "hmac 0.12.1",
  "password-hash",
  "pbkdf2",
  "salsa20",
@@ -5719,7 +5813,7 @@ dependencies = [
  "bollard-stubs",
  "futures",
  "hex",
- "hmac",
+ "hmac 0.12.1",
  "log",
  "rand 0.8.5",
  "serde",
