@@ -5,7 +5,7 @@
 
 //! Cosign verification
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use oci_distribution::secrets::RegistryAuth;
 use serde::{Deserialize, Serialize};
@@ -18,8 +18,9 @@ use sigstore::{
     },
     crypto::SigningScheme,
     errors::SigstoreVerifyConstraintsError,
-    registry::Auth,
+    registry::{Auth, OciReference},
 };
+use std::str::FromStr;
 
 use super::SignScheme;
 use crate::resource;
@@ -134,35 +135,17 @@ impl CosignParameters {
             (Some(_), Some(_)) => bail!("Both keyPath and keyData are specified."),
         };
 
-        let image_ref = image.reference.whole();
+        let image_ref = OciReference::from_str(&image.reference.whole())?;
+        let auth = &Auth::from(auth);
 
-        let auth = auth.clone();
-        // Get the signature layers in cosign signature "image"'s manifest
-        let signature_layers = tokio::task::spawn_blocking(move || -> Result<_> {
-            let auth = Auth::from(&auth);
+        let mut client = ClientBuilder::default().build()?;
 
-            let mut client = ClientBuilder::default().build()?;
+        // Get the cosign signature "image"'s uri and the signed image's digest
+        let (cosign_image, source_image_digest) = client.triangulate(&image_ref, auth).await?;
 
-            // Get the cosign signature "image"'s uri and the signed image's digest
-            //
-            // We need a runtime here because now `triangulate` is a future
-            // that cannot be `Send` between threads. Thus we need to create a
-            // runtime and disable context switch here.
-            let rt = tokio::runtime::Runtime::new()?;
-            let (cosign_image, source_image_digest) =
-                rt.block_on(client.triangulate(&image_ref, &auth))?;
-
-            let layers = rt.block_on(client.trusted_signature_layers(
-                &auth,
-                &source_image_digest,
-                &cosign_image,
-            ))?;
-
-            Ok(layers)
-        })
-        .await
-        .context("tokio spawn")?
-        .context("get signature layers")?;
+        let signature_layers = client
+            .trusted_signature_layers(auth, &source_image_digest, &cosign_image)
+            .await?;
 
         // By default, the hashing algorithm is SHA256
         let pub_key_verifier =
@@ -315,7 +298,7 @@ mod tests {
         "registry.cn-hangzhou.aliyuncs.com/xynnn/cosign:latest",
         false,
         // If verified failed, the pubkey given to verify will be printed.
-        "[PublicKeyVerifier { key: ECDSA_P256_SHA256_ASN1(VerifyingKey { inner: PublicKey { point: AffinePoint { x: FieldElement(UInt { limbs: [Limb(540873142526201775), Limb(9033147506996235883), Limb(13963524140470157687), Limb(5553333931660335980)] }), y: FieldElement(UInt { limbs: [Limb(310064843663294190), Limb(16768641685016372219), Limb(6660968332548595134), Limb(15802642679658786528)] }), infinity: 0 } } }) }]"
+        "[PublicKeyVerifier { key: ECDSA_P256_SHA256_ASN1(VerifyingKey { inner: PublicKey { point: AffinePoint { x: FieldElement(0x4D1167C9BBBCDB6CC1C867394D50C1777D5C2FCC46374E6B07819141E8D2CFAF), y: FieldElement(0xDB4E43CA897D2EE05C70836839AF5DBEE8B62EC4B93563FB044D92551FE33EEE), infinity: 0 } } }) }]"
     )]
     #[case(
         &format!("\
@@ -345,7 +328,7 @@ mod tests {
         "quay.io/kata-containers/confidential-containers:cosign-signed",
         false,
         // If verified failed, the pubkey given to verify will be printed.
-        "[PublicKeyVerifier { key: ECDSA_P256_SHA256_ASN1(VerifyingKey { inner: PublicKey { point: AffinePoint { x: FieldElement(UInt { limbs: [Limb(540873142526201775), Limb(9033147506996235883), Limb(13963524140470157687), Limb(5553333931660335980)] }), y: FieldElement(UInt { limbs: [Limb(310064843663294190), Limb(16768641685016372219), Limb(6660968332548595134), Limb(15802642679658786528)] }), infinity: 0 } } }) }]",
+        "[PublicKeyVerifier { key: ECDSA_P256_SHA256_ASN1(VerifyingKey { inner: PublicKey { point: AffinePoint { x: FieldElement(0x4D1167C9BBBCDB6CC1C867394D50C1777D5C2FCC46374E6B07819141E8D2CFAF), y: FieldElement(0xDB4E43CA897D2EE05C70836839AF5DBEE8B62EC4B93563FB044D92551FE33EEE), infinity: 0 } } }) }]"
     )]
     #[case(
         &format!("\
