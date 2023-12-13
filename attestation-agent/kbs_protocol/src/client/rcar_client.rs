@@ -107,10 +107,10 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         let tee = match &self._tee {
             ClientTee::Unitialized => {
                 let tee = self.provider.get_tee_type().await?;
-                self._tee = ClientTee::_Initializated(tee.clone());
+                self._tee = ClientTee::_Initializated(tee);
                 tee
             }
-            ClientTee::_Initializated(tee) => tee.clone(),
+            ClientTee::_Initializated(tee) => *tee,
         };
 
         let request = Request {
