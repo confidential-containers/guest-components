@@ -23,6 +23,7 @@ pub enum DecryptorProvider {
     #[strum(ascii_case_insensitive)]
     Aliyun,
 
+    #[strum(ascii_case_insensitive)]
     #[cfg(feature = "ehsm")]
     Ehsm,
 }
