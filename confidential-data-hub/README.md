@@ -39,5 +39,6 @@ KMS plugins (flag `PROVIDER`)
 | Feature name        |           Note                                                     |
 | ------------------- | -----------------------------------------------------------------  |
 | aliyun              | Use aliyun KMS suites to unseal secrets, etc.                      |
+| ehsm                | Use Intel eHSM KMS suites to unseal secrets, etc.                  |
 
 Note:  If no `PROVIDER` is given, all features will be enabled.
