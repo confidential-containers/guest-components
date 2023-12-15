@@ -8,11 +8,13 @@ on:
       - 'api-server-rest/**'
       - '.github/workflows/api-server-rest-basic.yml'
       - 'Cargo.toml'
+      - 'Cargo.lock'
   pull_request:
     paths:
       - 'api-server-rest/**'
       - '.github/workflows/api-server-rest-basic.yml'
       - 'Cargo.toml'
+      - 'Cargo.lock'
   create:
   workflow_dispatch:
 
