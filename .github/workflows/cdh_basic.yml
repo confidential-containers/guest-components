@@ -8,11 +8,13 @@ on:
       - 'confidential-data-hub/**'
       - '.github/workflows/cdh_basic.yml'
       - 'Cargo.toml'
+      - 'Cargo.lock'
   pull_request:
     paths:
       - 'confidential-data-hub/**'
       - '.github/workflows/cdh_basic.yml'
       - 'Cargo.toml'
+      - 'Cargo.lock'
   create:
   workflow_dispatch:
 
