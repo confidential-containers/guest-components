@@ -93,6 +93,15 @@ encryption = ["ocicrypt-rs/block-cipher"]
 encryption-ring = ["ocicrypt-rs/block-cipher-ring", "encryption"]
 encryption-openssl = ["ocicrypt-rs/block-cipher-openssl", "encryption"]
 
+# Get needed image verification keys from Confidential Data Hub
+# This is a workaround feature. Because currently to decrypt image, AA will
+# be connected. This feature controls if the public key to verify signature
+# is got from Confidential Data Hub.
+# The final goal is both image decryption and public key is handled by CDH.
+# At that time this feature should be depreciated. This work relies on moving
+# all non-attestation features of AA to CDH.
+confidential-data-hub = ["dep:ttrpc", "dep:protobuf"]
+
 keywrap-cmd = ["ocicrypt-rs/keywrap-keyprovider-cmd"]
 keywrap-grpc = ["ocicrypt-rs/keywrap-keyprovider-grpc", "prost", "tonic", "tonic-build"]
 keywrap-native = ["ocicrypt-rs/keywrap-keyprovider-native", "attestation_agent"]

@@ -5,6 +5,15 @@
 
 //! Cosign verification
 
+#[cfg(all(feature = "signature-cosign", feature = "confidential-data-hub"))]
+mod api;
+
+#[cfg(all(feature = "signature-cosign", feature = "confidential-data-hub"))]
+mod api_ttrpc;
+
+#[cfg(feature = "signature-cosign")]
+mod public_key;
+
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use oci_distribution::secrets::RegistryAuth;
@@ -23,7 +32,6 @@ use sigstore::{
 use std::str::FromStr;
 
 use super::SignScheme;
-use crate::resource;
 use crate::signature::{
     image::Image, mechanism::Paths, payload::simple_signing::SigPayload,
     policy::ref_match::PolicyReqMatchType,
@@ -130,7 +138,7 @@ impl CosignParameters {
         // Get the pubkey
         let key = match (&self.key_data, &self.key_path) {
             (None, None) => bail!("Neither keyPath nor keyData is specified."),
-            (None, Some(key_path)) => resource::get_resource(key_path).await?,
+            (None, Some(key_path)) => public_key::get_public_key(key_path).await?,
             (Some(key_data), None) => key_data.as_bytes().to_vec(),
             (Some(_), Some(_)) => bail!("Both keyPath and keyData are specified."),
         };
