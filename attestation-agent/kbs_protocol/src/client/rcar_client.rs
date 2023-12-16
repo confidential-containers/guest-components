@@ -268,7 +268,7 @@ impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
 
 #[cfg(test)]
 mod test {
-    use std::{env, path::PathBuf};
+    use std::{env, path::PathBuf, time::Duration};
     use testcontainers::{clients, images::generic::GenericImage};
     use tokio::fs;
 
@@ -301,11 +301,13 @@ mod test {
         // we should change the entrypoint of the kbs image by using
         // a start script
         let mut start_kbs_script = env::current_dir().expect("get cwd");
+        let mut kbs_config = start_kbs_script.clone();
         start_kbs_script.push("test/start_kbs.sh");
+        kbs_config.push("test/kbs-config.toml");
 
         let image = GenericImage::new(
-            "ghcr.io/confidential-containers/key-broker-service",
-            "built-in-as-v0.7.0",
+            "ghcr.io/confidential-containers/staged-images/kbs",
+            "latest",
         )
         .with_exposed_port(8085)
         .with_volume(
@@ -316,9 +318,14 @@ mod test {
             start_kbs_script.into_os_string().to_string_lossy(),
             "/usr/local/bin/start_kbs.sh",
         )
+        .with_volume(
+            kbs_config.into_os_string().to_string_lossy(),
+            "/etc/kbs-config.toml",
+        )
         .with_entrypoint("/usr/local/bin/start_kbs.sh");
         let kbs = docker.run(image);
 
+        tokio::time::sleep(Duration::from_secs(10)).await;
         let port = kbs.get_host_port_ipv4(8085);
         let kbs_host_url = format!("http://127.0.0.1:{port}");
 
