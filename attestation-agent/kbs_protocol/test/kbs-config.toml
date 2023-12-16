@@ -1,0 +1,3 @@
+insecure_http = true
+insecure_api = true
+sockets = ["0.0.0.0:8085"]
