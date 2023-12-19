@@ -11,6 +11,7 @@ use std::convert::TryFrom;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio_util::io::StreamReader;
 
 use crate::decoder::Compression;
 use crate::decrypt::Decryptor;
@@ -97,11 +98,12 @@ impl<'a> PullClient<'a> {
         let layer_metas: Vec<(usize, LayerMeta)> = stream::iter(layer_descs)
             .enumerate()
             .map(|(i, layer)| async move {
-                let layer_reader = self
+                let layer_stream = self
                     .client
-                    .async_pull_blob(&self.reference, &layer.digest)
+                    .pull_blob_stream(&self.reference, &layer.digest)
                     .await
-                    .map_err(|e| anyhow!("failed to async pull blob {}", e.to_string()))?;
+                    .map_err(|e| anyhow!("failed to async pull blob stream {}", e.to_string()))?;
+                let layer_reader = StreamReader::new(layer_stream);
                 self.async_handle_layer(
                     layer,
                     diff_ids[i].clone(),

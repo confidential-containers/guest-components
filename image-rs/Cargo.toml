@@ -27,7 +27,7 @@ libc = "0.2"
 log = "0.4.14"
 loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27"}
 nix = { version = "0.26", optional = true }
-oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c", default-features = false, optional = true }
+oci-distribution = { version = "0.10.0", default-features = false, optional = true }
 oci-spec = "0.6.2"
 ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = ["async-io"], optional = true }
 prost = { workspace = true, optional = true }
@@ -38,11 +38,12 @@ serde = { workspace = true, features = ["serde_derive", "rc"] }
 serde_json.workspace = true
 serde_yaml = { version = "0.9", optional = true }
 sha2.workspace = true
-sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", tag = "v0.7.2", default-features = false, optional = true}
+sigstore = { version = "0.8.0", default-features = false, optional = true, features = ["tuf"] }
 strum.workspace = true
 strum_macros = "0.25"
 tar = "0.4.37"
 tokio.workspace = true
+tokio-util = "0.7.10"
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = [ "async" ], optional = true }
 url = "2.2.2"

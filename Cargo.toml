@@ -68,6 +68,3 @@ ttrpc-codegen = "0.4.2"
 url = "2.3.1"
 uuid = "1"
 zeroize = "1.5.7"
-
-[patch.crates-io]
-oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c" }
