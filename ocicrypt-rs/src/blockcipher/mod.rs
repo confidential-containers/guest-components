@@ -12,7 +12,7 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 mod aes_ctr;
 use aes_ctr::AESCTRBlockCipher;
 
-mod rand;
+pub mod rand;
 
 /// Type of the cipher algorithm used to encrypt/decrypt image layers.
 pub type LayerCipherType = String;

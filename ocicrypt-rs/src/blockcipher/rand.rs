@@ -4,7 +4,7 @@
 use anyhow::Result;
 
 /// Fill the given slice with cryptographically generated random numbers
-pub(crate) fn rand_bytes(data: &mut [u8]) -> Result<()> {
+pub fn rand_bytes(data: &mut [u8]) -> Result<()> {
     cfg_if::cfg_if! {
         if #[cfg(feature = "block-cipher-openssl")] {
             openssl::rand::rand_bytes(&mut data[..])?;
