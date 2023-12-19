@@ -18,12 +18,12 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tokio::fs;
 
-use crate::plugins::aliyun::client::dkms_api::{DecryptRequest, EncryptRequest};
+// use crate::plugins::aliyun::client::dkms_api;
 use crate::plugins::_IN_GUEST_DEFAULT_KEY_PATH;
-use crate::{Annotations, Decrypter, Encrypter, ProviderSettings};
+use crate::{Annotations, Decrypter, Encrypter, Getter, ProviderSettings};
 use crate::{Error, Result};
 
-use super::annotations::{AliAnnotations, AliProviderSettings};
+use super::annotations::{AliCryptAnnotations, AliProviderSettings, AliSecretAnnotations};
 use super::credential::Credential;
 
 pub mod dkms_api {
@@ -132,7 +132,7 @@ impl AliyunKmsClient {
 #[async_trait]
 impl Encrypter for AliyunKmsClient {
     async fn encrypt(&mut self, data: &[u8], key_id: &str) -> Result<(Vec<u8>, Annotations)> {
-        let encrypt_request = EncryptRequest {
+        let encrypt_request = dkms_api::EncryptRequest {
             aad: "".into(),
             iv: Vec::new(),
             key_id: key_id.into(),
@@ -161,7 +161,7 @@ impl Encrypter for AliyunKmsClient {
                 "decrypt encrypt response using protobuf failed: {e}"
             ))
         })?;
-        let annotations = AliAnnotations {
+        let annotations = AliCryptAnnotations {
             iv: STANDARD.encode(encrypt_response.iv),
         };
 
@@ -183,7 +183,7 @@ impl Decrypter for AliyunKmsClient {
         key_id: &str,
         annotations: &Annotations,
     ) -> Result<Vec<u8>> {
-        let secret_settings: AliAnnotations =
+        let secret_settings: AliCryptAnnotations =
             serde_json::from_value(Value::Object(annotations.clone())).map_err(|e| {
                 Error::AliyunKmsError(format!(
                     "deserialize SecretSettings for decryption failed: {e}"
@@ -193,7 +193,7 @@ impl Decrypter for AliyunKmsClient {
         let iv = STANDARD
             .decode(secret_settings.iv)
             .map_err(|e| Error::AliyunKmsError(format!("decode iv for decryption failed: {e}")))?;
-        let decrypt_request = DecryptRequest {
+        let decrypt_request = dkms_api::DecryptRequest {
             aad: vec![],
             iv,
             key_id: key_id.into(),
@@ -220,6 +220,48 @@ impl Decrypter for AliyunKmsClient {
             ))
         })?;
         Ok(decrypt_response.plaintext)
+    }
+}
+
+#[async_trait]
+impl Getter for AliyunKmsClient {
+    async fn get_secret(&mut self, name: &str, annotations: &Annotations) -> Result<Vec<u8>> {
+        let secret_settings: AliSecretAnnotations =
+            serde_json::from_value(Value::Object(annotations.clone())).map_err(|e| {
+                Error::AliyunKmsError(format!(
+                    "deserialize SecretSettings for get_secret failed: {e}"
+                ))
+            })?;
+
+        let get_secret_request = dkms_api::GetSecretValueRequest {
+            secret_name: name.into(),
+            version_stage: secret_settings.version_stage,
+            version_id: secret_settings.version_id,
+            fetch_extended_config: false,
+        };
+
+        let mut body = Vec::new();
+        get_secret_request.encode(&mut body).map_err(|e| {
+            Error::AliyunKmsError(format!(
+                "encode get_secret request body using protobuf failed: {e}"
+            ))
+        })?;
+        let headers = self.build_headers("GetSecretValue", &body).map_err(|e| {
+            Error::AliyunKmsError(format!("build get_secret request http header failed: {e}"))
+        })?;
+
+        let res = self
+            .do_request(body, headers)
+            .await
+            .map_err(|e| Error::AliyunKmsError(format!("do request to kms server failed: {e}")))?;
+
+        let get_secret_response =
+            dkms_api::GetSecretValueResponse::decode(&res[..]).map_err(|e| {
+                Error::AliyunKmsError(format!(
+                    "decrypt get_secret response using protobuf failed: {e}"
+                ))
+            })?;
+        Ok(get_secret_response.secret_data.into())
     }
 }
 
@@ -313,9 +355,11 @@ impl AliyunKmsClient {
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
-    use serde_json::json;
+    use serde_json::{json, Map, Value};
 
-    use crate::{plugins::aliyun::client::AliyunKmsClient, Decrypter, Encrypter};
+    use crate::{
+        plugins::aliyun::client::AliyunKmsClient, Annotations, Decrypter, Encrypter, Getter,
+    };
 
     #[rstest]
     #[ignore]
@@ -326,10 +370,8 @@ mod tests {
     async fn key_lifetime(#[case] plaintext: &[u8]) {
         let kid = "yyy";
         let provider_settings = json!({
-            "provider_settings": {
-                "client_key_id": "KAAP.f4c8****",
-                "kms_instance_id": "kst-shh6****",
-            }
+            "client_key_id": "KAAP.f4c8****",
+            "kms_instance_id": "kst-shh6****",
         });
         // init encrypter at user side
         let provider_settings = provider_settings.as_object().unwrap().to_owned();
@@ -354,5 +396,32 @@ mod tests {
             .expect("decrypt");
 
         assert_eq!(decrypted, plaintext);
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn get_secret_with_client_key() {
+        let secret_name = "test_secret";
+        let provider_settings = json!({
+            "client_key_id": "KAAP.2bc431c0-416f-4ccb-8638-e71245fd60c1",
+            "kms_instance_id": "kst-bjj65794c36xm0v9aeujs",
+        });
+        // init encrypter at user side
+        let provider_settings = provider_settings.as_object().unwrap().to_owned();
+        let mut getter = AliyunKmsClient::from_provider_settings(&provider_settings)
+            .await
+            .unwrap();
+
+        // do get
+        let mut annotations: Annotations = Map::<String, Value>::new();
+        annotations.insert("version_stage".to_string(), Value::String("".to_string()));
+        annotations.insert("version_id".to_string(), Value::String("".to_string()));
+        let secret_value = getter
+            .get_secret(secret_name, &annotations)
+            .await
+            .expect("get_secret_with_client_key");
+
+        // We have set "test_secret_value" as secret on Aliyun KMS console.
+        assert_eq!(String::from_utf8_lossy(&secret_value), "test_secret_value");
     }
 }
