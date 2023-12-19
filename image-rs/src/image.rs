@@ -526,7 +526,7 @@ mod tests {
             // Azure Container Registry
             "mcr.microsoft.com/hello-world",
             // Docker container Registry
-            "docker.io/i386/busybox",
+            "docker.io/busybox",
             // Google Container Registry
             "gcr.io/google-containers/busybox:1.27.2",
             // JFrog Container Registry
