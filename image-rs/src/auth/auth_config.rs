@@ -155,18 +155,13 @@ mod tests {
     #[case("mysql:latest", RegistryAuth::Basic("liudalibj".to_string(),"Passw0rd!qaz".to_string()))]
     #[case("quay.io/confidential-containers/image:latest", RegistryAuth::Basic("liudalibj".to_string(),"Passw0rd!qaz".to_string()))]
     #[case("gcr.io/google-containers/busybox:1.27.2", RegistryAuth::Anonymous)]
-    fn test_credential_from_auth_config(#[case] reference: &str, #[case] _auth: RegistryAuth) {
+    fn test_credential_from_auth_config(#[case] reference: &str, #[case] auth: RegistryAuth) {
         let reference = Reference::try_from(reference).expect("reference creation failed");
         let auths: HashMap<String, DockerAuthConfig> = serde_json::from_str(DOCKER_AUTH_CONFIGS)
             .expect("deserialize DOCKER_AUTH_CONFIGS failed");
-        let _got_auth =
+        let got_auth =
             super::credential_from_auth_config(&reference, &auths).expect("get auth failed");
-        // TODO: This assert_eq! test needs the following tasks to be Done
-        // - wait for this PR to be merged into upstream: https://github.com/krustlet/oci-distribution/pull/48
-        // - wait for `oci-distribution` to publish a new release
-        // - let `ocicrypt-rs` follow the new release
-        // - let `image-rs` follow the new release and delete the notes below
-        // assert_eq!(got_auth, auth);
+        assert_eq!(got_auth, auth);
     }
 
     #[rstest]
