@@ -29,6 +29,10 @@ tokio = { version = "1", features = ["full"], optional = true }
 [dev-dependencies]
 tokio.workspace = true
 
+[[bin]]
+name = "evidence_getter"
+required-features = [ "bin" ]
+
 [features]
 default = ["all-attesters"]
 all-attesters = ["tdx-attester", "sgx-attester", "az-snp-vtpm-attester", "snp-attester", "csv-attester", "cca-attester"]
@@ -39,3 +43,5 @@ az-snp-vtpm-attester = ["az-snp-vtpm"]
 snp-attester = ["sev"]
 csv-attester = ["csv-rs", "codicon", "hyper", "hyper-tls", "tokio"]
 cca-attester = ["nix"]
+
+bin = ["tokio/rt", "tokio/macros", "all-attesters"]
