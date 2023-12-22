@@ -2,9 +2,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-/// Environment macro for `image-rs` work dir.
-pub const CC_IMAGE_WORK_DIR: &str = "CC_IMAGE_WORK_DIR";
-
 pub const ERR_BAD_UNCOMPRESSED_DIGEST: &str = "unsupported uncompressed digest format";
 
 pub mod auth;
