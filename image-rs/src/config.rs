@@ -9,7 +9,6 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use crate::snapshots::SnapshotType;
-use crate::CC_IMAGE_WORK_DIR;
 
 const DEFAULT_WORK_DIR: &str = "/var/lib/image-rs/";
 
@@ -84,12 +83,8 @@ where
 impl Default for ImageConfig {
     // Construct a default instance of `ImageConfig`
     fn default() -> ImageConfig {
-        let work_dir = PathBuf::from(
-            std::env::var(CC_IMAGE_WORK_DIR).unwrap_or_else(|_| DEFAULT_WORK_DIR.to_string()),
-        );
-
         ImageConfig {
-            work_dir,
+            work_dir: PathBuf::from(DEFAULT_WORK_DIR.to_string()),
             #[cfg(feature = "snapshot-overlayfs")]
             default_snapshot: SnapshotType::Overlay,
             #[cfg(not(feature = "snapshot-overlayfs"))]
@@ -131,6 +126,13 @@ impl TryFrom<&Path> for ImageConfig {
 }
 
 impl ImageConfig {
+    /// Construct an instance of `ImageConfig` with specific work directory.
+    pub fn new(image_work_dir: PathBuf) -> Self {
+        Self {
+            work_dir: image_work_dir,
+            ..Default::default()
+        }
+    }
     /// Validate the configuration object.
     pub fn validate(&self) -> bool {
         if let Some(nydus_cfg) = self.nydus_config.as_ref() {
@@ -307,7 +309,6 @@ mod tests {
 
     #[test]
     fn test_image_config() {
-        std::env::remove_var(CC_IMAGE_WORK_DIR);
         let config = ImageConfig::default();
         let work_dir = PathBuf::from(DEFAULT_WORK_DIR);
 
@@ -319,8 +320,7 @@ mod tests {
         );
 
         let env_work_dir = "/tmp";
-        std::env::set_var(CC_IMAGE_WORK_DIR, env_work_dir);
-        let config = ImageConfig::default();
+        let config = ImageConfig::new(PathBuf::from(env_work_dir));
         let work_dir = PathBuf::from(env_work_dir);
         assert_eq!(config.work_dir, work_dir);
     }
