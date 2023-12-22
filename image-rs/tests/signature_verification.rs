@@ -172,11 +172,10 @@ async fn do_signature_verification_tests(
 
         // Init tempdirs
         let work_dir = tempfile::tempdir().unwrap();
-        std::env::set_var("CC_IMAGE_WORK_DIR", work_dir.path());
 
         // a new client for every pulling, avoid effection
         // of cache of old client.
-        let mut image_client = ImageClient::default();
+        let mut image_client = ImageClient::new(work_dir.path().to_path_buf());
 
         // enable signature verification
         image_client.config.security_validate = true;
