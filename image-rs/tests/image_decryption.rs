@@ -43,7 +43,6 @@ async fn test_decrypt_layers(#[case] image: &str) {
     std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
 
     let work_dir = tempfile::tempdir().unwrap();
-    std::env::set_var("CC_IMAGE_WORK_DIR", work_dir.path());
     let bundle_dir = tempfile::tempdir().unwrap();
 
     // clean former test files, which is needed to prevent
@@ -51,7 +50,7 @@ async fn test_decrypt_layers(#[case] image: &str) {
     common::clean_configs()
         .await
         .expect("Delete configs failed.");
-    let mut image_client = ImageClient::default();
+    let mut image_client = ImageClient::new(work_dir.path().to_path_buf());
     if cfg!(feature = "snapshot-overlayfs") {
         image_client
             .pull_image(image, bundle_dir.path(), &None, &Some(common::AA_PARAMETER))
