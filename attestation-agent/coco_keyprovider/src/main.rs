@@ -5,8 +5,10 @@
 
 use anyhow::*;
 use clap::{arg, command, Parser};
+use daemonize::Daemonize;
 use log::*;
-use std::{net::SocketAddr, path::PathBuf};
+use std::{fs::File, net::SocketAddr, path::PathBuf};
+use tokio::fs;
 
 pub mod enc_mods;
 pub mod grpc;
@@ -30,6 +32,15 @@ struct Cli {
     /// will be automatically registered into the KBS.
     #[arg(long)]
     kbs: Option<String>,
+
+    /// Whether this process is launched in daemon mode. If it is set to
+    /// true, the stdio and stderr will be redirected to
+    /// `/run/confidential-containers/coco_keyprovider.out` and
+    /// `/run/confidential-containers/coco_keyprovider.err`.
+    /// The pid will be recorded in
+    /// `/run/confidential-containers/coco_keyprovider.pid`
+    #[arg(short, long, default_value = "false")]
+    daemon: bool,
 }
 
 #[tokio::main]
@@ -46,6 +57,25 @@ async fn main() -> Result<()> {
             "The encryption key will be registered to kbs: {:?}",
             cli.kbs
         );
+    }
+
+    if cli.daemon {
+        fs::create_dir_all("/run/confidential-containers")
+            .await
+            .context("create coco run dir failed.")?;
+        let stdout = File::create("/run/confidential-containers/coco_keyprovider.out")
+            .context("create stdout redirect file failed.")?;
+        let stderr = File::create("/run/confidential-containers/coco_keyprovider.err")
+            .context("create stderr redirect file failed.")?;
+
+        let daemonize = Daemonize::new()
+            .pid_file("/run/confidential-containers/coco_keyprovider.pid")
+            .chown_pid_file(true)
+            .working_directory("/run/confidential-containers")
+            .stdout(stdout)
+            .stderr(stderr);
+
+        daemonize.start().context("daemonize failed")?;
     }
 
     grpc::start_service(cli.socket, cli.auth_private_key, cli.kbs).await?;
