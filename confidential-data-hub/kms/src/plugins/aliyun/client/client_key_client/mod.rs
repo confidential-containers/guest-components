@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Alibaba Cloud
+// Copyright (c) 2024 Alibaba Cloud
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -6,40 +6,46 @@
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
-use base64::engine::general_purpose::STANDARD;
-use base64::Engine;
+use base64::{engine::general_purpose::STANDARD, Engine};
 use chrono::Utc;
-use const_format::concatcp;
 use log::error;
 use prost::Message;
-use reqwest::Certificate;
-use reqwest::{header::HeaderMap, ClientBuilder};
+use reqwest::{header::HeaderMap, Certificate, ClientBuilder};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tokio::fs;
 
-// use crate::plugins::aliyun::client::dkms_api;
-use crate::plugins::_IN_GUEST_DEFAULT_KEY_PATH;
+mod config;
+mod credential;
+
 use crate::{Annotations, Decrypter, Encrypter, Getter, ProviderSettings};
 use crate::{Error, Result};
 
-use super::annotations::{AliCryptAnnotations, AliProviderSettings, AliSecretAnnotations};
-use super::credential::Credential;
+use super::super::annotations::*;
+use super::ALIYUN_IN_GUEST_DEFAULT_KEY_PATH;
+use config::*;
+use credential::*;
 
 pub mod dkms_api {
     tonic::include_proto!("dkms_api");
 }
 
-pub struct AliyunKmsClient {
-    http_client: reqwest::Client,
-    credential: Credential,
-    kms_instance_id: String,
-    endpoint: String,
+/// Serialized [`crate::ProviderSettings`]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AliClientKeyProviderSettings {
+    pub client_key_id: String,
+    pub kms_instance_id: String,
 }
 
-const ALIYUN_IN_GUEST_DEFAULT_KEY_PATH: &str = concatcp!(_IN_GUEST_DEFAULT_KEY_PATH, "/aliyun");
+#[derive(Clone, Debug)]
+pub struct ClientKeyClient {
+    credential: CredentialClientKey,
+    config: ConfigClientKey,
+    http_client: reqwest::Client,
+}
 
-impl AliyunKmsClient {
+impl ClientKeyClient {
     fn read_kms_instance_cert(cert_pem: &[u8]) -> Result<Certificate> {
         let kms_instance_ca_cert = Certificate::from_pem(cert_pem)
             .map_err(|e| Error::AliyunKmsError(format!("read kms instance ca cert failed: {e}")))?;
@@ -52,10 +58,15 @@ impl AliyunKmsClient {
         password: &str,
         cert_pem: &str,
     ) -> Result<Self> {
-        let credential = Credential::new(client_key, password).map_err(|e| {
-            Error::AliyunKmsError(format!("create credential of the kms instance failed: {e}"))
+        let credential = CredentialClientKey::new(client_key, password).map_err(|e| {
+            Error::AliyunKmsError(format!(
+                "create client_key credential of the kms instance failed: {e}"
+            ))
         })?;
+
         let endpoint = format!("{kms_instance_id}.cryptoservice.kms.aliyuncs.com");
+        let config = ConfigClientKey::new(kms_instance_id, &endpoint);
+
         let cert = Self::read_kms_instance_cert(cert_pem.as_bytes())?;
         let http_client = ClientBuilder::new()
             .use_rustls_tls()
@@ -64,10 +75,9 @@ impl AliyunKmsClient {
             .map_err(|e| Error::AliyunKmsError(format!("build http client failed: {e}")))?;
 
         Ok(Self {
-            http_client,
-            kms_instance_id: kms_instance_id.to_string(),
             credential,
-            endpoint,
+            config,
+            http_client,
         })
     }
 
@@ -75,9 +85,9 @@ impl AliyunKmsClient {
     /// [`ALIYUN_IN_GUEST_DEFAULT_KEY_PATH`] which is the by default path where the credential
     /// to access kms is saved.
     pub async fn from_provider_settings(provider_settings: &ProviderSettings) -> Result<Self> {
-        let provider_settings: AliProviderSettings =
+        let provider_settings: AliClientKeyProviderSettings =
             serde_json::from_value(Value::Object(provider_settings.clone())).map_err(|e| {
-                Error::AliyunKmsError(format!("parse provider setting failed: {e}"))
+                Error::AliyunKmsError(format!("parse client_key provider setting failed: {e}"))
             })?;
 
         let cert_path = format!(
@@ -114,12 +124,12 @@ impl AliyunKmsClient {
     /// in the encryptor side. The [`ProviderSettings`] will be used to initial a client
     /// in the decryptor side.
     pub fn export_provider_settings(&self) -> Result<ProviderSettings> {
-        let provider_settings = AliProviderSettings {
+        let client_key_provider_settings = AliClientKeyProviderSettings {
             client_key_id: self.credential.client_key_id.clone(),
-            kms_instance_id: self.kms_instance_id.clone(),
+            kms_instance_id: self.config.kms_instance_id.clone(),
         };
 
-        let provider_settings = serde_json::to_value(provider_settings)
+        let provider_settings = serde_json::to_value(client_key_provider_settings)
             .map_err(|e| Error::AliyunKmsError(format!("serialize ProviderSettings failed: {e}")))?
             .as_object()
             .expect("must be an object")
@@ -130,7 +140,7 @@ impl AliyunKmsClient {
 }
 
 #[async_trait]
-impl Encrypter for AliyunKmsClient {
+impl Encrypter for ClientKeyClient {
     async fn encrypt(&mut self, data: &[u8], key_id: &str) -> Result<(Vec<u8>, Annotations)> {
         let encrypt_request = dkms_api::EncryptRequest {
             aad: "".into(),
@@ -176,7 +186,7 @@ impl Encrypter for AliyunKmsClient {
 }
 
 #[async_trait]
-impl Decrypter for AliyunKmsClient {
+impl Decrypter for ClientKeyClient {
     async fn decrypt(
         &mut self,
         ciphertext: &[u8],
@@ -224,7 +234,7 @@ impl Decrypter for AliyunKmsClient {
 }
 
 #[async_trait]
-impl Getter for AliyunKmsClient {
+impl Getter for ClientKeyClient {
     async fn get_secret(&mut self, name: &str, annotations: &Annotations) -> Result<Vec<u8>> {
         let secret_settings: AliSecretAnnotations =
             serde_json::from_value(Value::Object(annotations.clone())).map_err(|e| {
@@ -233,17 +243,16 @@ impl Getter for AliyunKmsClient {
                 ))
             })?;
 
+        let mut body = Vec::new();
         let get_secret_request = dkms_api::GetSecretValueRequest {
             secret_name: name.into(),
-            version_stage: secret_settings.version_stage,
-            version_id: secret_settings.version_id,
-            fetch_extended_config: false,
+            version_stage: secret_settings.version_stage.clone(),
+            version_id: secret_settings.version_id.clone(),
+            fetch_extended_config: true,
         };
-
-        let mut body = Vec::new();
         get_secret_request.encode(&mut body).map_err(|e| {
             Error::AliyunKmsError(format!(
-                "encode get_secret request body using protobuf failed: {e}"
+                "encode get_secret request using protobuf failed: {e}"
             ))
         })?;
         let headers = self.build_headers("GetSecretValue", &body).map_err(|e| {
@@ -258,14 +267,16 @@ impl Getter for AliyunKmsClient {
         let get_secret_response =
             dkms_api::GetSecretValueResponse::decode(&res[..]).map_err(|e| {
                 Error::AliyunKmsError(format!(
-                    "decrypt get_secret response using protobuf failed: {e}"
+                    "decode get_secret response using protobuf failed: {e}"
                 ))
             })?;
-        Ok(get_secret_response.secret_data.into())
+        let secret_data = get_secret_response.secret_data.as_bytes().to_vec();
+
+        Ok(secret_data)
     }
 }
 
-impl AliyunKmsClient {
+impl ClientKeyClient {
     const API_VERSION: &'static str = "dkms-gcs-0.2";
     const SIGNATURE_METHOD: &'static str = "RSA_PKCS1_SHA_256";
     const CONTENT_TYPE: &'static str = "application/x-protobuf";
@@ -273,7 +284,7 @@ impl AliyunKmsClient {
     fn build_headers(&self, api_name: &str, body: &[u8]) -> anyhow::Result<HeaderMap> {
         let mut headers = HeaderMap::new();
         headers.insert("Accept", "application/x-protobuf".parse()?);
-        headers.insert("Host", self.endpoint.parse()?);
+        headers.insert("Host", self.config.endpoint.parse()?);
         let date = Utc::now().format("%a, %d %b %Y %H:%M:%S GMT").to_string();
         headers.insert("date", date.parse()?);
         headers.insert(
@@ -311,20 +322,24 @@ impl AliyunKmsClient {
             .collect::<Vec<String>>()
             .join("");
 
-        let tbs = format!(
+        let string_to_sign = format!(
             "POST\n{}\n{}\n{}\n{}/",
             sha256,
             Self::CONTENT_TYPE,
             date,
             canonicalized_headers
         );
-        let bear_auth = self.credential.generate_bear_auth(&tbs)?;
-        headers.insert("Authorization", bear_auth.parse()?);
+        let string_signed = self.credential.sign(&string_to_sign)?;
+        headers.insert(
+            "Authorization",
+            format!("Bearer {}", string_signed).parse()?,
+        );
+
         Ok(headers)
     }
 
     async fn do_request(&self, body: Vec<u8>, headers: HeaderMap) -> anyhow::Result<Vec<u8>> {
-        let server_url = format!("https://{}", self.endpoint);
+        let server_url = format!("https://{}", self.config.endpoint);
 
         let response = self
             .http_client
@@ -349,79 +364,5 @@ impl AliyunKmsClient {
         }
 
         Ok(response.bytes().await?.to_vec())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use rstest::rstest;
-    use serde_json::{json, Map, Value};
-
-    use crate::{
-        plugins::aliyun::client::AliyunKmsClient, Annotations, Decrypter, Encrypter, Getter,
-    };
-
-    #[rstest]
-    #[ignore]
-    #[case(b"this is a test plaintext")]
-    #[ignore]
-    #[case(b"this is a another test plaintext")]
-    #[tokio::test]
-    async fn key_lifetime(#[case] plaintext: &[u8]) {
-        let kid = "yyy";
-        let provider_settings = json!({
-            "client_key_id": "KAAP.f4c8****",
-            "kms_instance_id": "kst-shh6****",
-        });
-        // init encrypter at user side
-        let provider_settings = provider_settings.as_object().unwrap().to_owned();
-        let mut encryptor = AliyunKmsClient::from_provider_settings(&provider_settings)
-            .await
-            .unwrap();
-
-        // do encryption
-        let (ciphertext, secret_settings) =
-            encryptor.encrypt(plaintext, kid).await.expect("encrypt");
-        let provider_settings = encryptor.export_provider_settings().unwrap();
-
-        // init decrypter in a guest
-        let mut decryptor = AliyunKmsClient::from_provider_settings(&provider_settings)
-            .await
-            .unwrap();
-
-        // do decryption
-        let decrypted = decryptor
-            .decrypt(&ciphertext, kid, &secret_settings)
-            .await
-            .expect("decrypt");
-
-        assert_eq!(decrypted, plaintext);
-    }
-
-    #[ignore]
-    #[tokio::test]
-    async fn get_secret_with_client_key() {
-        let secret_name = "test_secret";
-        let provider_settings = json!({
-            "client_key_id": "KAAP.2bc431c0-416f-4ccb-8638-e71245fd60c1",
-            "kms_instance_id": "kst-bjj65794c36xm0v9aeujs",
-        });
-        // init encrypter at user side
-        let provider_settings = provider_settings.as_object().unwrap().to_owned();
-        let mut getter = AliyunKmsClient::from_provider_settings(&provider_settings)
-            .await
-            .unwrap();
-
-        // do get
-        let mut annotations: Annotations = Map::<String, Value>::new();
-        annotations.insert("version_stage".to_string(), Value::String("".to_string()));
-        annotations.insert("version_id".to_string(), Value::String("".to_string()));
-        let secret_value = getter
-            .get_secret(secret_name, &annotations)
-            .await
-            .expect("get_secret_with_client_key");
-
-        // We have set "test_secret_value" as secret on Aliyun KMS console.
-        assert_eq!(String::from_utf8_lossy(&secret_value), "test_secret_value");
     }
 }

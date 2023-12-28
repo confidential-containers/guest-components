@@ -10,6 +10,5 @@
 
 mod annotations;
 mod client;
-mod credential;
 
 pub use client::AliyunKmsClient;
