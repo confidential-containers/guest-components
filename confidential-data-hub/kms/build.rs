@@ -6,7 +6,9 @@ use anyhow::*;
 
 fn main() -> Result<()> {
     #[cfg(feature = "aliyun")]
-    tonic_build::compile_protos("./src/plugins/aliyun/protobuf/dkms_api.proto")?;
+    tonic_build::compile_protos(
+        "./src/plugins/aliyun/client/client_key_client/protobuf/dkms_api.proto",
+    )?;
 
     #[cfg(feature = "sev")]
     tonic_build::configure()

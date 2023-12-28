@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Alibaba Cloud
+// Copyright (c) 2024 Alibaba Cloud
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -17,8 +17,8 @@ use serde::Deserialize;
 use yasna::ASN1Result;
 
 #[derive(Clone, Debug)]
-pub(crate) struct Credential {
-    pub(crate) client_key_id: String,
+pub(crate) struct CredentialClientKey {
+    pub client_key_id: String,
     private_key: PKey<Private>,
 }
 
@@ -35,17 +35,17 @@ struct Password {
     client_key_password: String,
 }
 
-impl Credential {
+// implement CredentialClientKey related function
+impl CredentialClientKey {
     pub(crate) fn new(client_key: &str, pswd: &str) -> Result<Self> {
         let ck: ClientKey = serde_json::from_str(client_key)?;
 
         let password: Password = serde_json::from_str(pswd)?;
-
         let private_key =
             Self::parse_private_key(ck.private_key_data, password.client_key_password)?;
-
         let private_key = PKey::private_key_from_der(&private_key)?;
-        let credential = Credential {
+
+        let credential = CredentialClientKey {
             client_key_id: ck.key_id.clone(),
             private_key,
         };
@@ -53,12 +53,12 @@ impl Credential {
         Ok(credential)
     }
 
-    pub(crate) fn generate_bear_auth(&self, str_to_sign: &str) -> Result<String> {
+    pub(crate) fn sign(&self, str_to_sign: &str) -> Result<String> {
         let mut signer = Signer::new(openssl::hash::MessageDigest::sha256(), &self.private_key)?;
         signer.update(str_to_sign.as_bytes())?;
         let signature = signer.sign_to_vec()?;
 
-        Ok(format!("Bearer {}", STANDARD.encode(signature)))
+        Ok(STANDARD.encode(signature))
     }
 
     pub(crate) fn parse_private_key(private_key_data: String, password: String) -> Result<Vec<u8>> {

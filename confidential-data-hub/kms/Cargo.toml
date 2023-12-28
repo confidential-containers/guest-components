@@ -21,17 +21,19 @@ log.workspace = true
 openssl = { workspace = true, optional = true }
 p12 = { version = "0.6.3", optional = true }
 prost = { workspace = true, optional = true }
+rand = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
 resource_uri = { path = "../../attestation-agent/deps/resource_uri" }
 sha2 = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 sev = { path = "../../attestation-agent/deps/sev", optional = true }
 strum.workspace = true
-reqwest = { version = "0.11", optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 toml.workspace = true
 tonic = { workspace = true, optional = true }
+url = { workspace = true, optional = true }
 uuid = { workspace = true, features = ["serde", "v4"], optional = true }
 yasna = { version = "0.5.2", optional = true }
 zeroize = { workspace = true, optional = true }
@@ -47,7 +49,7 @@ tonic-build.workspace = true
 [features]
 default = ["aliyun", "kbs", "ehsm"]
 
-aliyun = ["chrono", "hex", "openssl", "p12", "prost", "reqwest/rustls-tls", "sha2", "tonic", "yasna"]
+aliyun = ["chrono", "hex", "openssl", "p12", "prost", "rand", "reqwest/rustls-tls", "sha2", "tonic", "url", "yasna"]
 kbs = ["kbs_protocol"]
 ehsm = ["ehsm_client"]
 sev = ["bincode", "crypto", "dep:sev", "prost", "tonic", "uuid", "zeroize"]
