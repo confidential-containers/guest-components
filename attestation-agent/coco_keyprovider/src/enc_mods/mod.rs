@@ -74,7 +74,6 @@ fn parse_input_params(input: &str) -> Result<InputParams> {
         .collect::<Vec<&str>>()
         .iter()
         .filter_map(|field| field.split_once('='))
-        .map(|(k, v)| (k, v))
         .collect();
     debug!("Get new request: {:?}", map);
     let sample = map
