@@ -23,7 +23,7 @@ CoCo Keyprovider. Used to encrypt the container images.
 
 ## Build
 
-A `Makefile` is provided to quickly build Attestation Agent/Api Server Rest/Confidential Data Hub of a given platform.
+A `Makefile` is provided to quickly build Attestation Agent/Api Server Rest/Confidential Data Hub for a given platform.
 
 ```shell
 make build TEE_PLATFORM=$(TEE_PLATFORM)
@@ -31,9 +31,13 @@ make install DESTDIR=/usr/local/bin
 ```
 
 The `TEE_PLATFORM` parameter can be
-- `test`: for test
+- `none`: for tests with non-confidential guests
+- `fs`: for platforms with encrypted root filesystems (i.e. s390x)
 - `tdx`: for Intel TDX
-- `sev`: for AMD SEV
+- `az-tdx-vtpm`: for Intel TDX with Azure vTPM
+- `sev`: for AMD SEV(-ES)
+- `snp`: for AMD SEV-SNP
+- `az-snp-vtpm`: for AMD SEV-SNP with Azure vTPM
 
 ## License
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fconfidential-containers%2Fimage-rs.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fconfidential-containers%2Fimage-rs?ref=badge_large)
