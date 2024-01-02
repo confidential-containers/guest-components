@@ -10,4 +10,4 @@ pub mod error;
 pub use error::*;
 
 pub mod plugins;
-pub use plugins::{new_decryptor, new_getter};
+pub use plugins::{get_public_key, new_decryptor, new_getter};

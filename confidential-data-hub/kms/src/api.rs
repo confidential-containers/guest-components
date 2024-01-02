@@ -77,3 +77,9 @@ pub trait Getter: Send + Sync {
     /// `annotations`.
     async fn get_secret(&mut self, name: &str, annotations: &Annotations) -> Result<Vec<u8>>;
 }
+
+#[async_trait]
+pub trait PubkeyProvider: Send + Sync {
+    /// Get public key from the KMS due to the given key id.
+    async fn get_public_key(&mut self, key_id: &str) -> Result<Vec<u8>>;
+}

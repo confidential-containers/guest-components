@@ -28,7 +28,7 @@ pub struct SealedSecretServiceClient {
 impl SealedSecretServiceClient {
     pub fn new(client: ::ttrpc::r#async::Client) -> Self {
         SealedSecretServiceClient {
-            client,
+            client: client,
         }
     }
 
@@ -76,7 +76,7 @@ pub struct GetResourceServiceClient {
 impl GetResourceServiceClient {
     pub fn new(client: ::ttrpc::r#async::Client) -> Self {
         GetResourceServiceClient {
-            client,
+            client: client,
         }
     }
 
@@ -124,7 +124,7 @@ pub struct KeyProviderServiceClient {
 impl KeyProviderServiceClient {
     pub fn new(client: ::ttrpc::r#async::Client) -> Self {
         KeyProviderServiceClient {
-            client,
+            client: client,
         }
     }
 
@@ -172,7 +172,7 @@ pub struct SecureMountServiceClient {
 impl SecureMountServiceClient {
     pub fn new(client: ::ttrpc::r#async::Client) -> Self {
         SecureMountServiceClient {
-            client,
+            client: client,
         }
     }
 
@@ -220,7 +220,7 @@ pub struct GetPublicKeyServiceClient {
 impl GetPublicKeyServiceClient {
     pub fn new(client: ::ttrpc::r#async::Client) -> Self {
         GetPublicKeyServiceClient {
-            client,
+            client: client,
         }
     }
 

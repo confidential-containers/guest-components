@@ -82,4 +82,11 @@ impl DataHub for Hub {
             .map_err(|e| Error::SecureMount(e.to_string()))?;
         Ok(res)
     }
+
+    async fn get_public_key(&self, key_id: &str) -> Result<Vec<u8>> {
+        let pubkey = kms::get_public_key(key_id)
+            .await
+            .map_err(|e| Error::GetPublicKey(e.to_string()))?;
+        Ok(pubkey)
+    }
 }

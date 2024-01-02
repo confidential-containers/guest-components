@@ -22,4 +22,9 @@ pub enum Error {
 
     #[error("Unsupported provider: {0}")]
     UnsupportedProvider(String),
+
+    #[error(
+        "Unsupported public key id: {0}. should be, e.g. `kbs:///example/key/1` or `aliyun://xxx`"
+    )]
+    UnsupportedPublicKeyId(String),
 }

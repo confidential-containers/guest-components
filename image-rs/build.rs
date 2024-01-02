@@ -10,18 +10,33 @@ fn main() -> Result<()> {
     tonic_build::compile_protos("./protos/getresource.proto").context("tonic build")?;
 
     #[cfg(feature = "ttrpc-codegen")]
-    ttrpc_codegen::Codegen::new()
-        .out_dir("./src/resource/kbs/ttrpc_proto")
-        .input("./protos/getresource.proto")
-        .include("./protos")
-        .rust_protobuf()
-        .customize(ttrpc_codegen::Customize {
-            async_all: true,
-            ..Default::default()
-        })
-        .rust_protobuf_customize(ttrpc_codegen::ProtobufCustomize::default().gen_mod_rs(false))
-        .run()
-        .context("ttrpc build")?;
+    {
+        ttrpc_codegen::Codegen::new()
+            .out_dir("./src/resource/kbs/ttrpc_proto")
+            .input("./protos/getresource.proto")
+            .include("./protos")
+            .rust_protobuf()
+            .customize(ttrpc_codegen::Customize {
+                async_all: true,
+                ..Default::default()
+            })
+            .rust_protobuf_customize(ttrpc_codegen::ProtobufCustomize::default().gen_mod_rs(false))
+            .run()
+            .context("ttrpc build")?;
 
+        #[cfg(all(feature = "signature-cosign", feature = "confidential-data-hub"))]
+        ttrpc_codegen::Codegen::new()
+            .out_dir("./src/signature/mechanism/cosign")
+            .input("../confidential-data-hub/hub/protos/api.proto")
+            .include("../confidential-data-hub/hub/protos")
+            .rust_protobuf()
+            .customize(ttrpc_codegen::Customize {
+                async_all: true,
+                ..Default::default()
+            })
+            .rust_protobuf_customize(ttrpc_codegen::ProtobufCustomize::default().gen_mod_rs(false))
+            .run()
+            .context("ttrpc build")?;
+    }
     Ok(())
 }

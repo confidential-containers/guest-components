@@ -29,4 +29,7 @@ pub trait DataHub {
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>>;
 
     async fn secure_mount(&self, storage: Storage) -> Result<String>;
+
+    /// Get the public key due to the `key_id`.
+    async fn get_public_key(&self, key_id: &str) -> Result<Vec<u8>>;
 }

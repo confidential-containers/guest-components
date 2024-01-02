@@ -16,11 +16,14 @@ use ttrpc::{asynchronous::TtrpcContext, Code, Error, Status};
 
 use crate::{
     api::{
-        GetResourceRequest, GetResourceResponse, KeyProviderKeyWrapProtocolInput,
-        KeyProviderKeyWrapProtocolOutput, SecureMountRequest, SecureMountResponse,
-        UnsealSecretInput, UnsealSecretOutput,
+        GetPublicKeyRequest, GetPublicKeyResponse, GetResourceRequest, GetResourceResponse,
+        KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput, SecureMountRequest,
+        SecureMountResponse, UnsealSecretInput, UnsealSecretOutput,
     },
-    api_ttrpc::{GetResourceService, KeyProviderService, SealedSecretService, SecureMountService},
+    api_ttrpc::{
+        GetPublicKeyService, GetResourceService, KeyProviderService, SealedSecretService,
+        SecureMountService,
+    },
     server::message::{KeyProviderInput, KeyUnwrapOutput, KeyUnwrapResults},
 };
 
@@ -182,6 +185,32 @@ impl SecureMountService for Server {
         let mut reply = SecureMountResponse::new();
         reply.mount_path = resource;
         debug!("send back the resource");
+
+        Ok(reply)
+    }
+}
+
+#[async_trait]
+impl GetPublicKeyService for Server {
+    async fn get_public_key(
+        &self,
+        _ctx: &TtrpcContext,
+        req: GetPublicKeyRequest,
+    ) -> ::ttrpc::Result<GetPublicKeyResponse> {
+        debug!("get new GetPublicKey request");
+        let reader = HUB.read().await;
+        let reader = reader.as_ref().expect("must be initialized");
+        let pubkey_pem = reader.get_public_key(&req.KeyId).await.map_err(|e| {
+            let mut status = Status::new();
+            status.set_code(Code::INTERNAL);
+            status.set_message(format!("[CDH] [ERROR]: Get Public Key failed: {e}"));
+            Error::RpcStatus(status)
+        })?;
+
+        let mut reply = GetPublicKeyResponse::new();
+        reply.PublicKeyPem = pubkey_pem;
+
+        debug!("send back the public key in PEM encoding");
         Ok(reply)
     }
 }

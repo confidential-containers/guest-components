@@ -9,6 +9,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("get public key failed: {0}")]
+    GetPublicKey(String),
+
     #[error("get resource failed: {0}")]
     GetResource(String),
 
