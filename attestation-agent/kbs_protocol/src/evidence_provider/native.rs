@@ -15,12 +15,9 @@ pub struct NativeEvidenceProvider(BoxedAttester);
 
 impl NativeEvidenceProvider {
     pub fn new() -> Result<Self> {
-        let tee = detect_tee_type()
-            .ok_or_else(|| Error::GetTeeTypeFailed("no supported Tee type detected.".into()))?
-            .try_into()
-            .map_err(|e| {
-                Error::NativeEvidenceProvider(format!("failed to initialize tee driver: {e}"))
-            })?;
+        let tee = detect_tee_type().try_into().map_err(|e| {
+            Error::NativeEvidenceProvider(format!("failed to initialize tee driver: {e}"))
+        })?;
         Ok(Self(tee))
     }
 }
@@ -35,7 +32,6 @@ impl EvidenceProvider for NativeEvidenceProvider {
     }
 
     async fn get_tee_type(&self) -> Result<Tee> {
-        detect_tee_type()
-            .ok_or_else(|| Error::GetTeeTypeFailed("no supported Tee type detected.".into()))
+        Ok(detect_tee_type())
     }
 }

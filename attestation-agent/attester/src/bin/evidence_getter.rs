@@ -14,7 +14,7 @@ async fn main() {
         .read(&mut report_data)
         .expect("read input failed");
 
-    let tee = detect_tee_type().expect("unknown tee type");
+    let tee = detect_tee_type();
     let attester: BoxedAttester = tee.try_into().expect("create attester failed");
     let evidence = attester
         .get_evidence(report_data)

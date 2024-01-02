@@ -7,12 +7,10 @@ use super::Attester;
 use anyhow::*;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
-use std::env;
 
-// If the environment variable "AA_SAMPLE_ATTESTER_TEST" is set,
-// the TEE platform is considered as "sample".
+// Sample attester is always supported
 pub fn detect_platform() -> bool {
-    env::var("AA_SAMPLE_ATTESTER_TEST").is_ok()
+    true
 }
 
 // A simple example of TEE evidence.

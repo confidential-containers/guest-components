@@ -24,9 +24,6 @@ pub enum Error {
     #[error("get token failed: {0}")]
     GetTokenFailed(String),
 
-    #[error("get tee type failed: {0}")]
-    GetTeeTypeFailed(String),
-
     #[error("http request failed: {0}")]
     HttpError(String),
 
