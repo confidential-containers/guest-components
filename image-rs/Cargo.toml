@@ -104,8 +104,6 @@ keywrap-ttrpc = ["ocicrypt-rs/keywrap-keyprovider-ttrpc", "dep:ttrpc", "dep:prot
 # Enable keywrap-jwe to decrypt image
 keywrap-jwe = ["ocicrypt-rs/keywrap-jwe"]
 
-cc-kbc-sgx = ["kbs_protocol/background_check", "kbs_protocol/sgx-attester", "ocicrypt-rs/cc_kbc_sgx", "kbs_protocol/passport"]
-
 signature = ["hex"]
 signature-cosign = ["signature", "futures"]
 signature-cosign-rustls = ["signature-cosign", "sigstore/cosign-rustls-tls"]

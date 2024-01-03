@@ -3548,10 +3548,10 @@ dependencies = [
  "aes-gcm",
  "anyhow",
  "async-trait",
- "attestation_agent",
  "base64 0.21.5",
  "base64-serde",
  "cfg-if",
+ "crypto",
  "ctr",
  "hmac 0.12.1",
  "josekit",
@@ -3561,6 +3561,7 @@ dependencies = [
  "pin-project-lite",
  "prost 0.11.9",
  "protobuf 3.3.0",
+ "resource_uri",
  "ring 0.16.20",
  "serde",
  "serde_json",
@@ -3570,6 +3571,7 @@ dependencies = [
  "tonic-build",
  "ttrpc",
  "ttrpc-codegen",
+ "zeroize",
 ]
 
 [[package]]
