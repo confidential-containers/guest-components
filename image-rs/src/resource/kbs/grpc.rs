@@ -24,7 +24,13 @@ mod get_resource {
 
 /// Attestation Agent's GetResource gRPC address.
 /// It's given <https://github.com/confidential-containers/guest-components/tree/main/attestation-agent#run>
-pub const AA_GETRESOURCE_ADDR: &str = "http://127.0.0.1:50001";
+///
+/// We are now using CDH to provide the GetResource gRPC service,
+/// while gRPC is still not supported by CDH. So this feature will
+/// not work.
+/// TODO: Add gRPC support for CDH to leverage the ability of getting
+/// resources by image-rs using gRPC.
+pub const GETRESOURCE_ADDR: &str = "http://127.0.0.1:50001";
 
 pub struct Grpc {
     inner: GetResourceServiceClient<Channel>,
@@ -32,23 +38,16 @@ pub struct Grpc {
 
 impl Grpc {
     pub async fn new() -> Result<Self> {
-        let inner = GetResourceServiceClient::connect(AA_GETRESOURCE_ADDR).await?;
+        let inner = GetResourceServiceClient::connect(GETRESOURCE_ADDR).await?;
         Ok(Self { inner })
     }
 }
 
 #[async_trait]
 impl Client for Grpc {
-    async fn get_resource(
-        &mut self,
-        kbc_name: &str,
-        resource_path: &str,
-        kbs_uri: &str,
-    ) -> Result<Vec<u8>> {
+    async fn get_resource(&mut self, resource_path: &str) -> Result<Vec<u8>> {
         let req = tonic::Request::new(GetResourceRequest {
-            kbc_name: kbc_name.to_string(),
             resource_path: resource_path.to_string(),
-            kbs_uri: kbs_uri.to_string(),
         });
         Ok(self.inner.get_resource(req).await?.into_inner().resource)
     }
