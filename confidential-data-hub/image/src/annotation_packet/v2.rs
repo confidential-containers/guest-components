@@ -60,7 +60,6 @@ fn default_provider() -> String {
     VaultProvider::Kbs.as_ref().to_string()
 }
 
-#[cfg(feature = "kbs")]
 impl TryInto<super::v1::AnnotationPacket> for AnnotationPacketV2 {
     type Error = Error;
 
@@ -107,7 +106,6 @@ impl TryInto<super::v1::AnnotationPacket> for AnnotationPacketV2 {
 impl AnnotationPacketV2 {
     pub async fn unwrap_key(&self) -> Result<Vec<u8>> {
         let lek = match &self.provider[..] {
-            #[cfg(feature = "kbs")]
             "kbs" => {
                 let anno_v1: super::v1::AnnotationPacket = self.clone().try_into()?;
                 anno_v1.unwrap_key().await?
