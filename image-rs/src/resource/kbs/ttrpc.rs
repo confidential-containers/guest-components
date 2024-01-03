@@ -14,7 +14,7 @@ use super::Client;
 use super::ttrpc_proto::getresource::GetResourceRequest;
 use super::ttrpc_proto::getresource_ttrpc::GetResourceServiceClient;
 
-const SOCKET_ADDR: &str = "unix:///run/confidential-containers/attestation-agent/getresource.sock";
+const SOCKET_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
 
 pub struct Ttrpc {
     gtclient: GetResourceServiceClient,
@@ -31,16 +31,9 @@ impl Ttrpc {
 
 #[async_trait]
 impl Client for Ttrpc {
-    async fn get_resource(
-        &mut self,
-        kbc_name: &str,
-        resource_path: &str,
-        kbs_uri: &str,
-    ) -> Result<Vec<u8>> {
+    async fn get_resource(&mut self, resource_path: &str) -> Result<Vec<u8>> {
         let req = GetResourceRequest {
-            KbcName: kbc_name.to_string(),
             ResourcePath: resource_path.to_string(),
-            KbsUri: kbs_uri.to_string(),
             ..Default::default()
         };
         let res = self

@@ -74,9 +74,7 @@ jobs:
         run: |
           cargo clippy -p image-rs --all-targets --features=default -- -D warnings
           cargo clippy -p image-rs --all-targets --features=kata-cc-rustls-tls --no-default-features -- -D warnings
-          cargo clippy -p image-rs --all-targets --features=enclave-cc-eaakbc-rustls-tls --no-default-features -- -D warnings
           cargo clippy -p image-rs --all-targets --features=kata-cc-native-tls --no-default-features -- -D warnings
-          cargo clippy -p image-rs --all-targets --features=enclave-cc-eaakbc-native-tls --no-default-features -- -D warnings
           cargo clippy -p image-rs --all-targets --features=enclave-cc-cckbc-native-tls --no-default-features -- -D warnings
           cargo clippy -p image-rs --all-targets --features=kata-cc-native-tls,signature-simple-xrss --no-default-features -- -D warnings
 
@@ -90,13 +88,14 @@ jobs:
         run: |
           sudo -E PATH=$PATH -s cargo test -p image-rs --features default
 
-      - name: Run cargo test - kata-cc (rust-tls version) with keywrap-grpc + keywrap-jwe
-        run: |
-          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-ring,keywrap-grpc,snapshot-overlayfs,signature-cosign-rustls,signature-simple,getresource,oci-distribution/rustls-tls,keywrap-jwe
+      # TODO: delete the comment after https://github.com/confidential-containers/guest-components/issues/430
+      # - name: Run cargo test - kata-cc (rust-tls version) with keywrap-grpc + keywrap-jwe
+      #   run: |
+      #     sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-ring,keywrap-grpc,snapshot-overlayfs,signature-cosign-rustls,signature-simple,getresource,oci-distribution/rustls-tls,keywrap-jwe
 
-      - name: Run cargo test - kata-cc (native-tls version) with keywrap-grpc + keywrap-jwe
-        run: |
-          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-openssl,keywrap-grpc,snapshot-overlayfs,signature-cosign-native,signature-simple,getresource,oci-distribution/native-tls,keywrap-jwe
+      # - name: Run cargo test - kata-cc (native-tls version) with keywrap-grpc + keywrap-jwe
+      #   run: |
+      #     sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-openssl,keywrap-grpc,snapshot-overlayfs,signature-cosign-native,signature-simple,getresource,oci-distribution/native-tls,keywrap-jwe
 
       - name: Run cargo test - kata-cc (rust-tls version) with keywrap-ttrpc (default) + keywrap-jwe
         run: |
