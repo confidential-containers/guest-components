@@ -13,13 +13,7 @@ use crate::keywrap::KeyWrapper;
 use crate::utils::{self, CommandExecuter};
 
 #[cfg(feature = "keywrap-keyprovider-native")]
-use attestation_agent::{AttestationAPIs, AttestationAgent};
-
-#[cfg(feature = "keywrap-keyprovider-native")]
-lazy_static! {
-    pub static ref ATTESTATION_AGENT: std::sync::Arc<tokio::sync::Mutex<AttestationAgent>> =
-        std::sync::Arc::new(tokio::sync::Mutex::new(AttestationAgent::new()));
-}
+mod native;
 
 #[derive(Debug)]
 enum OpKey {
@@ -201,18 +195,15 @@ impl KeyProviderKeyWrapProtocolOutput {
         let (kbc, kbs) = pair_str
             .split_once("::")
             .ok_or_else(|| anyhow!("keyprovider: invalid kbc::kbs pair"))?;
-        let kbc = kbc.to_string();
         let kbs = kbs.to_string();
+        let kbc = kbc.to_string();
         let annotation = annotation.to_string();
 
         let handler = std::thread::spawn(move || {
             create_async_runtime()?.block_on(async {
-                ATTESTATION_AGENT
-                    .lock()
+                native::decrypt_image_layer_annotation(&kbs, &kbc, &annotation)
                     .await
-                    .decrypt_image_layer_annotation(&kbc, &kbs, &annotation)
-                    .await
-                    .map_err(|e| format!("{e}"))
+                    .map_err(|e| format!("{e:?}"))
             })
         });
 
@@ -221,7 +212,7 @@ impl KeyProviderKeyWrapProtocolOutput {
                 key_unwrap_results: Some(KeyUnwrapResults { opts_data: v }),
                 ..Default::default()
             }),
-            Ok(Err(e)) => Err(anyhow!("keyprovider: retrieve opts_data failed: {e}")),
+            Ok(Err(e)) => Err(anyhow!("keyprovider: retrieve opts_data failed: {e:?}")),
             Err(e) => Err(anyhow!("keyprovider: retrieve opts_data failed: {e:?}")),
         }
     }

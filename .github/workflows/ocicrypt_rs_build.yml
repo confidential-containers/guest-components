@@ -146,18 +146,6 @@ jobs:
           command: test
           args: -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-native
 
-      - name: Run cargo test - eaa-kbc
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features --features=eaa_kbc
-
-      - name: Run cargo test - cc-kbc-sgx
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features --features=cc_kbc_sgx
-
       - name: Run cargo test - default
         uses: actions-rs/cargo@v1
         with:
