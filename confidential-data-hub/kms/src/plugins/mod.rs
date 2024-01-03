@@ -50,7 +50,6 @@ pub async fn new_decryptor(
 
 #[derive(AsRefStr, EnumString)]
 pub enum VaultProvider {
-    #[cfg(feature = "kbs")]
     #[strum(ascii_case_insensitive)]
     Kbs,
 }

@@ -10,7 +10,7 @@ edition = "2021"
 base64.workspace = true
 crypto.path = "../../attestation-agent/deps/crypto"
 kms = { path = "../kms", default-features = false }
-resource_uri = { path = "../../attestation-agent/deps/resource_uri", optional = true }
+resource_uri.path = "../../attestation-agent/deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -23,7 +23,7 @@ rstest.workspace = true
 default = []
 
 # legacy AnnotationPacket format, s.t. legacy encrypted image format relies on `kbs` feature
-kbs = ["kms/kbs", "resource_uri"]
+kbs = ["kms/kbs"]
 aliyun = ["kms/aliyun"]
 sev = ["kms/sev"]
 ehsm = ["kms/ehsm"]

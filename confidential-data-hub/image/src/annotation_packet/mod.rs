@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#[cfg(feature = "kbs")]
 pub mod v1;
 pub mod v2;
 

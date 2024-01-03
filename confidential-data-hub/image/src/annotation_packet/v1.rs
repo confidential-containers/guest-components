@@ -3,14 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use base64::{engine::general_purpose::STANDARD, Engine};
-use crypto::WrapType;
-use kms::{plugins::VaultProvider, Annotations, ProviderSettings};
-use serde::{Deserialize, Serialize};
-
 use resource_uri::ResourceUri;
-
-use crate::{Error, Result};
+use serde::{Deserialize, Serialize};
 
 /// `AnnotationPacket` is what a encrypted image layer's
 /// `org.opencontainers.image.enc.keys.provider.attestation-agent`
@@ -30,7 +24,13 @@ pub struct AnnotationPacket {
 }
 
 impl AnnotationPacket {
-    pub(crate) async fn unwrap_key(&self) -> Result<Vec<u8>> {
+    pub(crate) async fn unwrap_key(&self) -> crate::Result<Vec<u8>> {
+        use base64::{engine::general_purpose::STANDARD, Engine};
+        use crypto::WrapType;
+        use kms::{plugins::VaultProvider, Annotations, ProviderSettings};
+
+        use crate::Error;
+
         let wrap_type = WrapType::try_from(&self.wrap_type[..])
             .map_err(|e| Error::UnwrapAnnotationV1Failed(format!("parse WrapType failed: {e}")))?;
         let mut kbs_client =
