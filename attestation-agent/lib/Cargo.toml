@@ -16,6 +16,7 @@ resource_uri.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 strum.workspace = true
+token = { path = "../token", optional = true }
 tokio = { workspace = true, features = ["fs"] }
 toml.workspace = true
 tonic = { workspace = true, optional = true }
@@ -24,9 +25,11 @@ tonic = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [features]
-default = ["sample_kbc", "rust-crypto"]
+default = ["sample_kbc", "rust-crypto", "kbs_as"]
 
-cc_kbc = ["kbc/cc_kbc", "kbs_protocol/background_check"]
+kbs_as = ["token/kbs"]
+
+cc_kbc = ["kbc/cc_kbc", "kbs_as"]
 all-attesters = ["kbc/all-attesters", "kbs_protocol?/all-attesters", "attester/all-attesters"]
 tdx-attester = ["kbc/tdx-attester", "kbs_protocol/tdx-attester", "attester/tdx-attester"]
 sgx-attester = ["kbc/sgx-attester", "kbs_protocol/sgx-attester", "attester/sgx-attester"]
