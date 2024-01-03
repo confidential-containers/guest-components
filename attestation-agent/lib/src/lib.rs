@@ -14,8 +14,8 @@ use kbc::{AnnotationPacket, KbcCheckInfo, KbcInstance, KbcModuleList};
 use resource_uri::ResourceUri;
 use std::collections::HashMap;
 
-#[cfg(feature = "cc_kbc")]
-mod token;
+mod config;
+
 #[cfg(feature = "cc_kbc")]
 use token::get_kbs_token;
 
@@ -175,22 +175,19 @@ impl AttestationAPIs for AttestationAgent {
     }
 
     async fn get_token(&mut self, _token_type: &str) -> Result<Vec<u8>> {
-        #[cfg(feature = "cc_kbc")]
-        {
-            let token = match _token_type {
-                "kbs" => get_kbs_token().await?,
-                typ => bail!("Unsupported token type {typ}"),
-            };
+        let token = match _token_type {
+            #[cfg(feature = "cc_kbc")]
+            "kbs" => {
+                let kbs_host_url = config::get_host_url().await?;
+                let kbs_token = token::kbs::KbsTokenGetter::default()
+                    .get_token(kbs_host_url)
+                    .await?;
+                kbs_token
+            }
+            typ => bail!("Unsupported token type {typ}"),
+        };
 
-            Ok(token)
-        }
-
-        // TODO: remove the feature flags after refactoring AA. Currently, kbs_host_url
-        // is only set by user in aa_kbc_params when cc_kbc is enabled.
-        #[cfg(not(feature = "cc_kbc"))]
-        {
-            bail!("unimplemented!");
-        }
+        Ok(token)
     }
 
     /// Get TEE hardware signed evidence that includes the runtime data.

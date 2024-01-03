@@ -7,6 +7,7 @@ members = [
     "attestation-agent/kbc",
     "attestation-agent/kbs_protocol",
     "attestation-agent/attester",
+    "attestation-agent/token",
     "attestation-agent/deps/resource_uri",
     "attestation-agent/deps/crypto",
     "attestation-agent/deps/sev",

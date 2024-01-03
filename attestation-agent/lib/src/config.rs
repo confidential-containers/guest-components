@@ -4,9 +4,8 @@
 //
 
 use anyhow::{anyhow, Context, Result};
-use kbs_protocol::{evidence_provider::NativeEvidenceProvider, KbsClientBuilder};
 use log::debug;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::env;
 use std::path::Path;
 use std::sync::OnceLock;
@@ -14,50 +13,21 @@ use tokio::fs;
 
 const PEER_POD_CONFIG_PATH: &str = "/run/peerpod/daemon.json";
 
-#[derive(Serialize)]
-struct Message {
-    token: String,
-    tee_keypair: String,
-}
-
 static KATA_AGENT_CONFIG_PATH: OnceLock<String> = OnceLock::new();
 
-pub(crate) async fn get_kbs_token() -> Result<Vec<u8>> {
-    let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
-
+#[allow(dead_code)]
+pub async fn get_host_url() -> Result<String> {
     // Check for /run/peerpod/daemon.json to see if we are in a peer pod
     // If so we need to read from the agent-config file, not /proc/cmdline
     let kbc_params = match Path::new(PEER_POD_CONFIG_PATH).exists() {
-        true => get_kbc_params_from_config_file().await?,
-        false => get_kbc_params_from_cmdline().await?,
+        true => get_aa_params_from_config_file().await?,
+        false => get_aa_params_from_cmdline().await?,
     };
 
-    let kbs_host_url = extract_kbs_host_url(&kbc_params)?;
-
-    let mut client =
-        KbsClientBuilder::with_evidence_provider(evidence_provider, &kbs_host_url).build()?;
-
-    let (token, tee_keypair) = client.get_token().await?;
-    let message = Message {
-        token: token.content,
-        tee_keypair: tee_keypair.to_pkcs1_pem()?.to_string(),
-    };
-
-    let res = serde_json::to_vec(&message)?;
-    Ok(res)
+    extract_host_url(&kbc_params)
 }
 
-fn extract_kbs_host_url(kbc_params: &str) -> Result<String> {
-    let kbs_host = kbc_params
-        .split("::")
-        .last()
-        .ok_or(anyhow!("illegal input `agent.aa_kbc_params` format",))?
-        .to_string();
-
-    Ok(kbs_host)
-}
-
-pub(crate) async fn get_kbc_params_from_cmdline() -> Result<String> {
+async fn get_aa_params_from_cmdline() -> Result<String> {
     let cmdline = fs::read_to_string("/proc/cmdline").await?;
     let kbc_params = cmdline
         .split_ascii_whitespace()
@@ -71,7 +41,7 @@ pub(crate) async fn get_kbc_params_from_cmdline() -> Result<String> {
     Ok(kbc_params)
 }
 
-pub(crate) async fn get_kbc_params_from_config_file() -> Result<String> {
+async fn get_aa_params_from_config_file() -> Result<String> {
     // We only care about the aa_kbc_params value at the moment
     #[derive(Debug, Deserialize)]
     struct AgentConfig {
@@ -94,4 +64,14 @@ pub(crate) async fn get_kbc_params_from_config_file() -> Result<String> {
     agent_config
         .aa_kbc_params
         .ok_or(anyhow!("no `aa_kbc_params` found in {path}!"))
+}
+
+fn extract_host_url(kbc_params: &str) -> Result<String> {
+    let kbs_host = kbc_params
+        .split("::")
+        .last()
+        .ok_or(anyhow!("illegal input `agent.aa_kbc_params` format",))?
+        .to_string();
+
+    Ok(kbs_host)
 }
