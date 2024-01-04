@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::str::FromStr;
+
 use strum::{AsRefStr, EnumString};
 
 use crate::{Decrypter, Error, Getter, ProviderSettings, Result};
@@ -59,7 +61,7 @@ pub async fn new_getter(
     provider_name: &str,
     _provider_settings: ProviderSettings,
 ) -> Result<Box<dyn Getter>> {
-    let provider = VaultProvider::try_from(provider_name)
+    let provider = VaultProvider::from_str(provider_name)
         .map_err(|_| Error::UnsupportedProvider(provider_name.to_string()))?;
     match provider {
         VaultProvider::Kbs => Ok(Box::new(kbs::KbcClient::new().await?) as Box<dyn Getter>),

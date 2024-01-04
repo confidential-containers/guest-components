@@ -10,8 +10,6 @@ use std::collections::HashMap;
 use std::str;
 use std::vec::Vec;
 
-const ANNOTATION_KEY_NAME: &str = "attestation-agent";
-
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default, Clone)]
 pub struct KeyProviderInput {
     // Operation is either "keywrap" or "keyunwrap"
@@ -26,10 +24,8 @@ impl KeyProviderInput {
     pub fn get_annotation(&self) -> Result<Vec<u8>> {
         let annotation_base64 = self
             .keyunwrapparams
-            .dc
+            .annotation
             .as_ref()
-            .and_then(|dc| dc.parameters.get(ANNOTATION_KEY_NAME))
-            .and_then(|paras| paras.get(0))
             .ok_or_else(|| anyhow!("Illegal UnwrapKey request: no AnnotationPacket given."))?;
 
         let engine = base64::engine::general_purpose::STANDARD;
