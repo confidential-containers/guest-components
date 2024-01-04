@@ -31,8 +31,6 @@ endif
 
 ifdef RESOURCE_PROVIDER
     features += $(RESOURCE_PROVIDER)
-else
-    features += kbs,sev
 endif
 
 ifdef PROVIDER

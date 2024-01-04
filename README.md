@@ -39,5 +39,12 @@ The `TEE_PLATFORM` parameter can be
 - `snp`: for AMD SEV-SNP
 - `az-snp-vtpm`: for AMD SEV-SNP with Azure vTPM
 
+by default, `kbs`/`sev` as a resource provider will be built in Confidential Data Hub. If you do not want enable any
+default except for only builtin `offline-fs-kbc`, you can build with `NO_RESOURCE_PROVIDER` flag set to `true`.
+
+```shell
+make build TEE_PLATFORM=$(TEE_PLATFORM) NO_RESOURCE_PROVIDER=true
+```
+
 ## License
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fconfidential-containers%2Fimage-rs.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fconfidential-containers%2Fimage-rs?ref=badge_large)

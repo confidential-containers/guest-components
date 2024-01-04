@@ -50,11 +50,11 @@ jobs:
 
       - name: Build and install
         run: |
-          make && make install
+          make RESOURCE_PROVIDER=kbs,sev && make install
 
       - name: Musl build
         run: |
-          make LIBC=musl
+          make LIBC=musl RESOURCE_PROVIDER=kbs,sev
 
       - name: s390x build
         run:

@@ -5,7 +5,14 @@ DESTDIR ?= /usr/local/bin
 
 LIBC ?= musl
 KBC ?=
-RESOURCE_PROVIDER ?= kbs
+
+NO_RESOURCE_PROVIDER ?=
+
+ifeq ($(NO_RESOURCE_PROVIDER), true)
+  RESOURCE_PROVIDER :=
+else
+  RESOURCE_PROVIDER ?= kbs
+endif
 
 ifeq ($(TEE_PLATFORM), none)
   KBC = cc_kbc
@@ -18,7 +25,11 @@ else ifeq ($(TEE_PLATFORM), az-tdx-vtpm)
   KBC = cc_kbc_az_tdx_vtpm
 else ifeq ($(TEE_PLATFORM), sev)
   KBC = online_sev_kbc
-  RESOURCE_PROVIDER = sev
+  ifeq ($(NO_RESOURCE_PROVIDER), true)
+    RESOURCE_PROVIDER :=
+  else
+    RESOURCE_PROVIDER = sev
+  endif
 else ifeq ($(TEE_PLATFORM), snp)
   KBC = cc_kbc_snp
 else ifeq ($(TEE_PLATFORM), az-snp-vtpm)
