@@ -15,6 +15,7 @@ anyhow = { workspace = true, optional = true }
 async-trait.workspace = true
 base64.workspace = true
 clap = { workspace = true, features = [ "derive" ], optional = true }
+env_logger = { workspace = true, optional = true }
 image = { path = "../image", default-features = false }
 kms = { path = "../kms", default-features = false }
 lazy_static.workspace = true
@@ -47,4 +48,4 @@ sev = ["image/sev", "kms/sev", "dep:sev", "secret/sev"]
 # support eHSM stacks (KMS, ...)
 ehsm = ["image/ehsm", "secret/ehsm"]
 
-bin = ["anyhow", "clap", "protobuf", "serde", "tokio/signal", "ttrpc", "ttrpc-codegen"]
+bin = ["anyhow", "clap", "env_logger", "protobuf", "serde", "tokio/signal", "ttrpc", "ttrpc-codegen"]

@@ -119,6 +119,7 @@ impl KbcClient {
 
 async fn get_aa_params_from_cmdline() -> Result<(String, String)> {
     use tokio::fs;
+    debug!("get aa_kbc_params from kernel cmdline");
     let cmdline = fs::read_to_string("/proc/cmdline")
         .await
         .map_err(|e| Error::KbsClientError(format!("read kernel cmdline failed: {e}")))?;
@@ -143,6 +144,7 @@ async fn get_aa_params_from_cmdline() -> Result<(String, String)> {
 }
 
 async fn get_aa_params_from_config_file() -> Result<(String, String)> {
+    debug!("get aa_kbc_params from file");
     // We only care about the aa_kbc_params value at the moment
     #[derive(Debug, Deserialize)]
     struct AgentConfig {

@@ -944,6 +944,7 @@ dependencies = [
  "async-trait",
  "base64 0.21.5",
  "clap 4.2.7",
+ "env_logger 0.10.1",
  "image",
  "kms",
  "lazy_static",
