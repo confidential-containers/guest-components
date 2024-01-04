@@ -150,9 +150,9 @@ impl KeyProviderKeyWrapProtocolOutput {
             OpKey::Unwrap => kc1
                 .un_wrap_key(ttrpc::context::with_timeout(50 * 1000 * 1000 * 1000), &req)
                 .await
-                .map_err(|_| {
+                .map_err(|e| {
                     anyhow!(
-                        "keyprovider: Error from ttrpc server for {:?} operation",
+                        "keyprovider: Error from ttrpc server for {:?} operation: {e:?}",
                         OpKey::Unwrap.to_string()
                     )
                 })?,
@@ -440,8 +440,8 @@ impl KeyProviderKeyWrapper {
             });
             match handler.join() {
                 Ok(Ok(v)) => Ok(v),
-                Ok(Err(e)) => bail!("failed to unwrap key by gRPC, {e}"),
-                Err(e) => bail!("failed to unwrap key by gRPC, {e:?}"),
+                Ok(Err(e)) => bail!("failed to unwrap key by ttrpc, {e}"),
+                Err(e) => bail!("failed to unwrap key by ttrpc, {e:?}"),
             }
         }
     }

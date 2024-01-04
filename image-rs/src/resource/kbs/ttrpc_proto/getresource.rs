@@ -25,14 +25,14 @@
 /// of protobuf runtime.
 const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_3_3_0;
 
-// @@protoc_insertion_point(message:getresource.GetResourceRequest)
+// @@protoc_insertion_point(message:api.GetResourceRequest)
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct GetResourceRequest {
     // message fields
-    // @@protoc_insertion_point(field:getresource.GetResourceRequest.ResourcePath)
+    // @@protoc_insertion_point(field:api.GetResourceRequest.ResourcePath)
     pub ResourcePath: ::std::string::String,
     // special fields
-    // @@protoc_insertion_point(special_field:getresource.GetResourceRequest.special_fields)
+    // @@protoc_insertion_point(special_field:api.GetResourceRequest.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
 }
 
@@ -147,14 +147,14 @@ impl ::protobuf::reflect::ProtobufValue for GetResourceRequest {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
-// @@protoc_insertion_point(message:getresource.GetResourceResponse)
+// @@protoc_insertion_point(message:api.GetResourceResponse)
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct GetResourceResponse {
     // message fields
-    // @@protoc_insertion_point(field:getresource.GetResourceResponse.Resource)
+    // @@protoc_insertion_point(field:api.GetResourceResponse.Resource)
     pub Resource: ::std::vec::Vec<u8>,
     // special fields
-    // @@protoc_insertion_point(special_field:getresource.GetResourceResponse.special_fields)
+    // @@protoc_insertion_point(special_field:api.GetResourceResponse.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
 }
 
@@ -270,11 +270,11 @@ impl ::protobuf::reflect::ProtobufValue for GetResourceResponse {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x11getresource.proto\x12\x0bgetresource\"8\n\x12GetResourceRequest\
-    \x12\"\n\x0cResourcePath\x18\x01\x20\x01(\tR\x0cResourcePath\"1\n\x13Get\
-    ResourceResponse\x12\x1a\n\x08Resource\x18\x01\x20\x01(\x0cR\x08Resource\
-    2f\n\x12GetResourceService\x12P\n\x0bGetResource\x12\x1f.getresource.Get\
-    ResourceRequest\x1a\x20.getresource.GetResourceResponseb\x06proto3\
+    \n\x11getresource.proto\x12\x03api\"8\n\x12GetResourceRequest\x12\"\n\
+    \x0cResourcePath\x18\x01\x20\x01(\tR\x0cResourcePath\"1\n\x13GetResource\
+    Response\x12\x1a\n\x08Resource\x18\x01\x20\x01(\x0cR\x08Resource2V\n\x12\
+    GetResourceService\x12@\n\x0bGetResource\x12\x17.api.GetResourceRequest\
+    \x1a\x18.api.GetResourceResponseb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file

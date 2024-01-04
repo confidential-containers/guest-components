@@ -119,27 +119,10 @@ impl Protocol for SecureChannel {
             return Ok(res);
         }
 
-        // Related issue: https://github.com/confidential-containers/attestation-agent/issues/130
-        //
-        // Now we use `aa_kbc_params` to specify the KBC and KBS URI
-        // used in CoCo System. Different KBCs are initialized in AA lazily due
-        // to the kbs uri information included in a `download_confidential_resource` or
-        // `decrypt_image_layer_annotation`. The kbs uri input to the two APIs
-        // are from `aa_kbc_params` but not the kbs uri in a resource uri.
-        // Thus as a temporary solution, we need to overwrite the
-        // kbs uri field using the one included in `aa_kbc_params`, s.t.
-        // `kbs_uri` of [`SecureChannel`].
-        let resource_path = get_resource_path(resource_uri)?;
-
-        let res = self.client.get_resource(&resource_path).await?;
+        let res = self.client.get_resource(resource_uri).await?;
 
         let path = self.get_filepath(resource_uri);
         fs::write(path, &res).await?;
         Ok(res)
     }
-}
-
-fn get_resource_path(uri: &str) -> Result<String> {
-    let path = url::Url::parse(uri)?;
-    Ok(path.path().to_string())
 }

@@ -19,7 +19,7 @@ mod get_resource {
     #![allow(unknown_lints)]
     #![allow(clippy::derive_partial_eq_without_eq)]
     #![allow(clippy::redundant_async_block)]
-    tonic::include_proto!("getresource");
+    tonic::include_proto!("api");
 }
 
 /// Attestation Agent's GetResource gRPC address.
