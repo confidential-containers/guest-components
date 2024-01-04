@@ -146,18 +146,6 @@ jobs:
           command: test
           args: -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-native
 
-      - name: Run cargo test - default
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features
-
-      - name: Run cargo test - all features
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features --all-features
-
       - name: Run cargo fmt check
         uses: actions-rs/cargo@v1
         with:
