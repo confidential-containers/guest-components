@@ -18,14 +18,6 @@ message GetResourceResponse {
     bytes Resource = 1;
 }
 
-message KeyProviderKeyWrapProtocolInput {
-    bytes KeyProviderKeyWrapProtocolInput = 1;
-}
-
-message KeyProviderKeyWrapProtocolOutput {
-    bytes KeyProviderKeyWrapProtocolOutput = 1;
-}
-
 message SecureMountRequest {
     string driver = 1;
     repeated string driver_options = 2;
@@ -45,10 +37,6 @@ service SealedSecretService {
 
 service GetResourceService {
     rpc GetResource(GetResourceRequest) returns (GetResourceResponse) {};
-}
-
-service KeyProviderService {
-    rpc UnWrapKey(KeyProviderKeyWrapProtocolInput) returns (KeyProviderKeyWrapProtocolOutput) {};
 }
 
 service SecureMountService {

@@ -26,7 +26,7 @@ fn main() {
 
         Codegen::new()
             .out_dir("src/bin/confidential-data-hub")
-            .inputs(["./protos/api.proto"])
+            .inputs(["./protos/api.proto", "./protos/keyprovider.proto"])
             .include("./protos")
             .rust_protobuf()
             .customize(Customize {

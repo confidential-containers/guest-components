@@ -117,54 +117,6 @@ pub fn create_get_resource_service(service: Arc<Box<dyn GetResourceService + Sen
 }
 
 #[derive(Clone)]
-pub struct KeyProviderServiceClient {
-    client: ::ttrpc::r#async::Client,
-}
-
-impl KeyProviderServiceClient {
-    pub fn new(client: ::ttrpc::r#async::Client) -> Self {
-        KeyProviderServiceClient {
-            client,
-        }
-    }
-
-    pub async fn un_wrap_key(&self, ctx: ttrpc::context::Context, req: &super::api::KeyProviderKeyWrapProtocolInput) -> ::ttrpc::Result<super::api::KeyProviderKeyWrapProtocolOutput> {
-        let mut cres = super::api::KeyProviderKeyWrapProtocolOutput::new();
-        ::ttrpc::async_client_request!(self, ctx, req, "api.KeyProviderService", "UnWrapKey", cres);
-    }
-}
-
-struct UnWrapKeyMethod {
-    service: Arc<Box<dyn KeyProviderService + Send + Sync>>,
-}
-
-#[async_trait]
-impl ::ttrpc::r#async::MethodHandler for UnWrapKeyMethod {
-    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
-        ::ttrpc::async_request_handler!(self, ctx, req, api, KeyProviderKeyWrapProtocolInput, un_wrap_key);
-    }
-}
-
-#[async_trait]
-pub trait KeyProviderService: Sync {
-    async fn un_wrap_key(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::api::KeyProviderKeyWrapProtocolInput) -> ::ttrpc::Result<super::api::KeyProviderKeyWrapProtocolOutput> {
-        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/api.KeyProviderService/UnWrapKey is not supported".to_string())))
-    }
-}
-
-pub fn create_key_provider_service(service: Arc<Box<dyn KeyProviderService + Send + Sync>>) -> HashMap<String, ::ttrpc::r#async::Service> {
-    let mut ret = HashMap::new();
-    let mut methods = HashMap::new();
-    let streams = HashMap::new();
-
-    methods.insert("UnWrapKey".to_string(),
-                    Box::new(UnWrapKeyMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
-
-    ret.insert("api.KeyProviderService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
-    ret
-}
-
-#[derive(Clone)]
 pub struct SecureMountServiceClient {
     client: ::ttrpc::r#async::Client,
 }
