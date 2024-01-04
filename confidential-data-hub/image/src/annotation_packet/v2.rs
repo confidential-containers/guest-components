@@ -57,7 +57,7 @@ fn default_version() -> String {
 }
 
 fn default_provider() -> String {
-    VaultProvider::Kbs.as_ref().to_string()
+    VaultProvider::Kbs.as_ref().to_lowercase().to_string()
 }
 
 impl TryInto<super::v1::AnnotationPacket> for AnnotationPacketV2 {
@@ -70,7 +70,7 @@ impl TryInto<super::v1::AnnotationPacket> for AnnotationPacketV2 {
             )));
         }
 
-        if self.provider != VaultProvider::Kbs.as_ref() {
+        if self.provider != VaultProvider::Kbs.as_ref().to_lowercase() {
             return Err(Error::ConvertAnnotationPacketFailed(String::from(
                 "Provider must be `kbs`.",
             )));
