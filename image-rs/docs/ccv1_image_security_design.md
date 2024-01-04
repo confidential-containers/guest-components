@@ -112,9 +112,7 @@ such as the ID of the owner's key, for example:
 
 The specific format of the annotation packet can be determined by the customized key provider program used by the owner,
 but it is necessary to ensure that the key provider program used by the decryptor
-(i.e. the `attestation-agent` integrated with the specified [Key Broker Client](../../attestation-agent/docs/IMPLEMENTATION.md#kbc))
 supports parsing annotation packets of the same format.
-(In CCv1, when decrypting the image, the decryption of `PrivateLayerBlockCipherOptions` will be carried out by `ocicrypt-rs` through the [key provider protocol with the `attestation-agent`](../../attestation-agent/docs/IMPLEMENTATION.md#keyprovider-protocol) (as a key provider program).)
 
 #### Update manifest
 
@@ -372,72 +370,9 @@ and decrypts the `PrivateLayerBlockCipherOptions` using the owner's decryption k
 4. Obtain the decrypted `PrivateLayerBlockCipherOptions` from the `attestation-agent`,
 reads the symmetric key used to decrypt the container image layer from it, then completes the decryption.
 
-# Attestation Agent
-
-The [`attestation-agent`](../../attestation-agent) is an indispensable core component in the confidential containers architecture.
-It undertakes the trust distribution function of the confidential container.
-In the process of signature verification and decryption of the protected image,
-the `attestation-agent` serves as the source of the owner's confidential information,
-and a key provider program of `ocicrypt-rs`: it helps `ocicrypt-rs` to decrypt the `PrivateLayerBlockCipherOptions`.
-
-`attestation-agent` provides two gRPC services at present: `GetResource` and `KeyProvider`.
-
-The `GetResource` gRPC service is for image-rs supporting the signature verification functions,
-As stated earlier in this document, four necessary materials are required to verify the signature of the container image:
-policy file, `sigstore` configuration file, public key ring (can be included in the `keyData` field of the policy file) and signature itself.
-Depending on the owner's different configurations of the pod,
-these materials may be dynamically distributed remotely at runtime,
-or these materials cached in the pod may be updated regularly,
-the get resource API of the attention agent provides a reliable distribution way for the remote acquisition of these materials.
-
-The `KeyProvider` gRPC service is for `ocicrypt-rs` to support the image layer decryption.
-Through this service, the `attestation-agent` can serve `ocicrypt-rs` as a key provider program.
-
-### Get-Resource service
-
-The `GetResource` gRPC service interface provided by the attestation agent
-is used to obtain various confidential resources from the relying party (KBS).
-In the process of protected image deployment,
-it is usually used to obtain `policy.json` config file.
-
-Attestation-agent performs attestation to the KBS,
-establish an encrypted channel after negotiating the key,
-and download the required confidential resources through the encrypted channel.
-The `GetResource` gRPC service interface `protobuf` is defined as follows:
-
-```protobuf
-message getResourceRequest {
-    string KbcName = 1;
-    string KbsUri = 2;
-    string ResourceDescription = 3;
-}
-
-message getResourceResponse {
-    bytes resource = 1;
-}
-
-service GetResource {
-    rpc GetResource(getResourceRequest) returns (getResourceResponse) {};
-}
-```
-
-`ResourceDescription` is a JSON string used to describe resources, and its format is defined as follows:
-
-```json
-{
-    "name":"resource_name",
-    "optional":{}
-}
-```
-
-`optional` is a reserved key value pair JSON string.
-It can be used to pass some additional description information when requesting resources in the future.
-Its key words and values can be customized by the caller.
-It only needs to ensure that the KBC specified in the evaluation agent can be parsed.
-
 ### Key-Provider service
 
-The key provider gRPC interface provided by the `attestation-agent`
+The key provider gRPC interface provided by the `confidential-data-hub`
 is used to decrypt `PrivateLayerBlockCipherOptions` for `ocicrypt-rs`.
 The `protobuf` of this gRPC service is defined as follows:
 
@@ -462,12 +397,7 @@ The input JSON string format is:
     "op":"keyunwrap",
     "keyunwrapparams":{
         "dc":{
-            "Parameters":{
-                "`attestation-agent`":[
-                    "KBC_NAME::KBS_URI <base64encode>"
-                ],
-                "DecryptConfig":{"Parameters":{}}
-            }
+            "Parameters":{}
         }
     },
     "annotation": #annotation-packet,

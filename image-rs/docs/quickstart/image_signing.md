@@ -2,8 +2,7 @@
 
 This document includes the following:
 * Guide to generate a cosign-signed image.
-* Guide to config image security policy to enable signature verification of the image.
-* Guide to distribute the public key and image security policy via offline-fs-kbs.
+* TODO: Guide to config image security policy to enable signature verification of the image.
 
 ## Signing the encrypted/unencrypted image and enable signature verification when running the workload
 
@@ -54,87 +53,3 @@ Here, `cosign.key` can be replaced with any cosign-generated private key.
 Now the image is signed by cosign, and the signature is pushed to the same repository as the image.
 
 To learn more about cosign, please refer to [the github repository](https://github.com/sigstore/cosign).
-
-### Enable cosign image signature verification and retrieve public key via KBC channel
-
-Take [offline file system key broker](../../../attestation-agent/kbc/src/offline_fs_kbc) (Offline-FS-KBC for short) for example.
-
-#### Prepare Attestation-Agent and Offline-FS-KBC
-
-Clone the repository.
-
-```
-git clone https://github.com/confidential-containers/guest-components
-```
-
-Build Offline-Fs-KBC & AA
-```
-cd guest-components/attestation-agent
-make KBC=offline_fs_kbc
-
-install_dir=/path/to/be/installed
-make install
-```
-
-#### Add Offline-Fs-KBC resources
-
-All signature verification rules are defined in a `policy.json`. But before we work on
-the `policy.json`, there are a few things to be clarified:
-* The `policy.json` is provided by the relying party, so we will use Offline-Fs-KBC to provide
-this secret file. The channel is secure.
-* The verification public key is also retrieved via KBC secure channel.
-
-So the next steps will firstly add the two resources (`policy.json` and public key) to the
-Offline-Fs-KBC resources.
-
-Let's continue with the image `example.org/test`, and enable security strategy (including signature verification).
-
-Firstly edit an `policy.json` like
-
-```
-{
-    "default": [{"type": "reject"}], 
-    "transports": {
-        "docker": {
-            "example.org": [
-                {
-                    "type": "sigstoreSigned",
-                    "keyPath": "/run/image-security/cosign/cosign.pub"
-                }
-            ]
-        }
-    }
-}
-```
-
-Here, `"keyPath"` refers to the path to the `cosign.pub` public key. When verification
-occurs, firstly the path is checked to see whether there is such a file. If not, the
-key will be retrieved via the KBC secure channel.
-
-let's calculate base64-encoded values for the two resources
-```bash
-cat /path/to/policy.json | base64 --wrap=0
-cat /path/to/cosign.pub | base64 --wrap=0
-```
-
-Let's return to the dir of `attestation-agent` and edit the resources.
-Replace the values of `Policy` and `Cosign Key` in `src/kbc_modules/offline_fs_kbc/aa-offline_fs_kbc-resources.json`
-to the related base64 code generated. 
-
-Then copy the newly edited `aa-offline_fs_kbc-resources.json` to the target dir.
-```
-cd src/kbc_modules/offline_fs_kbc/
-cp aa-offline_fs_kbc-resources.json /etc/aa-offline_fs_kbc-resources.json
-cp aa-offline_fs_kbc-keys.json /etc/aa-offline_fs_kbc-keys.json
-```
-
-In this way, when the images from `"example.org"` is being pulled,
-the signature will be verified using the public key of path `"/run/image-security/cosign/cosign.pub"`.
-
-Now let's start the AA with Offline-Fs-KBC
-
-```
-attestation-agent --keyprovider_sock 127.0.0.1:50000 --getresource_sock 127.0.0.1:50001
-```
-
-Now the attestation-agent can response with the correct resources.

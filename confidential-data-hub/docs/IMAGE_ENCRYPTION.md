@@ -4,10 +4,10 @@
 
 As stated in [CCv0 image security design](../../image-rs/docs/ccv1_image_security_design.md), CoCo uses image encryption machanism compatible with [ocicrypt](https://github.com/containers/ocicrypt) and [ocicrypt-rs](../../ocicrypt-rs).
 
-Attestation-Agent as a [Key Provider](../../image-rs/docs/ccv1_image_security_design.md#update-manifest) implements API `unwrapkey`, which works together
-with the [Sample Key Provider](../coco_keyprovider/) who implements API `wrapkey`.
+Confidential Data Hub as a [Key Provider](../../image-rs/docs/ccv1_image_security_design.md#update-manifest) implements API `unwrapkey`, which works together
+with the [Sample Key Provider](../../coco_keyprovider/) who implements API `wrapkey`.
 
-This document will describe how Attestation-Agent and Sample Key Provider play a role in image encryption. Together, some specifications will also be defined.
+This document will describe how Confidential Data Hub and Sample Key Provider play a role in image encryption. Together, some specifications will also be defined.
 
 ## Image Encryption and Decryption
 
@@ -30,12 +30,12 @@ Suppose there is a user wanting to encrypt an image layer `L`.
 
 ### Decryption
 
-`unwrapkey` API is directly related to image decryption. An image layer encrypted by `Sample Key Provider` can be decrypted with `Attestation-Agent`'s participation.
+`unwrapkey` API is directly related to image decryption. An image layer encrypted by `Sample Key Provider` can be decrypted with `Confidential Data Hub`'s participation.
 Here are the steps.
 1. `ocicrypt-rs` finds `L` is a encrypted layer, and `L` has a `org.opencontainers.image.enc.keys.provider.attestation-agent` annotation.
-2. `ocicrypt-rs` will send the content of the value of `org.opencontainers.image.enc.keys.provider.attestation-agent` annotation over `unwrapkey` gRPC to `Attestation-Agent`.
-3. `Attestation-Agent` will parse the annotation into an `AnnotationPacket`.
-4. `Attestation-Agent` will use the `AnnotationPacket` to call related KBC's `decrypt_payload()` api to retrieve the `PLBCO`.
+2. `ocicrypt-rs` will send the content of the value of `org.opencontainers.image.enc.keys.provider.attestation-agent` annotation over `unwrapkey` gRPC to `Confidential Data Hub`.
+3. `Confidential Data Hub` will parse the annotation into an `AnnotationPacket`.
+4. `Confidential Data Hub` will use the `AnnotationPacket` to call related KBC's `decrypt_payload()` api to retrieve the `PLBCO`.
     * For `*_sev_kbc`, `offline_fs_kbc`, `get_key()` helps to get the `KEK` due to the `key id`, and then `crypto` module decrypts the PLBCO.
     * For `eaa_kbc` and those KBCes who do not expose the plaintext of the `KEK`, `decrypt_payload()` api will perform its own decryption action.
 7. `ocicrypt-rs` uses `PLBCO` to decrypt the layer.

@@ -25,7 +25,6 @@ encrypted using Key Encryption Key (KEK for short). KEK is stored in KBS.
 Different KBCs use different protocol format, so different KBSs are needed to
 encrypt the images. To genetate KBS encrypted image, please refer to the following link:
 
-* [Using Offline-fs-kbs](../../attestation-agent/kbc/src/offline_fs_kbc/README.md)
 
 ## Image Signature Verification
 
