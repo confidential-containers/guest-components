@@ -6,9 +6,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 
 #[cfg(feature = "kbs")]
-mod kbs;
+pub mod kbs;
 
 #[async_trait]
 pub trait GetToken {
-    async fn get_token(service_url: String) -> Result<Vec<u8>>;
+    async fn get_attestation_token(&self, service_url: String) -> Result<Vec<u8>>;
 }

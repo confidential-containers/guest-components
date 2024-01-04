@@ -1,10 +1,11 @@
-TEE_PLATFORM ?= fs
+TEE_PLATFORM ?= none
+AS ?=
 ARCH ?= $(shell uname -m)
 
 DESTDIR ?= /usr/local/bin
 
 LIBC ?= musl
-KBC ?=
+ATTESTERS ?=
 
 NO_RESOURCE_PROVIDER ?=
 
@@ -15,25 +16,23 @@ else
 endif
 
 ifeq ($(TEE_PLATFORM), none)
-  KBC = cc_kbc
-else ifeq ($(TEE_PLATFORM), fs)
-  KBC = offline_fs_kbc
+  ATTESTERS := 
 else ifeq ($(TEE_PLATFORM), tdx)
   LIBC = gnu
-  KBC = cc_kbc_tdx
+  ATTESTERS = tdx
+else ifeq ($(TEE_PLATFORM), tdx)
+  ATTESTERS = snp
 else ifeq ($(TEE_PLATFORM), az-tdx-vtpm)
-  KBC = cc_kbc_az_tdx_vtpm
+  ATTESTERS = az_tdx_vtpm
+else ifeq ($(TEE_PLATFORM), az-snp-vtpm)
+  ATTESTERS = az_snp_vtpm
 else ifeq ($(TEE_PLATFORM), sev)
-  KBC = online_sev_kbc
+  ATTESTERS = 
   ifeq ($(NO_RESOURCE_PROVIDER), true)
     RESOURCE_PROVIDER :=
   else
     RESOURCE_PROVIDER = sev
   endif
-else ifeq ($(TEE_PLATFORM), snp)
-  KBC = cc_kbc_snp
-else ifeq ($(TEE_PLATFORM), az-snp-vtpm)
-  KBC = cc_kbc_az_snp_vtpm
 endif
 # TODO: Add support for CCA and CSV
 
@@ -60,7 +59,7 @@ $(CDH_BINARY):
 
 $(AA_BINARY):
 	@echo build $(AA) for $(TEE_PLATFORM)
-	cd $(AA) && $(MAKE) ttrpc=true ARCH=$(ARCH) LIBC=$(LIBC) KBC=$(KBC)
+	cd $(AA) && $(MAKE) ttrpc=true ARCH=$(ARCH) LIBC=$(LIBC) AS=$(AS) ATTESTERS=$(ATTESTERS)
 
 $(ASR_BINARY):
 	@echo build $(ASR) for $(TEE_PLATFORM)

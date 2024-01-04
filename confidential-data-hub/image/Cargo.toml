@@ -8,9 +8,9 @@ edition = "2021"
 
 [dependencies]
 base64.workspace = true
-crypto.path = "../../attestation-agent/deps/crypto"
+crypto.path = "../deps/crypto"
 kms = { path = "../kms", default-features = false }
-resource_uri.path = "../../attestation-agent/deps/resource_uri"
+resource_uri.path = "../deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

@@ -4,13 +4,9 @@
 //
 
 pub mod attestation;
-pub mod getresource;
-pub mod keyprovider;
 
 #[cfg(feature = "ttrpc")]
 pub mod ttrpc_protocol;
-
-use crate::AttestationAgent;
 
 pub const AGENT_NAME: &str = "attestation-agent";
 
@@ -20,8 +16,5 @@ const PROTOCOL: &str = "ttrpc";
 const PROTOCOL: &str = "grpc";
 
 lazy_static! {
-    pub static ref ABOUT: String = {
-        let aa_about = AttestationAgent::new().about();
-        format!("Protocol: {PROTOCOL}\n{aa_about}")
-    };
+    pub static ref ABOUT: String = format!("Protocol: {PROTOCOL}");
 }

@@ -19,7 +19,7 @@ SOURCE_ARCH := $(shell uname -m)
 ARCH ?= $(shell uname -m)
 DEBUG ?=
 LIBC ?= gnu
-KBC ?=
+AS ?=
 ttrpc ?=
 grpc ?=
 DESTDIR ?= $(PREFIX)/bin
@@ -35,10 +35,14 @@ ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
   OPENSSL=1
 endif
 
-ifdef KBC
-    features += $(KBC)
+ifdef ATTESTERS
+    features += $(ATTESTERS)
+endif
+
+ifdef AS
+    features += $(AS)
 else
-    features += sample_kbc
+    features += kbs
 endif
 
 ifeq ($(ttrpc), true)
@@ -90,27 +94,6 @@ else
     TARGET_DIR := $(TARGET_DIR)/release
 endif
 
-ifeq ($(KBC), eaa_kbc)
-    ifeq ($(LIBC), musl)
-        $(error ERROR: EAA KBC does not support MUSL build!)
-    endif
-    ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
-        $(error ERROR: EAA KBC does not support s390x and ppc64le architectures!)
-    endif
-    RATS_TLS := $(shell ls /usr/local/lib/rats-tls/ 2> /dev/null)
-    ifeq ($(RATS_TLS),)
-        RATS_TLS_DOWNLOAD := $(shell cd .. && rm -rf inclavare-containers && git clone https://github.com/alibaba/inclavare-containers)
-        RATS_TLS_INSTALL := $(shell cd ../inclavare-containers/rats-tls && cmake -DBUILD_SAMPLES=on -H. -Bbuild && make -C build install >&2)
-    endif
-    RUSTFLAGS_ARGS += -C link-args=-Wl,-rpath,/usr/local/lib/rats-tls
-endif
-
-ifeq ($(KBC), offline_sev_kbc)
-    ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
-        $(error ERROR: Offline SEV KBC does not support s390x and ppc64le architectures!)
-    endif
-endif
-
 ifneq ($(RUSTFLAGS_ARGS),)
     RUST_FLAGS := RUSTFLAGS="$(RUSTFLAGS_ARGS)"
 endif
@@ -137,5 +120,5 @@ clean:
 
 help:
 	@echo "==========================Help========================================="
-	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [KBC=xxx_kbc] [OPENSSL=1]"
+	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [AS=(kbs)] [ATTESTERS=(cca/csv/sgx/snp/tdx/az_snp_vtpm/az_tdx_vtpm)] [OPENSSL=1]"
 	@echo "install: make install [DESTDIR=/path/to/target] [LIBC=(musl)]"

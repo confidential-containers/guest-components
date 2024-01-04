@@ -1,15 +1,15 @@
-name: attestation-agent crypto tests
+name: confidential-data-hub crypto tests
 
 on:
   push:
     branches:
       - 'main'
     paths:
-      - 'attestation-agent/deps/crypto/**'
+      - 'confidential-data-hub/deps/crypto/**'
       - '.github/workflows/aa_crypto.yml'
   pull_request:
     paths:
-      - 'attestation-agent/deps/crypto/**'
+      - 'confidential-data-hub/deps/crypto/**'
       - '.github/workflows/aa_crypto.yml'
   create:
   workflow_dispatch:
@@ -19,7 +19,7 @@ jobs:
     name: Check
     defaults:
       run:
-        working-directory: ./attestation-agent
+        working-directory: ./confidential-data-hub
     runs-on: ubuntu-20.04
     strategy:
       fail-fast: false

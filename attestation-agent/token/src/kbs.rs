@@ -20,7 +20,7 @@ pub struct KbsTokenGetter {}
 
 #[async_trait]
 impl GetToken for KbsTokenGetter {
-    async fn get_token(kbs_host_url: String) -> Result<Vec<u8>> {
+    async fn get_attestation_token(&self, kbs_host_url: String) -> Result<Vec<u8>> {
         let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
 
         let mut client =

@@ -159,13 +159,11 @@ pub mod ttrpc {
                 .get_token(&req.TokenType)
                 .await
                 .map_err(|e| {
-                    error!("Call AA-KBC to get token failed: {}", e);
+                    error!("Call AA to get token failed: {}", e);
                     let mut error_status = ::ttrpc::proto::Status::new();
                     error_status.set_code(Code::INTERNAL);
-                    error_status.set_message(format!(
-                        "[ERROR:{}] AA-KBC get token failed: {}",
-                        AGENT_NAME, e
-                    ));
+                    error_status
+                        .set_message(format!("[ERROR:{}] AA get token failed: {}", AGENT_NAME, e));
                     ::ttrpc::Error::RpcStatus(error_status)
                 })?;
 
@@ -191,11 +189,11 @@ pub mod ttrpc {
                 .get_evidence(&req.RuntimeData)
                 .await
                 .map_err(|e| {
-                    error!("Call AA-KBC to get evidence failed: {}", e);
+                    error!("Call AA to get evidence failed: {}", e);
                     let mut error_status = ::ttrpc::proto::Status::new();
                     error_status.set_code(Code::INTERNAL);
                     error_status.set_message(format!(
-                        "[ERROR:{}] AA-KBC get evidence failed: {}",
+                        "[ERROR:{}] AA get evidence failed: {}",
                         AGENT_NAME, e
                     ));
                     ::ttrpc::Error::RpcStatus(error_status)

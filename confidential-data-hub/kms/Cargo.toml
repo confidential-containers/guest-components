@@ -12,20 +12,20 @@ base64.workspace = true
 bincode = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 const_format.workspace = true
-crypto = { path = "../../attestation-agent/deps/crypto", optional = true }
+crypto = { path = "../deps/crypto", optional = true }
 ehsm_client = {git = "https://github.com/intel/ehsm", rev = "f84688688e724dfd080c1dc491db3e58415cc5b7", optional = true }
 hex = { workspace = true, optional = true }
-kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = ["passport", "aa_token", "openssl"], optional = true }
+kbs_protocol = { path = "../kbs_protocol", default-features = false, features = ["passport", "aa_token", "openssl"], optional = true }
 lazy_static.workspace = true
 log.workspace = true
 openssl = { workspace = true, optional = true }
 p12 = { version = "0.6.3", optional = true }
 prost = { workspace = true, optional = true }
-resource_uri = { path = "../../attestation-agent/deps/resource_uri" }
+resource_uri = { path = "../deps/resource_uri" }
 sha2 = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
-sev = { path = "../../attestation-agent/deps/sev", optional = true }
+sev = { path = "../deps/sev", optional = true }
 strum.workspace = true
 reqwest = { version = "0.11", optional = true }
 thiserror.workspace = true

@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-attester = { path = "../attester", default-features = false }
+attester = { path = "../../attestation-agent/attester", default-features = false }
 base64.workspace = true
 crypto = { path = "../deps/crypto", default-features = false }
 jwt-simple.workspace = true

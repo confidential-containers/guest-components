@@ -12,7 +12,7 @@ required-features = ["occlum"]
 [dependencies]
 anyhow.workspace = true
 attester = { path = "../attester", default-features = false, optional = true }
-crypto = { path = "../deps/crypto" }
+crypto = { path = "../../confidential-data-hub/deps/crypto" }
 
 [features]
 occlum = ["attester/sgx-attester"]

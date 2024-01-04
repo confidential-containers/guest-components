@@ -13,4 +13,8 @@ message KeyProviderKeyWrapProtocolOutput {
 service KeyProviderService {
     rpc WrapKey(KeyProviderKeyWrapProtocolInput) returns (KeyProviderKeyWrapProtocolOutput) {};
     rpc UnWrapKey(KeyProviderKeyWrapProtocolInput) returns (KeyProviderKeyWrapProtocolOutput) {};
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 9d6651f (AA: Remove Out-of-date API and crates which implemented by CDH)

@@ -29,23 +29,20 @@ tonic-build = { workspace = true, optional = true }
 ttrpc-codegen = { workspace = true, optional = true }
 
 [features]
-default = ["sample_kbc", "ttrpc"]
+default = ["all_attesters", "ttrpc", "kbs"]
 grpc = ["tonic", "prost", "tonic-build"]
 ttrpc = ["dep:ttrpc", "ttrpc-codegen", "protobuf"]
-sample_kbc = ["attestation_agent/sample_kbc"]
-cc_kbc = ["attestation_agent/cc_kbc"]
 
-# attester suites of cc-kbc
-cc_kbc_all_attesters = ["cc_kbc", "attestation_agent/all-attesters"]
-cc_kbc_tdx = ["cc_kbc", "attestation_agent/tdx-attester"]
-cc_kbc_sgx = ["cc_kbc", "attestation_agent/sgx-attester"]
-cc_kbc_az_snp_vtpm = ["cc_kbc", "attestation_agent/az-snp-vtpm-attester"]
-cc_kbc_az_tdx_vtpm = ["cc_kbc", "attestation_agent/az-tdx-vtpm-attester"]
-cc_kbc_snp = ["cc_kbc", "attestation_agent/snp-attester"]
+# supported attestation service (token issuer)
+kbs = ["attestation_agent/kbs"]
 
-eaa_kbc = ["attestation_agent/eaa_kbc"]
-offline_fs_kbc = ["attestation_agent/offline_fs_kbc"]
-offline_sev_kbc = ["attestation_agent/offline_sev_kbc"]
-online_sev_kbc = ["attestation_agent/online_sev_kbc"]
+# attester suites
+all_attesters = ["attestation_agent/all-attesters"]
+tdx = ["attestation_agent/tdx-attester"]
+sgx = ["attestation_agent/sgx-attester"]
+az_snp_vtpm = ["attestation_agent/az-snp-vtpm-attester"]
+az_tdx_vtpm = ["attestation_agent/az-tdx-vtpm-attester"]
+snp = ["attestation_agent/snp-attester"]
+
 openssl = ["attestation_agent/openssl"]
 rust-crypto = ["attestation_agent/rust-crypto"]

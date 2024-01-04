@@ -4,6 +4,6 @@
 //
 
 fn main() -> shadow_rs::SdResult<()> {
-    tonic_build::compile_protos("../protos/keyprovider.proto")?;
+    tonic_build::compile_protos("../hub/protos/keyprovider.proto")?;
     shadow_rs::new()
 }

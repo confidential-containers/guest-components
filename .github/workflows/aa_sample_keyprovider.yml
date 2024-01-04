@@ -4,11 +4,11 @@ on:
     branches:
       - 'main'
     paths:
-      - 'attestation-agent/coco_keyprovider/**'
+      - 'coco_keyprovider/**'
       - '.github/workflows/aa_sample_keyprovider.yml'
   pull_request:
     paths:
-      - 'attestation-agent/coco_keyprovider/**'
+      - 'coco_keyprovider/**'
       - '.github/workflows/aa_sample_keyprovider.yml'
   create:
   workflow_dispatch:
@@ -46,22 +46,22 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --check --manifest-path attestation-agent/coco_keyprovider/Cargo.toml
+          args: --check --manifest-path coco_keyprovider/Cargo.toml
 
       - name: Rust clippy check
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path attestation-agent/coco_keyprovider/Cargo.toml -- -D warnings
+          args: --manifest-path coco_keyprovider/Cargo.toml -- -D warnings
 
       - name: Build and install
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --manifest-path attestation-agent/coco_keyprovider/Cargo.toml
+          args: --manifest-path coco_keyprovider/Cargo.toml
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path attestation-agent/coco_keyprovider/Cargo.toml
+          args: --manifest-path coco_keyprovider/Cargo.toml
