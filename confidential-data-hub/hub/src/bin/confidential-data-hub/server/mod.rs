@@ -16,11 +16,12 @@ use ttrpc::{asynchronous::TtrpcContext, Code, Error, Status};
 
 use crate::{
     api::{
-        GetResourceRequest, GetResourceResponse, KeyProviderKeyWrapProtocolInput,
-        KeyProviderKeyWrapProtocolOutput, SecureMountRequest, SecureMountResponse,
+        GetResourceRequest, GetResourceResponse, SecureMountRequest, SecureMountResponse,
         UnsealSecretInput, UnsealSecretOutput,
     },
-    api_ttrpc::{GetResourceService, KeyProviderService, SealedSecretService, SecureMountService},
+    api_ttrpc::{GetResourceService, SealedSecretService, SecureMountService},
+    keyprovider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput},
+    keyprovider_ttrpc::KeyProviderService,
     server::message::{KeyProviderInput, KeyUnwrapOutput, KeyUnwrapResults},
 };
 

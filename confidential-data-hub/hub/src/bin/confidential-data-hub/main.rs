@@ -7,10 +7,10 @@ use std::{path::Path, sync::Arc};
 
 use anyhow::{anyhow, Context, Result};
 use api_ttrpc::{
-    create_get_resource_service, create_key_provider_service, create_sealed_secret_service,
-    create_secure_mount_service,
+    create_get_resource_service, create_sealed_secret_service, create_secure_mount_service,
 };
 use clap::Parser;
+use keyprovider_ttrpc::create_key_provider_service;
 use log::info;
 use server::Server;
 use tokio::{
@@ -21,6 +21,8 @@ use ttrpc::r#async::Server as TtrpcServer;
 
 mod api;
 mod api_ttrpc;
+mod keyprovider;
+mod keyprovider_ttrpc;
 mod server;
 
 const DEFAULT_CDH_SOCKET_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
