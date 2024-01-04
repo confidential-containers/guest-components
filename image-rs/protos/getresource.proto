@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package getresource;
+package api;
 
 message GetResourceRequest {
     string ResourcePath = 1;

@@ -6,9 +6,9 @@
 
 //! Test for signature verification.
 
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
 use image_rs::image::ImageClient;
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
 use serial_test::serial;
 use strum_macros::{Display, EnumString};
 
@@ -105,23 +105,27 @@ const _TESTS_XRSS: [_TestItem; _TEST_ITEMS_XRSS] = [
     },
 ];
 
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
 const POLICY_URI: &str = "kbs:///default/security-policy/test";
 
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
 const SIGSTORE_CONFIG_URI: &str = "kbs:///default/sigstore-config/test";
 
 /// image-rs built without support for cosign image signing cannot use a policy that includes a type that
 /// uses cosign (type: sigstoreSigned), even if the image being pulled is not signed using cosign.
 /// https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/kbc/src/sample_kbc/policy.json
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
 #[tokio::test]
 #[serial]
 async fn signature_verification() {
-    do_signature_verification_tests(&_TESTS, common::AA_OFFLINE_FS_KBC_RESOURCES_FILE, &None).await;
+    do_signature_verification_tests(&_TESTS, common::OFFLINE_FS_KBC_RESOURCES_FILE, &None).await;
 }
 
-#[cfg(all(feature = "signature-simple-xrss", feature = "getresource"))]
+#[cfg(all(
+    feature = "signature-simple-xrss",
+    feature = "getresource",
+    feature = "keywrap-ttrpc"
+))]
 #[tokio::test]
 #[serial]
 async fn signature_verification_xrss() {
@@ -147,17 +151,17 @@ async fn signature_verification_xrss() {
     }
 }
 
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
 async fn do_signature_verification_tests(
     tests: &[_TestItem<'_, '_>],
     offline_fs_kbc_resources: &str,
     auth_info: &Option<&str>,
 ) {
     common::prepare_test(offline_fs_kbc_resources).await;
-    // Init AA
-    let _aa = common::start_attestation_agent()
+    // Init CDH
+    let _cdh = common::start_confidential_data_hub()
         .await
-        .expect("Failed to start attestation agent!");
+        .expect("Failed to start confidential data hub!");
 
     for test in tests {
         let mut test_auth_info = auth_info;

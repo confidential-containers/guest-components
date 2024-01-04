@@ -34,7 +34,7 @@ impl GetResourceServiceClient {
 
     pub async fn get_resource(&self, ctx: ttrpc::context::Context, req: &super::getresource::GetResourceRequest) -> ::ttrpc::Result<super::getresource::GetResourceResponse> {
         let mut cres = super::getresource::GetResourceResponse::new();
-        ::ttrpc::async_client_request!(self, ctx, req, "getresource.GetResourceService", "GetResource", cres);
+        ::ttrpc::async_client_request!(self, ctx, req, "api.GetResourceService", "GetResource", cres);
     }
 }
 
@@ -52,7 +52,7 @@ impl ::ttrpc::r#async::MethodHandler for GetResourceMethod {
 #[async_trait]
 pub trait GetResourceService: Sync {
     async fn get_resource(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::getresource::GetResourceRequest) -> ::ttrpc::Result<super::getresource::GetResourceResponse> {
-        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/getresource.GetResourceService/GetResource is not supported".to_string())))
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/api.GetResourceService/GetResource is not supported".to_string())))
     }
 }
 
@@ -64,6 +64,6 @@ pub fn create_get_resource_service(service: Arc<Box<dyn GetResourceService + Sen
     methods.insert("GetResource".to_string(),
                     Box::new(GetResourceMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
 
-    ret.insert("getresource.GetResourceService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
+    ret.insert("api.GetResourceService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
     ret
 }

@@ -9,12 +9,9 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-parameters=("KBC=offline_fs_kbc")
-
 [ -n "${BASH_VERSION:-}" ] && set -o errtrace
 [ -n "${DEBUG:-}" ] && set -o xtrace
 if [[ -n "${TTRPC:-}" ]]; then
-    parameters+=("ttrpc=true")
     dest_dir_suffix="ttrpc"
 else
     dest_dir_suffix="grpc"
@@ -23,12 +20,12 @@ fi
 source $HOME/.cargo/env
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-AA_DIR=$SCRIPT_DIR/../../attestation-agent
+CDH_DIR=$SCRIPT_DIR/../../confidential-data-hub
 
-pushd $AA_DIR
+pushd $CDH_DIR
 
-make "${parameters[@]}"
+make
 make DESTDIR="${SCRIPT_DIR}/${dest_dir_suffix}" install
 
-file "${SCRIPT_DIR}/${dest_dir_suffix}/attestation-agent"
+file "${SCRIPT_DIR}/${dest_dir_suffix}/confidential-data-hub"
 popd
