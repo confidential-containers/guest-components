@@ -17,15 +17,19 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use lazy_static::lazy_static;
+use log::debug;
 pub use resource_uri::ResourceUri;
 use serde::Deserialize;
-use std::fs;
 use std::path::Path;
+use std::sync::OnceLock;
+use std::{env, fs};
 use tokio::sync::Mutex;
 
 use crate::{Annotations, Error, Getter, Result};
 
 const PEER_POD_CONFIG_PATH: &str = "/run/peerpod/daemon.json";
+
+static KATA_AGENT_CONFIG_PATH: OnceLock<String> = OnceLock::new();
 
 enum RealClient {
     #[cfg(feature = "kbs")]
@@ -145,25 +149,30 @@ async fn get_aa_params_from_config_file() -> Result<(String, String)> {
         aa_kbc_params: Option<String>,
     }
 
-    // Hard-code agent config path to "/etc/agent-config.toml" as a workaround
-    let agent_config_str = fs::read_to_string("/etc/agent-config.toml").map_err(|e| {
-        Error::KbsClientError(format!("Failed to read /etc/agent-config.toml file: {e}"))
-    })?;
+    // check env for KATA_AGENT_CONFIG_PATH, fall back to default path
+    let path: &String = KATA_AGENT_CONFIG_PATH.get_or_init(|| {
+        env::var("KATA_AGENT_CONFIG_PATH").unwrap_or_else(|_| "/etc/agent-config.toml".into())
+    });
 
-    let agent_config: AgentConfig = toml::from_str(&agent_config_str).map_err(|e| {
-        Error::KbsClientError(format!("Failed to deserialize /etc/agent-config.toml: {e}"))
-    })?;
+    debug!("reading agent config from {}", path);
+    let agent_config_str = fs::read_to_string(path)
+        .map_err(|e| Error::KbsClientError(format!("Failed to read {path} file: {e}")))?;
 
-    let aa_kbc_params = agent_config.aa_kbc_params.ok_or(Error::KbsClientError(
-        "no `aa_kbc_params` found in /etc/agent-config.toml".into(),
-    ))?;
+    let agent_config: AgentConfig = toml::from_str(&agent_config_str)
+        .map_err(|e| Error::KbsClientError(format!("Failed to deserialize {path}: {e}")))?;
+
+    let aa_kbc_params = agent_config
+        .aa_kbc_params
+        .ok_or(Error::KbsClientError(format!(
+            "no `aa_kbc_params` found in {path}"
+        )))?;
 
     let aa_kbc_params_vec = aa_kbc_params.split("::").collect::<Vec<&str>>();
 
     if aa_kbc_params_vec.len() != 2 {
-        return Err(Error::KbsClientError(
-            "Illegal `aa_kbc_params` format provided in /etc/agent-config.toml.".to_string(),
-        ));
+        return Err(Error::KbsClientError(format!(
+            "Illegal `aa_kbc_params` format provided in {path}."
+        )));
     }
 
     Ok((
