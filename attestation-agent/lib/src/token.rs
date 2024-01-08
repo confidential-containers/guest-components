@@ -3,10 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use kbs_protocol::{evidence_provider::NativeEvidenceProvider, KbsClientBuilder};
+use log::debug;
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::path::Path;
+use std::sync::OnceLock;
 use tokio::fs;
 
 const PEER_POD_CONFIG_PATH: &str = "/run/peerpod/daemon.json";
@@ -16,6 +19,8 @@ struct Message {
     token: String,
     tee_keypair: String,
 }
+
+static KATA_AGENT_CONFIG_PATH: OnceLock<String> = OnceLock::new();
 
 pub(crate) async fn get_kbs_token() -> Result<Vec<u8>> {
     let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
@@ -73,15 +78,20 @@ pub(crate) async fn get_kbc_params_from_config_file() -> Result<String> {
         aa_kbc_params: Option<String>,
     }
 
-    // Hard-code agent config path to "/etc/agent-config.toml" as a workaround
-    let agent_config_str = fs::read_to_string("/etc/agent-config.toml")
+    // check env for KATA_AGENT_CONFIG_PATH, fall back to default path
+    let path: &String = KATA_AGENT_CONFIG_PATH.get_or_init(|| {
+        env::var("KATA_AGENT_CONFIG_PATH").unwrap_or_else(|_| "/etc/agent-config.toml".into())
+    });
+
+    debug!("reading agent config from {}", path);
+    let agent_config_str = fs::read_to_string(path)
         .await
-        .map_err(|e| anyhow!("Failed to read /etc/agent-config.toml file: {e}"))?;
+        .context(format!("Failed to read {path}"))?;
 
-    let agent_config: AgentConfig = toml::from_str(&agent_config_str)
-        .map_err(|e| anyhow!("Failed to deserialize /etc/agent-config.toml: {e}"))?;
+    let agent_config: AgentConfig =
+        toml::from_str(&agent_config_str).context(format!("Failed to deserialize {path}"))?;
 
-    agent_config.aa_kbc_params.ok_or(anyhow!(
-        "no `aa_kbc_params` found in /etc/agent-config.toml!",
-    ))
+    agent_config
+        .aa_kbc_params
+        .ok_or(anyhow!("no `aa_kbc_params` found in {path}!"))
 }
