@@ -14,7 +14,7 @@ use storage::volume_type::Storage;
 use tokio::sync::RwLock;
 use ttrpc::{asynchronous::TtrpcContext, Code, Error, Status};
 
-use crate::{
+use crate::protos::{
     api::{
         GetResourceRequest, GetResourceResponse, SecureMountRequest, SecureMountResponse,
         UnsealSecretInput, UnsealSecretOutput,
@@ -22,8 +22,8 @@ use crate::{
     api_ttrpc::{GetResourceService, SealedSecretService, SecureMountService},
     keyprovider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput},
     keyprovider_ttrpc::KeyProviderService,
-    server::message::{KeyProviderInput, KeyUnwrapOutput, KeyUnwrapResults},
 };
+use message::{KeyProviderInput, KeyUnwrapOutput, KeyUnwrapResults};
 
 lazy_static! {
     static ref HUB: Arc<RwLock<Option<Hub>>> = Arc::new(RwLock::new(None));

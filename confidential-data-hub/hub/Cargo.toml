@@ -10,6 +10,10 @@ edition = "2021"
 name = "confidential-data-hub"
 required-features = ["bin"]
 
+[[bin]]
+name = "cdh-tool"
+required-features = ["bin"]
+
 [dependencies]
 anyhow = { workspace = true, optional = true }
 async-trait.workspace = true

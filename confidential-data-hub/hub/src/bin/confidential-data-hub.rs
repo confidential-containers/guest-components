@@ -6,12 +6,14 @@
 use std::{env, path::Path, sync::Arc};
 
 use anyhow::{anyhow, Context, Result};
-use api_ttrpc::{
-    create_get_resource_service, create_sealed_secret_service, create_secure_mount_service,
-};
 use clap::Parser;
-use keyprovider_ttrpc::create_key_provider_service;
 use log::info;
+use protos::{
+    api_ttrpc::{
+        create_get_resource_service, create_sealed_secret_service, create_secure_mount_service,
+    },
+    keyprovider_ttrpc::create_key_provider_service,
+};
 use server::Server;
 use tokio::{
     fs,
@@ -19,11 +21,8 @@ use tokio::{
 };
 use ttrpc::r#async::Server as TtrpcServer;
 
-mod api;
-mod api_ttrpc;
 mod config;
-mod keyprovider;
-mod keyprovider_ttrpc;
+mod protos;
 mod server;
 
 use config::*;
