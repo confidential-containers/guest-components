@@ -25,7 +25,7 @@ fn main() {
         let protobuf_customized = ProtobufCustomize::default().gen_mod_rs(false);
 
         Codegen::new()
-            .out_dir("src/bin/confidential-data-hub")
+            .out_dir("src/bin/protos")
             .inputs(["./protos/api.proto", "./protos/keyprovider.proto"])
             .include("./protos")
             .rust_protobuf()
@@ -38,10 +38,6 @@ fn main() {
             .expect("Generate ttrpc protocol code failed.");
 
         // Fix clippy warnings of code generated from ttrpc_codegen
-        replace_text_in_file(
-            "src/bin/confidential-data-hub/api_ttrpc.rs",
-            "client: client",
-            "client",
-        );
+        replace_text_in_file("src/bin/protos/api_ttrpc.rs", "client: client", "client");
     }
 }
