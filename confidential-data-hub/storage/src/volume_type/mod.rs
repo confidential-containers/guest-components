@@ -10,8 +10,9 @@ pub mod alibaba_cloud_oss;
 use self::alibaba_cloud_oss::oss::Oss;
 use crate::{Error, Result};
 use log::warn;
+use serde::Deserialize;
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug, Deserialize)]
 pub struct Storage {
     pub driver: String,
     pub driver_options: Vec<String>,
