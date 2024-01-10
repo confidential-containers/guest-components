@@ -6,6 +6,7 @@
 use std::os::unix::fs::PermissionsExt;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
+use log::debug;
 use secret::secret::Secret;
 use serde::{Deserialize, Serialize};
 use tokio::{fs, io::AsyncWriteExt, process::Command};
@@ -77,6 +78,7 @@ async fn unseal_secret(secret: Vec<u8>) -> Result<Vec<u8>> {
 
 async fn get_plaintext_secret(secret: &str) -> Result<String> {
     if secret.starts_with("sealed.") {
+        debug!("detected sealed secret");
         let tmp = secret
             .strip_prefix("sealed.")
             .ok_or(Error::SecureMountFailed(
@@ -84,12 +86,11 @@ async fn get_plaintext_secret(secret: &str) -> Result<String> {
             ))?;
         let unsealed = unseal_secret(tmp.into()).await?;
 
-        return String::from_utf8(unsealed)
-            .map_err(|e| Error::SecureMountFailed(format!("convert to String failed: {e}")));
+        String::from_utf8(unsealed)
+            .map_err(|e| Error::SecureMountFailed(format!("convert to String failed: {e}")))
+    } else {
+        Ok(secret.into())
     }
-    Err(Error::SecureMountFailed(
-        "sealed secret format error!".to_string(),
-    ))
 }
 
 impl Oss {
