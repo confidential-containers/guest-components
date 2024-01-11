@@ -273,6 +273,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "az-snp-vtpm",
+ "az-tdx-vtpm",
  "base64 0.21.5",
  "codicon",
  "csv-rs",
@@ -354,9 +355,9 @@ dependencies = [
 
 [[package]]
 name = "az-cvm-vtpm"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6239da1e7629eabf1ee6bf5e7dd78b532c029e2fc477afe846db201c67325233"
+checksum = "8810a74cfe3024bdfd6bf13e1829114a3ce5431b7d2ef4e4a718a78ffaf03f79"
 dependencies = [
  "bincode",
  "jsonwebkey",
@@ -386,6 +387,22 @@ dependencies = [
  "sev 1.2.1",
  "thiserror",
  "ureq",
+]
+
+[[package]]
+name = "az-tdx-vtpm"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b42775a99133b9c0edff34fb463713bb197f744b96d74dee5c1f953434721001"
+dependencies = [
+ "az-cvm-vtpm",
+ "base64-url",
+ "bincode",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "ureq",
+ "zerocopy",
 ]
 
 [[package]]
@@ -429,6 +446,15 @@ checksum = "ba368df5de76a5bea49aaf0cf1b39ccfbbef176924d1ba5db3e4135216cbe3c7"
 dependencies = [
  "base64 0.21.5",
  "serde",
+]
+
+[[package]]
+name = "base64-url"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb9fb9fb058cc3063b5fc88d9a21eefa2735871498a04e1650da76ed511c8569"
+dependencies = [
+ "base64 0.21.5",
 ]
 
 [[package]]
@@ -2805,9 +2831,9 @@ dependencies = [
 
 [[package]]
 name = "kbs-types"
-version = "0.5.1"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40d90e19846fb37e6025740825dd10f65320d3e56f8e957b4bba021b85bc79d6"
+checksum = "d1f4b0642769e12f56cfc646d8be13668ed48d3caed0e99efb161c407f3ec532"
 dependencies = [
  "serde",
  "serde_json",
