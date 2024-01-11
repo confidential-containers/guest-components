@@ -3,20 +3,25 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::os::unix::fs::PermissionsExt;
+
 use base64::{engine::general_purpose::STANDARD, Engine};
 use secret::secret::Secret;
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::fs::File;
-use std::io::Write;
-use std::os::unix::fs::PermissionsExt;
-use std::process::Command;
+use tokio::{fs, io::AsyncWriteExt, process::Command};
 
 use crate::{Error, Result};
 
-const OSSFS_PASSWD_FILE: &str = "/tmp/ossfs_passwd";
-const GOCRYPTFS_PASSWD_FILE: &str = "/tmp/gocryptfs_passwd";
+/// Name of the file that contains ossfs password
+const OSSFS_PASSWD_FILE: &str = "ossfs_passwd";
+
+/// Name of the file that contains gocryptfs password
+const GOCRYPTFS_PASSWD_FILE: &str = "gocryptfs_passwd";
+
+/// Aliyun OSS filesystem client binary
 const OSSFS_BIN: &str = "/usr/local/bin/ossfs";
+
+/// Gocryptofs binary
 const GOCRYPTFS_BIN: &str = "/usr/local/bin/gocryptfs";
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -88,79 +93,122 @@ async fn get_plaintext_secret(secret: &str) -> Result<String> {
 }
 
 impl Oss {
-    pub(crate) async fn mount(&self, source: String, mount_point: String) -> Result<String> {
+    /// Mount the Aliyun OSS storage to the given `mount_point``.
+    ///
+    /// The OSS parameters of the mount source are stored inside the `Oss` struct.
+    ///
+    /// If `oss.encrypted` is set to `gocryptfs`, the OSS storage is a gocryptofs FUSE.
+    /// This function will create a temp directory, which is used to mount OSS. Then
+    /// use gocryptfs to mount the `mount_point` as plaintext and the temp directory
+    /// as ciphertext.
+    pub(crate) async fn mount(&self, _source: String, mount_point: String) -> Result<String> {
         // unseal secret
         let plain_ak_id = get_plaintext_secret(&self.ak_id).await?;
         let plain_ak_secret = get_plaintext_secret(&self.ak_secret).await?;
 
+        // create temp directory to storage metadata for this mount operation
+        let tempdir = tempfile::tempdir().map_err(|e| {
+            Error::FileError(format!(
+                "create ossfs metadata temp directory failed: {e:?}"
+            ))
+        })?;
+
         // create ossfs passwd file
-        let mut ossfs_passwd = File::create(OSSFS_PASSWD_FILE)
-            .map_err(|e| Error::FileError(format!("create file failed: {e}")))?;
-        let metadata = ossfs_passwd
+        let mut ossfs_passwd_path = tempdir.path().to_owned();
+        ossfs_passwd_path.push(OSSFS_PASSWD_FILE);
+        let ossfs_passwd_path = ossfs_passwd_path.to_string_lossy().to_string();
+        let mut ossfs_passwd = fs::File::create(&ossfs_passwd_path)
+            .await
+            .map_err(|e| Error::FileError(format!("create ossfs password file failed: {e:?}")))?;
+        let mut permissions = ossfs_passwd
             .metadata()
-            .map_err(|e| Error::FileError(format!("create metadata failed: {e}")))?;
-        let mut permissions = metadata.permissions();
+            .await
+            .map_err(|e| Error::FileError(format!("create metadata failed: {e}")))?
+            .permissions();
         permissions.set_mode(0o600);
         ossfs_passwd
             .set_permissions(permissions)
+            .await
             .map_err(|e| Error::FileError(format!("set permissions failed: {e}")))?;
         ossfs_passwd
             .write_all(format!("{}:{}:{}", self.bucket, plain_ak_id, plain_ak_secret).as_bytes())
+            .await
             .map_err(|e| Error::FileError(format!("write file failed: {e}")))?;
 
-        // generate parameters for ossfs command, and execute
+        // generate parameters for ossfs command
         let mut opts = self
             .other_opts
             .split_whitespace()
             .map(str::to_string)
             .collect();
-        let s = if self.encrypted == "gocryptfs" {
-            fs::create_dir_all("/tmp/oss")
-                .map_err(|e| Error::FileError(format!("create dir failed: {e}")))?;
-            "/tmp/oss/".to_string()
-        } else {
-            source.clone()
-        };
-        let mut parameters = vec![
-            format!("{}:{}", self.bucket, self.path),
-            s.clone(),
-            format!("-ourl={}", self.url),
-            format!("-opasswd_file={}", OSSFS_PASSWD_FILE),
-        ];
-        parameters.append(&mut opts);
 
-        Command::new(OSSFS_BIN)
-            .args(parameters)
-            .spawn()
-            .expect("failed to mount oss");
-        std::thread::sleep(std::time::Duration::from_secs(3));
-
-        // decrypt with gocryptfs if needed
         if self.encrypted == "gocryptfs" {
-            // unseal secret
+            let gocryptfs_dir = tempfile::tempdir().map_err(|e| {
+                Error::FileError(format!("create gocryptfs mount dir failed: {e:?}"))
+            })?;
+
+            let gocryptfs_dir_path = gocryptfs_dir.path().to_string_lossy().to_string();
+            let mut parameters = vec![
+                format!("{}:{}", self.bucket, self.path),
+                gocryptfs_dir_path.clone(),
+                format!("-ourl={}", self.url),
+                format!("-opasswd_file={ossfs_passwd_path}"),
+            ];
+
+            parameters.append(&mut opts);
+            Command::new(OSSFS_BIN)
+                .args(parameters)
+                .spawn()
+                .map_err(|e| Error::SecureMountFailed(format!("failed to mount oss: {e:?}")))?;
+
+            // get the gocryptfs password
             let plain_passwd = get_plaintext_secret(&self.enc_passwd).await?;
 
             // create gocryptfs passwd file
-            let mut gocryptfs_passwd = File::create(GOCRYPTFS_PASSWD_FILE)
-                .map_err(|e| Error::FileError(format!("create file failed: {e}")))?;
+            let mut gocryptfs_passwd_path = tempdir.path().to_owned();
+            gocryptfs_passwd_path.push(GOCRYPTFS_PASSWD_FILE);
+            let gocryptfs_passwd_path = gocryptfs_passwd_path.to_string_lossy().to_string();
+            let mut gocryptfs_passwd =
+                fs::File::create(&gocryptfs_passwd_path)
+                    .await
+                    .map_err(|e| {
+                        Error::FileError(format!("create gocryptfs password file failed: {e:?}"))
+                    })?;
+
             gocryptfs_passwd
                 .write_all(plain_passwd.as_bytes())
+                .await
                 .map_err(|e| Error::FileError(format!("write file failed: {e}")))?;
 
             // generate parameters for gocryptfs, and execute
             let parameters = vec![
-                s,
-                source,
+                gocryptfs_dir_path,
+                mount_point.clone(),
                 "-passfile".to_string(),
-                GOCRYPTFS_PASSWD_FILE.to_string(),
+                gocryptfs_passwd_path,
                 "-nosyslog".to_string(),
             ];
             Command::new(GOCRYPTFS_BIN)
                 .args(parameters)
                 .spawn()
-                .expect("failed to decrypt oss");
-            std::thread::sleep(std::time::Duration::from_secs(3));
-        }
+                .map_err(|e| Error::SecureMountFailed(format!("failed to decrypt oss: {e:?}")))?;
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        } else {
+            let mut parameters = vec![
+                format!("{}:{}", self.bucket, self.path),
+                mount_point.clone(),
+                format!("-ourl={}", self.url),
+                format!("-opasswd_file={ossfs_passwd_path}"),
+            ];
+
+            parameters.append(&mut opts);
+            Command::new(OSSFS_BIN)
+                .args(parameters)
+                .spawn()
+                .map_err(|e| Error::SecureMountFailed(format!("failed to mount oss: {e:?}")))?;
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        };
+
         Ok(mount_point)
     }
 }
