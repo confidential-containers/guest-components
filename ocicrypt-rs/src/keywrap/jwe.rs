@@ -141,7 +141,7 @@ mod tests {
     fn test_keywrap_jwe() {
         let path = load_data_path();
         let path = path.display();
-        let pub_key_files = vec![
+        let pub_key_files = [
             format!("{}/{}", path, "public_key.pem"),
             format!("{}/{}", path, "public_key_ec.der"),
             format!("{}/{}", path, "RSA_public.jwk"),
@@ -167,7 +167,7 @@ mod tests {
 
         let json = jwe_key_wrapper.wrap_keys(&ec, &payload).unwrap();
 
-        let priv_key_files = vec![
+        let priv_key_files = [
             format!("{}/{}", path, "private_key.pem"),
             format!("{}/{}", path, "private_key.der"),
             format!("{}/{}", path, "private_key8.pem"),
