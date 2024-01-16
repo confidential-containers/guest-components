@@ -376,12 +376,33 @@ dependencies = [
 ]
 
 [[package]]
-name = "az-snp-vtpm"
-version = "0.4.1"
+name = "az-cvm-vtpm"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0703ff4c71faae6f5ab21ac8590104e771d17ff117f6941a48deb3db6f75769"
+checksum = "9eeac6951cedbd3185174f1dc20ad8832ae61f7412d1a76021932b78b2d13e81"
 dependencies = [
- "az-cvm-vtpm",
+ "bincode",
+ "jsonwebkey",
+ "memoffset 0.9.0",
+ "openssl",
+ "rsa 0.9.6",
+ "serde",
+ "serde-big-array",
+ "serde_json",
+ "sev 1.2.1",
+ "sha2 0.10.8",
+ "thiserror",
+ "tss-esapi",
+ "zerocopy",
+]
+
+[[package]]
+name = "az-snp-vtpm"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4e7ac600f726394c4174145c5d65a0cc8052b35a383e9d2be0a0d9209b545b1"
+dependencies = [
+ "az-cvm-vtpm 0.5.0",
  "bincode",
  "clap 4.2.7",
  "serde",
@@ -396,7 +417,7 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b42775a99133b9c0edff34fb463713bb197f744b96d74dee5c1f953434721001"
 dependencies = [
- "az-cvm-vtpm",
+ "az-cvm-vtpm 0.4.1",
  "base64-url",
  "bincode",
  "serde",
@@ -4654,6 +4675,7 @@ dependencies = [
  "pkcs1 0.7.5",
  "pkcs8 0.10.2",
  "rand_core 0.6.4",
+ "sha2 0.10.8",
  "signature 2.2.0",
  "spki 0.7.3",
  "subtle",
