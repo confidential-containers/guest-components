@@ -356,27 +356,6 @@ dependencies = [
 
 [[package]]
 name = "az-cvm-vtpm"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8810a74cfe3024bdfd6bf13e1829114a3ce5431b7d2ef4e4a718a78ffaf03f79"
-dependencies = [
- "bincode",
- "jsonwebkey",
- "memoffset 0.9.0",
- "openssl",
- "rsa 0.8.2",
- "serde",
- "serde-big-array",
- "serde_json",
- "sev 1.2.1",
- "sha2 0.10.8",
- "thiserror",
- "tss-esapi",
- "zerocopy",
-]
-
-[[package]]
-name = "az-cvm-vtpm"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9eeac6951cedbd3185174f1dc20ad8832ae61f7412d1a76021932b78b2d13e81"
@@ -402,7 +381,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4e7ac600f726394c4174145c5d65a0cc8052b35a383e9d2be0a0d9209b545b1"
 dependencies = [
- "az-cvm-vtpm 0.5.0",
+ "az-cvm-vtpm",
  "bincode",
  "clap 4.2.7",
  "serde",
@@ -413,11 +392,11 @@ dependencies = [
 
 [[package]]
 name = "az-tdx-vtpm"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b42775a99133b9c0edff34fb463713bb197f744b96d74dee5c1f953434721001"
+checksum = "f74c823342c57ca6b79195beea11a458485456aaa1fdf9263160e7bc4ade3b1b"
 dependencies = [
- "az-cvm-vtpm 0.4.1",
+ "az-cvm-vtpm",
  "base64-url",
  "bincode",
  "serde",
@@ -3786,15 +3765,6 @@ dependencies = [
 
 [[package]]
 name = "pbkdf2"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83a0692ec44e4cf1ef28ca317f14f8f07da2d95ec3fa01f86e4467b725e60917"
-dependencies = [
- "digest 0.10.7",
-]
-
-[[package]]
-name = "pbkdf2"
 version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8ed6a7761f76e3b9f92dfb0a60a6a6477c61024b775147ff0973a02653abaf2"
@@ -3984,22 +3954,6 @@ dependencies = [
 
 [[package]]
 name = "pkcs5"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d10d862c1f5c302df3c3dbfd837afbae0ad09551a6fa37b10311cb5890a80175"
-dependencies = [
- "aes",
- "cbc",
- "der 0.6.1",
- "hmac 0.12.1",
- "pbkdf2 0.11.0",
- "scrypt 0.10.0",
- "sha2 0.10.8",
- "spki 0.6.0",
-]
-
-[[package]]
-name = "pkcs5"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e847e2c91a18bfa887dd028ec33f2fe6f25db77db3619024764914affe8b69a6"
@@ -4007,8 +3961,8 @@ dependencies = [
  "aes",
  "cbc",
  "der 0.7.8",
- "pbkdf2 0.12.2",
- "scrypt 0.11.0",
+ "pbkdf2",
+ "scrypt",
  "sha2 0.10.8",
  "spki 0.7.3",
 ]
@@ -4020,8 +3974,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9eca2c590a5f85da82668fa685c09ce2888b9430e83299debf1f34b65fd4a4ba"
 dependencies = [
  "der 0.6.1",
- "pkcs5 0.5.0",
- "rand_core 0.6.4",
  "spki 0.6.0",
 ]
 
@@ -4032,7 +3984,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f950b2377845cebe5cf8b5165cb3cc1a5e0fa5cfa3e1f7f55707d8fd82e0a7b7"
 dependencies = [
  "der 0.7.8",
- "pkcs5 0.7.1",
+ "pkcs5",
  "rand_core 0.6.4",
  "spki 0.7.3",
 ]
@@ -4642,27 +4594,6 @@ dependencies = [
 
 [[package]]
 name = "rsa"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55a77d189da1fee555ad95b7e50e7457d91c0e089ec68ca69ad2989413bbdab4"
-dependencies = [
- "byteorder",
- "digest 0.10.7",
- "num-bigint-dig",
- "num-integer",
- "num-iter",
- "num-traits",
- "pkcs1 0.4.1",
- "pkcs8 0.9.0",
- "rand_core 0.6.4",
- "sha2 0.10.8",
- "signature 2.2.0",
- "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "rsa"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d0e5124fcb30e76a7e79bfee683a2746db83784b86289f6251b54b7950a0dfc"
@@ -4871,24 +4802,12 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "scrypt"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f9e24d2b632954ded8ab2ef9fea0a0c769ea56ea98bddbafbad22caeeadf45d"
-dependencies = [
- "hmac 0.12.1",
- "pbkdf2 0.11.0",
- "salsa20",
- "sha2 0.10.8",
-]
-
-[[package]]
-name = "scrypt"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0516a385866c09368f0b5bcd1caff3366aace790fcd46e2bb032697bb172fd1f"
 dependencies = [
  "password-hash",
- "pbkdf2 0.12.2",
+ "pbkdf2",
  "salsa20",
  "sha2 0.10.8",
 ]
@@ -5404,7 +5323,7 @@ dependencies = [
  "rsa 0.9.6",
  "rustls-pki-types",
  "rustls-webpki 0.102.0",
- "scrypt 0.11.0",
+ "scrypt",
  "serde",
  "serde_json",
  "serde_repr",
