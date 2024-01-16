@@ -7,13 +7,33 @@ use anyhow::{anyhow, Context, Result};
 use log::debug;
 use serde::Deserialize;
 use std::env;
+use std::fs::File;
 use std::path::Path;
 use std::sync::OnceLock;
 use tokio::fs;
 
 const PEER_POD_CONFIG_PATH: &str = "/run/peerpod/daemon.json";
+pub const DEFAULT_AA_CONFIG_PATH: &str = "/etc/attestation.toml";
 
 static KATA_AGENT_CONFIG_PATH: OnceLock<String> = OnceLock::new();
+
+#[derive(Clone, Debug, Deserialize)]
+#[allow(dead_code)]
+pub struct Config {
+    /// URL Address of Attestation Service
+    pub as_url: String,
+}
+
+impl TryFrom<&Path> for Config {
+    type Error = anyhow::Error;
+    fn try_from(config_path: &Path) -> Result<Self, Self::Error> {
+        let file = File::open(config_path)
+            .map_err(|e| anyhow!("failed to open AA config file {}", e.to_string()))?;
+
+        serde_json::from_reader::<File, Config>(file)
+            .map_err(|e| anyhow!("failed to parse AA config file {}", e.to_string()))
+    }
+}
 
 #[allow(dead_code)]
 pub async fn get_host_url() -> Result<String> {

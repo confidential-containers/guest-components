@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use attester::{detect_tee_type, BoxedAttester};
 use kbc::{AnnotationPacket, KbcCheckInfo, KbcInstance, KbcModuleList};
 use resource_uri::ResourceUri;
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
 mod config;
 
@@ -31,7 +31,7 @@ use token::GetToken;
 /// use attestation_agent::AttestationAgent;
 /// use attestation_agent::AttestationAPIs;
 ///
-/// let mut aa = AttestationAgent::new();
+/// let mut aa = AttestationAgent::new(None);
 ///
 /// let key_result = aa.decrypt_image_layer_annotation(
 ///     "sample_kbc",
@@ -88,22 +88,26 @@ pub trait AttestationAPIs {
     ) -> Result<()>;
 }
 
+#[allow(dead_code)]
 /// Attestation agent to provide attestation service.
-pub struct AttestationAgent {
+pub struct AttestationAgent<'a> {
+    config_file_path: &'a Path,
     kbc_module_list: KbcModuleList,
     kbc_instance_map: HashMap<String, KbcInstance>,
 }
 
-impl Default for AttestationAgent {
+impl<'a> Default for AttestationAgent<'a> {
     fn default() -> Self {
-        Self::new()
+        Self::new(None)
     }
 }
 
-impl AttestationAgent {
+impl<'a> AttestationAgent<'a> {
     /// Create a new instance of [AttestationAgent].
-    pub fn new() -> Self {
+    pub fn new(config_path: Option<&'a str>) -> Self {
+        let config_path = config_path.unwrap_or(config::DEFAULT_AA_CONFIG_PATH);
         AttestationAgent {
+            config_file_path: &Path::new(config_path),
             kbc_module_list: KbcModuleList::new(),
             kbc_instance_map: HashMap::new(),
         }
@@ -135,7 +139,7 @@ impl AttestationAgent {
 }
 
 #[async_trait]
-impl AttestationAPIs for AttestationAgent {
+impl<'a> AttestationAPIs for AttestationAgent<'a> {
     async fn decrypt_image_layer_annotation(
         &mut self,
         kbc_name: &str,

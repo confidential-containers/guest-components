@@ -32,8 +32,8 @@ const DEFAULT_ATTESTATION_SOCKET_ADDR: &str = concatcp!(
 );
 
 lazy_static! {
-    pub static ref ASYNC_ATTESTATION_AGENT: Arc<Mutex<AttestationAgent>> =
-        Arc::new(Mutex::new(AttestationAgent::new()));
+    pub static ref ASYNC_ATTESTATION_AGENT: Arc<Mutex<AttestationAgent<'static>>> =
+        Arc::new(Mutex::new(AttestationAgent::<'static>::new(None)));
 }
 
 #[derive(Debug, Parser)]

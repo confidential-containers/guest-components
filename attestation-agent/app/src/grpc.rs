@@ -13,8 +13,10 @@ const DEFAULT_GETRESOURCE_ADDR: &str = "127.0.0.1:50001";
 const DEFAULT_ATTESTATION_AGENT_ADDR: &str = "127.0.0.1:50002";
 
 lazy_static! {
-    pub static ref ASYNC_ATTESTATION_AGENT: Arc<tokio::sync::Mutex<AttestationAgent>> =
-        Arc::new(tokio::sync::Mutex::new(AttestationAgent::new()));
+    pub static ref ASYNC_ATTESTATION_AGENT: Arc<tokio::sync::Mutex<AttestationAgent<'static>>> =
+        Arc::new(tokio::sync::Mutex::new(AttestationAgent::<'static>::new(
+            None
+        )));
 }
 
 #[derive(Debug, Parser)]
