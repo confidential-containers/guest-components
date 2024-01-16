@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-az-snp-vtpm = { version = "0.4", default-features = false, features = [
+az-snp-vtpm = { version = "0.5", default-features = false, features = [
     "attester",
 ], optional = true }
 az-tdx-vtpm = { version = "0.4", default-features = false, features = [
