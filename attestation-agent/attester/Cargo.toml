@@ -8,16 +8,22 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-az-snp-vtpm = { version = "0.4", default-features = false, features = ["attester"], optional = true }
-az-tdx-vtpm = { version = "0.4", default-features = false, features = ["attester"], optional = true }
+az-snp-vtpm = { version = "0.4", default-features = false, features = [
+    "attester",
+], optional = true }
+az-tdx-vtpm = { version = "0.4", default-features = false, features = [
+    "attester",
+], optional = true }
 base64.workspace = true
 kbs-types.workspace = true
 log.workspace = true
-nix = {version = "0.26.2", optional = true }
+nix = { version = "0.26.2", optional = true }
 occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.7", optional = true }
 serde.workspace = true
 serde_json.workspace = true
-sev = { version = "1.2.0", default-features = false, features = ["snp"], optional = true }
+sev = { version = "1.2.0", default-features = false, features = [
+    "snp",
+], optional = true }
 strum.workspace = true
 tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.16", optional = true }
 # TODO: change it to "0.1", once released.
@@ -32,11 +38,19 @@ tokio.workspace = true
 
 [[bin]]
 name = "evidence_getter"
-required-features = [ "bin" ]
+required-features = ["bin"]
 
 [features]
 default = ["all-attesters"]
-all-attesters = ["tdx-attester", "sgx-attester", "az-snp-vtpm-attester", "az-tdx-vtpm-attester", "snp-attester", "csv-attester", "cca-attester"]
+all-attesters = [
+    "tdx-attester",
+    "sgx-attester",
+    "az-snp-vtpm-attester",
+    "az-tdx-vtpm-attester",
+    "snp-attester",
+    "csv-attester",
+    "cca-attester",
+]
 
 tdx-attester = ["tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
