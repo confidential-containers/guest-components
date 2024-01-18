@@ -3,4 +3,5 @@
 .DS_Store
 
 image-rs/scripts/attestation-agent
+confidential-data-hub/kms/src/plugins/aliyun/example_credential/
 shell.nix
