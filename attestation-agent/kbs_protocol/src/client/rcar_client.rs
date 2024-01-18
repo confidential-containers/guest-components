@@ -302,8 +302,10 @@ mod test {
         // a start script
         let mut start_kbs_script = env::current_dir().expect("get cwd");
         let mut kbs_config = start_kbs_script.clone();
+        let mut policy = start_kbs_script.clone();
         start_kbs_script.push("test/start_kbs.sh");
         kbs_config.push("test/kbs-config.toml");
+        policy.push("test/policy.rego");
 
         let image = GenericImage::new(
             "ghcr.io/confidential-containers/staged-images/kbs",
@@ -322,6 +324,10 @@ mod test {
             kbs_config.into_os_string().to_string_lossy(),
             "/etc/kbs-config.toml",
         )
+        .with_volume(
+            policy.into_os_string().to_string_lossy(),
+            "/opa/confidential-containers/kbs/policy.rego",
+        )
         .with_entrypoint("/usr/local/bin/start_kbs.sh");
         let kbs = docker.run(image);
 
@@ -329,7 +335,6 @@ mod test {
         let port = kbs.get_host_port_ipv4(8085);
         let kbs_host_url = format!("http://127.0.0.1:{port}");
 
-        env::set_var("AA_SAMPLE_ATTESTER_TEST", "1");
         let evidence_provider = Box::new(NativeEvidenceProvider::new().unwrap());
         let mut client = KbsClientBuilder::with_evidence_provider(evidence_provider, &kbs_host_url)
             .build()
