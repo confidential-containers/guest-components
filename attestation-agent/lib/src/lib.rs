@@ -16,7 +16,7 @@ use std::{collections::HashMap, path::Path};
 
 mod config;
 
-#[cfg(any(feature = "cc_kbc", feature = "kbs_as"))]
+#[cfg(any(feature = "coco_as", feature = "kbs_as"))]
 use token::GetToken;
 
 /// Attestation Agent (AA for short) is a rust library crate for attestation procedure
@@ -189,6 +189,20 @@ impl<'a> AttestationAPIs for AttestationAgent<'a> {
                     .get_token(kbs_host_url)
                     .await?;
                 kbs_token
+            }
+            #[cfg(feature = "coco_as")]
+            "coco_as" => {
+                let as_url = match config::get_host_url().await {
+                    Ok(url) => url,
+                    Err(_) => {
+                        let config = config::Config::try_from(self.config_file_path)?;
+                        config.as_url.clone()
+                    }
+                };
+                let coco_as_token = token::coco_as::CoCoASTokenGetter::default()
+                    .get_token(as_url)
+                    .await?;
+                coco_as_token
             }
             typ => bail!("Unsupported token type {typ}"),
         };

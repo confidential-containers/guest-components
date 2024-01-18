@@ -8,6 +8,9 @@ use async_trait::async_trait;
 #[cfg(feature = "kbs")]
 pub mod kbs;
 
+#[cfg(feature = "coco_as")]
+pub mod coco_as;
+
 #[async_trait]
 pub trait GetToken {
     async fn get_token(&self, service_url: String) -> Result<Vec<u8>>;

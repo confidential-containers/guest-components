@@ -8,12 +8,26 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
+attester = { path = "../attester", optional = true, default-features = false }
+base64.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 kbs_protocol = { path = "../kbs_protocol", optional = true }
+reqwest = { version = "0.11", features = ["json"], optional = true }
 tokio = { workspace = true, features = ["fs"] }
 toml.workspace = true
 
 [features]
-default = ["kbs"]
+default = ["kbs", "coco_as"]
+
 kbs = ["kbs_protocol/background_check"]
+coco_as = ["reqwest", "attester"]
+
+all-attesters = ["attester?/all-attesters"]
+tdx = ["attester?/tdx-attester"]
+sgx = ["attester?/sgx-attester"]
+az-snp-vtpm = ["attester?/az-snp-vtpm-attester"]
+az-tdx-vtpm = ["attester?/az-tdx-vtpm-attester"]
+snp = ["attester?/snp-attester"]
+csv = ["attester?/csv-attester"]
+cca = ["attester?/cca-attester"]
