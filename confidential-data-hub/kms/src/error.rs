@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use attestation_agent::aa_kbc_params;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -22,4 +23,7 @@ pub enum Error {
 
     #[error("Unsupported provider: {0}")]
     UnsupportedProvider(String),
+
+    #[error("aa_kbc_params error")]
+    AaKbcParamsError(#[from] aa_kbc_params::ParamError),
 }

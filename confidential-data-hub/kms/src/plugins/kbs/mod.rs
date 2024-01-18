@@ -16,20 +16,12 @@ mod offline_fs;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use attestation_agent::aa_kbc_params;
 use lazy_static::lazy_static;
-use log::debug;
 pub use resource_uri::ResourceUri;
-use serde::Deserialize;
-use std::path::Path;
-use std::sync::OnceLock;
-use std::{env, fs};
 use tokio::sync::Mutex;
 
 use crate::{Annotations, Error, Getter, Result};
-
-const PEER_POD_CONFIG_PATH: &str = "/run/peerpod/daemon.json";
-
-static KATA_AGENT_CONFIG_PATH: OnceLock<String> = OnceLock::new();
 
 enum RealClient {
     #[cfg(feature = "kbs")]
@@ -41,18 +33,13 @@ enum RealClient {
 
 impl RealClient {
     async fn new() -> Result<Self> {
-        // Check for /run/peerpod/daemon.json to see if we are in a peer pod
-        // If so we need to read from the agent-config file, not /proc/cmdline
-        let (kbc, _kbs_host) = match Path::new(PEER_POD_CONFIG_PATH).exists() {
-            true => get_aa_params_from_config_file().await?,
-            false => get_aa_params_from_cmdline().await?,
-        };
+        let params = aa_kbc_params::get_params().await?;
 
-        let c = match &kbc[..] {
+        let c = match params.kbc() {
             #[cfg(feature = "kbs")]
-            "cc_kbc" => RealClient::Cc(cc_kbc::CcKbc::new(&_kbs_host).await?),
+            "cc_kbc" => RealClient::Cc(cc_kbc::CcKbc::new(params.uri()).await?),
             #[cfg(feature = "sev")]
-            "online_sev_kbc" => RealClient::Sev(sev::OnlineSevKbc::new(&_kbs_host).await?),
+            "online_sev_kbc" => RealClient::Sev(sev::OnlineSevKbc::new(params.uri()).await?),
             "offline_fs_kbc" => RealClient::OfflineFs(offline_fs::OfflineFsKbc::new().await?),
             others => return Err(Error::KbsClientError(format!("unknown kbc name {others}, only support `cc_kbc`(feature `kbs`), `online_sev_kbc` (feature `sev`) and `offline_fs_kbc`."))),
         };
@@ -115,70 +102,4 @@ impl KbcClient {
 
         Ok(KbcClient {})
     }
-}
-
-async fn get_aa_params_from_cmdline() -> Result<(String, String)> {
-    use tokio::fs;
-    debug!("get aa_kbc_params from kernel cmdline");
-    let cmdline = fs::read_to_string("/proc/cmdline")
-        .await
-        .map_err(|e| Error::KbsClientError(format!("read kernel cmdline failed: {e}")))?;
-    let aa_kbc_params = cmdline
-        .split_ascii_whitespace()
-        .find(|para| para.starts_with("agent.aa_kbc_params="))
-        .ok_or(Error::KbsClientError(
-            "no `agent.aa_kbc_params` provided in kernel commandline!".into(),
-        ))?
-        .strip_prefix("agent.aa_kbc_params=")
-        .expect("must have a prefix")
-        .split("::")
-        .collect::<Vec<&str>>();
-
-    if aa_kbc_params.len() != 2 {
-        return Err(Error::KbsClientError(
-            "Illegal `agent.aa_kbc_params` format provided in kernel commandline.".to_string(),
-        ));
-    }
-
-    Ok((aa_kbc_params[0].to_string(), aa_kbc_params[1].to_string()))
-}
-
-async fn get_aa_params_from_config_file() -> Result<(String, String)> {
-    debug!("get aa_kbc_params from file");
-    // We only care about the aa_kbc_params value at the moment
-    #[derive(Debug, Deserialize)]
-    struct AgentConfig {
-        aa_kbc_params: Option<String>,
-    }
-
-    // check env for KATA_AGENT_CONFIG_PATH, fall back to default path
-    let path: &String = KATA_AGENT_CONFIG_PATH.get_or_init(|| {
-        env::var("KATA_AGENT_CONFIG_PATH").unwrap_or_else(|_| "/etc/agent-config.toml".into())
-    });
-
-    debug!("reading agent config from {}", path);
-    let agent_config_str = fs::read_to_string(path)
-        .map_err(|e| Error::KbsClientError(format!("Failed to read {path} file: {e}")))?;
-
-    let agent_config: AgentConfig = toml::from_str(&agent_config_str)
-        .map_err(|e| Error::KbsClientError(format!("Failed to deserialize {path}: {e}")))?;
-
-    let aa_kbc_params = agent_config
-        .aa_kbc_params
-        .ok_or(Error::KbsClientError(format!(
-            "no `aa_kbc_params` found in {path}"
-        )))?;
-
-    let aa_kbc_params_vec = aa_kbc_params.split("::").collect::<Vec<&str>>();
-
-    if aa_kbc_params_vec.len() != 2 {
-        return Err(Error::KbsClientError(format!(
-            "Illegal `aa_kbc_params` format provided in {path}."
-        )));
-    }
-
-    Ok((
-        aa_kbc_params_vec[0].to_string(),
-        aa_kbc_params_vec[1].to_string(),
-    ))
 }
