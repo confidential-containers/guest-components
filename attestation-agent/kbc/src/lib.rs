@@ -81,6 +81,7 @@ impl Default for KbcModuleList {
 impl KbcModuleList {
     /// Create a new [KbcModuleList] and register all known KBC modules.
     pub fn new() -> KbcModuleList {
+        #[allow(unused_mut)]
         let mut mod_list = HashMap::new();
 
         #[cfg(feature = "sample_kbc")]

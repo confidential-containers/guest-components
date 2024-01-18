@@ -261,6 +261,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strum",
+ "thiserror",
  "tokio",
  "toml 0.8.8",
  "tonic",
@@ -2886,6 +2887,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "attestation_agent",
  "base64 0.21.5",
  "bincode",
  "chrono",

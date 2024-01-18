@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
+attestation_agent = { path = "../../attestation-agent/lib", default-features = false }
 base64.workspace = true
 bincode = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }

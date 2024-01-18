@@ -19,6 +19,8 @@ mod token;
 #[cfg(feature = "cc_kbc")]
 use token::get_kbs_token;
 
+pub mod aa_kbc_params;
+
 /// Attestation Agent (AA for short) is a rust library crate for attestation procedure
 /// in confidential containers. It provides kinds of service APIs that need to make
 /// requests to the Relying Party (Key Broker Service) in Confidential Containers,
