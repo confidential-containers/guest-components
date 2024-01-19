@@ -24,7 +24,7 @@ CDH_DIR=$SCRIPT_DIR/../../confidential-data-hub
 
 pushd $CDH_DIR
 
-make
+make RESOURCE_PROVIDER=none KMS_PROVIDER=none
 make DESTDIR="${SCRIPT_DIR}/${dest_dir_suffix}" install
 
 file "${SCRIPT_DIR}/${dest_dir_suffix}/confidential-data-hub"
