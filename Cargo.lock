@@ -1204,7 +1204,7 @@ dependencies = [
 [[package]]
 name = "csv-rs"
 version = "0.1.0"
-source = "git+https://gitee.com/anolis/csv-rs?rev=9d8882e#9d8882e005ab0f64f4e3802a37aebfc61bc4fe32"
+source = "git+https://github.com/openanolis/csv-rs?rev=9d8882e#9d8882e005ab0f64f4e3802a37aebfc61bc4fe32"
 dependencies = [
  "bitfield 0.13.2",
  "codicon",
