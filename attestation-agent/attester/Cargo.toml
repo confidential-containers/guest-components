@@ -27,7 +27,7 @@ sev = { version = "1.2.0", default-features = false, features = [
 strum.workspace = true
 tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.16", optional = true }
 # TODO: change it to "0.1", once released.
-csv-rs = { git = "https://gitee.com/anolis/csv-rs", rev = "9d8882e", optional = true }
+csv-rs = { git = "https://github.com/openanolis/csv-rs", rev = "b74aa8c", optional = true }
 codicon = { version = "3.0", optional = true }
 hyper = { version = "0.14", features = ["full"], optional = true }
 hyper-tls = { version = "0.5", optional = true }
