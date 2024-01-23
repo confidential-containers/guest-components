@@ -37,6 +37,29 @@ message DecryptResponse {
   string PaddingMode = 5;
 }
 
+message GetSecretValueRequest {
+  string SecretName = 1;
+  string VersionStage = 2;
+  string VersionId = 3;
+  bool FetchExtendedConfig = 4;
+}
+
+message GetSecretValueResponse {
+  string SecretName = 1;
+  string SecretType = 2;
+  string SecretData = 3;
+  string SecretDataType = 4;
+  repeated string VersionStages = 5;
+  string VersionId = 6;
+  string CreateTime = 7;
+  string RequestId = 8;
+  string LastRotationDate = 9;
+  string NextRotationDate = 10;
+  string ExtendedConfig = 11;
+  string AutomaticRotation = 12;
+  string RotationInterval = 13;
+}
+
 message Error {
   int32 StatusCode = 1;
   string ErrorCode = 2;

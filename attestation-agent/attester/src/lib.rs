@@ -11,6 +11,9 @@ pub mod sample;
 #[cfg(feature = "az-snp-vtpm-attester")]
 pub mod az_snp_vtpm;
 
+#[cfg(feature = "az-tdx-vtpm-attester")]
+pub mod az_tdx_vtpm;
+
 #[cfg(feature = "cca-attester")]
 pub mod cca;
 
@@ -40,6 +43,8 @@ impl TryFrom<Tee> for BoxedAttester {
             Tee::Sgx => Box::<sgx_dcap::SgxDcapAttester>::default(),
             #[cfg(feature = "az-snp-vtpm-attester")]
             Tee::AzSnpVtpm => Box::<az_snp_vtpm::AzSnpVtpmAttester>::default(),
+            #[cfg(feature = "az-tdx-vtpm-attester")]
+            Tee::AzTdxVtpm => Box::<az_tdx_vtpm::AzTdxVtpmAttester>::default(),
             #[cfg(feature = "cca-attester")]
             Tee::Cca => Box::<cca::CCAAttester>::default(),
             #[cfg(feature = "snp-attester")]
@@ -59,43 +64,55 @@ pub trait Attester {
     /// The parameter `report_data` will be used as the user input of the
     /// evidence to avoid reply attack.
     async fn get_evidence(&self, report_data: Vec<u8>) -> Result<String>;
+
+    /// Extend TEE specific dynamic measurement register
+    /// to enable dynamic measurement capabilities for input data at runtime.
+    async fn extend_runtime_measurement(
+        &self,
+        _events: Vec<Vec<u8>>,
+        _register_index: Option<u64>,
+    ) -> Result<()> {
+        bail!("Unimplemented")
+    }
 }
 
 // Detect which TEE platform the KBC running environment is.
-pub fn detect_tee_type() -> Option<Tee> {
-    if sample::detect_platform() {
-        return Some(Tee::Sample);
-    }
-
+pub fn detect_tee_type() -> Tee {
     #[cfg(feature = "tdx-attester")]
     if tdx::detect_platform() {
-        return Some(Tee::Tdx);
+        return Tee::Tdx;
     }
 
     #[cfg(feature = "sgx-attester")]
     if sgx_dcap::detect_platform() {
-        return Some(Tee::Sgx);
+        return Tee::Sgx;
+    }
+
+    #[cfg(feature = "az-tdx-vtpm-attester")]
+    if az_tdx_vtpm::detect_platform() {
+        return Tee::AzTdxVtpm;
     }
 
     #[cfg(feature = "az-snp-vtpm-attester")]
     if az_snp_vtpm::detect_platform() {
-        return Some(Tee::AzSnpVtpm);
+        return Tee::AzSnpVtpm;
     }
 
     #[cfg(feature = "snp-attester")]
     if snp::detect_platform() {
-        return Some(Tee::Snp);
+        return Tee::Snp;
     }
 
     #[cfg(feature = "csv-attester")]
     if csv::detect_platform() {
-        return Some(Tee::Csv);
+        return Tee::Csv;
     }
 
     #[cfg(feature = "cca-attester")]
     if cca::detect_platform() {
-        return Some(Tee::Cca);
+        return Tee::Cca;
     }
 
-    None
+    log::warn!("No TEE platform detected. Sample Attester will be used.");
+    Tee::Sample
 }

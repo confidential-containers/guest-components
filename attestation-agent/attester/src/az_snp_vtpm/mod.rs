@@ -4,17 +4,18 @@
 //
 
 use super::Attester;
-use anyhow::*;
-use az_snp_vtpm::{imds, vtpm};
+use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
 use log::debug;
 use serde::{Deserialize, Serialize};
 
 pub fn detect_platform() -> bool {
-    if let Err(err) = vtpm::get_report() {
-        debug!("Failed to retrieve Azure HCL data from vTPM: {err}");
-        return false;
+    match is_snp_cvm() {
+        Ok(is_snp) => is_snp,
+        Err(err) => {
+            debug!("Failed to retrieve Azure HCL data from vTPM: {}", err);
+            false
+        }
     }
-    true
 }
 
 #[derive(Debug, Default)]
@@ -29,7 +30,7 @@ struct Evidence {
 
 #[async_trait::async_trait]
 impl Attester for AzSnpVtpmAttester {
-    async fn get_evidence(&self, report_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, report_data: Vec<u8>) -> anyhow::Result<String> {
         let report = vtpm::get_report()?;
         let quote = vtpm::get_quote(&report_data)?;
         let certs = imds::get_certs()?;

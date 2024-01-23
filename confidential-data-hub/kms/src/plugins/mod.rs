@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::str::FromStr;
+
 use strum::{AsRefStr, EnumString};
 
 use crate::{Decrypter, Error, Getter, ProviderSettings, Result};
@@ -14,11 +16,18 @@ pub mod aliyun;
 
 pub mod kbs;
 
+#[cfg(feature = "ehsm")]
+pub mod ehsm;
+
 #[derive(AsRefStr, EnumString)]
 pub enum DecryptorProvider {
     #[cfg(feature = "aliyun")]
     #[strum(ascii_case_insensitive)]
     Aliyun,
+
+    #[strum(ascii_case_insensitive)]
+    #[cfg(feature = "ehsm")]
+    Ehsm,
 }
 
 /// Create a new [`Decrypter`] by given provider name and [`ProviderSettings`]
@@ -33,12 +42,16 @@ pub async fn new_decryptor(
         DecryptorProvider::Aliyun => Ok(Box::new(
             aliyun::AliyunKmsClient::from_provider_settings(&_provider_settings).await?,
         ) as Box<dyn Decrypter>),
+
+        #[cfg(feature = "ehsm")]
+        DecryptorProvider::Ehsm => Ok(Box::new(
+            ehsm::EhsmKmsClient::from_provider_settings(&_provider_settings).await?,
+        ) as Box<dyn Decrypter>),
     }
 }
 
 #[derive(AsRefStr, EnumString)]
 pub enum VaultProvider {
-    #[cfg(feature = "kbs")]
     #[strum(ascii_case_insensitive)]
     Kbs,
 }
@@ -48,7 +61,7 @@ pub async fn new_getter(
     provider_name: &str,
     _provider_settings: ProviderSettings,
 ) -> Result<Box<dyn Getter>> {
-    let provider = VaultProvider::try_from(provider_name)
+    let provider = VaultProvider::from_str(provider_name)
         .map_err(|_| Error::UnsupportedProvider(provider_name.to_string()))?;
     match provider {
         VaultProvider::Kbs => Ok(Box::new(kbs::KbcClient::new().await?) as Box<dyn Getter>),

@@ -14,7 +14,9 @@ members = [
     "attestation-agent/test-binaries",
     "confidential-data-hub/hub",
     "confidential-data-hub/kms",
+    "confidential-data-hub/image",
     "confidential-data-hub/secret",
+    "confidential-data-hub/storage",
     "image-rs",
     "ocicrypt-rs",
 ]
@@ -37,8 +39,7 @@ env_logger = "0.10.0"
 hex = "0.4.3"
 hmac = "0.12.1"
 jwt-simple = "0.11"
-# TODO: change it to "0.5", once released.
-kbs-types = { git = "https://github.com/virtee/kbs-types", rev = "c90df0e" }
+kbs-types = "0.5.3"
 lazy_static = "1.4.0"
 log = "0.4.14"
 openssl = "0.10"
@@ -67,6 +68,3 @@ ttrpc-codegen = "0.4.2"
 url = "2.3.1"
 uuid = "1"
 zeroize = "1.5.7"
-
-[patch.crates-io]
-oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c" }

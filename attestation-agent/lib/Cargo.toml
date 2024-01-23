@@ -16,6 +16,7 @@ resource_uri.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 strum.workspace = true
+thiserror.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 toml.workspace = true
 tonic = { workspace = true, optional = true }
@@ -31,6 +32,7 @@ all-attesters = ["kbc/all-attesters", "kbs_protocol?/all-attesters", "attester/a
 tdx-attester = ["kbc/tdx-attester", "kbs_protocol/tdx-attester", "attester/tdx-attester"]
 sgx-attester = ["kbc/sgx-attester", "kbs_protocol/sgx-attester", "attester/sgx-attester"]
 az-snp-vtpm-attester = ["kbc/az-snp-vtpm-attester", "kbs_protocol/az-snp-vtpm-attester", "attester/az-snp-vtpm-attester"]
+az-tdx-vtpm-attester = ["kbc/az-tdx-vtpm-attester", "kbs_protocol/az-tdx-vtpm-attester", "attester/az-tdx-vtpm-attester"]
 snp-attester = ["kbc/snp-attester", "kbs_protocol/snp-attester", "attester/snp-attester"]
 
 sample_kbc = ["kbc/sample_kbc"]

@@ -1,0 +1,29 @@
+[package]
+name = "image"
+version = "0.1.0"
+authors = ["The Confidential Container Authors"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+base64.workspace = true
+crypto.path = "../../attestation-agent/deps/crypto"
+kms = { path = "../kms", default-features = false }
+resource_uri.path = "../../attestation-agent/deps/resource_uri"
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+assert-json-diff.workspace = true
+rstest.workspace = true
+
+[features]
+default = []
+
+# legacy AnnotationPacket format, s.t. legacy encrypted image format relies on `kbs` feature
+kbs = ["kms/kbs"]
+aliyun = ["kms/aliyun"]
+sev = ["kms/sev"]
+ehsm = ["kms/ehsm"]

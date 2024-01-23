@@ -113,7 +113,7 @@ List of supported KBC modules:
 | eaa_kbc            | [EAA KBC](kbc/src/eaa_kbc/README.md)                        | EAA protocol | Alibaba Cloud             |
 | offline_sev_kbc    | [Offline SEV KBC](kbc/src/offline_sev_kbc/README.md)        | Null         | IBM                       |
 | online_sev_kbc     | [Online SEV KBC](kbc/src/online_sev_kbc/README.md)          | simple-kbs   | IBM                       |
-| cc_kbc             | [CC KBC](kbc/src/cc_kbc/README.md)                          | [CoCo KBS protocol](https://github.com/confidential-containers/kbs/blob/main/docs/kbs_attestation_protocol.md) | CoCo Community            |
+| cc_kbc             | [CC KBC](kbc/src/cc_kbc/README.md)                          | [CoCo KBS protocol](https://github.com/confidential-containers/kbs/blob/main/kbs/docs/kbs_attestation_protocol.md) | CoCo Community            |
 
 ### CC KBC
 
@@ -124,6 +124,8 @@ CC KBC supports different kinds of hardware TEE attesters, now
 | sgx-attester        | Intel SGX DCAP              |
 | snp-attester        | AMD SEV-SNP                 |
 | az-snp-vtpm-attester| Azure SEV-SNP CVM           |
+| az-tdx-vtpm-attester| Azure TDX CVM               |
+| cca-attester        | Arm Confidential Compute Architecture (CCA)  |
 
 To build cc kbc with all available attesters and install, use
 ```shell

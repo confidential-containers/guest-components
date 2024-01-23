@@ -1,0 +1,6 @@
+insecure_http = true
+insecure_api = true
+sockets = ["0.0.0.0:8085"]
+
+[attestation_token_config]
+attestation_token_type = "CoCo"

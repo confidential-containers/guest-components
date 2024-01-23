@@ -8,12 +8,12 @@
 //!
 //! For the first implementation, it is assumed that all the resource
 //! ids are from the kernel commandline in the following format:
-//! ```
+//! ```shell
 //! cdh.kbs_resources=<resource id 1>::<target path 1>,<resource id 2>::<target path 2>...
 //! ```
 //!
 //! for example
-//! ```
+//! ```shell
 //! cdh.kbs_resources=kbs:///default/key/1::/run/temp1,kbs:///default/key/2::/run/temp2
 //! ```
 //!

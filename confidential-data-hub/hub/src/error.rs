@@ -12,9 +12,15 @@ pub enum Error {
     #[error("get resource failed: {0}")]
     GetResource(String),
 
+    #[error("decrypt image (unwrap key) failed: {0}")]
+    ImageDecryption(String),
+
     #[error("init Hub failed: {0}")]
     InitializationFailed(String),
 
     #[error("unseal secret failed: {0}")]
     UnsealSecret(String),
+
+    #[error("secure mount failed: {0}")]
+    SecureMount(String),
 }

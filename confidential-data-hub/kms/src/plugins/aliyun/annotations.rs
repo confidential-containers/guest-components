@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Alibaba Cloud
+// Copyright (c) 2024 Alibaba Cloud
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -7,13 +7,13 @@ use serde::{Deserialize, Serialize};
 
 /// Serialized [`crate::Annotations`]
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AliAnnotations {
+pub struct AliCryptAnnotations {
     pub iv: String,
 }
 
-/// Serialized [`crate::ProviderSettings`]
+/// Serialized [`crate::Annotations`]
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AliProviderSettings {
-    pub client_key_id: String,
-    pub kms_instance_id: String,
+pub struct AliSecretAnnotations {
+    pub version_stage: String,
+    pub version_id: String,
 }

@@ -15,11 +15,15 @@ anyhow = { workspace = true, optional = true }
 async-trait.workspace = true
 base64.workspace = true
 clap = { workspace = true, features = [ "derive" ], optional = true }
+env_logger = { workspace = true, optional = true }
+image = { path = "../image", default-features = false }
 kms = { path = "../kms", default-features = false }
 lazy_static.workspace = true
 log.workspace = true
 protobuf = { workspace = true, optional = true }
 secret.path = "../secret"
+storage.path = "../storage"
+serde = { workspace = true, optional = true }
 serde_json.workspace = true
 sev = { path = "../../attestation-agent/deps/sev", optional = true }
 thiserror.workspace = true
@@ -33,12 +37,15 @@ ttrpc-codegen = { workspace = true, optional = true }
 default = ["kbs"]
 
 # support aliyun stacks (KMS, ..)
-aliyun = ["secret/aliyun"]
+aliyun = ["image/aliyun", "secret/aliyun"]
 
 # support coco-KBS to provide confidential resources
-kbs = ["kms/kbs", "secret/kbs"]
+kbs = ["image/kbs", "kms/kbs", "secret/kbs"]
 
 # support sev to provide confidential resources
-sev = ["kms/sev", "dep:sev", "secret/sev"]
+sev = ["image/sev", "kms/sev", "dep:sev", "secret/sev"]
 
-bin = ["anyhow", "clap", "protobuf", "tokio/signal", "ttrpc", "ttrpc-codegen"]
+# support eHSM stacks (KMS, ...)
+ehsm = ["image/ehsm", "secret/ehsm"]
+
+bin = ["anyhow", "clap", "env_logger", "protobuf", "serde", "tokio/signal", "ttrpc", "ttrpc-codegen"]

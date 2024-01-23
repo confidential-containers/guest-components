@@ -19,8 +19,8 @@ SOURCE_ARCH := $(shell uname -m)
 ARCH ?= $(shell uname -m)
 DEBUG ?=
 LIBC ?= gnu
-RESOURCE_PROVIDER ?=
-PROVIDER ?=
+RESOURCE_PROVIDER ?= kbs,sev
+KMS_PROVIDER ?= aliyun,ehsm
 DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
 features ?=
@@ -29,19 +29,12 @@ ifeq ($(SOURCE_ARCH), ppc64le)
   ARCH=powerpc64le
 endif
 
-ifdef RESOURCE_PROVIDER
+ifneq ($(RESOURCE_PROVIDER), none)
     features += $(RESOURCE_PROVIDER)
-else
-    features += kbs,sev
 endif
 
-ifdef PROVIDER
-    features += $(PROVIDER)
-else
-    ifneq ($(ARCH), s390x)
-        $(info INFO: Aliyun KMS plugins will be built in by default)
-        features += aliyun
-    endif
+ifneq ($(KMS_PROVIDER), none)
+    features += $(KMS_PROVIDER)
 endif
 
 ifeq ($(LIBC), musl)
@@ -107,5 +100,5 @@ clean:
 
 help:
 	@echo "==========================Help========================================="
-	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [RESOURCE_PROVIDER=(kbs/sev)] [PROVIDER=aliyun]"
+	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [RESOURCE_PROVIDER=(kbs/sev)] [KMS_PROVIDER=aliyun/ehsm]"
 	@echo "install: make install [DESTDIR=/path/to/target] [LIBC=(musl)]"

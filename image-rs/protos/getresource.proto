@@ -1,11 +1,9 @@
 syntax = "proto3";
 
-package getresource;
+package api;
 
 message GetResourceRequest {
     string ResourcePath = 1;
-    string KbcName = 2;
-    string KbsUri = 3;
 }
 
 message GetResourceResponse {

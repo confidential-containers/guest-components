@@ -6,10 +6,14 @@ on:
     paths:
       - 'ocicrypt-rs/**'
       - '.github/workflows/ocicrypt_rs_build.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
   pull_request:
     paths:
       - 'ocicrypt-rs/**'
       - '.github/workflows/ocicrypt_rs_build.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
   create:
   workflow_dispatch:
 
@@ -141,30 +145,6 @@ jobs:
         with:
           command: test
           args: -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-native
-
-      - name: Run cargo test - eaa-kbc
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features --features=eaa_kbc
-
-      - name: Run cargo test - cc-kbc-sgx
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features --features=cc_kbc_sgx
-
-      - name: Run cargo test - default
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features
-
-      - name: Run cargo test - all features
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features --all-features
 
       - name: Run cargo fmt check
         uses: actions-rs/cargo@v1

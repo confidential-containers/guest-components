@@ -322,7 +322,7 @@ fn get_kbc_kbs_pair(kpi: &KeyProviderInput) -> Result<(String, String)> {
         .ok_or_else(|| anyhow!(ERR_DC_EMPTY))?;
 
     if let Some(parameters_list) = dc.parameters.get(AGENT_NAME) {
-        let value = if let Some(value) = parameters_list.get(0) {
+        let value = if let Some(value) = parameters_list.first() {
             value
         } else {
             return Err(anyhow!(ERR_DC_EMPTY));

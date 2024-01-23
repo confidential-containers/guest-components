@@ -6,44 +6,59 @@
 
 //! Test for decryption of image layers.
 
-#[cfg(all(feature = "getresource", feature = "encryption"))]
+#[cfg(all(
+    feature = "getresource",
+    feature = "encryption",
+    feature = "keywrap-ttrpc"
+))]
 use image_rs::image::ImageClient;
-#[cfg(all(feature = "getresource", feature = "encryption"))]
+#[cfg(all(
+    feature = "getresource",
+    feature = "encryption",
+    feature = "keywrap-ttrpc"
+))]
 use serial_test::serial;
 
 pub mod common;
 
-/// Ocicrypt-rs config for grpc
-#[cfg(all(feature = "getresource", feature = "encryption"))]
-#[cfg(not(feature = "keywrap-ttrpc"))]
-const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_grpc.conf";
+// TODO: add `keywrap-grpc` integration test after CDH supports grpc mode
+// /// Ocicrypt-rs config for grpc
+// #[cfg(all(feature = "getresource", feature = "encryption"))]
+// #[cfg(not(feature = "keywrap-ttrpc"))]
+// const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_grpc.conf";
 
 /// Ocicrypt-rs config for ttrpc
-#[cfg(all(feature = "getresource", feature = "encryption"))]
-#[cfg(feature = "keywrap-ttrpc")]
+#[cfg(all(
+    feature = "getresource",
+    feature = "encryption",
+    feature = "keywrap-ttrpc"
+))]
 const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_ttrpc.conf";
 
-#[cfg(all(feature = "getresource", feature = "encryption"))]
+#[cfg(all(
+    feature = "getresource",
+    feature = "encryption",
+    feature = "keywrap-ttrpc"
+))]
 #[rstest::rstest]
 #[case("ghcr.io/confidential-containers/test-container:unencrypted")]
 #[case("ghcr.io/confidential-containers/test-container:encrypted")]
 #[tokio::test]
 #[serial]
 async fn test_decrypt_layers(#[case] image: &str) {
-    common::prepare_test(common::AA_OFFLINE_FS_KBC_RESOURCES_FILE).await;
-    // Init AA
-    let _aa = common::start_attestation_agent()
+    common::prepare_test(common::OFFLINE_FS_KBC_RESOURCES_FILE).await;
+    // Init CDH
+    let _cdh = common::start_confidential_data_hub()
         .await
-        .expect("Failed to start attestation agent!");
+        .expect("Failed to start confidential data hub!");
 
     // Set env for ocicrypt-rs. The env is needed by ocicrypt-rs
-    // to communicate with AA
+    // to communicate with CDH
     let manifest_dir = std::env!("CARGO_MANIFEST_DIR");
     let keyprovider_config = format!("{}/{}", manifest_dir, OCICRYPT_CONFIG);
     std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
 
     let work_dir = tempfile::tempdir().unwrap();
-    std::env::set_var("CC_IMAGE_WORK_DIR", work_dir.path());
     let bundle_dir = tempfile::tempdir().unwrap();
 
     // clean former test files, which is needed to prevent
@@ -51,7 +66,7 @@ async fn test_decrypt_layers(#[case] image: &str) {
     common::clean_configs()
         .await
         .expect("Delete configs failed.");
-    let mut image_client = ImageClient::default();
+    let mut image_client = ImageClient::new(work_dir.path().to_path_buf());
     if cfg!(feature = "snapshot-overlayfs") {
         image_client
             .pull_image(image, bundle_dir.path(), &None, &Some(common::AA_PARAMETER))

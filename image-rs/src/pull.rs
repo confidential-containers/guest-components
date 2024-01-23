@@ -6,10 +6,12 @@ use anyhow::{anyhow, bail, Result};
 use futures_util::stream::{self, StreamExt, TryStreamExt};
 use oci_distribution::manifest::{OciDescriptor, OciImageManifest};
 use oci_distribution::{secrets::RegistryAuth, Client, Reference};
+use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio_util::io::StreamReader;
 
 use crate::decoder::Compression;
 use crate::decrypt::Decryptor;
@@ -77,7 +79,7 @@ impl<'a> PullClient<'a> {
         let layer_metas = self
             .async_pull_layers(vec![bootstrap_desc], &[diff_id], decrypt_config, meta_store)
             .await?;
-        match layer_metas.get(0) {
+        match layer_metas.first() {
             Some(b) => Ok(b.clone()),
             None => Err(anyhow!("Failed to  download this bootstrap layer")),
         }
@@ -92,35 +94,33 @@ impl<'a> PullClient<'a> {
         decrypt_config: &Option<&str>,
         meta_store: Arc<Mutex<MetaStore>>,
     ) -> Result<Vec<LayerMeta>> {
-        let layer_metas = stream::iter(layer_descs)
+        let meta_store = &meta_store;
+        let layer_metas: Vec<(usize, LayerMeta)> = stream::iter(layer_descs)
             .enumerate()
-            .map(|(i, layer)| {
-                let client = &self.client;
-                let reference = &self.reference;
-                let ms = meta_store.clone();
-
-                async move {
-                    let layer_reader = client
-                        .async_pull_blob(reference, &layer.digest)
-                        .await
-                        .map_err(|e| anyhow!("failed to async pull blob {}", e.to_string()))?;
-
-                    self.async_handle_layer(
-                        layer,
-                        diff_ids[i].clone(),
-                        decrypt_config,
-                        layer_reader,
-                        ms,
-                    )
+            .map(|(i, layer)| async move {
+                let layer_stream = self
+                    .client
+                    .pull_blob_stream(&self.reference, &layer.digest)
                     .await
-                    .map_err(|e| anyhow!("failed to handle layer: {:?}", e))
-                }
+                    .map_err(|e| anyhow!("failed to async pull blob stream {}", e.to_string()))?;
+                let layer_reader = StreamReader::new(layer_stream);
+                self.async_handle_layer(
+                    layer,
+                    diff_ids[i].clone(),
+                    decrypt_config,
+                    layer_reader,
+                    meta_store.clone(),
+                )
+                .await
+                .map_err(|e| anyhow!("failed to handle layer: {:?}", e))
+                .map(|layer_meta| (i, layer_meta))
             })
             .buffer_unordered(self.max_concurrent_download)
             .try_collect()
             .await?;
-
-        Ok(layer_metas)
+        let meta_map: BTreeMap<usize, _> = layer_metas.into_iter().collect();
+        let sorted_layer_metas = meta_map.into_values().collect();
+        Ok(sorted_layer_metas)
     }
 
     async fn async_handle_layer(
@@ -214,6 +214,50 @@ mod tests {
     use tempfile;
 
     use test_utils::{assert_result, assert_retry};
+
+    #[ignore]
+    #[tokio::test]
+    async fn image_layer_order() {
+        let image_url =
+            "nginx@sha256:9700d098d545f9d2ee0660dfb155fe64f4447720a0a763a93f2cf08997227279";
+        let tempdir = tempfile::tempdir().unwrap();
+        let image = Reference::try_from(image_url.to_string()).expect("create reference failed");
+        let mut client = PullClient::new(
+            image,
+            tempdir.path(),
+            &RegistryAuth::Anonymous,
+            DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+        )
+        .unwrap();
+        let (image_manifest, _image_digest, image_config) = client.pull_manifest().await.unwrap();
+
+        let image_config = ImageConfiguration::from_reader(image_config.as_bytes()).unwrap();
+        let diff_ids = image_config.rootfs().diff_ids();
+
+        // retry 3 times w/ timeout
+        for i in 0..3 {
+            let wait = std::time::Duration::from_secs(i * 2);
+            tokio::time::sleep(wait).await;
+
+            let result = client
+                .async_pull_layers(
+                    image_manifest.layers.clone(),
+                    diff_ids,
+                    &None,
+                    Arc::new(Mutex::new(MetaStore::default())),
+                )
+                .await;
+            if let Ok(layer_metas) = result {
+                let digests: Vec<String> = layer_metas
+                    .iter()
+                    .map(|l| l.uncompressed_digest.clone())
+                    .collect();
+                assert_eq!(&digests, diff_ids, "hashes should be in same order");
+                return;
+            }
+        }
+        panic!("failed to pull layers");
+    }
 
     #[tokio::test]
     async fn test_async_pull_client() {

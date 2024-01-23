@@ -17,13 +17,16 @@ use std::path::Path;
 
 #[cfg(not(feature = "keywrap-native"))]
 use anyhow::Context;
-use anyhow::{bail, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use log::info;
 use sha2::{Digest, Sha256};
 use tokio::fs;
 
 use super::Protocol;
+
+#[cfg(feature = "keywrap-grpc")]
+compile_error!("`keywrap-grpc` feature is temporarily not supported until https://github.com/confidential-containers/guest-components/issues/430 is closed");
 
 #[cfg(feature = "keywrap-grpc")]
 mod grpc;
@@ -44,74 +47,43 @@ const STORAGE_PATH: &str = "/run/image-security/kbs/";
 pub struct SecureChannel {
     /// Get Resource Service client.
     client: Box<dyn Client>,
-    // TODO: now the _kbs_uri from `aa_kbc_params` is not used. Because the
-    // kbs uri is included in the kbs resource uri.
-    kbs_uri: String,
-    kbc_name: String,
+
     /// The path to store downloaded kbs resources
     pub storage_path: String,
 }
 
 #[async_trait]
 trait Client: Send + Sync {
-    async fn get_resource(
-        &mut self,
-        kbc_name: &str,
-        resource_path: &str,
-        kbs_uri: &str,
-    ) -> Result<Vec<u8>>;
+    async fn get_resource(&mut self, resource_path: &str) -> Result<Vec<u8>>;
 }
 
 impl SecureChannel {
     /// Create a new [`SecureChannel`], the input parameter:
     /// * `aa_kbc_params`: s string with format `<kbc_name>::<kbs_uri>`.
-    pub async fn new(aa_kbc_params: &str) -> Result<Self> {
-        // unzip here is unstable
-        if let Some((kbc_name, kbs_uri)) = aa_kbc_params.split_once("::") {
-            if kbc_name.is_empty() {
-                bail!("aa_kbc_params: missing KBC name");
-            }
-
-            if kbs_uri.is_empty() {
-                bail!("aa_kbc_params: missing KBS URI");
-            }
-
-            let client: Box<dyn Client> = {
-                cfg_if::cfg_if! {
-                        if #[cfg(feature = "keywrap-grpc")] {
-                            info!("secure channel uses gRPC");
-                            Box::new(grpc::Grpc::new().await.context("grpc client init failed")?)
-                        } else if #[cfg(feature = "keywrap-ttrpc")] {
-                            info!("secure channel uses ttrpc");
-                            Box::new(ttrpc::Ttrpc::new().context("ttrpc client init failed")?)
-                        } else if #[cfg(feature = "keywrap-native")] {
-                            info!("secure channel uses native-aa");
-                Box::<native::Native>::default()
-                        } else {
-                            compile_error!("At last one feature of `keywrap-grpc`, `keywrap-ttrpc`, and `keywrap-native` must be enabled.");
-                        }
-                    }
-            };
-
-            fs::create_dir_all(STORAGE_PATH).await?;
-
-            let kbs_uri = match kbs_uri {
-                "null" => {
-                    log::warn!("detected kbs uri `null`, use localhost to be placeholder");
-                    "http://localhost".into()
+    pub async fn new(_aa_kbc_params: &str) -> Result<Self> {
+        let client: Box<dyn Client> = {
+            cfg_if::cfg_if! {
+                if #[cfg(feature = "keywrap-ttrpc")] {
+                    info!("secure channel uses ttrpc");
+                    Box::new(ttrpc::Ttrpc::new().context("ttrpc client init failed")?)
+                } else if #[cfg(feature = "keywrap-native")] {
+                    info!("secure channel uses native-aa");
+                    Box::new(native::Native::new(_aa_kbc_params)?)
+                } else if #[cfg(feature = "keywrap-grpc")] {
+                    info!("secure channel uses gRPC");
+                    Box::new(grpc::Grpc::new().await.context("grpc client init failed")?)
+                } else  {
+                    compile_error!("At last one feature of `keywrap-grpc`, `keywrap-ttrpc`, and `keywrap-native` must be enabled.");
                 }
-                uri => uri.into(),
-            };
+            }
+        };
 
-            Ok(Self {
-                client,
-                kbs_uri,
-                kbc_name: kbc_name.into(),
-                storage_path: STORAGE_PATH.into(),
-            })
-        } else {
-            bail!("aa_kbc_params: KBC/KBS pair not found")
-        }
+        fs::create_dir_all(STORAGE_PATH).await?;
+
+        Ok(Self {
+            client,
+            storage_path: STORAGE_PATH.into(),
+        })
     }
 
     /// Check whether the resource of the uri has been downloaded.
@@ -147,30 +119,10 @@ impl Protocol for SecureChannel {
             return Ok(res);
         }
 
-        // Related issue: https://github.com/confidential-containers/attestation-agent/issues/130
-        //
-        // Now we use `aa_kbc_params` to specify the KBC and KBS URI
-        // used in CoCo System. Different KBCs are initialized in AA lazily due
-        // to the kbs uri information included in a `download_confidential_resource` or
-        // `decrypt_image_layer_annotation`. The kbs uri input to the two APIs
-        // are from `aa_kbc_params` but not the kbs uri in a resource uri.
-        // Thus as a temporary solution, we need to overwrite the
-        // kbs uri field using the one included in `aa_kbc_params`, s.t.
-        // `kbs_uri` of [`SecureChannel`].
-        let resource_path = get_resource_path(resource_uri)?;
-
-        let res = self
-            .client
-            .get_resource(&self.kbc_name, &resource_path, &self.kbs_uri)
-            .await?;
+        let res = self.client.get_resource(resource_uri).await?;
 
         let path = self.get_filepath(resource_uri);
         fs::write(path, &res).await?;
         Ok(res)
     }
-}
-
-fn get_resource_path(uri: &str) -> Result<String> {
-    let path = url::Url::parse(uri)?;
-    Ok(path.path().to_string())
 }

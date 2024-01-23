@@ -6,9 +6,9 @@
 
 //! Test for signature verification.
 
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
 use image_rs::image::ImageClient;
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
 use serial_test::serial;
 use strum_macros::{Display, EnumString};
 
@@ -92,36 +92,40 @@ const _TESTS_XRSS: [_TestItem; _TEST_ITEMS_XRSS] = [
         description: "Deny pulling an unencrypted signed image with no local sigstore and a registry that does not support the X-R-S-S API extension",
     },
     _TestItem {
-        image_ref: "uk.icr.io/mattarno_image_push/busybox:signed-latest",
+        image_ref: "uk.icr.io/kata-containers/busybox:signed-latest",
         allow: true,
         signing_scheme: SigningName::SimpleSigning,
         description: "Allow pulling an unencrypted signed image from a protected registry that supports the X-R-S-S API extension with no local sigstore",
     },
     _TestItem {
-        image_ref: "uk.icr.io/mattarno_image_push/busybox:unsigned-1.35",
+        image_ref: "uk.icr.io/kata-containers/busybox:unsigned-1.35",
         allow: false,
         signing_scheme: SigningName::SimpleSigning,
         description: "Deny pulling an unencrypted and unsigned image from a protected registry that supports the X-R-S-S API extension with no local sigstore",
     },
 ];
 
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
 const POLICY_URI: &str = "kbs:///default/security-policy/test";
 
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
 const SIGSTORE_CONFIG_URI: &str = "kbs:///default/sigstore-config/test";
 
 /// image-rs built without support for cosign image signing cannot use a policy that includes a type that
 /// uses cosign (type: sigstoreSigned), even if the image being pulled is not signed using cosign.
 /// https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/kbc/src/sample_kbc/policy.json
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
 #[tokio::test]
 #[serial]
 async fn signature_verification() {
-    do_signature_verification_tests(&_TESTS, common::AA_OFFLINE_FS_KBC_RESOURCES_FILE, &None).await;
+    do_signature_verification_tests(&_TESTS, common::OFFLINE_FS_KBC_RESOURCES_FILE, &None).await;
 }
 
-#[cfg(all(feature = "signature-simple-xrss", feature = "getresource"))]
+#[cfg(all(
+    feature = "signature-simple-xrss",
+    feature = "getresource",
+    feature = "keywrap-ttrpc"
+))]
 #[tokio::test]
 #[serial]
 async fn signature_verification_xrss() {
@@ -147,17 +151,17 @@ async fn signature_verification_xrss() {
     }
 }
 
-#[cfg(feature = "getresource")]
+#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
 async fn do_signature_verification_tests(
     tests: &[_TestItem<'_, '_>],
     offline_fs_kbc_resources: &str,
     auth_info: &Option<&str>,
 ) {
     common::prepare_test(offline_fs_kbc_resources).await;
-    // Init AA
-    let _aa = common::start_attestation_agent()
+    // Init CDH
+    let _cdh = common::start_confidential_data_hub()
         .await
-        .expect("Failed to start attestation agent!");
+        .expect("Failed to start confidential data hub!");
 
     for test in tests {
         let mut test_auth_info = auth_info;
@@ -172,11 +176,10 @@ async fn do_signature_verification_tests(
 
         // Init tempdirs
         let work_dir = tempfile::tempdir().unwrap();
-        std::env::set_var("CC_IMAGE_WORK_DIR", work_dir.path());
 
         // a new client for every pulling, avoid effection
         // of cache of old client.
-        let mut image_client = ImageClient::default();
+        let mut image_client = ImageClient::new(work_dir.path().to_path_buf());
 
         // enable signature verification
         image_client.config.security_validate = true;

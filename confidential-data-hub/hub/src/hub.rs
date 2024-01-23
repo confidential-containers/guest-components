@@ -5,8 +5,11 @@
 
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
+use image::AnnotationPacket;
 use kms::{Annotations, ProviderSettings};
+use log::info;
 use secret::secret::Secret;
+use storage::volume_type::Storage;
 
 use crate::{DataHub, Error, Result};
 
@@ -24,6 +27,7 @@ impl Hub {
 #[async_trait]
 impl DataHub for Hub {
     async fn unseal_secret(&self, secret: Vec<u8>) -> Result<Vec<u8>> {
+        info!("unseal secret called");
         // TODO: verify the jws signature using the key specified by `kid`
         // in header. Here we directly get the JWS payload
         let payload = secret
@@ -49,11 +53,19 @@ impl DataHub for Hub {
         Ok(res)
     }
 
-    async fn unwrap_key(&self, _annotation: &[u8]) -> Result<Vec<u8>> {
-        todo!()
+    async fn unwrap_key(&self, annotation_packet: &[u8]) -> Result<Vec<u8>> {
+        info!("unwrap key called");
+        let annotation_packet: AnnotationPacket = serde_json::from_slice(annotation_packet)
+            .map_err(|e| Error::ImageDecryption(format!("illegal AnnotationPacket format: {e}")))?;
+        let lek = annotation_packet
+            .unwrap_key()
+            .await
+            .map_err(|e| Error::ImageDecryption(format!("unwrap key failed: {e}")))?;
+        Ok(lek)
     }
 
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>> {
+        info!("get resource called: {uri}");
         // to initialize a get_resource_provider client we do not need the ProviderSettings.
         let mut client = kms::new_getter("kbs", ProviderSettings::default())
             .await
@@ -64,6 +76,15 @@ impl DataHub for Hub {
             .get_secret(&uri, &Annotations::default())
             .await
             .map_err(|e| Error::GetResource(format!("get rersource failed: {e}")))?;
+        Ok(res)
+    }
+
+    async fn secure_mount(&self, storage: Storage) -> Result<String> {
+        info!("secure mount called");
+        let res = storage
+            .mount()
+            .await
+            .map_err(|e| Error::SecureMount(e.to_string()))?;
         Ok(res)
     }
 }

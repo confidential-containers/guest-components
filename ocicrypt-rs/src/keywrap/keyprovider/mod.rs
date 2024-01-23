@@ -13,13 +13,7 @@ use crate::keywrap::KeyWrapper;
 use crate::utils::{self, CommandExecuter};
 
 #[cfg(feature = "keywrap-keyprovider-native")]
-use attestation_agent::{AttestationAPIs, AttestationAgent};
-
-#[cfg(feature = "keywrap-keyprovider-native")]
-lazy_static! {
-    pub static ref ATTESTATION_AGENT: std::sync::Arc<tokio::sync::Mutex<AttestationAgent>> =
-        std::sync::Arc::new(tokio::sync::Mutex::new(AttestationAgent::new()));
-}
+mod native;
 
 #[derive(Debug)]
 enum OpKey {
@@ -156,9 +150,9 @@ impl KeyProviderKeyWrapProtocolOutput {
             OpKey::Unwrap => kc1
                 .un_wrap_key(ttrpc::context::with_timeout(50 * 1000 * 1000 * 1000), &req)
                 .await
-                .map_err(|_| {
+                .map_err(|e| {
                     anyhow!(
-                        "keyprovider: Error from ttrpc server for {:?} operation",
+                        "keyprovider: Error from ttrpc server for {:?} operation: {e:?}",
                         OpKey::Unwrap.to_string()
                     )
                 })?,
@@ -192,7 +186,7 @@ impl KeyProviderKeyWrapProtocolOutput {
     #[cfg(feature = "keywrap-keyprovider-native")]
     fn from_native(annotation: &str, dc_config: &DecryptConfig) -> Result<Self> {
         let kbc_kbs_pair = if let Some(list) = dc_config.param.get("attestation-agent") {
-            list.get(0)
+            list.first()
                 .ok_or_else(|| anyhow!("keyprovider: empty kbc::kbs pair"))?
         } else {
             return Err(anyhow!("keyprovider: not supported attestation agent"));
@@ -201,18 +195,15 @@ impl KeyProviderKeyWrapProtocolOutput {
         let (kbc, kbs) = pair_str
             .split_once("::")
             .ok_or_else(|| anyhow!("keyprovider: invalid kbc::kbs pair"))?;
-        let kbc = kbc.to_string();
         let kbs = kbs.to_string();
+        let kbc = kbc.to_string();
         let annotation = annotation.to_string();
 
         let handler = std::thread::spawn(move || {
             create_async_runtime()?.block_on(async {
-                ATTESTATION_AGENT
-                    .lock()
+                native::decrypt_image_layer_annotation(&kbs, &kbc, &annotation)
                     .await
-                    .decrypt_image_layer_annotation(&kbc, &kbs, &annotation)
-                    .await
-                    .map_err(|e| format!("{e}"))
+                    .map_err(|e| format!("{e:?}"))
             })
         });
 
@@ -221,7 +212,7 @@ impl KeyProviderKeyWrapProtocolOutput {
                 key_unwrap_results: Some(KeyUnwrapResults { opts_data: v }),
                 ..Default::default()
             }),
-            Ok(Err(e)) => Err(anyhow!("keyprovider: retrieve opts_data failed: {e}")),
+            Ok(Err(e)) => Err(anyhow!("keyprovider: retrieve opts_data failed: {e:?}")),
             Err(e) => Err(anyhow!("keyprovider: retrieve opts_data failed: {e:?}")),
         }
     }
@@ -449,8 +440,8 @@ impl KeyProviderKeyWrapper {
             });
             match handler.join() {
                 Ok(Ok(v)) => Ok(v),
-                Ok(Err(e)) => bail!("failed to unwrap key by gRPC, {e}"),
-                Err(e) => bail!("failed to unwrap key by gRPC, {e:?}"),
+                Ok(Err(e)) => bail!("failed to unwrap key by ttrpc, {e}"),
+                Err(e) => bail!("failed to unwrap key by ttrpc, {e:?}"),
             }
         }
     }
