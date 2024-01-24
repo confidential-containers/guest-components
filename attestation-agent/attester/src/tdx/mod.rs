@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tdx_attest_rs;
 
+const TDX_REPORT_DATA_SIZE: usize = 64;
 const CCEL_PATH: &str = "/sys/firmware/acpi/tables/data/CCEL";
 
 pub fn detect_platform() -> bool {
@@ -31,14 +32,16 @@ pub struct TdxAttester {}
 #[async_trait::async_trait]
 impl Attester for TdxAttester {
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
-        if report_data.len() > 64 {
-            bail!("TDX Attester: Report data must be no more than 64 bytes");
+        if report_data.len() > TDX_REPORT_DATA_SIZE {
+            bail!("TDX Attester: Report data must be no more than {TDX_REPORT_DATA_SIZE} bytes");
         }
 
-        report_data.resize(64, 0);
+        report_data.resize(TDX_REPORT_DATA_SIZE, 0);
 
         let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
-            d: report_data.as_slice().try_into()?,
+            // report_data.resize() ensures copying report_data to
+            // tdx_attest_rs::tdx_report_data_t cannot panic.
+            d: report_data.as_slice().try_into().unwrap(),
         };
 
         let engine = base64::engine::general_purpose::STANDARD;
