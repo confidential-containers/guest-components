@@ -1,26 +1,54 @@
 # Copyright (c) 2023 by Alibaba.
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
-
-FROM rust:1.67 as builder
-
-WORKDIR /usr/src/coco-keyprovider
-
-RUN apt-get update && apt-get install protobuf-compiler -y && \
-    rustup component add rustfmt
-
-COPY . .
+FROM rust:1.75-slim-bookworm as builder
 
 LABEL org.opencontainers.image.source="https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docker/Dockerfile.keyprovider"
 
-RUN cd attestation-agent/coco_keyprovider && cargo install --path .
+RUN apt-get update && apt-get install -y \
+	build-essential \
+	git \
+	libssl-dev \
+	pkg-config \
+	protobuf-compiler
+WORKDIR /build
+COPY . .
+RUN cargo build --release -p coco_keyprovider
+RUN mv target/release/coco_keyprovider .
 
-FROM ubuntu:20.04
+FROM golang:1.21.6-bookworm as skopeo
+RUN apt-get update && apt-get install -y \
+	make\
+	libgpgme-dev \
+	libassuan-dev \
+	libbtrfs-dev \
+	libdevmapper-dev \
+	pkg-config
+RUN git clone https://github.com/containers/skopeo $GOPATH/src/github.com/containers/skopeo 
+WORKDIR $GOPATH/src/github.com/containers/skopeo
+RUN git checkout v1.14.1
+ENV DISABLE_DOCS=1
+RUN make bin/skopeo
+RUN make install
 
-RUN apt-get update && apt install openssl -y && rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /usr/local/cargo/bin/coco_keyprovider /usr/local/bin/coco_keyprovider
-
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y \
+	ca-certificates \
+	libdevmapper1.02.1 \
+	libgpgme11 \
+	--no-install-recommends
+COPY --from=builder /build/coco_keyprovider /usr/local/bin/coco_keyprovider
+COPY --from=skopeo /usr/local/bin/skopeo /usr/local/bin/skopeo
+COPY <<EOF /etc/ocicrypt.conf
+{
+	"key-providers": {
+		"attestation-agent": {
+			"grpc": "localhost:50000"
+		}
+	}
+}
+EOF
+COPY attestation-agent/hack/encrypt-image.sh /encrypt.sh
+ENV OCICRYPT_KEYPROVIDER_CONFIG="/etc/ocicrypt.conf"
 CMD ["coco_keyprovider", "--socket", "0.0.0.0:50000"]
-
 EXPOSE 50000

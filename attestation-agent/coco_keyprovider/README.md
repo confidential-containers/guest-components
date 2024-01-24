@@ -13,6 +13,47 @@ The following guide will help make an encrypted image using [skopeo](https://git
 
 ## Encryption
 
+### Docker
+
+A docker image provides prebuilt CoCo keyprovider and skopeo to simplify image encryption:
+
+```bash
+$ docker run ghcr.io/confidential-containers/coco-keyprovider /encrypt.sh -h
+usage: /encrypt.sh [-k <b64-encoded key>] [-i <key id>] [-s <source>] [-d <destination>]
+```
+
+Source and destination have to be provided as [container/image](https://github.com/containers/image/blob/main/docs/containers-transports.5.md) transport URIs.
+
+This example will encrypt an image from docker/library and buffer the resulting encrypted image in a local `./output` folder:
+
+```bash
+head -c 32 /dev/urandom | openssl enc > image_key
+mkdir output
+docker run -v "$PWD/output:/output" ghcr.io/confidential-containers/coco-keyprovider /encrypt.sh \
+	-k "$(base64 < image_key)" \
+	-i kbs:///some/key/id \
+	-s docker://nginx:stable \
+	-d dir:/output
+```
+
+The image can then be pushed to a registry using skopeo:
+
+```bash
+skopeo copy dir:output docker://ghcr.io/confidential-containers/nginx-encrypted
+```
+
+Alternatively, an authorization file can be mounted to the container to be able to access private registries directly:
+
+```bash
+docker run -v ~/.docker/config.json:/root/.docker/config.json ghcr.io/confidential-containers/coco-keyprovider /encrypt.sh \
+	-k "$(base64 < image_key)" \
+	-i kbs:///some/key/id \
+	-s docker://private.registry.io/nginx:stable \
+	-d docker://private.registry.io/nginx:encrypted
+```
+
+### Detailed instructions
+
 Build and run CoCo keyprovider at localhost on port 50000:
 
 ```shell
