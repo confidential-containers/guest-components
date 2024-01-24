@@ -7,17 +7,17 @@
 #[macro_use]
 extern crate strum;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use attester::{detect_tee_type, BoxedAttester};
 use kbc::{AnnotationPacket, KbcCheckInfo, KbcInstance, KbcModuleList};
 use resource_uri::ResourceUri;
 use std::collections::HashMap;
 
-#[cfg(feature = "cc_kbc")]
 mod token;
-#[cfg(feature = "cc_kbc")]
-use token::get_kbs_token;
+
+#[allow(unused_imports)]
+use token::{GetToken, TokenType};
 
 pub mod aa_kbc_params;
 
@@ -176,23 +176,28 @@ impl AttestationAPIs for AttestationAgent {
             .await
     }
 
+    #[allow(unreachable_code)]
     async fn get_token(&mut self, _token_type: &str) -> Result<Vec<u8>> {
-        #[cfg(feature = "cc_kbc")]
-        {
-            let token = match _token_type {
-                "kbs" => get_kbs_token().await?,
-                typ => bail!("Unsupported token type {typ}"),
-            };
+        let _params = aa_kbc_params::get_params().await?;
 
-            Ok(token)
-        }
-
-        // TODO: remove the feature flags after refactoring AA. Currently, kbs_host_url
-        // is only set by user in aa_kbc_params when cc_kbc is enabled.
-        #[cfg(not(feature = "cc_kbc"))]
+        let _token = match serde_json::from_str::<TokenType>(_token_type)
+            .map_err(|e| anyhow!("Unsupported token type: {e}"))?
         {
-            bail!("unimplemented!");
-        }
+            #[cfg(feature = "kbs")]
+            TokenType::Kbs => {
+                token::kbs::KbsTokenGetter::default()
+                    .get_token(_params.uri().to_string())
+                    .await?
+            }
+            #[cfg(feature = "coco_as")]
+            TokenType::CoCoAS => {
+                token::coco_as::CoCoASTokenGetter::default()
+                    .get_token(_params.uri().to_string())
+                    .await?
+            }
+        };
+
+        Ok(_token)
     }
 
     /// Get TEE hardware signed evidence that includes the runtime data.
