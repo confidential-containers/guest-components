@@ -21,7 +21,7 @@ const PROTOCOL: &str = "grpc";
 
 lazy_static! {
     pub static ref ABOUT: String = {
-        let aa_about = AttestationAgent::new().about();
+        let aa_about = AttestationAgent::default().about();
         format!("Protocol: {PROTOCOL}\n{aa_about}")
     };
 }

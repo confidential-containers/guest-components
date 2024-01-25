@@ -14,12 +14,13 @@ use kbc::{AnnotationPacket, KbcCheckInfo, KbcInstance, KbcModuleList};
 use resource_uri::ResourceUri;
 use std::collections::HashMap;
 
+pub mod config;
 mod token;
 
 #[allow(unused_imports)]
 use token::{GetToken, TokenType};
 
-pub mod aa_kbc_params;
+use crate::config::{aa_kbc_params, Config};
 
 /// Attestation Agent (AA for short) is a rust library crate for attestation procedure
 /// in confidential containers. It provides kinds of service APIs that need to make
@@ -33,7 +34,7 @@ pub mod aa_kbc_params;
 /// use attestation_agent::AttestationAgent;
 /// use attestation_agent::AttestationAPIs;
 ///
-/// let mut aa = AttestationAgent::new();
+/// let mut aa = AttestationAgent::default();
 ///
 /// let key_result = aa.decrypt_image_layer_annotation(
 ///     "sample_kbc",
@@ -94,20 +95,29 @@ pub trait AttestationAPIs {
 pub struct AttestationAgent {
     kbc_module_list: KbcModuleList,
     kbc_instance_map: HashMap<String, KbcInstance>,
+    config: Option<Config>,
 }
 
 impl Default for AttestationAgent {
     fn default() -> Self {
-        Self::new()
+        let config = Config::try_from(config::DEFAULT_AA_CONFIG_PATH).ok();
+        AttestationAgent {
+            kbc_module_list: KbcModuleList::new(),
+            kbc_instance_map: HashMap::new(),
+            config,
+        }
     }
 }
 
 impl AttestationAgent {
     /// Create a new instance of [AttestationAgent].
-    pub fn new() -> Self {
+    pub fn new(config_path: &str) -> Self {
+        let config = Config::try_from(config_path).ok();
+
         AttestationAgent {
             kbc_module_list: KbcModuleList::new(),
             kbc_instance_map: HashMap::new(),
+            config,
         }
     }
 
@@ -178,7 +188,15 @@ impl AttestationAPIs for AttestationAgent {
 
     #[allow(unreachable_code)]
     async fn get_token(&mut self, _token_type: &str) -> Result<Vec<u8>> {
-        let _params = aa_kbc_params::get_params().await?;
+        let _uri = match self.config.as_ref() {
+            Some(c) => c.as_uri.clone(),
+            None => {
+                let params = aa_kbc_params::get_params()
+                    .await
+                    .map_err(|_| anyhow!("Get AS URI failed"))?;
+                params.uri().to_string()
+            }
+        };
 
         let _token = match serde_json::from_str::<TokenType>(_token_type)
             .map_err(|e| anyhow!("Unsupported token type: {e}"))?
@@ -186,13 +204,13 @@ impl AttestationAPIs for AttestationAgent {
             #[cfg(feature = "kbs")]
             TokenType::Kbs => {
                 token::kbs::KbsTokenGetter::default()
-                    .get_token(_params.uri().to_string())
+                    .get_token(_uri)
                     .await?
             }
             #[cfg(feature = "coco_as")]
             TokenType::CoCoAS => {
                 token::coco_as::CoCoASTokenGetter::default()
-                    .get_token(_params.uri().to_string())
+                    .get_token(_uri)
                     .await?
             }
         };
