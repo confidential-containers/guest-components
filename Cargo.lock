@@ -945,6 +945,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "attestation_agent",
  "base64 0.21.5",
  "clap 4.2.7",
  "env_logger 0.10.1",

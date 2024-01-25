@@ -32,6 +32,7 @@ make install DESTDIR=/usr/local/bin
 
 The `TEE_PLATFORM` parameter can be
 - `none`: for tests with non-confidential guests
+- `all`: for all following platforms
 - `fs`: for platforms with encrypted root filesystems (i.e. s390x)
 - `tdx`: for Intel TDX
 - `az-tdx-vtpm`: for Intel TDX with Azure vTPM

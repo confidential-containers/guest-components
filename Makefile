@@ -4,6 +4,9 @@ ARCH ?= $(shell uname -m)
 DESTDIR ?= /usr/local/bin
 
 LIBC ?= musl
+
+# TODO: delete `KBC` parameter once KBC related functionalities are
+# all deprecated in code.
 KBC ?=
 
 NO_RESOURCE_PROVIDER ?=
@@ -34,6 +37,14 @@ else ifeq ($(TEE_PLATFORM), snp)
   KBC = cc_kbc_snp
 else ifeq ($(TEE_PLATFORM), az-snp-vtpm)
   KBC = cc_kbc_az_snp_vtpm
+else ifeq ($(TEE_PLATFORM), all)
+  LIBC = gnu
+  KBC = cc_kbc_all_attesters
+  ifeq ($(NO_RESOURCE_PROVIDER), true)
+    RESOURCE_PROVIDER :=
+  else
+    RESOURCE_PROVIDER = sev,kbs
+  endif
 endif
 # TODO: Add support for CCA and CSV
 
