@@ -38,6 +38,7 @@ The `TEE_PLATFORM` parameter can be
 - `az-tdx-vtpm`: for Intel TDX with Azure vTPM
 - `sev`: for AMD SEV(-ES)
 - `snp`: for AMD SEV-SNP
+- `amd`: for both AMD SEV(-ES) and AMD SEV-SNP
 - `az-snp-vtpm`: for AMD SEV-SNP with Azure vTPM
 
 by default, `kbs`/`sev` as a resource provider will be built in Confidential Data Hub. If you do not want enable any

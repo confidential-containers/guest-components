@@ -45,6 +45,14 @@ else ifeq ($(TEE_PLATFORM), all)
   else
     RESOURCE_PROVIDER = sev,kbs
   endif
+else ifeq ($(TEE_PLATFORM), amd)
+  LIBC = gnu
+  KBC = cc_kbc_snp,online_sev_kbc
+  ifeq ($(NO_RESOURCE_PROVIDER), true)
+    RESOURCE_PROVIDER :=
+  else
+    RESOURCE_PROVIDER = sev,kbs
+  endif
 endif
 # TODO: Add support for CCA and CSV
 
