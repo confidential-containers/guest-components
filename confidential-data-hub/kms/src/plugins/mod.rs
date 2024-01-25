@@ -54,6 +54,10 @@ pub async fn new_decryptor(
 pub enum VaultProvider {
     #[strum(ascii_case_insensitive)]
     Kbs,
+
+    #[cfg(feature = "aliyun")]
+    #[strum(ascii_case_insensitive)]
+    Aliyun,
 }
 
 /// Create a new [`Getter`] by given provider name and [`ProviderSettings`]
@@ -65,5 +69,10 @@ pub async fn new_getter(
         .map_err(|_| Error::UnsupportedProvider(provider_name.to_string()))?;
     match provider {
         VaultProvider::Kbs => Ok(Box::new(kbs::KbcClient::new().await?) as Box<dyn Getter>),
+
+        #[cfg(feature = "aliyun")]
+        VaultProvider::Aliyun => Ok(Box::new(
+            aliyun::AliyunKmsClient::from_provider_settings(&_provider_settings).await?,
+        ) as Box<dyn Getter>),
     }
 }
