@@ -14,7 +14,7 @@ pub struct CoCoASTokenGetter {}
 
 #[async_trait]
 impl GetToken for CoCoASTokenGetter {
-    async fn get_token(&self, as_url: String) -> Result<Vec<u8>> {
+    async fn get_token(&self, as_uri: String) -> Result<Vec<u8>> {
         let tee_type = attester::detect_tee_type();
         let attester = attester::BoxedAttester::try_from(tee_type)?;
         let evidence = attester.get_evidence(vec![]).await?;
@@ -26,7 +26,7 @@ impl GetToken for CoCoASTokenGetter {
 
         let client = reqwest::Client::new();
         let res = client
-            .post(as_url)
+            .post(as_uri)
             .header("Content-Type", "application/json")
             .json(&request_body)
             .send()

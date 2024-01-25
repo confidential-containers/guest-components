@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use attestation_agent::aa_kbc_params;
+use attestation_agent::config::aa_kbc_params;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;

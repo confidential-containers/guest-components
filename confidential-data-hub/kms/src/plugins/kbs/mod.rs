@@ -16,7 +16,7 @@ mod offline_fs;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use attestation_agent::aa_kbc_params;
+use attestation_agent::config::aa_kbc_params;
 use lazy_static::lazy_static;
 pub use resource_uri::ResourceUri;
 use tokio::sync::Mutex;
