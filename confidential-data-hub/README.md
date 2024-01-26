@@ -56,3 +56,12 @@ KMS_PROVIDER plugins (flag `KMS_PROVIDER`)
 
 Note:
 - If no `KMS_PROVIDER` flag is given, then all the KMS providers will be enabled by default.
+
+### Configuration file
+
+CDH will be launched by a configuration file by
+```shell
+confidential-data-hub -c <path-to-config>
+```
+
+Please see the [example config file](./example.config.toml) for more details.

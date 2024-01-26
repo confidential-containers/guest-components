@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::AnnotationPacket;
@@ -13,11 +15,13 @@ use storage::volume_type::Storage;
 
 use crate::{DataHub, Error, Result};
 
-pub struct Hub {}
+pub struct Hub {
+    pub(crate) credentials: HashMap<String, String>,
+}
 
 impl Hub {
-    pub async fn new() -> Result<Self> {
-        let mut hub = Self {};
+    pub async fn new(credentials: HashMap<String, String>) -> Result<Self> {
+        let mut hub = Self { credentials };
 
         hub.init().await?;
         Ok(hub)

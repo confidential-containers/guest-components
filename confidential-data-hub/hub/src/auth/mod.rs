@@ -29,7 +29,7 @@ impl Hub {
 
         #[cfg(feature = "kbs")]
         {
-            Self::init_kbs_resources().await?;
+            self.init_kbs_resources().await?;
         }
 
         Ok(())
