@@ -4,84 +4,96 @@
 //
 
 //! This module helps to get confidential resources that will be used
-//! by Confidential Data Hub from KBS, e.g. credentials used by KMSes.
-//!
-//! For the first implementation, it is assumed that all the resource
-//! ids are from the kernel commandline in the following format:
-//! ```shell
-//! cdh.kbs_resources=<resource id 1>::<target path 1>,<resource id 2>::<target path 2>...
-//! ```
-//!
-//! for example
-//! ```shell
-//! cdh.kbs_resources=kbs:///default/key/1::/run/temp1,kbs:///default/key/2::/run/temp2
-//! ```
-//!
-//! TODO: update the way to pass the initial KBS resource list
+//! by Confidential Data Hub from KBS, i.e. credentials used by KMSes.
 
 use std::path::PathBuf;
 
 use kms::{plugins::kbs::KbcClient, Annotations, Getter};
+use log::debug;
 use tokio::fs;
 
 use crate::{hub::Hub, Error, Result};
 
+/// This directory is used to store all the kbs resources get by CDH's init
+/// function, s.t. `[[Credential]]` sections in the config.toml file.
+pub const KBS_RESOURCE_STORAGE_DIR: &str = "/run/confidential-containers/cdh";
+
 impl Hub {
-    pub(crate) async fn init_kbs_resources() -> Result<()> {
-        let cmdline = fs::read_to_string("/proc/cmdline")
-            .await
-            .map_err(|e| Error::InitializationFailed(format!("read kernel cmdline failed: {e}")))?;
-        let kbs_resources = cmdline
-            .split_ascii_whitespace()
-            .find(|para| para.starts_with("cdh.kbs_resources="))
-            .unwrap_or("cdh.kbs_resources=")
-            .strip_prefix("cdh.kbs_resources=")
-            .expect("must have one")
-            .split(',')
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<&str>>();
+    pub(crate) async fn init_kbs_resources(&self) -> Result<()> {
+        // check the validity of the credential paths.
+        for k in self.credentials.keys() {
+            if !is_path_valid(k) {
+                return Err(Error::InitializationFailed(format!(
+                    "illegal path to put credential : {k}"
+                )));
+            }
+        }
 
         let mut kbs_client = KbcClient::new()
             .await
             .map_err(|e| Error::InitializationFailed(format!("kbs client creation failed: {e}")))?;
 
-        // for each `kbs://...::/...` string
-        for resource_pair in kbs_resources {
-            let s = resource_pair.split("::").collect::<Vec<&str>>();
-            if s.len() != 2 {
-                return Err(Error::InitializationFailed(format!(
-                    "illegal `cdh.kbs_resources` item from kernel commandline: {resource_pair}"
-                )));
-            }
-
-            let mut target_path = PathBuf::new();
-            target_path.push(s[1]);
-            let parent_dir = target_path
-                .parent()
-                .ok_or(Error::InitializationFailed(format!(
-                    "illegal `cdh.kbs_resources` path item from kernel commandline: {}",
-                    s[1]
-                )))?;
-            fs::create_dir_all(parent_dir).await.map_err(|e| {
+        fs::create_dir_all(KBS_RESOURCE_STORAGE_DIR)
+            .await
+            .map_err(|e| {
                 Error::InitializationFailed(format!(
-                    "get kbs resource failed when creating dir: {e}"
+                    "Create {KBS_RESOURCE_STORAGE_DIR} dir failed {e:?}."
                 ))
             })?;
 
-            let contents = kbs_client
-                .get_secret(s[0], &Annotations::default())
+        for (k, v) in &self.credentials {
+            let content = kbs_client
+                .get_secret(v, &Annotations::default())
                 .await
                 .map_err(|e| {
                     Error::InitializationFailed(format!("kbs client get resource failed: {e}"))
                 })?;
 
-            fs::write(target_path, contents).await.map_err(|e| {
-                Error::InitializationFailed(format!(
-                    "kbs client get resource failed when writing to file: {e}"
-                ))
+            let target_path = PathBuf::from(k);
+
+            debug!(
+                "Get config item {v} from KBS and put to {}",
+                target_path.as_os_str().to_string_lossy()
+            );
+
+            if let Some(parent) = target_path.parent() {
+                fs::create_dir_all(parent).await.map_err(|e| {
+                    Error::InitializationFailed(format!("create dir {parent:?} failed: {e:?}"))
+                })?;
+            }
+
+            fs::write(target_path, content).await.map_err(|e| {
+                Error::InitializationFailed(format!("write kbs initialization file failed: {e:?}"))
             })?;
         }
 
         Ok(())
+    }
+}
+
+/// This function helps to check if a path is valid, including:
+/// - it does not have any `..`
+/// - it does not have any `.`
+/// - it starts with [`KBS_RESOURCE_STORAGE_DIR`]
+/// To avoid unexpected path attacks, such as putting a file
+/// to random path in the guest.
+fn is_path_valid(path: &str) -> bool {
+    path.starts_with(KBS_RESOURCE_STORAGE_DIR) && !path.split('/').any(|it| it == ".." || it == ".")
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use crate::auth::kbs::{is_path_valid, KBS_RESOURCE_STORAGE_DIR};
+
+    #[rstest]
+    #[case("/etc/config.toml".into(), false)]
+    #[case(format!("{KBS_RESOURCE_STORAGE_DIR}/../../config.toml"), false)]
+    #[case(format!("{KBS_RESOURCE_STORAGE_DIR}/kms-credential/../../../config.toml"), false)]
+    #[case(format!("{KBS_RESOURCE_STORAGE_DIR}/kms-credential/./config.toml"), false)]
+    #[case(format!("{KBS_RESOURCE_STORAGE_DIR}/kms-credential/aliyun/config.toml"), true)]
+    fn path_valid(#[case] path: String, #[case] res: bool) {
+        assert_eq!(is_path_valid(&path), res);
     }
 }

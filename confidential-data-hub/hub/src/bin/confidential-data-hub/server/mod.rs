@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -34,18 +34,18 @@ mod message;
 pub struct Server;
 
 impl Server {
-    async fn init() -> Result<()> {
+    async fn init(credentials: &HashMap<String, String>) -> Result<()> {
         let mut writer = HUB.write().await;
         if writer.is_none() {
-            let hub = Hub::new().await?;
+            let hub = Hub::new(credentials.to_owned()).await?;
             *writer = Some(hub);
         }
 
         Ok(())
     }
 
-    pub async fn new() -> Result<Self> {
-        Self::init().await?;
+    pub async fn new(credentials: &HashMap<String, String>) -> Result<Self> {
+        Self::init(credentials).await?;
         Ok(Self)
     }
 }

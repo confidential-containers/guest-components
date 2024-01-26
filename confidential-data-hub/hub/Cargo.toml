@@ -16,6 +16,7 @@ async-trait.workspace = true
 attestation_agent = { path = "../../attestation-agent/lib", default-features = false, optional = true }
 base64.workspace = true
 clap = { workspace = true, features = [ "derive" ], optional = true }
+config = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
 image = { path = "../image", default-features = false }
 kms = { path = "../kms", default-features = false }
@@ -34,6 +35,9 @@ ttrpc = { workspace = true, features = ["async"], optional = true }
 [build-dependencies]
 ttrpc-codegen = { workspace = true, optional = true }
 
+[dev-dependencies]
+rstest.workspace = true
+
 [features]
 default = ["kbs"]
 
@@ -49,4 +53,4 @@ sev = ["attestation_agent", "image/sev", "kms/sev", "dep:sev", "secret/sev"]
 # support eHSM stacks (KMS, ...)
 ehsm = ["image/ehsm", "secret/ehsm"]
 
-bin = ["anyhow", "clap", "env_logger", "protobuf", "serde", "tokio/signal", "ttrpc", "ttrpc-codegen"]
+bin = ["anyhow", "clap", "config", "env_logger", "protobuf", "serde", "tokio/signal", "ttrpc", "ttrpc-codegen"]

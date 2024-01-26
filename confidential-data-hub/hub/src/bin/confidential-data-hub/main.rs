@@ -21,29 +21,30 @@ use ttrpc::r#async::Server as TtrpcServer;
 
 mod api;
 mod api_ttrpc;
+mod config;
 mod keyprovider;
 mod keyprovider_ttrpc;
 mod server;
 
-const DEFAULT_CDH_SOCKET_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
+use config::*;
+
+const DEFAULT_CONFIG_PATH: &str = "/etc/confidential-data-hub.toml";
 
 const UNIX_SOCKET_PREFIX: &str = "unix://";
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    /// CDH ttRPC Unix socket addr.
+    /// Path to the config  file
     ///
-    /// CDH will listen to this unix socket address.
-    ///
-    /// `--socket unix:///tmp/cdh_keyprovider`
-    #[arg(default_value_t = DEFAULT_CDH_SOCKET_ADDR.to_string(), short)]
-    socket: String,
+    /// `--config /etc/confidential-data-hub.toml`
+    #[arg(default_value_t = DEFAULT_CONFIG_PATH.to_string(), short)]
+    config: String,
 }
 
 macro_rules! ttrpc_service {
-    ($func: expr) => {{
-        let server = Server::new().await?;
+    ($func: expr, $conf: expr) => {{
+        let server = Server::new($conf).await?;
         let server = Arc::new(Box::new(server) as _);
         $func(server)
     }};
@@ -54,7 +55,11 @@ async fn main() -> Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     let cli = Cli::parse();
 
-    let unix_socket_path = cli
+    info!("Use configuration file {}", cli.config);
+    let config = CdhConfig::init(&cli.config).await?;
+    config.set_configuration_envs();
+
+    let unix_socket_path = config
         .socket
         .strip_prefix(UNIX_SOCKET_PREFIX)
         .ok_or_else(|| anyhow!("socket address scheme is not expected"))?;
@@ -62,12 +67,19 @@ async fn main() -> Result<()> {
     create_socket_parent_directory(unix_socket_path).await?;
     clean_previous_sock_file(unix_socket_path).await?;
 
-    let sealed_secret_service = ttrpc_service!(create_sealed_secret_service);
-    let get_resource_service = ttrpc_service!(create_get_resource_service);
-    let key_provider_service = ttrpc_service!(create_key_provider_service);
-    let secure_mount_service = ttrpc_service!(create_secure_mount_service);
+    let credentials = config
+        .credentials
+        .iter()
+        .map(|it| (it.path.clone(), it.resource_uri.clone()))
+        .collect();
+
+    let sealed_secret_service = ttrpc_service!(create_sealed_secret_service, &credentials);
+    let get_resource_service = ttrpc_service!(create_get_resource_service, &credentials);
+    let key_provider_service = ttrpc_service!(create_key_provider_service, &credentials);
+    let secure_mount_service = ttrpc_service!(create_secure_mount_service, &credentials);
+
     let mut server = TtrpcServer::new()
-        .bind(&cli.socket)
+        .bind(&config.socket)
         .context("cannot bind cdh ttrpc service")?
         .register_service(sealed_secret_service)
         .register_service(get_resource_service)
@@ -76,7 +88,7 @@ async fn main() -> Result<()> {
 
     info!(
         "Confidential Data Hub starts to listen to request: {}",
-        cli.socket
+        config.socket
     );
     server.start().await?;
 
