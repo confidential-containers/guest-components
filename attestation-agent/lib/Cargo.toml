@@ -33,7 +33,7 @@ default = ["sample_kbc", "rust-crypto", "coco_as"]
 kbs = ["kbs_protocol/background_check"]
 coco_as = ["reqwest"]
 
-cc_kbc = ["kbc/cc_kbc", "kbs_protocol/background_check", "kbs"]
+cc_kbc = ["kbc/cc_kbc", "kbs_protocol/background_check", "kbs", "coco_as"]
 all-attesters = ["kbc/all-attesters", "kbs_protocol?/all-attesters", "attester/all-attesters"]
 tdx-attester = ["kbc/tdx-attester", "kbs_protocol/tdx-attester", "attester/tdx-attester"]
 sgx-attester = ["kbc/sgx-attester", "kbs_protocol/sgx-attester", "attester/sgx-attester"]
