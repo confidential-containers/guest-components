@@ -98,14 +98,12 @@ pub async fn start_confidential_data_hub() -> Result<Child> {
         if #[cfg(feature = "keywrap-ttrpc")] {
             let mut cdh = Command::new(cdh_path)
             .kill_on_drop(true)
-            .args(["-s", "unix:///run/confidential-containers/cdh.sock"])
             .spawn()
             .expect("Failed to start confidential-data-hub");
         } else {
             // TODO: implement this after CDH supports gRPC
             let mut cdh = Command::new(cdh_path)
             .kill_on_drop(true)
-            .args(["-s", "unix:///run/confidential-containers/cdh.sock"])
             .spawn()
             .expect("Failed to start confidential-data-hub");
         }
