@@ -56,10 +56,17 @@ impl TryFrom<String> for AaKbcParams {
 }
 
 async fn get_value() -> Result<String, ParamError> {
-    // first check whether we are in a peer pod
+    // first check env
+    if let Ok(params) = env::var("AA_KBC_PARAMS") {
+        debug!("get aa_kbc_params from env.");
+        return Ok(params);
+    }
+
+    // second check whether we are in a peer pod
     if Path::new(PEER_POD_CONFIG_PATH).exists() {
         return from_config_file().await;
     }
+
     // finally use the kernel cmdline
     from_cmdline().await
 }
