@@ -7,6 +7,7 @@ use anyhow::*;
 use kbs_types::Tee;
 
 pub mod sample;
+pub mod utils;
 
 #[cfg(feature = "az-snp-vtpm-attester")]
 pub mod az_snp_vtpm;
