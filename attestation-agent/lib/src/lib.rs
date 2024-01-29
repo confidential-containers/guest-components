@@ -13,6 +13,7 @@ use attester::{detect_tee_type, BoxedAttester};
 use kbc::{AnnotationPacket, KbcCheckInfo, KbcInstance, KbcModuleList};
 use resource_uri::ResourceUri;
 use std::collections::HashMap;
+use std::str::FromStr;
 
 mod token;
 
@@ -180,7 +181,7 @@ impl AttestationAPIs for AttestationAgent {
     async fn get_token(&mut self, _token_type: &str) -> Result<Vec<u8>> {
         let _params = aa_kbc_params::get_params().await?;
 
-        let _token = match serde_json::from_str::<TokenType>(_token_type)
+        let _token = match TokenType::from_str(_token_type)
             .map_err(|e| anyhow!("Unsupported token type: {e}"))?
         {
             #[cfg(feature = "kbs")]

@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use strum::EnumString;
 
 #[cfg(feature = "kbs")]
 pub mod kbs;
@@ -13,14 +13,14 @@ pub mod kbs;
 #[cfg(feature = "coco_as")]
 pub mod coco_as;
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(EnumString, Clone, Copy)]
 pub enum TokenType {
     #[cfg(feature = "kbs")]
-    #[serde(rename = "kbs")]
+    #[strum(serialize = "kbs")]
     Kbs,
 
     #[cfg(feature = "coco_as")]
-    #[serde(rename = "coco_as")]
+    #[strum(serialize = "coco_as")]
     CoCoAS,
 }
 
