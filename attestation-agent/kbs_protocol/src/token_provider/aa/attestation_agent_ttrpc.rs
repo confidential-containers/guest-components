@@ -46,6 +46,11 @@ impl AttestationAgentServiceClient {
         let mut cres = super::attestation_agent::ExtendRuntimeMeasurementResponse::new();
         ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "ExtendRuntimeMeasurement", cres);
     }
+
+    pub async fn check_init_data(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::CheckInitDataRequest) -> ::ttrpc::Result<super::attestation_agent::CheckInitDataResponse> {
+        let mut cres = super::attestation_agent::CheckInitDataResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "CheckInitData", cres);
+    }
 }
 
 struct GetEvidenceMethod {
@@ -81,6 +86,17 @@ impl ::ttrpc::r#async::MethodHandler for ExtendRuntimeMeasurementMethod {
     }
 }
 
+struct CheckInitDataMethod {
+    service: Arc<Box<dyn AttestationAgentService + Send + Sync>>,
+}
+
+#[async_trait]
+impl ::ttrpc::r#async::MethodHandler for CheckInitDataMethod {
+    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
+        ::ttrpc::async_request_handler!(self, ctx, req, attestation_agent, CheckInitDataRequest, check_init_data);
+    }
+}
+
 #[async_trait]
 pub trait AttestationAgentService: Sync {
     async fn get_evidence(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetEvidenceRequest) -> ::ttrpc::Result<super::attestation_agent::GetEvidenceResponse> {
@@ -91,6 +107,9 @@ pub trait AttestationAgentService: Sync {
     }
     async fn extend_runtime_measurement(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::ExtendRuntimeMeasurementRequest) -> ::ttrpc::Result<super::attestation_agent::ExtendRuntimeMeasurementResponse> {
         Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/ExtendRuntimeMeasurement is not supported".to_string())))
+    }
+    async fn check_init_data(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::CheckInitDataRequest) -> ::ttrpc::Result<super::attestation_agent::CheckInitDataResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/CheckInitData is not supported".to_string())))
     }
 }
 
@@ -107,6 +126,9 @@ pub fn create_attestation_agent_service(service: Arc<Box<dyn AttestationAgentSer
 
     methods.insert("ExtendRuntimeMeasurement".to_string(),
                     Box::new(ExtendRuntimeMeasurementMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
+
+    methods.insert("CheckInitData".to_string(),
+                    Box::new(CheckInitDataMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
 
     ret.insert("attestation_agent.AttestationAgentService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
     ret

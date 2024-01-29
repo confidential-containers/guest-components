@@ -21,8 +21,9 @@ pub mod grpc {
         AttestationAgentService, AttestationAgentServiceServer,
     };
     use attestation::{
-        ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse, GetEvidenceRequest,
-        GetEvidenceResponse, GetTokenRequest, GetTokenResponse,
+        CheckInitDataRequest, CheckInitDataResponse, ExtendRuntimeMeasurementRequest,
+        ExtendRuntimeMeasurementResponse, GetEvidenceRequest, GetEvidenceResponse, GetTokenRequest,
+        GetTokenResponse,
     };
     use std::net::SocketAddr;
     use tonic::{transport::Server, Request, Response, Status};
@@ -113,6 +114,35 @@ pub mod grpc {
             debug!("Extend runtime measurement successfully!");
 
             let reply = ExtendRuntimeMeasurementResponse {};
+
+            Result::Ok(Response::new(reply))
+        }
+
+        async fn check_init_data(
+            &self,
+            request: Request<CheckInitDataRequest>,
+        ) -> Result<Response<CheckInitDataResponse>, Status> {
+            let request = request.into_inner();
+
+            let attestation_agent_mutex_clone = Arc::clone(&ASYNC_ATTESTATION_AGENT);
+            let mut attestation_agent = attestation_agent_mutex_clone.lock().await;
+
+            debug!("Call AA to check init data ...");
+
+            attestation_agent
+                .check_init_data(&request.digest)
+                .await
+                .map_err(|e| {
+                    error!("Call AA to check init data failed: {}", e);
+                    Status::internal(format!(
+                        "[ERROR:{}] AA check init data failed: {}",
+                        AGENT_NAME, e
+                    ))
+                })?;
+
+            debug!("Check init data successfully!");
+
+            let reply = CheckInitDataResponse {};
 
             Result::Ok(Response::new(reply))
         }
@@ -234,6 +264,34 @@ pub mod ttrpc {
                 })?;
 
             let reply = attestation_agent::ExtendRuntimeMeasurementResponse::new();
+            ::ttrpc::Result::Ok(reply)
+        }
+
+        async fn check_init_data(
+            &self,
+            _ctx: &::ttrpc::r#async::TtrpcContext,
+            req: attestation_agent::CheckInitDataRequest,
+        ) -> ::ttrpc::Result<attestation_agent::CheckInitDataResponse> {
+            debug!("Call AA to check initdata ...");
+
+            let attestation_agent_mutex_clone = ASYNC_ATTESTATION_AGENT.clone();
+            let mut attestation_agent = attestation_agent_mutex_clone.lock().await;
+
+            attestation_agent
+                .check_init_data(&req.Digest)
+                .await
+                .map_err(|e| {
+                    error!("Call AA to check initdata failed: {}", e);
+                    let mut error_status = ::ttrpc::proto::Status::new();
+                    error_status.set_code(Code::INTERNAL);
+                    error_status.set_message(format!(
+                        "[ERROR:{}] AA check initdata failed: {}",
+                        AGENT_NAME, e
+                    ));
+                    ::ttrpc::Error::RpcStatus(error_status)
+                })?;
+
+            let reply = attestation_agent::CheckInitDataResponse::new();
             ::ttrpc::Result::Ok(reply)
         }
     }
