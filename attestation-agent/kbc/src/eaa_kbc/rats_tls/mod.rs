@@ -31,7 +31,7 @@ unsafe impl ForeignType for RatsTls {
     type Ref = RatsTlsRef;
 
     unsafe fn from_ptr(ptr: *mut rats_tls_handle) -> RatsTls {
-        RatsTls(NonNull::new_unchecked(ptr))
+        RatsTls(NonNull::new(ptr).expect("rats_tls_handle ptr is null!"))
     }
 
     fn as_ptr(&self) -> *mut rats_tls_handle {
