@@ -74,6 +74,10 @@ pub trait Attester {
     ) -> Result<()> {
         bail!("Unimplemented")
     }
+
+    async fn check_init_data(&self, _init_data: &[u8]) -> Result<()> {
+        bail!("Unimplemented");
+    }
 }
 
 // Detect which TEE platform the KBC running environment is.

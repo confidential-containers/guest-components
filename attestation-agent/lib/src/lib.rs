@@ -12,8 +12,7 @@ use async_trait::async_trait;
 use attester::{detect_tee_type, BoxedAttester};
 use kbc::{AnnotationPacket, KbcCheckInfo, KbcInstance, KbcModuleList};
 use resource_uri::ResourceUri;
-use std::collections::HashMap;
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 pub mod config;
 mod token;
@@ -90,6 +89,9 @@ pub trait AttestationAPIs {
         events: Vec<Vec<u8>>,
         register_index: Option<u64>,
     ) -> Result<()>;
+
+    /// Check the initdata binding
+    async fn check_init_data(&mut self, init_data: &[u8]) -> Result<()>;
 }
 
 /// Attestation agent to provide attestation service.
@@ -238,6 +240,15 @@ impl AttestationAPIs for AttestationAgent {
         attester
             .extend_runtime_measurement(events, register_index)
             .await?;
+        Ok(())
+    }
+
+    /// Check the initdata binding. If current platform does not support initdata
+    /// injection, return a success and raise a warning log.
+    async fn check_init_data(&mut self, init_data: &[u8]) -> Result<()> {
+        let tee_type = detect_tee_type();
+        let attester = TryInto::<BoxedAttester>::try_into(tee_type)?;
+        attester.check_init_data(init_data).await?;
         Ok(())
     }
 }
