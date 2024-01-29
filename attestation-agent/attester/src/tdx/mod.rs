@@ -3,12 +3,18 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use crate::utils::pad;
+
 use super::Attester;
 use anyhow::*;
 use base64::Engine;
+use log::debug;
+use scroll::Pread;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use tdx_attest_rs;
+use tdx_attest_rs::{self, tdx_report_t};
+
+mod report;
 
 const TDX_REPORT_DATA_SIZE: usize = 64;
 const CCEL_PATH: &str = "/sys/firmware/acpi/tables/data/CCEL";
@@ -86,6 +92,33 @@ impl Attester for TdxAttester {
                     );
                 }
             }
+        }
+
+        Ok(())
+    }
+
+    async fn check_init_data(&self, init_data: &[u8]) -> Result<()> {
+        let mut report = tdx_report_t { d: [0; 1024] };
+        match tdx_attest_rs::tdx_att_get_report(None, &mut report) {
+            tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
+                debug!("Successfully get report")
+            }
+            error_code => {
+                bail!(
+                    "TDX Attester: Failed to get TD report. Error code: {:?}",
+                    error_code
+                );
+            }
+        };
+
+        let td_report = report
+            .d
+            .pread::<report::TdReport>(0)
+            .map_err(|e| anyhow!("Parse TD report failed: {:?}", e))?;
+
+        let init_data: [u8; 48] = pad(init_data);
+        if init_data != td_report.tdinfo.mrconfigid {
+            bail!("Init data does not match!");
         }
 
         Ok(())

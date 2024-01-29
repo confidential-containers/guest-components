@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use crate::utils::pad;
+
 use super::Attester;
 use anyhow::*;
 use serde::{Deserialize, Serialize};
@@ -10,6 +12,8 @@ use sev::firmware::guest::AttestationReport;
 use sev::firmware::guest::Firmware;
 use sev::firmware::host::CertTableEntry;
 use std::path::Path;
+
+mod hostdata;
 
 pub fn detect_platform() -> bool {
     Path::new("/sys/devices/platform/sev-guest").exists()
@@ -46,5 +50,15 @@ impl Attester for SnpAttester {
         };
 
         serde_json::to_string(&evidence).context("Serialize SNP evidence failed")
+    }
+
+    async fn check_init_data(&self, init_data: &[u8]) -> Result<()> {
+        let hostdata = hostdata::get_snp_host_data().context("Get HOSTDATA failed")?;
+        let init_data: [u8; 32] = pad(init_data);
+        if init_data != hostdata {
+            bail!("HOSTDATA does not match.");
+        }
+
+        Ok(())
     }
 }
