@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, env};
 
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -85,23 +85,29 @@ impl ClientKeyClient {
     /// [`ALIYUN_IN_GUEST_DEFAULT_KEY_PATH`] which is the by default path where the credential
     /// to access kms is saved.
     pub async fn from_provider_settings(provider_settings: &ProviderSettings) -> Result<Self> {
+        let key_path = match env::var("ALIYUN_IN_GUEST_DEFAULT_KEY_PATH") {
+            Ok(val) => val,
+            Err(_) => ALIYUN_IN_GUEST_DEFAULT_KEY_PATH.to_string(),
+        };
+
         let provider_settings: AliClientKeyProviderSettings =
             serde_json::from_value(Value::Object(provider_settings.clone())).map_err(|e| {
                 Error::AliyunKmsError(format!("parse client_key provider setting failed: {e}"))
             })?;
 
         let cert_path = format!(
-            "{ALIYUN_IN_GUEST_DEFAULT_KEY_PATH}/PrivateKmsCA_{}.pem",
-            provider_settings.kms_instance_id
+            "{}/PrivateKmsCA_{}.pem",
+            key_path, provider_settings.kms_instance_id
         );
         let pswd_path = format!(
-            "{ALIYUN_IN_GUEST_DEFAULT_KEY_PATH}/password_{}.json",
-            provider_settings.client_key_id
+            "{}/password_{}.json",
+            key_path, provider_settings.client_key_id
         );
         let client_key_path = format!(
-            "{ALIYUN_IN_GUEST_DEFAULT_KEY_PATH}/clientKey_{}.json",
-            provider_settings.client_key_id
+            "{}/clientKey_{}.json",
+            key_path, provider_settings.client_key_id
         );
+
         let cert_pem = fs::read_to_string(cert_path).await.map_err(|e| {
             Error::AliyunKmsError(format!("read kms instance pem cert failed: {e}"))
         })?;
