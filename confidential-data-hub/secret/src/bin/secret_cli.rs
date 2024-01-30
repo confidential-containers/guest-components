@@ -84,9 +84,6 @@ enum EnvelopeArgs {
     /// Intel eHSM driver to seal the envelope
     #[cfg(feature = "ehsm")]
     Ehsm(EhsmProviderArgs),
-
-    /// NoFeatureOpened is added in case no feature is opened, which is not prefered
-    NoFeatureOpened,
 }
 
 #[cfg(feature = "aliyun")]
@@ -133,9 +130,9 @@ async fn main() {
                 .expect("illegal input sealed secret format (json deseralization failed)");
 
             match secret.r#type {
-                SecretContent::Envelope(ref envlope) => match envlope.provider.as_str() {
-                    "aliyun" => env::set_var("ALIYUN_IN_GUEST_KEY_PATH", &para.key_path),
-                    "ehsm" => env::set_var("EHSM_IN_GUEST_KEY_PATH", &para.key_path),
+                SecretContent::Envelope(ref envelope) => match envelope.provider.as_str() {
+                    "aliyun" => env::set_var("ALIYUN_IN_GUEST_KEY_PATH", &unseal_args.key_path),
+                    "ehsm" => env::set_var("EHSM_IN_GUEST_KEY_PATH", &unseal_args.key_path),
                     _ => {}
                 },
                 SecretContent::Vault(_) => todo!(),
@@ -266,7 +263,7 @@ async fn handle_envelope_provider(
                 .expect("aliyun export provider_settings fail");
             (Box::new(client), provider_settings, "ehsm".into())
         }
-        EnvelopeArgs::NoFeatureOpened => {
+        _ => {
             panic!("no kms provider is supported, please rebuild the secret cli tool!")
         }
     }

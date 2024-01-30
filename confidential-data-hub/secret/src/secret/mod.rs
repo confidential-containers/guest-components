@@ -58,7 +58,7 @@ mod tests {
     use super::{Secret, SecretContent};
 
     #[rstest]
-    #[case(include_str!("../../test/envelope-1.json"), Secret {
+    #[case(include_str!("../../tests/envelope-1.json"), Secret {
         version: "0.1.0".into(),
         r#type: SecretContent::Envelope(Envelope {
             provider: "aliyun".into(),
@@ -71,7 +71,7 @@ mod tests {
             annotations: Annotations::default(),
         }),
     })]
-    #[case(include_str!("../../test/vault-1.json"), Secret {
+    #[case(include_str!("../../tests/vault-1.json"), Secret {
         version: "0.1.0".into(),
         r#type: SecretContent::Vault(VaultSecret {
             provider: "aliyun".into(),

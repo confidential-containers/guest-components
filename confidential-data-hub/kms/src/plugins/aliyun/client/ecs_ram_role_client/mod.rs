@@ -11,7 +11,7 @@ use std::{
 
 use async_trait::async_trait;
 use chrono::Utc;
-use log::error;
+use log::{error, info};
 use rand::{distributions::Alphanumeric, Rng};
 use reqwest::{header::HeaderMap, ClientBuilder};
 use serde_json::Value;
@@ -59,10 +59,9 @@ impl EcsRamRoleClient {
     /// [`ALIYUN_IN_GUEST_DEFAULT_KEY_PATH`] which is the by default path where the credential
     /// to access kms is saved.
     pub async fn from_provider_settings(_provider_settings: &ProviderSettings) -> Result<Self> {
-        let key_path = match env::var("ALIYUN_IN_GUEST_DEFAULT_KEY_PATH") {
-            Ok(val) => val,
-            Err(_) => ALIYUN_IN_GUEST_DEFAULT_KEY_PATH.to_string(),
-        };
+        let key_path = env::var("ALIYUN_IN_GUEST_KEY_PATH")
+            .unwrap_or(ALIYUN_IN_GUEST_DEFAULT_KEY_PATH.to_owned());
+        info!("ALIYUN_IN_GUEST_KEY_PATH = {}", key_path);
 
         let ecs_ram_role_path = format!("{}/ecsRamRole.json", key_path);
 
