@@ -3,12 +3,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::env;
+
 use ehsm_client::{api::KMS, client::EHSMClient};
 
 use async_trait::async_trait;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use const_format::concatcp;
+use log::info;
 use serde_json::Value;
 use tokio::fs;
 
@@ -47,14 +50,15 @@ impl EhsmKmsClient {
     /// [`EHSM_IN_GUEST_DEFAULT_KEY_PATH`] which is the by default path where the credential
     /// to access kms is saved.
     pub async fn from_provider_settings(provider_settings: &ProviderSettings) -> Result<Self> {
+        let key_path =
+            env::var("EHSM_IN_GUEST_KEY_PATH").unwrap_or(EHSM_IN_GUEST_DEFAULT_KEY_PATH.to_owned());
+        info!("EHSM_IN_GUEST_KEY_PATH = {}", key_path);
+
         let provider_settings: EhsmProviderSettings =
             serde_json::from_value(Value::Object(provider_settings.clone()))
                 .map_err(|e| Error::EhsmKmsError(format!("parse provider setting failed: {e}")))?;
 
-        let credential_path = format!(
-            "{EHSM_IN_GUEST_DEFAULT_KEY_PATH}/credential_{}.json",
-            provider_settings.app_id
-        );
+        let credential_path = format!("{}/credential_{}.json", key_path, provider_settings.app_id);
 
         let api_key = {
             let cred = fs::read_to_string(credential_path)

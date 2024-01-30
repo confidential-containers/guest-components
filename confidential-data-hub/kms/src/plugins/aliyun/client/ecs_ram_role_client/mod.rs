@@ -5,6 +5,7 @@
 
 use std::{
     collections::{BTreeMap, HashMap},
+    env,
     fmt::Write,
 };
 
@@ -58,7 +59,12 @@ impl EcsRamRoleClient {
     /// [`ALIYUN_IN_GUEST_DEFAULT_KEY_PATH`] which is the by default path where the credential
     /// to access kms is saved.
     pub async fn from_provider_settings(_provider_settings: &ProviderSettings) -> Result<Self> {
-        let ecs_ram_role_path = format!("{ALIYUN_IN_GUEST_DEFAULT_KEY_PATH}/ecsRamRole.json");
+        let key_path = match env::var("ALIYUN_IN_GUEST_DEFAULT_KEY_PATH") {
+            Ok(val) => val,
+            Err(_) => ALIYUN_IN_GUEST_DEFAULT_KEY_PATH.to_string(),
+        };
+
+        let ecs_ram_role_path = format!("{}/ecsRamRole.json", key_path);
 
         let ecs_ram_role_str = fs::read_to_string(ecs_ram_role_path).await.map_err(|e| {
             Error::AliyunKmsError(format!(
