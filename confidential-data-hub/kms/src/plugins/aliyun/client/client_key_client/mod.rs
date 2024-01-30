@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, env};
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use chrono::Utc;
-use log::error;
+use log::{error, info};
 use prost::Message;
 use reqwest::{header::HeaderMap, Certificate, ClientBuilder};
 use serde::{Deserialize, Serialize};
@@ -85,10 +85,9 @@ impl ClientKeyClient {
     /// [`ALIYUN_IN_GUEST_DEFAULT_KEY_PATH`] which is the by default path where the credential
     /// to access kms is saved.
     pub async fn from_provider_settings(provider_settings: &ProviderSettings) -> Result<Self> {
-        let key_path = match env::var("ALIYUN_IN_GUEST_DEFAULT_KEY_PATH") {
-            Ok(val) => val,
-            Err(_) => ALIYUN_IN_GUEST_DEFAULT_KEY_PATH.to_string(),
-        };
+        let key_path = env::var("ALIYUN_IN_GUEST_KEY_PATH")
+            .unwrap_or(ALIYUN_IN_GUEST_DEFAULT_KEY_PATH.to_owned());
+        info!("ALIYUN_IN_GUEST_KEY_PATH = {}", key_path);
 
         let provider_settings: AliClientKeyProviderSettings =
             serde_json::from_value(Value::Object(provider_settings.clone())).map_err(|e| {
