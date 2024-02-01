@@ -46,7 +46,12 @@ pub mod grpc {
             debug!("Call AA to get token ...");
 
             let token = attestation_agent
-                .get_token(&request.token_type)
+                .get_token(
+                    &request.token_type,
+                    &request
+                        .structured_runtime_data
+                        .unwrap_or_else(|| String::from("{}")),
+                )
                 .await
                 .map_err(|e| {
                     error!("Call AA to get token failed: {}", e);
@@ -186,7 +191,11 @@ pub mod ttrpc {
             let mut attestation_agent = attestation_agent_mutex_clone.lock().await;
 
             let token = attestation_agent
-                .get_token(&req.TokenType)
+                .get_token(
+                    &req.TokenType,
+                    &req.StructuredRuntimeData
+                        .unwrap_or_else(|| String::from("{}")),
+                )
                 .await
                 .map_err(|e| {
                     error!("Call AA-KBC to get token failed: {}", e);

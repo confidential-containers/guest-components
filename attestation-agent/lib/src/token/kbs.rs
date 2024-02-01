@@ -20,7 +20,13 @@ pub struct KbsTokenGetter {}
 
 #[async_trait]
 impl GetToken for KbsTokenGetter {
-    async fn get_token(&self, kbs_host_url: String) -> Result<Vec<u8>> {
+    async fn get_token(
+        &self,
+        kbs_host_url: String,
+        _structured_runtime_data: &str,
+    ) -> Result<Vec<u8>> {
+        log::warn!("Get KBS token does not support set customize runtime data");
+
         let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
 
         let mut client =

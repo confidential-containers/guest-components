@@ -57,8 +57,12 @@ impl ApiHandler for AAClient {
         match url_path {
             AA_TOKEN_URL => match params.get("token_type") {
                 Some(token_type) => {
+                    let default_structed_runtime_data = String::from("{}");
+                    let structured_runtime_data = params
+                        .get("structured_runtime_data")
+                        .unwrap_or(&default_structed_runtime_data);
                     let results = self
-                        .get_token(token_type)
+                        .get_token(token_type, structured_runtime_data)
                         .await
                         .unwrap_or_else(|e| e.to_string().into());
                     return self.octet_stream_response(results);
@@ -95,9 +99,14 @@ impl AAClient {
         })
     }
 
-    pub async fn get_token(&self, token_type: &str) -> Result<Vec<u8>> {
+    pub async fn get_token(
+        &self,
+        token_type: &str,
+        structured_runtime_data: &str,
+    ) -> Result<Vec<u8>> {
         let req = GetTokenRequest {
             TokenType: token_type.to_string(),
+            StructuredRuntimeData: Some(structured_runtime_data.to_string()),
             ..Default::default()
         };
         let res = self

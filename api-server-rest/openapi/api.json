@@ -80,6 +80,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "structured_runtime_data",
+            "in": "query",
+            "description": "Structured data in JSON format, which will be hashed as runtime data",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
           }
         ],
         "responses": {

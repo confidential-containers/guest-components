@@ -12,6 +12,7 @@ message GetEvidenceResponse {
 
 message GetTokenRequest {
     string TokenType = 1;
+    optional string StructuredRuntimeData = 2;
 }
 
 message GetTokenResponse {
