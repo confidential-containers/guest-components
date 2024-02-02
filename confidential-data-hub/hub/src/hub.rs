@@ -67,9 +67,21 @@ impl DataHub for Hub {
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>> {
         info!("get resource called: {uri}");
         // to initialize a get_resource_provider client we do not need the ProviderSettings.
+        #[cfg(feature = "kbs")]
         let mut client = kms::new_getter("kbs", ProviderSettings::default())
             .await
-            .map_err(|e| Error::GetResource(format!("create kbs client failed: {e}")))?;
+            .map_err(|e| {
+                Error::GetResource(format!(
+                    "create kbs client (background check mode) failed: {e}"
+                ))
+            })?;
+
+        #[cfg(feature = "resource_kbs")]
+        let mut client = kms::new_getter("resource_kbs", ProviderSettings::default())
+            .await
+            .map_err(|e| {
+                Error::GetResource(format!("create kbs client (passport mode) failed: {e}"))
+            })?;
 
         // to get resource using a get_resource_provider client we do not need the Annotations.
         let res = client

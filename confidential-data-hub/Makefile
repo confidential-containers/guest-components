@@ -100,5 +100,5 @@ clean:
 
 help:
 	@echo "==========================Help========================================="
-	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [RESOURCE_PROVIDER=(kbs/sev)] [KMS_PROVIDER=aliyun/ehsm]"
+	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [RESOURCE_PROVIDER=(kbs/resource_kbs/sev)] [KMS_PROVIDER=aliyun/ehsm]"
 	@echo "install: make install [DESTDIR=/path/to/target] [LIBC=(musl)]"

@@ -16,6 +16,9 @@ pub mod aliyun;
 
 pub mod kbs;
 
+#[cfg(feature = "resource_kbs")]
+pub mod resource_kbs;
+
 #[cfg(feature = "ehsm")]
 pub mod ehsm;
 
@@ -52,8 +55,15 @@ pub async fn new_decryptor(
 
 #[derive(AsRefStr, EnumString)]
 pub enum VaultProvider {
+    // Background Check Mode KBS (with built-in AS or gRPC AS)
+    // Including offline_kbc and SEV KBS
     #[strum(ascii_case_insensitive)]
     Kbs,
+
+    // Passport Mode KBS
+    #[cfg(feature = "resource_kbs")]
+    #[strum(serialize = "resource_kbs")]
+    ResourceKbs,
 
     #[cfg(feature = "aliyun")]
     #[strum(ascii_case_insensitive)]
@@ -69,6 +79,11 @@ pub async fn new_getter(
         .map_err(|_| Error::UnsupportedProvider(provider_name.to_string()))?;
     match provider {
         VaultProvider::Kbs => Ok(Box::new(kbs::KbcClient::new().await?) as Box<dyn Getter>),
+
+        #[cfg(feature = "resource_kbs")]
+        VaultProvider::ResourceKbs => {
+            Ok(Box::new(resource_kbs::ResourceKbsClient::default()) as Box<dyn Getter>)
+        }
 
         #[cfg(feature = "aliyun")]
         VaultProvider::Aliyun => Ok(Box::new(
