@@ -13,7 +13,7 @@ required-features = ["bin"]
 [dependencies]
 anyhow = { workspace = true, optional = true }
 async-trait.workspace = true
-attestation_agent = { path = "../../attestation-agent/lib", default-features = false, optional = true }
+attestation-agent = { path = "../../attestation-agent/attestation-agent", default-features = false, optional = true }
 base64.workspace = true
 clap = { workspace = true, features = [ "derive" ], optional = true }
 config = { workspace = true, optional = true }
@@ -48,7 +48,7 @@ aliyun = ["image/aliyun", "secret/aliyun"]
 kbs = ["image/kbs", "kms/kbs", "secret/kbs"]
 
 # support sev to provide confidential resources
-sev = ["attestation_agent", "image/sev", "kms/sev", "dep:sev", "secret/sev"]
+sev = ["attestation-agent", "image/sev", "kms/sev", "dep:sev", "secret/sev"]
 
 # support eHSM stacks (KMS, ...)
 ehsm = ["image/ehsm", "secret/ehsm"]

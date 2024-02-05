@@ -3,10 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#[allow(unused_imports)]
-#[macro_use]
-extern crate strum;
-
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
@@ -16,7 +12,7 @@ use attester::{detect_tee_type, BoxedAttester};
 pub mod config;
 mod token;
 
-use token::TokenType;
+use token::*;
 
 use crate::config::{aa_kbc_params, Config};
 
@@ -104,16 +100,12 @@ impl AttestationAPIs for AttestationAgent {
 
         match TokenType::from_str(token_type).map_err(|e| anyhow!("Unsupported token type: {e}"))? {
             #[cfg(feature = "kbs")]
-            token::TokenType::Kbs => {
-                token::kbs::KbsTokenGetter::default()
-                    .get_token(_uri)
-                    .await?
-            }
+            token::TokenType::Kbs => token::kbs::KbsTokenGetter::default().get_token(_uri).await,
             #[cfg(feature = "coco_as")]
             token::TokenType::CoCoAS => {
                 token::coco_as::CoCoASTokenGetter::default()
                     .get_token(_uri)
-                    .await?
+                    .await
             }
         }
     }

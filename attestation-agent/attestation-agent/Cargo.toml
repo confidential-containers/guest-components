@@ -1,17 +1,29 @@
 [package]
-name = "attestation_agent"
+name = "attestation-agent"
 version = "0.1.0"
 authors = ["The Attestation Agent Authors"]
 publish = false
 edition = "2021"
+
+[[bin]]
+name = "grpc-aa"
+required-features = ["bin", "grpc"]
+
+[[bin]]
+name = "ttrpc-aa"
+required-features = ["bin", "ttrpc"]
 
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
 attester = { path = "../attester", default-features = false }
 base64.workspace = true
+clap = { workspace = true, features = ["derive"], optional = true }
+const_format = { workspace = true, optional = true }
 kbs_protocol = { path = "../kbs_protocol", default-features = false, optional = true }
 log.workspace = true
+prost = { workspace = true, optional = true }
+protobuf = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["json"], optional = true }
 serde.workspace = true
 serde_json.workspace = true
@@ -21,9 +33,14 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 toml.workspace = true
 tonic = { workspace = true, optional = true }
+ttrpc = { workspace = true, features = ["async"], optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[build-dependencies]
+tonic-build = { workspace = true, optional = true }
+ttrpc-codegen = { workspace = true, optional = true }
 
 [features]
 default = ["rust-crypto"]
@@ -37,7 +54,6 @@ kbs = ["kbs_protocol/background_check", "token"]
 # CoCoAS Attestation Token
 coco_as = ["reqwest", "token"]
 
-cc_kbc = ["kbs_protocol/background_check", "kbs", "coco_as"]
 all-attesters = ["kbs_protocol?/all-attesters", "attester/all-attesters"]
 tdx-attester = ["kbs_protocol/tdx-attester", "attester/tdx-attester"]
 sgx-attester = ["kbs_protocol/sgx-attester", "attester/sgx-attester"]
@@ -48,3 +64,8 @@ snp-attester = ["kbs_protocol/snp-attester", "attester/snp-attester"]
 # Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
 rust-crypto = ["kbs_protocol?/rust-crypto"]
 openssl = ["kbs_protocol?/openssl"]
+
+# Binary RPC type
+bin = ["clap", "tokio/rt-multi-thread"]
+grpc = ["prost", "tonic", "tonic-build", "tokio/signal"]
+ttrpc = ["const_format", "dep:ttrpc", "ttrpc-codegen", "protobuf", "tokio/signal"]
