@@ -1,10 +1,7 @@
 # Attestation Agent
 
 Attestation Agent (AA for short) is a service function set for attestation procedure
-in Confidential Containers. It provides kinds of service APIs that need to make
-requests to the Relying Party (Key Broker Service) in Confidential Containers,
-and performs an attestation and establishes connection between the Key Broker Client (KBC)
-and corresponding KBS, so as to obtain the trusted services or resources of KBS.
+in Confidential Containers. It provides kinds of service APIs related to attestation.
 
 
 Current consumers of AA include: 
@@ -20,10 +17,10 @@ which allows callers to call the services provided by AA through gRPC.
 
 ## Library crate
 
-Import AA in `Cargo.toml` of your project with specific KBC(s):
+Import AA in `Cargo.toml` of your project with all platform supported:
 
 ```toml
-attestation-agent = { git = "https://github.com/confidential-containers/guest-components", features = ["sample_kbc"] }
+attestation-agent = { git = "https://github.com/confidential-containers/guest-components", features = ["all-attesters"] }
 ```
 
 **Note**: When the version is stable, we will release AA on https://crate.io.
@@ -42,10 +39,20 @@ cd guest-components/attestation-agent
 make && make install
 ```
 
-or explicitly specify the KBS modules it contains. Taking `sample_kbc` as example:
+or explicitly specify the platform it supports. Taking `tdx` as example:
 
 ```shell
-make KBC=sample_kbc
+make ATTESTER=tdx-attester
+```
+
+with no platform supprted
+```shell
+make ATTESTER=none
+```
+
+with all platforms supprted
+```shell
+make ATTESTER=all-attesters
 ```
 
 #### Musl 
@@ -73,10 +80,10 @@ attestation-agent --help
 Start AA and specify the endpoint of AA's gRPC service:
 
 ```shell
-attestation-agent --keyprovider_sock 127.0.0.1:50000 --getresource_sock 127.0.0.1:50001
+attestation-agent --attestation_sock 127.0.0.1:50002
 ```
 
-Or start AA with default keyprovider address (127.0.0.1:50000) and default getresource address (127.0.0.1:50001):
+Or start AA with default address (127.0.0.1:50002)
 
 ```
 attestation-agent
@@ -84,7 +91,7 @@ attestation-agent
 
 If you want to see the runtime log:
 ```
-RUST_LOG=attestation_agent attestation-agent --keyprovider_sock 127.0.0.1:50000 --getresource_sock 127.0.0.1:50001
+RUST_LOG=attestation_agent attestation-agent --attestation_sock 127.0.0.1:50002
 ```
 
 ### ttRPC
@@ -97,27 +104,12 @@ make ttrpc=true && make install
 ttRPC AA now only support Unix Socket, for example:
 
 ```shell
-attestation-agent --keyprovider_sock unix:///tmp/keyprovider.sock --getresource_sock unix:///tmp/getresource.sock
+attestation-agent --attestation_sock unix:///tmp/attestation.sock
 ```
 
-## Supported KBC modules
+### Supported Platforms
 
-AA provides a flexible KBC module mechanism to support different KBS protocols required to make the communication between KBC and KBS. If the KBC modules currently supported by AA cannot meet your use requirement (e.g, need to use a new KBS protocol), you can write a new KBC module complying with the KBC development [GUIDE](docs/kbc_module_development_guide.md). Welcome to contribute new KBC module to this project!
-
-List of supported KBC modules: 
-
-| KBC module name    | README                                                              | KBS protocol | Maintainer                |
-| ------------------ | ------------------------------------------------------------------- | ------------ | ------------------------- |
-| sample_kbc	     |  Null                                                               | Null         |	Attestation Agent Authors |
-| offline_fs_kbc     | [Offline file system KBC](kbc/src/offline_fs_kbc/README.md) | Null         | IBM                       |
-| eaa_kbc            | [EAA KBC](kbc/src/eaa_kbc/README.md)                        | EAA protocol | Alibaba Cloud             |
-| offline_sev_kbc    | [Offline SEV KBC](kbc/src/offline_sev_kbc/README.md)        | Null         | IBM                       |
-| online_sev_kbc     | [Online SEV KBC](kbc/src/online_sev_kbc/README.md)          | simple-kbs   | IBM                       |
-| cc_kbc             | [CC KBC](kbc/src/cc_kbc/README.md)                          | [CoCo KBS protocol](https://github.com/confidential-containers/kbs/blob/main/kbs/docs/kbs_attestation_protocol.md) | CoCo Community            |
-
-### CC KBC
-
-CC KBC supports different kinds of hardware TEE attesters, now
+AA supports different kinds of hardware TEE attesters, now
 | Attester name       |           Info              |
 | ------------------- | --------------------------  |
 | tdx-attester        | Intel TDX                   |
@@ -127,12 +119,7 @@ CC KBC supports different kinds of hardware TEE attesters, now
 | az-tdx-vtpm-attester| Azure TDX CVM               |
 | cca-attester        | Arm Confidential Compute Architecture (CCA)  |
 
-To build cc kbc with all available attesters and install, use
+To build AA with all available attesters and install, use
 ```shell
-make KBC=cc_kbc && make install
+make ATTESTER=all-attesters && make install
 ```
-
-## Tools
-
-- [Sample Keyprovider](./coco_keyprovider): A simple tool for encrypting container images with skopeo, please refer to its [README](./coco_keyprovider/README.md).
-
