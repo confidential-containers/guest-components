@@ -10,10 +10,8 @@ anyhow.workspace = true
 async-trait.workspace = true
 attester = { path = "../attester", default-features = false }
 base64.workspace = true
-kbc = { path = "../kbc", default-features = false }
 kbs_protocol = { path = "../kbs_protocol", default-features = false, optional = true }
 log.workspace = true
-resource_uri.workspace = true
 reqwest = { workspace = true, features = ["json"], optional = true }
 serde.workspace = true
 serde_json.workspace = true
@@ -28,26 +26,25 @@ tonic = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [features]
-default = ["sample_kbc", "rust-crypto", "coco_as"]
+default = ["rust-crypto"]
 
-# Attestation Service Supported (Get Token)
-kbs = ["kbs_protocol/background_check"]
-coco_as = ["reqwest"]
+# Attestation Token support
+token = []
 
-cc_kbc = ["kbc/cc_kbc", "kbs_protocol/background_check", "kbs", "coco_as"]
-all-attesters = ["kbc/all-attesters", "kbs_protocol?/all-attesters", "attester/all-attesters"]
-tdx-attester = ["kbc/tdx-attester", "kbs_protocol/tdx-attester", "attester/tdx-attester"]
-sgx-attester = ["kbc/sgx-attester", "kbs_protocol/sgx-attester", "attester/sgx-attester"]
-az-snp-vtpm-attester = ["kbc/az-snp-vtpm-attester", "kbs_protocol/az-snp-vtpm-attester", "attester/az-snp-vtpm-attester"]
-az-tdx-vtpm-attester = ["kbc/az-tdx-vtpm-attester", "kbs_protocol/az-tdx-vtpm-attester", "attester/az-tdx-vtpm-attester"]
-snp-attester = ["kbc/snp-attester", "kbs_protocol/snp-attester", "attester/snp-attester"]
+# KBS Token
+kbs = ["kbs_protocol/background_check", "token"]
 
-sample_kbc = ["kbc/sample_kbc"]
-eaa_kbc = ["kbc/eaa_kbc"]
-offline_fs_kbc = ["kbc/offline_fs_kbc"]
-offline_sev_kbc = ["kbc/offline_sev_kbc"]
-online_sev_kbc = ["kbc/online_sev_kbc"]
+# CoCoAS Attestation Token
+coco_as = ["reqwest", "token"]
+
+cc_kbc = ["kbs_protocol/background_check", "kbs", "coco_as"]
+all-attesters = ["kbs_protocol?/all-attesters", "attester/all-attesters"]
+tdx-attester = ["kbs_protocol/tdx-attester", "attester/tdx-attester"]
+sgx-attester = ["kbs_protocol/sgx-attester", "attester/sgx-attester"]
+az-snp-vtpm-attester = ["kbs_protocol/az-snp-vtpm-attester", "attester/az-snp-vtpm-attester"]
+az-tdx-vtpm-attester = ["kbs_protocol/az-tdx-vtpm-attester", "attester/az-tdx-vtpm-attester"]
+snp-attester = ["kbs_protocol/snp-attester", "attester/snp-attester"]
 
 # Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
-rust-crypto = ["kbc/rust-crypto", "kbs_protocol?/rust-crypto"]
-openssl = ["kbc/openssl", "kbs_protocol?/openssl"]
+rust-crypto = ["kbs_protocol?/rust-crypto"]
+openssl = ["kbs_protocol?/openssl"]
