@@ -69,19 +69,15 @@ jobs:
         run: |
           make && make install
 
-      - name: Musl build with default features
+      - name: Musl build with none platform
         run: |
-          make LIBC=musl
-
-      - name: s390x build with offline_fs_kbc feature
-        run:
-          make ARCH=s390x KBC=offline_fs_kbc
+          make LIBC=musl ATTESTER=none
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --features openssl,rust-crypto,offline_fs_kbc,kbs,coco_as -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p attestation_agent -p crypto -p resource_uri -p sev@0.1.0
+          args: --features openssl,rust-crypto,all-attesters,kbs,coco_as -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p crypto -p resource_uri
 
       - name: Run cargo fmt check
         uses: actions-rs/cargo@v1
