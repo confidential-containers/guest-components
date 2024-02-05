@@ -5,9 +5,7 @@ DESTDIR ?= /usr/local/bin
 
 LIBC ?= musl
 
-# TODO: delete `KBC` parameter once KBC related functionalities are
-# all deprecated in code.
-KBC ?=
+ATTESTER ?=
 
 NO_RESOURCE_PROVIDER ?=
 
@@ -18,28 +16,28 @@ else
 endif
 
 ifeq ($(TEE_PLATFORM), none)
-  KBC = cc_kbc
+  ATTESTER = none
 else ifeq ($(TEE_PLATFORM), fs)
-  KBC = offline_fs_kbc
+  ATTESTER = none
 else ifeq ($(TEE_PLATFORM), tdx)
   LIBC = gnu
-  KBC = cc_kbc_tdx
+  ATTESTER = tdx-attester
 else ifeq ($(TEE_PLATFORM), az-tdx-vtpm)
-  KBC = cc_kbc_az_tdx_vtpm
+  ATTESTER = az-tdx-vtpm-attester
 else ifeq ($(TEE_PLATFORM), sev)
-  KBC = online_sev_kbc
+  ATTESTER = none
   ifeq ($(NO_RESOURCE_PROVIDER), true)
     RESOURCE_PROVIDER :=
   else
     RESOURCE_PROVIDER = sev
   endif
 else ifeq ($(TEE_PLATFORM), snp)
-  KBC = cc_kbc_snp
+  ATTESTER = snp-attester
 else ifeq ($(TEE_PLATFORM), az-snp-vtpm)
-  KBC = cc_kbc_az_snp_vtpm
+  ATTESTER = az-snp-vtpm-attester
 else ifeq ($(TEE_PLATFORM), all)
   LIBC = gnu
-  KBC = cc_kbc_all_attesters
+  ATTESTER = all-attesters
   ifeq ($(NO_RESOURCE_PROVIDER), true)
     RESOURCE_PROVIDER :=
   else
@@ -47,7 +45,7 @@ else ifeq ($(TEE_PLATFORM), all)
   endif
 else ifeq ($(TEE_PLATFORM), amd)
   LIBC = gnu
-  KBC = cc_kbc_snp,online_sev_kbc
+  ATTESTER = snp-attester
   ifeq ($(NO_RESOURCE_PROVIDER), true)
     RESOURCE_PROVIDER :=
   else
@@ -79,7 +77,7 @@ $(CDH_BINARY):
 
 $(AA_BINARY):
 	@echo build $(AA) for $(TEE_PLATFORM)
-	cd $(AA) && $(MAKE) ttrpc=true ARCH=$(ARCH) LIBC=$(LIBC) KBC=$(KBC)
+	cd $(AA) && $(MAKE) ttrpc=true ARCH=$(ARCH) LIBC=$(LIBC) ATTESTER=$(ATTESTER)
 
 $(ASR_BINARY):
 	@echo build $(ASR) for $(TEE_PLATFORM)

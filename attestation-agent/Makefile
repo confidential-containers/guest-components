@@ -19,12 +19,14 @@ SOURCE_ARCH := $(shell uname -m)
 ARCH ?= $(shell uname -m)
 DEBUG ?=
 LIBC ?= gnu
-KBC ?=
 ttrpc ?=
 grpc ?=
 DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
-features ?=
+binary ?=
+binary_name ?=
+ATTESTER ?=
+features ?= coco_as,kbs
 OPENSSL ?=
 
 ifeq ($(SOURCE_ARCH), ppc64le)
@@ -35,16 +37,22 @@ ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
   OPENSSL=1
 endif
 
-ifdef KBC
-    features += $(KBC)
+ifeq ($(ttrpc), true)
+    binary = --bin ttrpc-aa
+    features += bin,ttrpc
+    binary_name = ttrpc-aa
 else
-    features += sample_kbc
+    binary = --bin grpc-aa
+    features += bin,grpc
+    binary_name = grpc-aa
 endif
 
-ifeq ($(ttrpc), true)
-    features += ttrpc
+ifdef ATTESTER
+    ifneq ($(ATTESTER), none)
+        features += $(ATTESTER)
+    endif
 else
-    features += grpc
+    features += all-attesters
 endif
 
 ifeq ($(LIBC), musl)
@@ -90,27 +98,6 @@ else
     TARGET_DIR := $(TARGET_DIR)/release
 endif
 
-ifeq ($(KBC), eaa_kbc)
-    ifeq ($(LIBC), musl)
-        $(error ERROR: EAA KBC does not support MUSL build!)
-    endif
-    ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
-        $(error ERROR: EAA KBC does not support s390x and ppc64le architectures!)
-    endif
-    RATS_TLS := $(shell ls /usr/local/lib/rats-tls/ 2> /dev/null)
-    ifeq ($(RATS_TLS),)
-        RATS_TLS_DOWNLOAD := $(shell cd .. && rm -rf inclavare-containers && git clone https://github.com/alibaba/inclavare-containers)
-        RATS_TLS_INSTALL := $(shell cd ../inclavare-containers/rats-tls && cmake -DBUILD_SAMPLES=on -H. -Bbuild && make -C build install >&2)
-    endif
-    RUSTFLAGS_ARGS += -C link-args=-Wl,-rpath,/usr/local/lib/rats-tls
-endif
-
-ifeq ($(KBC), offline_sev_kbc)
-    ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
-        $(error ERROR: Offline SEV KBC does not support s390x and ppc64le architectures!)
-    endif
-endif
-
 ifneq ($(RUSTFLAGS_ARGS),)
     RUST_FLAGS := RUSTFLAGS="$(RUSTFLAGS_ARGS)"
 endif
@@ -122,7 +109,8 @@ else
 endif
 
 build:
-	cd app && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features)" $(LIBC_FLAG)
+	cd attestation-agent && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features)" $(binary) $(LIBC_FLAG)
+	mv $(TARGET_DIR)/$(binary_name) $(TARGET)
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)
 
@@ -137,5 +125,5 @@ clean:
 
 help:
 	@echo "==========================Help========================================="
-	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [KBC=xxx_kbc] [OPENSSL=1]"
+	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [OPENSSL=1] [ATTESTER=all-attesters]"
 	@echo "install: make install [DESTDIR=/path/to/target] [LIBC=(musl)]"
