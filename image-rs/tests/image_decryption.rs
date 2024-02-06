@@ -43,6 +43,8 @@ const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_ttrpc.conf";
 #[rstest::rstest]
 #[case("ghcr.io/confidential-containers/test-container:unencrypted")]
 #[case("ghcr.io/confidential-containers/test-container:encrypted")]
+#[cfg_attr(not(feature = "nydus"), ignore)]
+#[case("ghcr.io/confidential-containers/busybox:nydus-encrypted")]
 #[tokio::test]
 #[serial]
 async fn test_decrypt_layers(#[case] image: &str) {
