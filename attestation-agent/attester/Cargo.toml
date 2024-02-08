@@ -60,7 +60,7 @@ all-attesters = [
 # quotes. It's an unconditional dependency for tdx-attester since that is the only way to
 # generate TDX quotes with upstream kernels.
 tsm-report = ["tempfile"]
-tdx-attester = ["scroll", "tdx-attest-rs"]
+tdx-attester = ["scroll", "tsm-report", "tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
 az-snp-vtpm-attester = ["az-snp-vtpm"]
 az-tdx-vtpm-attester = ["az-tdx-vtpm"]
