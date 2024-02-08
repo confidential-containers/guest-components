@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::utils::pad;
-
+use super::tsm_report::*;
 use super::Attester;
+use crate::utils::pad;
 use anyhow::*;
 use base64::Engine;
 use log::debug;
@@ -20,7 +20,27 @@ const TDX_REPORT_DATA_SIZE: usize = 64;
 const CCEL_PATH: &str = "/sys/firmware/acpi/tables/data/CCEL";
 
 pub fn detect_platform() -> bool {
+    TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || tdx_getquote_ioctl_is_available()
+}
+
+fn tdx_getquote_ioctl_is_available() -> bool {
     Path::new("/dev/tdx-attest").exists() || Path::new("/dev/tdx-guest").exists()
+}
+
+fn get_quote_ioctl(report_data: &Vec<u8>) -> Result<Vec<u8>> {
+    let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
+        // report_data.resize() ensures copying report_data to
+        // tdx_attest_rs::tdx_report_data_t cannot panic.
+        d: report_data.as_slice().try_into().unwrap(),
+    };
+
+    match tdx_attest_rs::tdx_att_get_quote(Some(&tdx_report_data), None, None, 0) {
+        (tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS, Some(q)) => Ok(q),
+        (error_code, _) => Err(anyhow!(
+            "TDX getquote ioctl: failed with error code: {:?}",
+            error_code
+        )),
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -44,22 +64,19 @@ impl Attester for TdxAttester {
 
         report_data.resize(TDX_REPORT_DATA_SIZE, 0);
 
-        let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
-            // report_data.resize() ensures copying report_data to
-            // tdx_attest_rs::tdx_report_data_t cannot panic.
-            d: report_data.as_slice().try_into().unwrap(),
-        };
+        let quote_bytes = TsmReportPath::new(TsmReportProvider::Tdx).map_or_else(
+            |notsm| {
+                get_quote_ioctl(&report_data)
+                    .context(format!("TDX Attester: quote generation using ioctl() fallback failed after a TSM report error ({notsm})"))
+            },
+            |tsm| {
+                tsm.attestation_report(TsmReportData::Tdx(report_data.clone()))
+                    .context("TDX Attester: quote generation using TSM reports failed")
+            },
+        )?;
 
         let engine = base64::engine::general_purpose::STANDARD;
-        let quote = match tdx_attest_rs::tdx_att_get_quote(Some(&tdx_report_data), None, None, 0) {
-            (tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS, Some(q)) => engine.encode(q),
-            (error_code, _) => {
-                return Err(anyhow!(
-                    "TDX Attester: Failed to get TD quote. Error code: {:?}",
-                    error_code
-                ));
-            }
-        };
+        let quote = engine.encode(quote_bytes);
 
         let cc_eventlog = match std::fs::read(CCEL_PATH) {
             Result::Ok(el) => Some(engine.encode(el)),
