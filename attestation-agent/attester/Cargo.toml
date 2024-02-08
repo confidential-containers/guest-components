@@ -34,9 +34,11 @@ codicon = { version = "3.0", optional = true }
 hyper = { version = "0.14", features = ["full"], optional = true }
 hyper-tls = { version = "0.5", optional = true }
 tokio = { version = "1", features = ["full"], optional = true }
+tempfile = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio.workspace = true
+rstest.workspace = true
 
 [[bin]]
 name = "evidence_getter"
@@ -54,6 +56,10 @@ all-attesters = [
     "cca-attester",
 ]
 
+# tsm-report enables a module that helps attesters to use Linux TSM_REPORTS for generating
+# quotes. It's an unconditional dependency for tdx-attester since that is the only way to
+# generate TDX quotes with upstream kernels.
+tsm-report = ["tempfile"]
 tdx-attester = ["scroll", "tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
 az-snp-vtpm-attester = ["az-snp-vtpm"]

@@ -30,6 +30,9 @@ pub mod snp;
 #[cfg(feature = "csv-attester")]
 pub mod csv;
 
+#[cfg(feature = "tsm-report")]
+pub mod tsm_report;
+
 pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
 
 impl TryFrom<Tee> for BoxedAttester {
