@@ -30,6 +30,7 @@ lazy_static::lazy_static! {
 /// - `SCHEME`: `file` string, to distinguish different uri scheme
 /// - `get_resource()`: get resource from the uri
 #[async_trait]
+#[allow(dead_code)]
 trait Protocol: Send + Sync {
     async fn get_resource(&mut self, uri: &str) -> Result<Vec<u8>>;
 }
