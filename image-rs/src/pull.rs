@@ -470,7 +470,7 @@ mod tests {
 
         for image_url in nydus_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
-            let image = Reference::try_from((*image_url).clone()).expect("create reference failed");
+            let image = Reference::try_from(*image_url).expect("create reference failed");
             let mut client = PullClient::new(
                 image,
                 tempdir.path(),

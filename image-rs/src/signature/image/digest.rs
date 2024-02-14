@@ -76,9 +76,9 @@ impl Digest {
     }
 }
 
-impl ToString for Digest {
-    fn to_string(&self) -> String {
-        format!("{}:{}", self.algorithm, self.value)
+impl fmt::Display for Digest {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}:{}", self.algorithm, self.value)
     }
 }
 
