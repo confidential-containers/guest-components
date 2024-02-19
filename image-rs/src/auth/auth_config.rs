@@ -118,7 +118,7 @@ fn auth_keys_for_key(key: &str) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, convert::TryFrom};
+    use std::collections::HashMap;
 
     use oci_distribution::{secrets::RegistryAuth, Reference};
     use rstest::rstest;

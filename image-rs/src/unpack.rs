@@ -84,10 +84,8 @@ pub fn unpack<R: io::Read>(input: R, destination: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use filetime;
     use std::fs::File;
     use std::io::prelude::*;
-    use tempfile;
 
     #[test]
     fn test_unpack() {

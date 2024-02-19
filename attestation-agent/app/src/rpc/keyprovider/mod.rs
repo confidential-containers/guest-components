@@ -8,7 +8,6 @@ use attestation_agent::AttestationAPIs;
 use base64::Engine;
 use log::*;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 use std::str;
 use std::sync::Arc;
 
@@ -359,9 +358,6 @@ fn str_to_kbc_kbs(value: &str) -> Result<(String, String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rpc::keyprovider::message::{
-        ERR_INVALID_OP, ERR_MISSING_OP, ERR_UNSUPPORTED_OP, ERR_UNWRAP_PARAMS_NO_DC,
-    };
 
     #[test]
     fn test_get_annotation() {

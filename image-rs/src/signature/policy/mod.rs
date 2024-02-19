@@ -7,7 +7,6 @@ use anyhow::{bail, Result};
 use oci_distribution::secrets::RegistryAuth;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::vec::Vec;
 use strum_macros::{Display, EnumString};
 
 use self::policy_requirement::PolicyReqType;

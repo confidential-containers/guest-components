@@ -4,7 +4,6 @@
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Deserializer};
-use std::convert::TryFrom;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -303,9 +302,7 @@ impl Default for FscacheConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::File;
     use std::io::prelude::*;
-    use tempfile;
 
     #[test]
     fn test_image_config() {

@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::fmt::Display;
+
 use aes_gcm::{aead::Aead, aes::Aes256, Aes256Gcm, Key, Nonce};
 use anyhow::*;
 use strum::EnumString;
@@ -20,11 +22,11 @@ pub enum Algorithm {
     A256CTR,
 }
 
-impl ToString for Algorithm {
-    fn to_string(&self) -> String {
+impl Display for Algorithm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Algorithm::A256GCM => "A256GCM".into(),
-            Algorithm::A256CTR => "A256CTR".into(),
+            Algorithm::A256GCM => f.write_str("A256GCM"),
+            Algorithm::A256CTR => f.write_str("A256CTR"),
         }
     }
 }
