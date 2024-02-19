@@ -7,9 +7,6 @@ use anyhow::{anyhow, Result};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::str;
-use std::vec::Vec;
 
 pub const ERR_INVALID_OP: &str = "invalid operator";
 pub const ERR_ANNOTATION_EMPTY: &str = "annotation cannot be empty";

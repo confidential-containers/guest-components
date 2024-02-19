@@ -12,7 +12,7 @@ use log::debug;
 use scroll::Pread;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use tdx_attest_rs::{self, tdx_report_t};
+use tdx_attest_rs::tdx_report_t;
 
 mod report;
 

@@ -5,7 +5,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::vec::Vec;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct KeyProviderInput {

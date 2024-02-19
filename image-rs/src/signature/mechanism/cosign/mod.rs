@@ -175,12 +175,9 @@ impl CosignParameters {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::signature::{
-        mechanism::SignScheme,
-        policy::{policy_requirement::PolicyReqType, ref_match::PolicyReqMatchType},
+    use crate::signature::policy::{
+        policy_requirement::PolicyReqType, ref_match::PolicyReqMatchType,
     };
-
-    use std::convert::TryFrom;
 
     use oci_distribution::Reference;
     use rstest::rstest;

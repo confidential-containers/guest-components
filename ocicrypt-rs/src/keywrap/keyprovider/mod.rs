@@ -650,7 +650,6 @@ mod tests {
         };
         use std::net::SocketAddr;
         use tokio::sync::mpsc;
-        use tonic;
         use tonic::{transport::Server, Request};
 
         #[tonic::async_trait]
@@ -880,10 +879,6 @@ mod tests {
 
     #[cfg(feature = "keywrap-keyprovider-cmd")]
     mod cmd {
-        use super::super::{
-            KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput, KeyUnwrapResults,
-            KeyWrapResults,
-        };
         use super::*;
 
         impl crate::utils::CommandExecuter for TestRunner {

@@ -6,7 +6,6 @@
 use anyhow::{bail, Result};
 use oci_distribution::Reference;
 use serde::*;
-use std::convert::TryFrom;
 
 use crate::signature::{image, policy::ErrorInfo};
 
@@ -142,8 +141,6 @@ impl PolicyReqMatchType {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryFrom;
-
     use crate::signature::policy::ref_match::PolicyReqMatchType;
 
     #[test]

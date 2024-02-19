@@ -7,7 +7,6 @@ use futures_util::stream::{self, StreamExt, TryStreamExt};
 use oci_distribution::manifest::{OciDescriptor, OciImageManifest};
 use oci_distribution::{secrets::RegistryAuth, Client, Reference};
 use std::collections::BTreeMap;
-use std::convert::TryFrom;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -211,7 +210,6 @@ mod tests {
     use oci_distribution::manifest::IMAGE_CONFIG_MEDIA_TYPE;
     use oci_spec::image::{ImageConfiguration, MediaType};
     use std::io::Write;
-    use tempfile;
 
     use test_utils::{assert_result, assert_retry};
 

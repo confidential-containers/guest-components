@@ -124,7 +124,6 @@ mod tests {
     use std::fs::File;
     use std::io::BufReader;
     use tar::{Builder, Header};
-    use tempfile;
 
     #[tokio::test]
     async fn test_channel_processing() {

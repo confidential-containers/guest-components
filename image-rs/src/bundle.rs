@@ -218,7 +218,6 @@ pub fn create_runtime_config(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile;
 
     #[test]
     fn test_bundle_create_config() {

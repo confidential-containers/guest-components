@@ -9,7 +9,6 @@ pub mod payload;
 pub mod policy;
 
 use crate::{config::Paths, signature::policy::Policy};
-use std::convert::TryFrom;
 
 use anyhow::Result;
 use oci_distribution::secrets::RegistryAuth;

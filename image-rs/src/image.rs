@@ -10,7 +10,6 @@ use oci_distribution::Reference;
 use oci_spec::image::{ImageConfiguration, Os};
 use serde::Deserialize;
 use std::collections::{BTreeSet, HashMap};
-use std::convert::TryFrom;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 

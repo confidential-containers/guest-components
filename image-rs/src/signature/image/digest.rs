@@ -5,11 +5,9 @@
 
 use strum::{Display, EnumProperty, EnumString};
 
-use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt;
 use std::str::FromStr;
-use std::string::ToString;
 
 // Supported digest algorithm types
 #[derive(EnumString, Display, Debug, PartialEq, Eq, EnumProperty)]
