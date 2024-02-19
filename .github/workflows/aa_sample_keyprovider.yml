@@ -22,7 +22,6 @@ jobs:
       matrix:
         rust:
           - stable
-          - nightly
 
     steps:
       - name: Code checkout

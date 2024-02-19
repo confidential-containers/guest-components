@@ -27,7 +27,6 @@ jobs:
         rust:
           - 1.72.0
           - stable
-          - nightly
 
     # Run all steps in the compilation testing containers
     container:
