@@ -74,3 +74,29 @@ impl OfflineFsKbc {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use resource_uri::ResourceUri;
+    use rstest::rstest;
+
+    use crate::plugins::kbs::{offline_fs::OfflineFsKbc, Kbc};
+
+    #[rstest]
+    #[tokio::test]
+    #[case("default/key/1", b"key1")]
+    async fn test_get_key(#[case] key: &str, #[case] value: &[u8]) {
+        let mut kbc = OfflineFsKbc {
+            resources: [(key.to_string(), value.to_vec())]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+
+        let rid = ResourceUri::try_from(&format!("kbs:///{key}")[..]).unwrap();
+        assert_eq!(
+            kbc.get_resource(rid).await.expect("get key failed")[..],
+            *value
+        );
+    }
+}
