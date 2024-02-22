@@ -78,3 +78,16 @@ will try to read from the kata-agent file (**/etc/agent-config.toml** or **KATA_
 to looking for `aa_kbc_params`.
 
 Finally on the abscence of a configuration, CDH will be configured with the `offline_fs_kbc` Key Broker Client (KBC).
+### Client Tool
+
+A client tool to interact with CDH is provided. run the following to build
+```shell
+git clone https://github.com/confidential-containers/guest-components
+cd guest-components/confidential-data-hub/hub
+cargo build --bin cdh-tool --features bin
+```
+
+Install
+```shell
+install -D -m0755 ../../target/x86_64-unknown-linux-gnu/release/cdh-tool /usr/local/bin/cdh-tool
+```
