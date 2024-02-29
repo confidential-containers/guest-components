@@ -275,6 +275,8 @@ pub struct GetTokenRequest {
     // message fields
     // @@protoc_insertion_point(field:attestation_agent.GetTokenRequest.TokenType)
     pub TokenType: ::std::string::String,
+    // @@protoc_insertion_point(field:attestation_agent.GetTokenRequest.StructuredRuntimeData)
+    pub StructuredRuntimeData: ::std::option::Option<::std::string::String>,
     // special fields
     // @@protoc_insertion_point(special_field:attestation_agent.GetTokenRequest.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
@@ -292,12 +294,17 @@ impl GetTokenRequest {
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(1);
+        let mut fields = ::std::vec::Vec::with_capacity(2);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
         fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
             "TokenType",
             |m: &GetTokenRequest| { &m.TokenType },
             |m: &mut GetTokenRequest| { &mut m.TokenType },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_option_accessor::<_, _>(
+            "StructuredRuntimeData",
+            |m: &GetTokenRequest| { &m.StructuredRuntimeData },
+            |m: &mut GetTokenRequest| { &mut m.StructuredRuntimeData },
         ));
         ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<GetTokenRequest>(
             "GetTokenRequest",
@@ -320,6 +327,9 @@ impl ::protobuf::Message for GetTokenRequest {
                 10 => {
                     self.TokenType = is.read_string()?;
                 },
+                18 => {
+                    self.StructuredRuntimeData = ::std::option::Option::Some(is.read_string()?);
+                },
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
                 },
@@ -335,6 +345,9 @@ impl ::protobuf::Message for GetTokenRequest {
         if !self.TokenType.is_empty() {
             my_size += ::protobuf::rt::string_size(1, &self.TokenType);
         }
+        if let Some(v) = self.StructuredRuntimeData.as_ref() {
+            my_size += ::protobuf::rt::string_size(2, &v);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
         my_size
@@ -343,6 +356,9 @@ impl ::protobuf::Message for GetTokenRequest {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
         if !self.TokenType.is_empty() {
             os.write_string(1, &self.TokenType)?;
+        }
+        if let Some(v) = self.StructuredRuntimeData.as_ref() {
+            os.write_string(2, v)?;
         }
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -362,12 +378,14 @@ impl ::protobuf::Message for GetTokenRequest {
 
     fn clear(&mut self) {
         self.TokenType.clear();
+        self.StructuredRuntimeData = ::std::option::Option::None;
         self.special_fields.clear();
     }
 
     fn default_instance() -> &'static GetTokenRequest {
         static instance: GetTokenRequest = GetTokenRequest {
             TokenType: ::std::string::String::new(),
+            StructuredRuntimeData: ::std::option::Option::None,
             special_fields: ::protobuf::SpecialFields::new(),
         };
         &instance
@@ -517,12 +535,14 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x17attestation_agent.proto\x12\x11attestation_agent\"6\n\x12GetEviden\
     ceRequest\x12\x20\n\x0bRuntimeData\x18\x01\x20\x01(\x0cR\x0bRuntimeData\
     \"1\n\x13GetEvidenceResponse\x12\x1a\n\x08Evidence\x18\x01\x20\x01(\x0cR\
-    \x08Evidence\"/\n\x0fGetTokenRequest\x12\x1c\n\tTokenType\x18\x01\x20\
-    \x01(\tR\tTokenType\"(\n\x10GetTokenResponse\x12\x14\n\x05Token\x18\x01\
-    \x20\x01(\x0cR\x05Token2\xcc\x01\n\x17AttestationAgentService\x12\\\n\
-    \x0bGetEvidence\x12%.attestation_agent.GetEvidenceRequest\x1a&.attestati\
-    on_agent.GetEvidenceResponse\x12S\n\x08GetToken\x12\".attestation_agent.\
-    GetTokenRequest\x1a#.attestation_agent.GetTokenResponseb\x06proto3\
+    \x08Evidence\"\x84\x01\n\x0fGetTokenRequest\x12\x1c\n\tTokenType\x18\x01\
+    \x20\x01(\tR\tTokenType\x129\n\x15StructuredRuntimeData\x18\x02\x20\x01(\
+    \tH\0R\x15StructuredRuntimeData\x88\x01\x01B\x18\n\x16_StructuredRuntime\
+    Data\"(\n\x10GetTokenResponse\x12\x14\n\x05Token\x18\x01\x20\x01(\x0cR\
+    \x05Token2\xcc\x01\n\x17AttestationAgentService\x12\\\n\x0bGetEvidence\
+    \x12%.attestation_agent.GetEvidenceRequest\x1a&.attestation_agent.GetEvi\
+    denceResponse\x12S\n\x08GetToken\x12\".attestation_agent.GetTokenRequest\
+    \x1a#.attestation_agent.GetTokenResponseb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file

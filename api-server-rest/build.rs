@@ -12,7 +12,8 @@ use utoipa::OpenApi;
     get,
     path = "/aa/token",
     params(
-        ("token_type" = String, Query, description = "Token Type")
+        ("token_type" = String, Query, description = "Token Type"),
+        ("structured_runtime_data" = Option<String>, Query, description = "Structured data in JSON format, which will be hashed as runtime data")
     ),
     responses(
         (status = 200, description = "success response",

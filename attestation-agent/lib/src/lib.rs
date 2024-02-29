@@ -78,7 +78,11 @@ pub trait AttestationAPIs {
     ) -> Result<Vec<u8>>;
 
     /// Get attestation Token
-    async fn get_token(&mut self, token_type: &str) -> Result<Vec<u8>>;
+    async fn get_token(
+        &mut self,
+        token_type: &str,
+        structured_runtime_data: &str,
+    ) -> Result<Vec<u8>>;
 
     /// Get TEE hardware signed evidence that includes the runtime data.
     async fn get_evidence(&mut self, runtime_data: &[u8]) -> Result<Vec<u8>>;
@@ -190,7 +194,11 @@ impl AttestationAPIs for AttestationAgent {
     }
 
     #[allow(unreachable_code)]
-    async fn get_token(&mut self, _token_type: &str) -> Result<Vec<u8>> {
+    async fn get_token(
+        &mut self,
+        _token_type: &str,
+        _structured_runtime_data: &str,
+    ) -> Result<Vec<u8>> {
         let _uri = match self.config.as_ref() {
             Some(c) => c.as_uri.clone(),
             None => {
@@ -207,13 +215,13 @@ impl AttestationAPIs for AttestationAgent {
             #[cfg(feature = "kbs")]
             TokenType::Kbs => {
                 token::kbs::KbsTokenGetter::default()
-                    .get_token(_uri)
+                    .get_token(_uri, _structured_runtime_data)
                     .await?
             }
             #[cfg(feature = "coco_as")]
             TokenType::CoCoAS => {
                 token::coco_as::CoCoASTokenGetter::default()
-                    .get_token(_uri)
+                    .get_token(_uri, _structured_runtime_data)
                     .await?
             }
         };
