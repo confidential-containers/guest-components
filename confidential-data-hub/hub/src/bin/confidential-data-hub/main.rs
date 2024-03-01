@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{path::Path, sync::Arc};
+use std::{env, path::Path, sync::Arc};
 
 use anyhow::{anyhow, Context, Result};
 use api_ttrpc::{
@@ -38,8 +38,8 @@ struct Cli {
     /// Path to the config  file
     ///
     /// `--config /etc/confidential-data-hub.toml`
-    #[arg(default_value_t = DEFAULT_CONFIG_PATH.to_string(), short)]
-    config: String,
+    #[arg(short)]
+    config: Option<String>,
 }
 
 macro_rules! ttrpc_service {
@@ -50,13 +50,23 @@ macro_rules! ttrpc_service {
     }};
 }
 
+fn get_config_path(cli: Cli) -> String {
+    cli.config.unwrap_or_else(|| {
+        if let Ok(env_path) = env::var("CDH_CONFIG_PATH") {
+            return env_path;
+        }
+        DEFAULT_CONFIG_PATH.into()
+    })
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     let cli = Cli::parse();
+    let config_path = get_config_path(cli);
+    info!("Use configuration file {}", config_path);
 
-    info!("Use configuration file {}", cli.config);
-    let config = CdhConfig::init(&cli.config).await?;
+    let config = CdhConfig::init(&config_path).await?;
     config.set_configuration_envs();
 
     let unix_socket_path = config
@@ -123,4 +133,33 @@ async fn create_socket_parent_directory(unix_socket_file: &str) -> Result<()> {
         .ok_or(anyhow!("The file path does not have a parent directory."))?;
     fs::create_dir_all(parent_directory).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_config_path() {
+        // --config takes precedence,
+        // then env.CDH_CONFIG_PATH,
+        // then DEFAULT_CONFIG_PATH.
+
+        let cli = Cli { config: None };
+        assert_eq!(get_config_path(cli), DEFAULT_CONFIG_PATH);
+
+        let cli = Cli {
+            config: Some("/thing".into()),
+        };
+        assert_eq!(get_config_path(cli), "/thing");
+
+        env::set_var("CDH_CONFIG_PATH", "/byenv");
+        let cli = Cli { config: None };
+        assert_eq!(get_config_path(cli), "/byenv");
+
+        let cli = Cli {
+            config: Some("/thing".into()),
+        };
+        assert_eq!(get_config_path(cli), "/thing");
+    }
 }
