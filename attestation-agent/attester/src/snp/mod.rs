@@ -4,6 +4,7 @@
 //
 
 use crate::utils::pad;
+use crate::InitdataResult;
 
 use super::Attester;
 use anyhow::*;
@@ -52,13 +53,13 @@ impl Attester for SnpAttester {
         serde_json::to_string(&evidence).context("Serialize SNP evidence failed")
     }
 
-    async fn check_init_data(&self, init_data: &[u8]) -> Result<()> {
+    async fn check_init_data(&self, init_data: &[u8]) -> Result<InitdataResult> {
         let hostdata = hostdata::get_snp_host_data().context("Get HOSTDATA failed")?;
         let init_data: [u8; 32] = pad(init_data);
         if init_data != hostdata {
             bail!("HOSTDATA does not match.");
         }
 
-        Ok(())
+        Ok(InitdataResult::Ok)
     }
 }

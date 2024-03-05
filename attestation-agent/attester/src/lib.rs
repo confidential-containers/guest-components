@@ -62,6 +62,11 @@ impl TryFrom<Tee> for BoxedAttester {
     }
 }
 
+pub enum InitdataResult {
+    Ok,
+    Unsupported,
+}
+
 #[async_trait::async_trait]
 pub trait Attester {
     /// Call the hardware driver to get the Hardware specific evidence.
@@ -79,8 +84,8 @@ pub trait Attester {
         bail!("Unimplemented")
     }
 
-    async fn check_init_data(&self, _init_data: &[u8]) -> Result<()> {
-        bail!("Unimplemented");
+    async fn check_init_data(&self, _init_data: &[u8]) -> Result<InitdataResult> {
+        Ok(InitdataResult::Unsupported)
     }
 }
 

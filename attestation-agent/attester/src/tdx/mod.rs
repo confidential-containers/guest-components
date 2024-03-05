@@ -6,6 +6,7 @@
 use super::tsm_report::*;
 use super::Attester;
 use crate::utils::pad;
+use crate::InitdataResult;
 use anyhow::*;
 use base64::Engine;
 use log::debug;
@@ -114,7 +115,7 @@ impl Attester for TdxAttester {
         Ok(())
     }
 
-    async fn check_init_data(&self, init_data: &[u8]) -> Result<()> {
+    async fn check_init_data(&self, init_data: &[u8]) -> Result<InitdataResult> {
         let mut report = tdx_report_t { d: [0; 1024] };
         match tdx_attest_rs::tdx_att_get_report(None, &mut report) {
             tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
@@ -138,7 +139,7 @@ impl Attester for TdxAttester {
             bail!("Init data does not match!");
         }
 
-        Ok(())
+        Ok(InitdataResult::Ok)
     }
 }
 

@@ -9,6 +9,8 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use attester::{detect_tee_type, BoxedAttester};
 
+pub use attester::InitdataResult;
+
 pub mod config;
 mod token;
 
@@ -61,7 +63,7 @@ pub trait AttestationAPIs {
     ) -> Result<()>;
 
     /// Check the initdata binding
-    async fn check_init_data(&mut self, init_data: &[u8]) -> Result<()>;
+    async fn check_init_data(&mut self, init_data: &[u8]) -> Result<InitdataResult>;
 }
 
 /// Attestation agent to provide attestation service.
@@ -133,11 +135,10 @@ impl AttestationAPIs for AttestationAgent {
     }
 
     /// Check the initdata binding. If current platform does not support initdata
-    /// injection, return a success and raise a warning log.
-    async fn check_init_data(&mut self, init_data: &[u8]) -> Result<()> {
+    /// injection, return `InitdataResult::Unsupported`.
+    async fn check_init_data(&mut self, init_data: &[u8]) -> Result<InitdataResult> {
         let tee_type = detect_tee_type();
         let attester = TryInto::<BoxedAttester>::try_into(tee_type)?;
-        attester.check_init_data(init_data).await?;
-        Ok(())
+        attester.check_init_data(init_data).await
     }
 }
