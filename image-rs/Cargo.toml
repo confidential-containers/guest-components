@@ -39,7 +39,7 @@ serde = { workspace = true, features = ["serde_derive", "rc"] }
 serde_json.workspace = true
 serde_yaml = { version = "0.9", optional = true }
 sha2.workspace = true
-sigstore = { version = "0.8.0", default-features = false, optional = true, features = ["tuf"] }
+sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "d5ba303", default-features = false, optional = true }
 strum.workspace = true
 strum_macros = "0.25"
 tar = "0.4.37"
