@@ -47,6 +47,16 @@ fn get_quote_ioctl(report_data: &Vec<u8>) -> Result<Vec<u8>> {
     }
 }
 
+// Return true if the TD environment can extend runtime measurement,
+// else false.
+fn runtime_measurement_extend_available() -> bool {
+    if Path::new("/dev/tdx_guest").exists() || Path::new("/sys/kernel/config/tsm/report").exists() {
+        return false;
+    }
+
+    true
+}
+
 #[derive(Serialize, Deserialize)]
 struct TdxEvidence {
     // Base64 encoded CC Eventlog ACPI table
@@ -101,6 +111,10 @@ impl Attester for TdxAttester {
         events: Vec<Vec<u8>>,
         _register_index: Option<u64>,
     ) -> Result<()> {
+        if !runtime_measurement_extend_available() {
+            bail!("TDX Attester: Cannot extend runtime measurement on this system");
+        }
+
         for event in events {
             let mut event_buffer = [0u8; mem::size_of::<tdx_attest_rs::tdx_rtmr_event_t>()];
             let mut hasher = Sha384::new();
