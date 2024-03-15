@@ -54,7 +54,7 @@ jobs:
 
       - name: Musl build
         run: |
-          make LIBC=musl RESOURCE_PROVIDER=kbs,sev
+          make LIBC=musl
 
       - name: s390x build
         run:
