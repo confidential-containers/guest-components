@@ -52,7 +52,7 @@ endif
 # TODO: Add support for CCA and CSV
 
 ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
-  echo "s390x/powerpc64le only supports gnu."
+  $(info s390x/powerpc64le only supports gnu)
   LIBC = gnu
 endif
 
