@@ -65,13 +65,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libdevmapper-dev
 
-      - name: Build and install with default features
+      - name: Gnu build and install with ttrpc
         run: |
-          make && make install
+          make ttrpc=true && make install
 
-      - name: Musl build with none platform
+      - name: Musl build with all platform
         run: |
-          make LIBC=musl ATTESTER=none
+          make LIBC=musl ttrpc=true ATTESTER=none
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
