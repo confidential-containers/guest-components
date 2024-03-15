@@ -20,7 +20,6 @@ ifeq ($(TEE_PLATFORM), none)
 else ifeq ($(TEE_PLATFORM), fs)
   ATTESTER = none
 else ifeq ($(TEE_PLATFORM), tdx)
-  LIBC = gnu
   ATTESTER = tdx-attester
 else ifeq ($(TEE_PLATFORM), az-tdx-vtpm)
   ATTESTER = az-tdx-vtpm-attester
@@ -36,7 +35,6 @@ else ifeq ($(TEE_PLATFORM), snp)
 else ifeq ($(TEE_PLATFORM), az-snp-vtpm)
   ATTESTER = az-snp-vtpm-attester
 else ifeq ($(TEE_PLATFORM), all)
-  LIBC = gnu
   ATTESTER = all-attesters
   ifeq ($(NO_RESOURCE_PROVIDER), true)
     RESOURCE_PROVIDER :=
@@ -44,7 +42,6 @@ else ifeq ($(TEE_PLATFORM), all)
     RESOURCE_PROVIDER = sev,kbs
   endif
 else ifeq ($(TEE_PLATFORM), amd)
-  LIBC = gnu
   ATTESTER = snp-attester
   ifeq ($(NO_RESOURCE_PROVIDER), true)
     RESOURCE_PROVIDER :=
@@ -55,6 +52,7 @@ endif
 # TODO: Add support for CCA and CSV
 
 ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
+  echo "s390x/powerpc64le only supports gnu."
   LIBC = gnu
 endif
 
