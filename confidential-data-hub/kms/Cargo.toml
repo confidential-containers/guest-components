@@ -22,6 +22,7 @@ log.workspace = true
 openssl = { workspace = true, optional = true }
 p12 = { version = "0.6.3", optional = true }
 prost = { workspace = true, optional = true }
+protobuf.workspace = true
 rand = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true }
 resource_uri = { path = "../../attestation-agent/deps/resource_uri" }
@@ -34,6 +35,7 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 toml.workspace = true
 tonic = { workspace = true, optional = true }
+ttrpc.workspace = true
 url = { workspace = true, optional = true }
 uuid = { workspace = true, features = ["serde", "v4"], optional = true }
 yasna = { version = "0.5.2", optional = true }
@@ -46,11 +48,13 @@ tokio = { workspace = true, features = ["rt", "macros" ] }
 [build-dependencies]
 anyhow.workspace = true
 tonic-build.workspace = true
+ttrpc-codegen.workspace = true
 
 [features]
-default = ["aliyun", "kbs", "ehsm"]
+default = ["aliyun", "resource_kbs", "ehsm"]
 
 aliyun = ["chrono", "hex", "openssl", "p12", "prost", "rand", "reqwest/rustls-tls", "sha2", "tonic", "url", "yasna"]
 kbs = ["kbs_protocol"]
+resource_kbs = ["kbs_protocol"]
 ehsm = ["ehsm_client"]
 sev = ["bincode", "crypto", "dep:sev", "prost", "tonic", "uuid", "zeroize"]

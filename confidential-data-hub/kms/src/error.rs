@@ -14,6 +14,13 @@ pub enum Error {
     #[error("Aliyun KMS error: {0}")]
     AliyunKmsError(String),
 
+    #[error("Attestation Agent client error: {0}")]
+    AAClientError(String),
+
+    #[cfg(feature = "resource_kbs")]
+    #[error("Resource KBS client error: {0}")]
+    ResourceKbsClientError(String),
+
     #[error("Kbs client error: {0}")]
     KbsClientError(String),
 

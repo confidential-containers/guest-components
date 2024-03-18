@@ -24,6 +24,7 @@ default = []
 
 # legacy AnnotationPacket format, s.t. legacy encrypted image format relies on `kbs` feature
 kbs = ["kms/kbs"]
+resource_kbs = ["kms/resource_kbs"]
 aliyun = ["kms/aliyun"]
 sev = ["kms/sev"]
 ehsm = ["kms/ehsm"]
