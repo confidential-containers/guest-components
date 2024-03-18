@@ -63,7 +63,7 @@ ttrpc-codegen = { workspace = true, optional = true }
 cfg-if.workspace = true
 filetime = "0.2"
 nix = "0.26"
-openssl.workspace = true
+ring.workspace = true
 rstest.workspace = true
 serial_test = "2.0.0"
 strum.workspace = true

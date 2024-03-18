@@ -120,7 +120,7 @@ async fn channel_processing(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use openssl::rand::rand_bytes;
+    use ring::rand::SecureRandom;
     use std::fs::File;
     use std::io::BufReader;
     use tar::{Builder, Header};
@@ -128,7 +128,7 @@ mod tests {
     #[tokio::test]
     async fn test_channel_processing() {
         let mut data = [0; 100000];
-        rand_bytes(&mut data).unwrap();
+        ring::rand::SystemRandom::new().fill(&mut data[..]).unwrap();
         let data_digest = sha2::Sha256::digest(data.as_slice());
 
         let mut ar = Builder::new(Vec::new());
@@ -169,7 +169,7 @@ mod tests {
     #[tokio::test]
     async fn test_stream_processing() {
         let mut data = [0; 100000];
-        rand_bytes(&mut data).unwrap();
+        ring::rand::SystemRandom::new().fill(&mut data[..]).unwrap();
 
         let mut ar = Builder::new(Vec::new());
         let mut header = Header::new_gnu();
