@@ -39,7 +39,7 @@ ttrpc-codegen = { workspace = true, optional = true }
 rstest.workspace = true
 
 [features]
-default = ["kbs"]
+default = ["kbs", "bin"]
 
 # support aliyun stacks (KMS, ..)
 aliyun = ["image/aliyun", "secret/aliyun"]
@@ -53,4 +53,4 @@ sev = ["attestation-agent", "image/sev", "kms/sev", "dep:sev", "secret/sev"]
 # support eHSM stacks (KMS, ...)
 ehsm = ["image/ehsm", "secret/ehsm"]
 
-bin = ["anyhow", "clap", "config", "env_logger", "protobuf", "serde", "tokio/signal", "ttrpc", "ttrpc-codegen"]
+bin = ["anyhow", "attestation-agent", "clap", "config", "env_logger", "protobuf", "serde", "tokio/signal", "ttrpc", "ttrpc-codegen"]
