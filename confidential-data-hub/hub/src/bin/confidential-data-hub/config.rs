@@ -7,7 +7,7 @@ use std::env;
 
 use anyhow::*;
 use config::{Config, File};
-use log::warn;
+use log::{debug, warn};
 use serde::Deserialize;
 use tokio::fs;
 
@@ -120,11 +120,15 @@ impl CdhConfig {
 
 impl CdhConfig {
     pub fn set_configuration_envs(&self) {
-        // KBS configurations
-        env::set_var(
-            "AA_KBC_PARAMS",
-            format!("{}::{}", self.kbc.name, self.kbc.url),
-        );
+        if let Err(_) = attestation_agent::config::aa_kbc_params::get_value() {
+            debug!("No aa_kbc_params provided in kernel cmdline, env and peerpod config.");
+            // KBS configurations
+            env::set_var(
+                "AA_KBC_PARAMS",
+                format!("{}::{}", self.kbc.name, self.kbc.url),
+            );
+        }
+
         if let Some(kbs_cert) = &self.kbc.kbs_cert {
             env::set_var("KBS_CERT", kbs_cert);
         }
