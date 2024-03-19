@@ -120,7 +120,7 @@ impl CdhConfig {
 
 impl CdhConfig {
     pub fn set_configuration_envs(&self) {
-        if let Err(_) = attestation_agent::config::aa_kbc_params::get_value() {
+        if attestation_agent::config::aa_kbc_params::get_value().is_err() {
             debug!("No aa_kbc_params provided in kernel cmdline, env and peerpod config.");
             // KBS configurations
             env::set_var(
