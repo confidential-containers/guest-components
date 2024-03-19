@@ -33,7 +33,7 @@ enum RealClient {
 
 impl RealClient {
     async fn new() -> Result<Self> {
-        let params = aa_kbc_params::get_params().await?;
+        let params = aa_kbc_params::get_params()?;
 
         let c = match params.kbc() {
             #[cfg(feature = "kbs")]

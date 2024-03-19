@@ -93,9 +93,8 @@ impl AttestationAPIs for AttestationAgent {
         let _uri = match self.config.as_ref() {
             Some(c) => c.as_uri.clone(),
             None => {
-                let params = aa_kbc_params::get_params()
-                    .await
-                    .map_err(|_| anyhow!("Get AS URI failed"))?;
+                let params =
+                    aa_kbc_params::get_params().map_err(|_| anyhow!("Get AS URI failed"))?;
                 params.uri().to_string()
             }
         };

@@ -4,7 +4,6 @@ use std::env;
 use std::path::Path;
 use std::sync::OnceLock;
 use thiserror::Error;
-use tokio::fs;
 
 const PEER_POD_CONFIG_PATH: &str = "/run/peerpod/daemon.json";
 static KATA_AGENT_CONFIG_PATH: OnceLock<String> = OnceLock::new();
@@ -55,7 +54,7 @@ impl TryFrom<String> for AaKbcParams {
     }
 }
 
-async fn get_value() -> Result<String, ParamError> {
+pub fn get_value() -> Result<String, ParamError> {
     // first check env
     if let Ok(params) = env::var("AA_KBC_PARAMS") {
         debug!("get aa_kbc_params from env.");
@@ -64,15 +63,15 @@ async fn get_value() -> Result<String, ParamError> {
 
     // second check whether we are in a peer pod
     if Path::new(PEER_POD_CONFIG_PATH).exists() {
-        return from_config_file().await;
+        return from_config_file();
     }
 
     // finally use the kernel cmdline
-    from_cmdline().await
+    from_cmdline()
 }
 
-pub async fn get_params() -> Result<AaKbcParams, ParamError> {
-    let value = get_value().await?;
+pub fn get_params() -> Result<AaKbcParams, ParamError> {
+    let value = get_value()?;
     value.try_into()
 }
 
@@ -82,7 +81,7 @@ struct AgentConfig {
     aa_kbc_params: String,
 }
 
-async fn from_config_file() -> Result<String, ParamError> {
+fn from_config_file() -> Result<String, ParamError> {
     debug!("get aa_kbc_params from file");
 
     // check env for KATA_AGENT_CONFIG_PATH, fall back to default path
@@ -98,9 +97,9 @@ async fn from_config_file() -> Result<String, ParamError> {
     Ok(agent_config.aa_kbc_params)
 }
 
-async fn from_cmdline() -> Result<String, ParamError> {
+fn from_cmdline() -> Result<String, ParamError> {
     debug!("get aa_kbc_params from kernel cmdline");
-    let cmdline = fs::read_to_string("/proc/cmdline").await?;
+    let cmdline = std::fs::read_to_string("/proc/cmdline")?;
     let value = cmdline
         .split_ascii_whitespace()
         .find(|para| para.starts_with("agent.aa_kbc_params="))
