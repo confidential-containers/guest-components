@@ -3596,7 +3596,7 @@ dependencies = [
 [[package]]
 name = "occlum_dcap"
 version = "0.1.0"
-source = "git+https://github.com/occlum/occlum?tag=v0.29.7#b5a32a8d8a81de2458c2b0d06b07ddce6fd10a44"
+source = "git+https://github.com/occlum/occlum?tag=v0.30.1#6eaad6994148bc50ef403755f58189ce0270a829"
 dependencies = [
  "cfg-if",
  "libc",
@@ -5359,8 +5359,8 @@ dependencies = [
 
 [[package]]
 name = "sgx_types"
-version = "1.1.5"
-source = "git+https://github.com/occlum/occlum?tag=v0.29.7#b5a32a8d8a81de2458c2b0d06b07ddce6fd10a44"
+version = "1.1.6"
+source = "git+https://github.com/occlum/occlum?tag=v0.30.1#6eaad6994148bc50ef403755f58189ce0270a829"
 
 [[package]]
 name = "sha1"
