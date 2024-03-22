@@ -962,6 +962,7 @@ dependencies = [
  "serde_json",
  "sev 0.1.0",
  "storage",
+ "tempfile",
  "thiserror",
  "tokio",
  "ttrpc",
