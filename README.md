@@ -18,6 +18,9 @@ Rust implementation of the OCI image encryption library.
 [api-server-rest](api-server-rest)
 CoCo Restful API server.
 
+[confidential-data-hub](confidential-data-hub)
+Confidential Data Hub.
+
 [coco-keyprovider](attestation-agent/coco_keyprovider/)
 CoCo Keyprovider. Used to encrypt the container images.
 
