@@ -28,7 +28,9 @@ pub fn detect_platform() -> bool {
 }
 
 fn tdx_getquote_ioctl_is_available() -> bool {
-    Path::new("/dev/tdx-attest").exists() || Path::new("/dev/tdx-guest").exists()
+    Path::new("/dev/tdx-attest").exists()
+        || Path::new("/dev/tdx-guest").exists()
+        || Path::new("/dev/tdx_guest").exists()
 }
 
 fn get_quote_ioctl(report_data: &Vec<u8>) -> Result<Vec<u8>> {
