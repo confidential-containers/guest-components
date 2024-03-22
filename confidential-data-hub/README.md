@@ -65,3 +65,16 @@ confidential-data-hub -c <path-to-config>
 ```
 
 Please see the [example config file](./example.config.toml) for more details.
+
+However, if a file isn't passed with **-c** then it will search for configurations on the
+following locations (in order):
+
+* **/etc/confidential-data-hub.toml**
+* **AA_KBC_PARAMS** environment variable
+* **agent.aa_kbc_params** parameter from the Kernel command-line (`/proc/cmdline`)
+
+There is a special case which is when running from [peer pods](https://github.com/confidential-containers/cloud-api-adaptor). It
+will try to read from the kata-agent file (**/etc/agent-config.toml** or **KATA_AGENT_CONFIG_PATH** environment variable) prior
+to looking for `aa_kbc_params`.
+
+Finally on the abscence of a configuration, CDH will be configured with the `offline_fs_kbc` Key Broker Client (KBC).
