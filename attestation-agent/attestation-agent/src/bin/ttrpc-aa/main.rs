@@ -37,6 +37,7 @@ struct Cli {
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     let cli = Cli::parse();
 
     if !Path::new(DEFAULT_UNIX_SOCKET_DIR).exists() {
