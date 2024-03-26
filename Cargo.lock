@@ -267,6 +267,7 @@ dependencies = [
  "base64 0.21.7",
  "clap 4.2.7",
  "const_format",
+ "env_logger 0.10.2",
  "kbs_protocol",
  "log",
  "prost 0.11.9",
