@@ -140,7 +140,9 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         });
         let runtime_data =
             serde_json::to_string(&runtime_data).context("serialize runtime data failed")?;
-        let evidence = self.generate_evidence(runtime_data).await?;
+        let evidence = self
+            .generate_evidence(runtime_data, challenge.extra_params)
+            .await?;
         debug!("get evidence with challenge: {evidence}");
 
         let attest_endpoint = format!("{}/{KBS_PREFIX}/attest", self.kbs_host_url);
@@ -179,11 +181,19 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         Ok(())
     }
 
-    async fn generate_evidence(&self, runtime_data: String) -> Result<String> {
+    async fn generate_evidence(
+        &self,
+        runtime_data: String,
+        challenge_extra_params: String,
+    ) -> Result<String> {
         let mut hasher = Sha384::new();
         hasher.update(runtime_data);
 
-        let ehd = hasher.finalize().to_vec();
+        let mut ehd = hasher.finalize().to_vec();
+        // IBM SE uses challenge_extra_params as runtime_data to pass attestation_request
+        if challenge_extra_params.chars().count() > 0 {
+            ehd = challenge_extra_params.into_bytes();
+        }
 
         let tee_evidence = self
             .provider
@@ -308,7 +318,9 @@ mod test {
         policy.push("test/policy.rego");
 
         let image = GenericImage::new(
-            "ghcr.io/confidential-containers/staged-images/kbs",
+            //"ghcr.io/confidential-containers/staged-images/kbs",
+            // TODO, rollback it and use a kbs with se tee implemented
+            "ibmhuoqif/kbs",
             "latest",
         )
         .with_exposed_port(8085)

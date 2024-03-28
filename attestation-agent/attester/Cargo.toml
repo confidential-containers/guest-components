@@ -51,6 +51,7 @@ all-attesters = [
     "snp-attester",
     "csv-attester",
     "cca-attester",
+    "se-attester",
 ]
 
 # tsm-report enables a module that helps attesters to use Linux TSM_REPORTS for generating
@@ -64,5 +65,6 @@ az-tdx-vtpm-attester = ["az-tdx-vtpm"]
 snp-attester = ["sev"]
 csv-attester = ["csv-rs", "codicon", "hyper", "hyper-tls", "tokio"]
 cca-attester = ["nix"]
+se-attester  = []
 
 bin = ["tokio/rt", "tokio/macros", "all-attesters"]
