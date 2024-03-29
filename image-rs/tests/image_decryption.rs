@@ -71,13 +71,13 @@ async fn test_decrypt_layers(#[case] image: &str) {
     let mut image_client = ImageClient::new(work_dir.path().to_path_buf());
     if cfg!(feature = "snapshot-overlayfs") {
         image_client
-            .pull_image(image, bundle_dir.path(), &None, &Some(common::AA_PARAMETER))
+            .pull_image(image, bundle_dir.path(), &None, &None)
             .await
             .expect("failed to download image");
         common::umount_bundle(&bundle_dir);
     } else {
         image_client
-            .pull_image(image, bundle_dir.path(), &None, &Some(common::AA_PARAMETER))
+            .pull_image(image, bundle_dir.path(), &None, &None)
             .await
             .unwrap_err();
     }

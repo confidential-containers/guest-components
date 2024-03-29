@@ -16,7 +16,7 @@ const SIGNATURE_SCRIPT: &str = "scripts/install_test_signatures.sh";
 const OFFLINE_FS_KBC_RESOURCE_SCRIPT: &str = "scripts/install_offline_fs_kbc_files.sh";
 
 /// Attestation Agent Key Provider Parameter
-pub const AA_PARAMETER: &str = "provider:attestation-agent:offline_fs_kbc::null";
+pub const AA_PARAMETER: &str = "offline_fs_kbc::null";
 
 /// Attestation Agent Offline Filesystem KBC resources file for general tests that use images stored in the quay.io registry
 pub const OFFLINE_FS_KBC_RESOURCES_FILE: &str = "aa-offline_fs_kbc-resources.json";
@@ -97,6 +97,7 @@ pub async fn start_confidential_data_hub() -> Result<Child> {
     cfg_if::cfg_if! {
         if #[cfg(feature = "keywrap-ttrpc")] {
             let mut cdh = Command::new(cdh_path)
+            .env("AA_KBC_PARAM", AA_PARAMETER)
             .kill_on_drop(true)
             .spawn()
             .expect("Failed to start confidential-data-hub");
