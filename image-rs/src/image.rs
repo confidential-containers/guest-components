@@ -199,7 +199,7 @@ impl ImageClient {
         };
 
         // If one of self.config.auth and self.config.security_validate is enabled,
-        // there will establish a secure channel between image-rs and Attestation-Agent
+        // there will establish a secure channel
         #[cfg(feature = "getresource")]
         if self.config.auth || self.config.security_validate {
             // Both we need a [`IMAGE_SECURITY_CONFIG_DIR`] dir
@@ -211,18 +211,8 @@ impl ImageClient {
                     })?;
             }
 
-            if let Some(wrapped_aa_kbc_params) = decrypt_config {
-                let wrapped_aa_kbc_params = wrapped_aa_kbc_params.to_string();
-                let aa_kbc_params =
-                    wrapped_aa_kbc_params.trim_start_matches("provider:attestation-agent:");
-
-                // The secure channel to communicate with KBS.
-                // This step will initialize the secure channel
-                let mut channel = crate::resource::SECURE_CHANNEL.lock().await;
-                *channel = Some(crate::resource::kbs::SecureChannel::new(aa_kbc_params).await?);
-            } else {
-                bail!("Secure channel creation needs aa_kbc_params.");
-            }
+            let mut channel = crate::resource::SECURE_CHANNEL.lock().await;
+            *channel = Some(crate::resource::kbs::SecureChannel::new(decrypt_config).await?);
         };
 
         // If no valid auth is given and config.auth is enabled, try to load

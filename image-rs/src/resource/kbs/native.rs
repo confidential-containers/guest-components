@@ -22,7 +22,13 @@ pub struct Native {
 }
 
 impl Native {
-    pub fn new(aa_kbc_params: &str) -> Result<Self> {
+    pub fn new(decrypt_config: &Option<&str>) -> Result<Self> {
+        let Some(wrapped_aa_kbc_params) = decrypt_config else {
+            bail!("Secure channel creation needs aa_kbc_params.");
+        };
+
+        let aa_kbc_params = wrapped_aa_kbc_params.trim_start_matches("provider:attestation-agent:");
+
         let Some((kbc_name, kbs_uri)) = aa_kbc_params.split_once("::") else {
             bail!("illegal aa_kbc_params : {aa_kbc_params}");
         };

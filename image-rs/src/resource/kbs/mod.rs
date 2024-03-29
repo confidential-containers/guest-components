@@ -59,8 +59,9 @@ trait Client: Send + Sync {
 
 impl SecureChannel {
     /// Create a new [`SecureChannel`], the input parameter:
-    /// * `aa_kbc_params`: s string with format `<kbc_name>::<kbs_uri>`.
-    pub async fn new(_aa_kbc_params: &str) -> Result<Self> {
+    /// * `decrypt_config`: s string with format `provider:attestation-agent:<kbc_name>::<kbs_uri>`.
+    /// This parameter is only used when in native secure channel (for enclave-cc)
+    pub async fn new(_decrypt_config: &Option<&str>) -> Result<Self> {
         let client: Box<dyn Client> = {
             cfg_if::cfg_if! {
                 if #[cfg(feature = "keywrap-ttrpc")] {
@@ -68,7 +69,7 @@ impl SecureChannel {
                     Box::new(ttrpc::Ttrpc::new().context("ttrpc client init failed")?)
                 } else if #[cfg(feature = "keywrap-native")] {
                     info!("secure channel uses native-aa");
-                    Box::new(native::Native::new(_aa_kbc_params)?)
+                    Box::new(native::Native::new(_decrypt_config)?)
                 } else if #[cfg(feature = "keywrap-grpc")] {
                     info!("secure channel uses gRPC");
                     Box::new(grpc::Grpc::new().await.context("grpc client init failed")?)
