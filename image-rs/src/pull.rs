@@ -18,8 +18,6 @@ use crate::image::LayerMeta;
 use crate::meta_store::MetaStore;
 use crate::stream::stream_processing;
 
-const ERR_NO_DECRYPT_CFG: &str = "decrypt_config is None";
-
 /// The PullClient connects to remote OCI registry, pulls the container image,
 /// and save the image layers under data_dir and return the layer meta info.
 pub struct PullClient<'a> {
@@ -145,25 +143,21 @@ impl<'a> PullClient<'a> {
 
         let decryptor = Decryptor::from_media_type(&layer.media_type);
         if decryptor.is_encrypted() {
-            if let Some(dc) = decrypt_config {
-                let decrypt_key = decryptor
-                    .get_decrypt_key(&layer, dc)
-                    .map_err(|e| anyhow!("failed to get decrypt key {}", e.to_string()))?;
-                let plaintext_layer = decryptor
-                    .async_get_plaintext_layer(layer_reader, &layer, &decrypt_key)
-                    .map_err(|e| anyhow!("failed to async_get_plaintext_layer: {:?}", e))?;
-                layer_meta.uncompressed_digest = self
-                    .async_decompress_unpack_layer(
-                        plaintext_layer,
-                        &diff_id,
-                        &decryptor.media_type,
-                        &destination,
-                    )
-                    .await?;
-                layer_meta.encrypted = true;
-            } else {
-                bail!(ERR_NO_DECRYPT_CFG);
-            }
+            let decrypt_key = decryptor
+                .get_decrypt_key(&layer, decrypt_config)
+                .map_err(|e| anyhow!("failed to get decrypt key {}", e.to_string()))?;
+            let plaintext_layer = decryptor
+                .async_get_plaintext_layer(layer_reader, &layer, &decrypt_key)
+                .map_err(|e| anyhow!("failed to async_get_plaintext_layer: {:?}", e))?;
+            layer_meta.uncompressed_digest = self
+                .async_decompress_unpack_layer(
+                    plaintext_layer,
+                    &diff_id,
+                    &decryptor.media_type,
+                    &destination,
+                )
+                .await?;
+            layer_meta.encrypted = true;
         } else {
             layer_meta.uncompressed_digest = self
                 .async_decompress_unpack_layer(

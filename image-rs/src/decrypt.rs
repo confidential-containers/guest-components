@@ -93,16 +93,18 @@ mod encryption {
         pub fn get_decrypt_key(
             &self,
             descriptor: &OciDescriptor,
-            decrypt_config: &str,
+            decrypt_config: &Option<&str>,
         ) -> Result<Vec<u8>> {
             if !self.is_encrypted() {
                 bail!("unencrypted media type: {}", self.media_type);
             }
-            if decrypt_config.is_empty() {
-                bail!("decrypt_config is empty");
-            }
 
-            let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
+            let keys = match decrypt_config {
+                Some(decrypt_config) => vec![decrypt_config.to_string()],
+                None => Vec::new(),
+            };
+
+            let cc = create_decrypt_config(keys, vec![])?;
             if let Some(decrypt_config) = cc.decrypt_config {
                 decrypt_layer_key_opts_data(&decrypt_config, descriptor.annotations.as_ref())
             } else {
@@ -359,7 +361,7 @@ impl Decryptor {
     pub fn get_decrypt_key(
         &self,
         _descriptor: &OciDescriptor,
-        _decrypt_config: &str,
+        _decrypt_config: &Option<&str>,
     ) -> Result<Vec<u8>> {
         bail!(
             "no support of encryption, can't handle '{}'",
