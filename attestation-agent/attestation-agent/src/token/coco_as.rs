@@ -25,8 +25,9 @@ impl GetToken for CoCoASTokenGetter {
         });
 
         let client = reqwest::Client::new();
+        let attest_endpoint = format!("{}/attestation", as_uri);
         let res = client
-            .post(as_uri)
+            .post(attest_endpoint)
             .header("Content-Type", "application/json")
             .json(&request_body)
             .send()
