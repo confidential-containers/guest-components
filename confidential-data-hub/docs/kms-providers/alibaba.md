@@ -121,7 +121,7 @@ CLIENT_KEY_FILE_PATH=$(pwd)/ClientKeyContent.json
 
 git clone https://github.com/confidential-containers/guest-components.git && cd guest-components
 
-cargo build --bin secret_cli --release
+cargo build --bin secret_cli --release --features "aliyun"
 
 target/release/secret_cli seal --file-path ../plaintext \
     envelope --key-id $KEY_ID ali \
