@@ -11,6 +11,9 @@ use super::aa_kbc_params;
 pub struct KbsConfig {
     /// URL Address of KBS.
     pub url: String,
+
+    /// Cert of KBS
+    pub cert: Option<String>,
 }
 
 impl Default for KbsConfig {
@@ -18,6 +21,7 @@ impl Default for KbsConfig {
         let aa_kbc_params = aa_kbc_params::get_params().expect("failed to get aa_kbc_params");
         Self {
             url: aa_kbc_params.uri().into(),
+            cert: None,
         }
     }
 }
