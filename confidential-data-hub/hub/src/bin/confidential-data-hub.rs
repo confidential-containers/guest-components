@@ -31,8 +31,10 @@ const DEFAULT_CONFIG_PATH: &str = "/etc/confidential-data-hub.toml";
 
 const UNIX_SOCKET_PREFIX: &str = "unix://";
 
+const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
+
 #[derive(Debug, Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version = Some(VERSION))]
 struct Cli {
     /// Path to the config  file
     ///
