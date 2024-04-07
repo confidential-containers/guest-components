@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use crate::config::kbs::KbsConfig;
+
 use super::GetToken;
 use anyhow::*;
 use async_trait::async_trait;
@@ -16,15 +18,18 @@ struct Message {
 }
 
 #[derive(Default)]
-pub struct KbsTokenGetter {}
+pub struct KbsTokenGetter {
+    kbs_host_url: String,
+}
 
 #[async_trait]
 impl GetToken for KbsTokenGetter {
-    async fn get_token(&self, kbs_host_url: String) -> Result<Vec<u8>> {
+    async fn get_token(&self) -> Result<Vec<u8>> {
         let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
 
         let mut client =
-            KbsClientBuilder::with_evidence_provider(evidence_provider, &kbs_host_url).build()?;
+            KbsClientBuilder::with_evidence_provider(evidence_provider, &self.kbs_host_url)
+                .build()?;
 
         let (token, tee_keypair) = client.get_token().await?;
         let message = Message {
@@ -34,5 +39,13 @@ impl GetToken for KbsTokenGetter {
 
         let res = serde_json::to_vec(&message)?;
         Ok(res)
+    }
+}
+
+impl KbsTokenGetter {
+    pub fn new(config: &KbsConfig) -> Self {
+        Self {
+            kbs_host_url: config.url.clone(),
+        }
     }
 }

@@ -24,7 +24,6 @@ use crate::ttrpc_protocol::attestation_agent_ttrpc::{
 
 pub const AGENT_NAME: &str = "attestation-agent";
 
-#[derive(Default)]
 pub struct AA {
     inner: Mutex<AttestationAgent>,
 }
@@ -121,8 +120,9 @@ impl AttestationAgentService for AA {
     }
 }
 
-pub fn start_ttrpc_service() -> Result<HashMap<String, Service>> {
-    let service = Box::new(AA::default()) as Box<dyn AttestationAgentService + Send + Sync>;
+pub fn start_ttrpc_service(aa: AttestationAgent) -> Result<HashMap<String, Service>> {
+    let service =
+        Box::new(AA { inner: aa.into() }) as Box<dyn AttestationAgentService + Send + Sync>;
 
     let service = Arc::new(service);
     let get_resource_service = create_attestation_agent_service(service);
