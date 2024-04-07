@@ -14,8 +14,10 @@ use std::net::SocketAddr;
 
 const DEFAULT_ATTESTATION_AGENT_ADDR: &str = "127.0.0.1:50002";
 
+const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
+
 #[derive(Debug, Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version = Some(VERSION))]
 struct Cli {
     /// Attestation gRPC Unix socket addr.
     ///

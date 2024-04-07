@@ -22,8 +22,10 @@ const DEFAULT_ATTESTATION_SOCKET_ADDR: &str = concatcp!(
     "attestation-agent.sock"
 );
 
+const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
+
 #[derive(Debug, Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version = Some(VERSION))]
 struct Cli {
     /// Attestation ttRPC Unix socket addr.
     ///
