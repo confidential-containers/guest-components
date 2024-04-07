@@ -6,6 +6,7 @@
 mod server;
 
 use anyhow::*;
+use attestation_agent::AttestationAgent;
 use clap::Parser;
 use log::{debug, info};
 use tokio::signal::unix::{signal, SignalKind};
@@ -25,6 +26,13 @@ struct Cli {
     /// `--attestation_sock 127.0.0.1:11223`
     #[arg(default_value_t = DEFAULT_ATTESTATION_AGENT_ADDR.to_string(), short, long = "attestation_sock")]
     attestation_sock: String,
+
+    /// Configuration file for Attestation Agent
+    ///
+    /// Example:
+    /// `--config /etc/attestation-agent.conf`
+    #[arg(short, long)]
+    config_file: Option<String>,
 }
 
 #[tokio::main]
@@ -34,6 +42,7 @@ pub async fn main() -> Result<()> {
 
     let attestation_socket = cli.attestation_sock.parse::<SocketAddr>()?;
 
+    let aa = AttestationAgent::new(cli.config_file.as_deref()).context("start AA")?;
     debug!(
         "Attestation gRPC service listening on: {:?}",
         cli.attestation_sock
@@ -44,7 +53,7 @@ pub async fn main() -> Result<()> {
     tokio::select! {
         _ = hangup.recv() => info!("Client terminal disconnected."),
         _ = interrupt.recv() => info!("SIGINT received, gracefully shutdown."),
-        _ = server::start_grpc_service(attestation_socket) => info!("AA exits."),
+        _ = server::start_grpc_service(attestation_socket, aa) => info!("AA exits."),
     }
 
     Ok(())

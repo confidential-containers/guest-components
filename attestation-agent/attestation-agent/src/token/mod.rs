@@ -26,5 +26,5 @@ pub enum TokenType {
 
 #[async_trait]
 pub trait GetToken {
-    async fn get_token(&self, service_url: String) -> Result<Vec<u8>>;
+    async fn get_token(&self) -> Result<Vec<u8>>;
 }

@@ -5,34 +5,54 @@
 
 use anyhow::Result;
 use serde::Deserialize;
-use std::fs::File;
-use thiserror::Error;
 
 pub mod aa_kbc_params;
 
-pub const DEFAULT_AA_CONFIG_PATH: &str = "/etc/attestation-agent.toml";
+#[cfg(feature = "coco_as")]
+pub mod coco_as;
 
-#[derive(Clone, Debug, Deserialize)]
-#[allow(dead_code)]
+#[cfg(feature = "kbs")]
+pub mod kbs;
+
+pub const DEFAULT_AA_CONFIG_PATH: &str = "/etc/attestation-agent.conf";
+
+#[derive(Clone, Debug, Deserialize, Default)]
 pub struct Config {
-    /// URL Address of Attestation Service
-    pub as_uri: String,
+    /// configs about token
+    pub token_configs: TokenConfigs,
     // TODO: Add more fields that accessing AS needs.
 }
 
-#[derive(Error, Debug)]
-pub enum ConfigFileError {
-    #[error("failed to open")]
-    Io(#[from] std::io::Error),
-    #[error("failed to parse")]
-    Parse(#[from] serde_json::Error),
+#[derive(Clone, Debug, Deserialize, Default)]
+pub struct TokenConfigs {
+    /// This config item is used when `coco_as` feature is enabled.
+    #[cfg(feature = "coco_as")]
+    pub coco_as: coco_as::CoCoASConfig,
+
+    /// This config item is used when `kbs` feature is enabled.
+    #[cfg(feature = "kbs")]
+    pub kbs: kbs::KbsConfig,
 }
 
 impl TryFrom<&str> for Config {
-    type Error = ConfigFileError;
+    type Error = config::ConfigError;
     fn try_from(config_path: &str) -> Result<Self, Self::Error> {
-        let file = File::open(config_path)?;
-        let cfg: Config = serde_json::from_reader(file)?;
+        let c = config::Config::builder()
+            .add_source(config::File::with_name(config_path))
+            .build()?;
+
+        let cfg = c.try_deserialize()?;
         Ok(cfg)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[cfg(all(feature = "kbs", feature = "coco_as"))]
+    #[rstest::rstest]
+    #[case("config.example.toml")]
+    #[case("config.example.json")]
+    fn parse_config(#[case] config: &str) {
+        let _config = super::Config::try_from(config).expect("failed to parse config file");
     }
 }

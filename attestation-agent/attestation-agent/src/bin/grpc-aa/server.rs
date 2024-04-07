@@ -25,7 +25,6 @@ mod attestation {
 
 pub const AGENT_NAME: &str = "attestation-agent";
 
-#[derive(Default)]
 pub struct AA {
     inner: Mutex<AttestationAgent>,
 }
@@ -142,8 +141,8 @@ impl AttestationAgentService for AA {
     }
 }
 
-pub async fn start_grpc_service(socket: SocketAddr) -> Result<()> {
-    let service = AA::default();
+pub async fn start_grpc_service(socket: SocketAddr, aa: AttestationAgent) -> Result<()> {
+    let service = AA { inner: aa.into() };
     Server::builder()
         .add_service(AttestationAgentServiceServer::new(service))
         .serve(socket)

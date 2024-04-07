@@ -19,6 +19,7 @@ async-trait.workspace = true
 attester = { path = "../attester", default-features = false }
 base64.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
+config.workspace = true
 const_format = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
 kbs_protocol = { path = "../kbs_protocol", default-features = false, optional = true }
@@ -37,6 +38,7 @@ tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 
 [dev-dependencies]
+rstest.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]

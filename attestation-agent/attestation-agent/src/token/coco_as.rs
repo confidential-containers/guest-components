@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use crate::config::coco_as::CoCoASConfig;
+
 use super::GetToken;
 use anyhow::*;
 use async_trait::async_trait;
@@ -10,11 +12,13 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
 
 #[derive(Default)]
-pub struct CoCoASTokenGetter {}
+pub struct CoCoASTokenGetter {
+    as_uri: String,
+}
 
 #[async_trait]
 impl GetToken for CoCoASTokenGetter {
-    async fn get_token(&self, as_uri: String) -> Result<Vec<u8>> {
+    async fn get_token(&self) -> Result<Vec<u8>> {
         let tee_type = attester::detect_tee_type();
         let attester = attester::BoxedAttester::try_from(tee_type)?;
         let evidence = attester.get_evidence(vec![]).await?;
@@ -25,7 +29,7 @@ impl GetToken for CoCoASTokenGetter {
         });
 
         let client = reqwest::Client::new();
-        let attest_endpoint = format!("{}/attestation", as_uri);
+        let attest_endpoint = format!("{}/attestation", self.as_uri);
         let res = client
             .post(attest_endpoint)
             .header("Content-Type", "application/json")
@@ -44,6 +48,14 @@ impl GetToken for CoCoASTokenGetter {
                     res.text().await?
                 );
             }
+        }
+    }
+}
+
+impl CoCoASTokenGetter {
+    pub fn new(config: &CoCoASConfig) -> Self {
+        Self {
+            as_uri: config.url.clone(),
         }
     }
 }

@@ -5,7 +5,7 @@
 
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use attester::{detect_tee_type, BoxedAttester};
 
@@ -14,9 +14,10 @@ pub use attester::InitdataResult;
 pub mod config;
 mod token;
 
+use log::{info, warn};
 use token::*;
 
-use crate::config::{aa_kbc_params, Config};
+use crate::config::Config;
 
 /// Attestation Agent (AA for short) is a rust library crate for attestation procedure
 /// in confidential containers. It provides kinds of service APIs related to attestation,
@@ -68,44 +69,55 @@ pub trait AttestationAPIs {
 
 /// Attestation agent to provide attestation service.
 pub struct AttestationAgent {
-    config: Option<Config>,
+    _config: Config,
 }
 
 impl Default for AttestationAgent {
     fn default() -> Self {
-        let config = Config::try_from(config::DEFAULT_AA_CONFIG_PATH).ok();
-        AttestationAgent { config }
+        if let Ok(_config) = Config::try_from(config::DEFAULT_AA_CONFIG_PATH) {
+            return AttestationAgent { _config };
+        }
+
+        AttestationAgent {
+            _config: Config::default(),
+        }
     }
 }
 
 impl AttestationAgent {
     /// Create a new instance of [AttestationAgent].
-    pub fn new(config_path: &str) -> Self {
-        let config = Config::try_from(config_path).ok();
+    pub fn new(config_path: Option<&str>) -> Result<Self> {
+        let _config = match config_path {
+            Some(config_path) => {
+                info!("Using AA config file: {config_path}");
+                Config::try_from(config_path)?
+            }
+            None => {
+                warn!("No AA config file specified. Using a default configuration.");
+                Config::default()
+            }
+        };
 
-        AttestationAgent { config }
+        Ok(AttestationAgent { _config })
     }
 }
 
 #[async_trait]
 impl AttestationAPIs for AttestationAgent {
     async fn get_token(&mut self, token_type: &str) -> Result<Vec<u8>> {
-        let _uri = match self.config.as_ref() {
-            Some(c) => c.as_uri.clone(),
-            None => {
-                let params =
-                    aa_kbc_params::get_params().map_err(|_| anyhow!("Get AS URI failed"))?;
-                params.uri().to_string()
-            }
-        };
+        let token_type = TokenType::from_str(token_type).context("Unsupported token type")?;
 
-        match TokenType::from_str(token_type).map_err(|e| anyhow!("Unsupported token type: {e}"))? {
+        match token_type {
             #[cfg(feature = "kbs")]
-            token::TokenType::Kbs => token::kbs::KbsTokenGetter::default().get_token(_uri).await,
+            token::TokenType::Kbs => {
+                token::kbs::KbsTokenGetter::new(&self._config.token_configs.kbs)
+                    .get_token()
+                    .await
+            }
             #[cfg(feature = "coco_as")]
             token::TokenType::CoCoAS => {
-                token::coco_as::CoCoASTokenGetter::default()
-                    .get_token(_uri)
+                token::coco_as::CoCoASTokenGetter::new(&self._config.token_configs.coco_as)
+                    .get_token()
                     .await
             }
         }
