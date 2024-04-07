@@ -20,6 +20,7 @@ struct Message {
 #[derive(Default)]
 pub struct KbsTokenGetter {
     kbs_host_url: String,
+    cert: Option<String>,
 }
 
 #[async_trait]
@@ -27,9 +28,14 @@ impl GetToken for KbsTokenGetter {
     async fn get_token(&self) -> Result<Vec<u8>> {
         let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
 
-        let mut client =
-            KbsClientBuilder::with_evidence_provider(evidence_provider, &self.kbs_host_url)
-                .build()?;
+        let mut builder =
+            KbsClientBuilder::with_evidence_provider(evidence_provider, &self.kbs_host_url);
+
+        if let Some(cert) = &self.cert {
+            builder = builder.add_kbs_cert(cert);
+        }
+
+        let mut client = builder.build()?;
 
         let (token, tee_keypair) = client.get_token().await?;
         let message = Message {
@@ -46,6 +52,7 @@ impl KbsTokenGetter {
     pub fn new(config: &KbsConfig) -> Self {
         Self {
             kbs_host_url: config.url.clone(),
+            cert: config.cert.clone(),
         }
     }
 }
