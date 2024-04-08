@@ -4,7 +4,7 @@
 //
 
 use super::Attester;
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Context, Result};
 use base64::Engine;
 use occlum_dcap::{sgx_report_data_t, DcapQuote};
 use serde::{Deserialize, Serialize};
@@ -81,8 +81,7 @@ impl Attester for SgxDcapAttester {
             quote: base64::engine::general_purpose::STANDARD.encode(quote),
         };
 
-        serde_json::to_string(&evidence)
-            .map_err(|e| anyhow!("Serialize SGX DCAP Attester evidence failed: {:?}", e))
+        serde_json::to_string(&evidence).context("Serialize SGX DCAP Attester evidence failed")
     }
 }
 

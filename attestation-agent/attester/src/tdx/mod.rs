@@ -104,8 +104,7 @@ impl Attester for TdxAttester {
 
         let evidence = TdxEvidence { cc_eventlog, quote };
 
-        serde_json::to_string(&evidence)
-            .map_err(|e| anyhow!("Serialize TDX evidence failed: {:?}", e))
+        serde_json::to_string(&evidence).context("Serialize TDX evidence failed")
     }
 
     async fn extend_runtime_measurement(
@@ -161,7 +160,7 @@ impl Attester for TdxAttester {
         let td_report = report
             .d
             .pread::<report::TdReport>(0)
-            .map_err(|e| anyhow!("Parse TD report failed: {:?}", e))?;
+            .context("Parse TD report failed")?;
 
         let init_data: [u8; 48] = pad(init_data);
         if init_data != td_report.tdinfo.mrconfigid {
