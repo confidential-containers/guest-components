@@ -31,6 +31,6 @@ impl Attester for SampleAttester {
             report_data: base64::engine::general_purpose::STANDARD.encode(report_data),
         };
 
-        serde_json::to_string(&evidence).map_err(|_| anyhow!("Serialize sample evidence failed"))
+        serde_json::to_string(&evidence).context("Serialize sample evidence failed")
     }
 }
