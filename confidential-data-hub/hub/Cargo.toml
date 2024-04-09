@@ -31,7 +31,6 @@ secret.path = "../secret"
 storage.path = "../storage"
 serde = { workspace = true, optional = true }
 serde_json.workspace = true
-sev = { path = "../../attestation-agent/deps/sev", optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
 ttrpc = { workspace = true, features = ["async"], optional = true }
@@ -53,7 +52,7 @@ aliyun = ["image/aliyun", "secret/aliyun"]
 kbs = ["image/kbs", "kms/kbs", "secret/kbs"]
 
 # support sev to provide confidential resources
-sev = ["attestation-agent", "image/sev", "kms/sev", "dep:sev", "secret/sev"]
+sev = ["image/sev", "kms/sev", "secret/sev"]
 
 # support eHSM stacks (KMS, ...)
 ehsm = ["image/ehsm", "secret/ehsm"]
