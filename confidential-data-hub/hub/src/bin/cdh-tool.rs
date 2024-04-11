@@ -142,10 +142,8 @@ async fn main() {
             let storage: Storage =
                 serde_json::from_slice(&storage_manifest).expect("deserialize Storage");
             let req = SecureMountRequest {
-                driver: storage.driver,
-                driver_options: storage.driver_options,
-                source: storage.source,
-                fstype: storage.fstype,
+                volume_type: storage.volume_type,
+                flags: storage.flags,
                 options: storage.options,
                 mount_point: storage.mount_point,
                 ..Default::default()
