@@ -6,51 +6,61 @@
 #[cfg(feature = "aliyun")]
 pub mod alibaba_cloud_oss;
 
-#[cfg(feature = "aliyun")]
-use self::alibaba_cloud_oss::oss::Oss;
-use crate::{Error, Result};
-use log::warn;
-use serde::Deserialize;
+use std::{collections::HashMap, str::FromStr};
 
+use crate::Result;
+
+use async_trait::async_trait;
+
+use serde::Deserialize;
+use strum::EnumString;
+
+#[derive(EnumString, PartialEq, Debug)]
+pub enum Volume {
+    #[cfg(feature = "aliyun")]
+    #[strum(serialize = "alibaba-cloud-oss")]
+    AliOss,
+}
+
+/// Indicating a mount point and its parameters.
 #[derive(PartialEq, Clone, Debug, Deserialize)]
 pub struct Storage {
-    pub driver: String,
-    pub driver_options: Vec<String>,
-    pub source: String,
-    pub fstype: String,
-    pub options: Vec<String>,
+    /// Driver nameof the mount plugin.
+    pub volume_type: String,
+
+    /// A key-value map to provide extra mount settings.
+    pub options: HashMap<String, String>,
+
+    /// A flag set to provide extra mount settings. This vector can also
+    /// contain string type parameters.
+    pub flags: Vec<String>,
+
+    /// The target mount point.
     pub mount_point: String,
+}
+
+#[async_trait]
+pub trait SecureMount {
+    /// Mount the volume to `mount_point` due to the given options.
+    async fn mount(
+        &self,
+        options: &HashMap<String, String>,
+        flags: &[String],
+        mount_point: &str,
+    ) -> Result<()>;
 }
 
 impl Storage {
     pub async fn mount(&self) -> Result<String> {
-        for driver_option in &self.driver_options {
-            let (volume_type, metadata) =
-                driver_option
-                    .split_once('=')
-                    .ok_or(Error::SecureMountFailed(
-                        "split by \"=\" failed".to_string(),
-                    ))?;
-
-            match volume_type {
-                #[cfg(feature = "aliyun")]
-                "alibaba-cloud-oss" => {
-                    let oss: Oss = serde_json::from_str(metadata).map_err(|e| {
-                        Error::SecureMountFailed(format!(
-                            "illegal mount info format (json deseralization failed): {e}"
-                        ))
-                    })?;
-                    return oss
-                        .mount(self.source.clone(), self.mount_point.clone())
-                        .await;
-                }
-                other => {
-                    warn!("skip mount info with unsupported volume_type: {other}");
-                }
-            };
+        let volume_type = Volume::from_str(&self.volume_type)?;
+        match volume_type {
+            #[cfg(feature = "aliyun")]
+            Volume::AliOss => {
+                let oss = alibaba_cloud_oss::Oss {};
+                oss.mount(&self.options, &self.flags, &self.mount_point)
+                    .await?;
+                Ok(self.mount_point.clone())
+            }
         }
-        Err(Error::SecureMountFailed(
-            "illegal mount info as no expected driver_options".to_string(),
-        ))
     }
 }

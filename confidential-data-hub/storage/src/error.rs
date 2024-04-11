@@ -5,16 +5,16 @@
 
 use thiserror::Error;
 
+use crate::volume_type;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("secure mount failed: {0}")]
-    SecureMountFailed(String),
+    #[cfg(feature = "aliyun")]
+    #[error("Error when mounting Aliyun OSS")]
+    AliyunOssError(#[from] volume_type::alibaba_cloud_oss::error::Error),
 
-    #[error("file error: {0}")]
-    FileError(String),
-
-    #[error("unseal secret failed: {0}")]
-    UnsealSecretFailed(String),
+    #[error("Failed to recognize the storage type")]
+    StorageTypeNotRecognized(#[from] strum::ParseError),
 }

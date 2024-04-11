@@ -166,11 +166,9 @@ impl SecureMountService for Server {
         let reader = HUB.read().await;
         let reader = reader.as_ref().expect("must be initialized");
         let storage = Storage {
-            driver: req.driver,
-            driver_options: req.driver_options,
-            source: req.source,
-            fstype: req.fstype,
+            volume_type: req.volume_type,
             options: req.options,
+            flags: req.flags,
             mount_point: req.mount_point,
         };
         let resource = reader.secure_mount(storage).await.map_err(|e| {
