@@ -64,12 +64,12 @@ CDH will be launched by a configuration file by
 confidential-data-hub -c <path-to-config>
 ```
 
-Please see the [example config file](./example.config.toml) for more details.
+Please see the example config file in [toml](./example.config.toml) or [json](./example.config.json) for more details.
 
 However, if a file isn't passed with **-c** then it will search for configurations on the
 following locations (in order):
 
-* **/etc/confidential-data-hub.toml**
+* **/etc/confidential-data-hub.conf**
 * **AA_KBC_PARAMS** environment variable
 * **agent.aa_kbc_params** parameter from the Kernel command-line (`/proc/cmdline`)
 
