@@ -517,16 +517,12 @@ impl ::protobuf::reflect::ProtobufValue for GetResourceResponse {
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct SecureMountRequest {
     // message fields
-    // @@protoc_insertion_point(field:api.SecureMountRequest.driver)
-    pub driver: ::std::string::String,
-    // @@protoc_insertion_point(field:api.SecureMountRequest.driver_options)
-    pub driver_options: ::std::vec::Vec<::std::string::String>,
-    // @@protoc_insertion_point(field:api.SecureMountRequest.source)
-    pub source: ::std::string::String,
-    // @@protoc_insertion_point(field:api.SecureMountRequest.fstype)
-    pub fstype: ::std::string::String,
+    // @@protoc_insertion_point(field:api.SecureMountRequest.volume_type)
+    pub volume_type: ::std::string::String,
     // @@protoc_insertion_point(field:api.SecureMountRequest.options)
-    pub options: ::std::vec::Vec<::std::string::String>,
+    pub options: ::std::collections::HashMap<::std::string::String, ::std::string::String>,
+    // @@protoc_insertion_point(field:api.SecureMountRequest.flags)
+    pub flags: ::std::vec::Vec<::std::string::String>,
     // @@protoc_insertion_point(field:api.SecureMountRequest.mount_point)
     pub mount_point: ::std::string::String,
     // special fields
@@ -546,32 +542,22 @@ impl SecureMountRequest {
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(6);
+        let mut fields = ::std::vec::Vec::with_capacity(4);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
         fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
-            "driver",
-            |m: &SecureMountRequest| { &m.driver },
-            |m: &mut SecureMountRequest| { &mut m.driver },
+            "volume_type",
+            |m: &SecureMountRequest| { &m.volume_type },
+            |m: &mut SecureMountRequest| { &mut m.volume_type },
         ));
-        fields.push(::protobuf::reflect::rt::v2::make_vec_simpler_accessor::<_, _>(
-            "driver_options",
-            |m: &SecureMountRequest| { &m.driver_options },
-            |m: &mut SecureMountRequest| { &mut m.driver_options },
-        ));
-        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
-            "source",
-            |m: &SecureMountRequest| { &m.source },
-            |m: &mut SecureMountRequest| { &mut m.source },
-        ));
-        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
-            "fstype",
-            |m: &SecureMountRequest| { &m.fstype },
-            |m: &mut SecureMountRequest| { &mut m.fstype },
-        ));
-        fields.push(::protobuf::reflect::rt::v2::make_vec_simpler_accessor::<_, _>(
+        fields.push(::protobuf::reflect::rt::v2::make_map_simpler_accessor::<_, _, _>(
             "options",
             |m: &SecureMountRequest| { &m.options },
             |m: &mut SecureMountRequest| { &mut m.options },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_vec_simpler_accessor::<_, _>(
+            "flags",
+            |m: &SecureMountRequest| { &m.flags },
+            |m: &mut SecureMountRequest| { &mut m.flags },
         ));
         fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
             "mount_point",
@@ -597,21 +583,27 @@ impl ::protobuf::Message for SecureMountRequest {
         while let Some(tag) = is.read_raw_tag_or_eof()? {
             match tag {
                 10 => {
-                    self.driver = is.read_string()?;
+                    self.volume_type = is.read_string()?;
                 },
                 18 => {
-                    self.driver_options.push(is.read_string()?);
+                    let len = is.read_raw_varint32()?;
+                    let old_limit = is.push_limit(len as u64)?;
+                    let mut key = ::std::default::Default::default();
+                    let mut value = ::std::default::Default::default();
+                    while let Some(tag) = is.read_raw_tag_or_eof()? {
+                        match tag {
+                            10 => key = is.read_string()?,
+                            18 => value = is.read_string()?,
+                            _ => ::protobuf::rt::skip_field_for_tag(tag, is)?,
+                        };
+                    }
+                    is.pop_limit(old_limit);
+                    self.options.insert(key, value);
                 },
                 26 => {
-                    self.source = is.read_string()?;
+                    self.flags.push(is.read_string()?);
                 },
                 34 => {
-                    self.fstype = is.read_string()?;
-                },
-                42 => {
-                    self.options.push(is.read_string()?);
-                },
-                50 => {
                     self.mount_point = is.read_string()?;
                 },
                 tag => {
@@ -626,23 +618,20 @@ impl ::protobuf::Message for SecureMountRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u64 {
         let mut my_size = 0;
-        if !self.driver.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.driver);
+        if !self.volume_type.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.volume_type);
         }
-        for value in &self.driver_options {
-            my_size += ::protobuf::rt::string_size(2, &value);
+        for (k, v) in &self.options {
+            let mut entry_size = 0;
+            entry_size += ::protobuf::rt::string_size(1, &k);
+            entry_size += ::protobuf::rt::string_size(2, &v);
+            my_size += 1 + ::protobuf::rt::compute_raw_varint64_size(entry_size) + entry_size
         };
-        if !self.source.is_empty() {
-            my_size += ::protobuf::rt::string_size(3, &self.source);
-        }
-        if !self.fstype.is_empty() {
-            my_size += ::protobuf::rt::string_size(4, &self.fstype);
-        }
-        for value in &self.options {
-            my_size += ::protobuf::rt::string_size(5, &value);
+        for value in &self.flags {
+            my_size += ::protobuf::rt::string_size(3, &value);
         };
         if !self.mount_point.is_empty() {
-            my_size += ::protobuf::rt::string_size(6, &self.mount_point);
+            my_size += ::protobuf::rt::string_size(4, &self.mount_point);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
@@ -650,23 +639,23 @@ impl ::protobuf::Message for SecureMountRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
-        if !self.driver.is_empty() {
-            os.write_string(1, &self.driver)?;
+        if !self.volume_type.is_empty() {
+            os.write_string(1, &self.volume_type)?;
         }
-        for v in &self.driver_options {
+        for (k, v) in &self.options {
+            let mut entry_size = 0;
+            entry_size += ::protobuf::rt::string_size(1, &k);
+            entry_size += ::protobuf::rt::string_size(2, &v);
+            os.write_raw_varint32(18)?; // Tag.
+            os.write_raw_varint32(entry_size as u32)?;
+            os.write_string(1, &k)?;
             os.write_string(2, &v)?;
         };
-        if !self.source.is_empty() {
-            os.write_string(3, &self.source)?;
-        }
-        if !self.fstype.is_empty() {
-            os.write_string(4, &self.fstype)?;
-        }
-        for v in &self.options {
-            os.write_string(5, &v)?;
+        for v in &self.flags {
+            os.write_string(3, &v)?;
         };
         if !self.mount_point.is_empty() {
-            os.write_string(6, &self.mount_point)?;
+            os.write_string(4, &self.mount_point)?;
         }
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -685,26 +674,16 @@ impl ::protobuf::Message for SecureMountRequest {
     }
 
     fn clear(&mut self) {
-        self.driver.clear();
-        self.driver_options.clear();
-        self.source.clear();
-        self.fstype.clear();
+        self.volume_type.clear();
         self.options.clear();
+        self.flags.clear();
         self.mount_point.clear();
         self.special_fields.clear();
     }
 
     fn default_instance() -> &'static SecureMountRequest {
-        static instance: SecureMountRequest = SecureMountRequest {
-            driver: ::std::string::String::new(),
-            driver_options: ::std::vec::Vec::new(),
-            source: ::std::string::String::new(),
-            fstype: ::std::string::String::new(),
-            options: ::std::vec::Vec::new(),
-            mount_point: ::std::string::String::new(),
-            special_fields: ::protobuf::SpecialFields::new(),
-        };
-        &instance
+        static instance: ::protobuf::rt::Lazy<SecureMountRequest> = ::protobuf::rt::Lazy::new();
+        instance.get(SecureMountRequest::new)
     }
 }
 
@@ -853,17 +832,18 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     laintext\x18\x01\x20\x01(\x0cR\tplaintext\"8\n\x12GetResourceRequest\x12\
     \"\n\x0cResourcePath\x18\x01\x20\x01(\tR\x0cResourcePath\"1\n\x13GetReso\
     urceResponse\x12\x1a\n\x08Resource\x18\x01\x20\x01(\x0cR\x08Resource\"\
-    \xbe\x01\n\x12SecureMountRequest\x12\x16\n\x06driver\x18\x01\x20\x01(\tR\
-    \x06driver\x12%\n\x0edriver_options\x18\x02\x20\x03(\tR\rdriverOptions\
-    \x12\x16\n\x06source\x18\x03\x20\x01(\tR\x06source\x12\x16\n\x06fstype\
-    \x18\x04\x20\x01(\tR\x06fstype\x12\x18\n\x07options\x18\x05\x20\x03(\tR\
-    \x07options\x12\x1f\n\x0bmount_point\x18\x06\x20\x01(\tR\nmountPoint\"4\
-    \n\x13SecureMountResponse\x12\x1d\n\nmount_path\x18\x01\x20\x01(\tR\tmou\
-    ntPath2V\n\x13SealedSecretService\x12?\n\x0cUnsealSecret\x12\x16.api.Uns\
-    ealSecretInput\x1a\x17.api.UnsealSecretOutput2V\n\x12GetResourceService\
-    \x12@\n\x0bGetResource\x12\x17.api.GetResourceRequest\x1a\x18.api.GetRes\
-    ourceResponse2V\n\x12SecureMountService\x12@\n\x0bSecureMount\x12\x17.ap\
-    i.SecureMountRequest\x1a\x18.api.SecureMountResponseb\x06proto3\
+    \xe8\x01\n\x12SecureMountRequest\x12\x1f\n\x0bvolume_type\x18\x01\x20\
+    \x01(\tR\nvolumeType\x12>\n\x07options\x18\x02\x20\x03(\x0b2$.api.Secure\
+    MountRequest.OptionsEntryR\x07options\x12\x14\n\x05flags\x18\x03\x20\x03\
+    (\tR\x05flags\x12\x1f\n\x0bmount_point\x18\x04\x20\x01(\tR\nmountPoint\
+    \x1a:\n\x0cOptionsEntry\x12\x10\n\x03key\x18\x01\x20\x01(\tR\x03key\x12\
+    \x14\n\x05value\x18\x02\x20\x01(\tR\x05value:\x028\x01\"4\n\x13SecureMou\
+    ntResponse\x12\x1d\n\nmount_path\x18\x01\x20\x01(\tR\tmountPath2V\n\x13S\
+    ealedSecretService\x12?\n\x0cUnsealSecret\x12\x16.api.UnsealSecretInput\
+    \x1a\x17.api.UnsealSecretOutput2V\n\x12GetResourceService\x12@\n\x0bGetR\
+    esource\x12\x17.api.GetResourceRequest\x1a\x18.api.GetResourceResponse2V\
+    \n\x12SecureMountService\x12@\n\x0bSecureMount\x12\x17.api.SecureMountRe\
+    quest\x1a\x18.api.SecureMountResponseb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
