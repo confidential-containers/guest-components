@@ -27,7 +27,7 @@ mod server;
 
 use config::*;
 
-const DEFAULT_CONFIG_PATH: &str = "/etc/confidential-data-hub.toml";
+const DEFAULT_CONFIG_PATH: &str = "/etc/confidential-data-hub.conf";
 
 const UNIX_SOCKET_PREFIX: &str = "unix://";
 
@@ -36,7 +36,7 @@ const UNIX_SOCKET_PREFIX: &str = "unix://";
 struct Cli {
     /// Path to the config  file
     ///
-    /// `--config /etc/confidential-data-hub.toml`
+    /// `--config /etc/confidential-data-hub.conf`
     #[arg(short)]
     config: Option<String>,
 }
