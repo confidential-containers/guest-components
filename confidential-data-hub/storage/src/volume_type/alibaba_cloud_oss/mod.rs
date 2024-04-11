@@ -130,6 +130,7 @@ impl Oss {
                 .as_bytes(),
             )
             .await?;
+        ossfs_passwd.flush().await?;
 
         // generate parameters for ossfs command
         let mut opts = oss_parameter
@@ -150,10 +151,16 @@ impl Oss {
             ];
 
             parameters.append(&mut opts);
-            Command::new(OSSFS_BIN)
+            let mut oss = Command::new(OSSFS_BIN)
                 .args(parameters)
                 .spawn()
                 .map_err(|_| Error::OssfsMountFailed)?;
+            let oss_res = oss.wait().await?;
+            if !oss_res.success() {
+                {
+                    return Err(Error::OssfsMountFailed);
+                }
+            }
 
             // get the gocryptfs password
             let plain_passwd = get_plaintext_secret(&oss_parameter.enc_passwd).await?;
@@ -165,6 +172,7 @@ impl Oss {
             let mut gocryptfs_passwd = fs::File::create(&gocryptfs_passwd_path).await?;
 
             gocryptfs_passwd.write_all(plain_passwd.as_bytes()).await?;
+            gocryptfs_passwd.flush().await?;
 
             // generate parameters for gocryptfs, and execute
             let parameters = vec![
@@ -174,11 +182,17 @@ impl Oss {
                 gocryptfs_passwd_path,
                 "-nosyslog".to_string(),
             ];
-            Command::new(GOCRYPTFS_BIN)
+            let mut gocryptfs = Command::new(GOCRYPTFS_BIN)
                 .args(parameters)
                 .spawn()
                 .map_err(|_| Error::GocryptfsMountFailed)?;
-            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+
+            let gocryptfs_res = gocryptfs.wait().await?;
+            if !gocryptfs_res.success() {
+                {
+                    return Err(Error::GocryptfsMountFailed);
+                }
+            }
         } else {
             let mut parameters = vec![
                 format!("{}:{}", oss_parameter.bucket, oss_parameter.path),
@@ -188,11 +202,16 @@ impl Oss {
             ];
 
             parameters.append(&mut opts);
-            Command::new(OSSFS_BIN)
+            let mut oss = Command::new(OSSFS_BIN)
                 .args(parameters)
                 .spawn()
                 .map_err(|_| Error::OssfsMountFailed)?;
-            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+            let oss_res = oss.wait().await?;
+            if !oss_res.success() {
+                {
+                    return Err(Error::OssfsMountFailed);
+                }
+            }
         };
 
         Ok(())
