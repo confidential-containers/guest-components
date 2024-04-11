@@ -66,39 +66,39 @@ Run CDH
 confidential-data-hub
 ```
 
-Prepare a request JSON `storage.json`
+Prepare a request JSON `storage.json`. This example is for aliyun OSS.
 ```json
 {
-    "driver": "",
-    "driver_options": [
-        "alibaba-cloud-oss={\"akId\":\"XXX\",\"akSecret\":\"XXX\",\"annotations\":\"\",\"bucket\":\"<bucket-id>\",\"encrypted\":\"gocryptfs\",\"encPasswd\":\"<PASSWORD>\",\"kmsKeyId\":\"\",\"otherOpts\":\"-o max_stat_cache_size=0 -o allow_other\",\"path\":\"<bucket-path>\",\"readonly\":\"\",\"targetPath\":\"/mnt/aliyun-oss\",\"url\":\"https://oss-cn-beijing.aliyuncs.com\",\"volumeId\":\"\"}"
-    ],
-    "source": "",
-    "fstype": "",
-    "options": [],
+    "volume_type": "alibaba-cloud-oss",
+    "options": {
+        "akId": "XXX",
+        "akSecret": "XXX",
+        "annotations": "",
+        "bucket": "<bucket-id>",
+        "encrypted": "gocryptfs",
+        "encPasswd": "<PASSWORD>",
+        "kmsKeyId": "",
+        "otherOpts": "-o max_stat_cache_size=0 -o allow_other",
+        "path": "<bucket-path>",
+        "readonly": "",
+        "targetPath": "/mnt/aliyun-oss",
+        "url": "https://oss-cn-beijing.aliyuncs.com",
+        "volumeId": ""
+    },
+    "flags": [],
     "mount_point": "/mnt/target-path"
 }
 ```
-- `mount_point`: the target path to mount the decrypted storage.
+Fields:
+- `volume_type`: the secure mount plugin type name. It will determine how the rest of the fields are used.
+- `options`: a key-value map that specifies the settings for the mount operation. Different plugin can define
+different keys of the `option`. In this example all keys are for Aliyun OSS.
+- `flags`: a string list that specifies the settings for the mount operation. Different plugin can define different
+usage of this field.
+- `mount_point`: The target mount path of the operation.
 
-The only string member of `driver_options` looks like `alibaba-cloud-oss=XXX`. `XXX` here is an escaped JSON object.
-```json
-{
-    "akId": "XXX",
-    "akSecret": "XXX",
-    "annotations": "",
-    "bucket": "<bucket-id>",
-    "encrypted": "gocryptfs",
-    "encPasswd": "<PASSWORD>",
-    "kmsKeyId": "",
-    "otherOpts": "-o max_stat_cache_size=0 -o allow_other",
-    "path": "/<bucket-path>",
-    "readonly": "",
-    "targetPath": "/mnt/aliyun-oss",
-    "url": "https://oss-cn-beijing.aliyuncs.com",
-    "volumeId": ""
-}
-```
+Let's dive into the example's `options` field. Note that this example is for Aliyun OSS and different mount plugin
+can define its own `options`!
 
 The fields here
 - `akId`: is Id of AK to access the OSS bucket. This will be provided when creating the OSS bucket. This can also be a [sealed secret](../SEALED_SECRET.md).
