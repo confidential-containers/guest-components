@@ -16,7 +16,7 @@ use secret::secret::Secret;
 use serde::{Deserialize, Serialize};
 use tokio::{fs, io::AsyncWriteExt, process::Command};
 
-use error::{Error, Result};
+use error::{AliyunError, Result};
 
 use super::SecureMount;
 
@@ -154,11 +154,11 @@ impl Oss {
             let mut oss = Command::new(OSSFS_BIN)
                 .args(parameters)
                 .spawn()
-                .map_err(|_| Error::OssfsMountFailed)?;
+                .map_err(|_| AliyunError::OssfsMountFailed)?;
             let oss_res = oss.wait().await?;
             if !oss_res.success() {
                 {
-                    return Err(Error::OssfsMountFailed);
+                    return Err(AliyunError::OssfsMountFailed);
                 }
             }
 
@@ -185,12 +185,12 @@ impl Oss {
             let mut gocryptfs = Command::new(GOCRYPTFS_BIN)
                 .args(parameters)
                 .spawn()
-                .map_err(|_| Error::GocryptfsMountFailed)?;
+                .map_err(|_| AliyunError::GocryptfsMountFailed)?;
 
             let gocryptfs_res = gocryptfs.wait().await?;
             if !gocryptfs_res.success() {
                 {
-                    return Err(Error::GocryptfsMountFailed);
+                    return Err(AliyunError::GocryptfsMountFailed);
                 }
             }
         } else {
@@ -205,11 +205,11 @@ impl Oss {
             let mut oss = Command::new(OSSFS_BIN)
                 .args(parameters)
                 .spawn()
-                .map_err(|_| Error::OssfsMountFailed)?;
+                .map_err(|_| AliyunError::OssfsMountFailed)?;
             let oss_res = oss.wait().await?;
             if !oss_res.success() {
                 {
-                    return Err(Error::OssfsMountFailed);
+                    return Err(AliyunError::OssfsMountFailed);
                 }
             }
         };

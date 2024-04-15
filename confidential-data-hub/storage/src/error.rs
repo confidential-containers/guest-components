@@ -13,7 +13,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[cfg(feature = "aliyun")]
     #[error("Error when mounting Aliyun OSS")]
-    AliyunOssError(#[from] volume_type::alibaba_cloud_oss::error::Error),
+    AliyunOssError(#[from] volume_type::aliyun::error::AliyunError),
 
     #[error("Failed to recognize the storage type")]
     StorageTypeNotRecognized(#[from] strum::ParseError),

@@ -4,7 +4,7 @@
 //
 
 #[cfg(feature = "aliyun")]
-pub mod alibaba_cloud_oss;
+pub mod aliyun;
 
 use std::{collections::HashMap, str::FromStr};
 
@@ -56,7 +56,7 @@ impl Storage {
         match volume_type {
             #[cfg(feature = "aliyun")]
             Volume::AliOss => {
-                let oss = alibaba_cloud_oss::Oss {};
+                let oss = aliyun::Oss {};
                 oss.mount(&self.options, &self.flags, &self.mount_point)
                     .await?;
                 Ok(self.mount_point.clone())
