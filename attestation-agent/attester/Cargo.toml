@@ -13,7 +13,7 @@ az-tdx-vtpm = { version = "0.5.2", default-features = false, features = ["attest
 base64.workspace = true
 kbs-types.workspace = true
 log.workspace = true
-nix = { version = "0.26.2", optional = true }
+nix = { version = "0.28", optional = true, features = ["ioctl", "fs"] }
 occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.7", optional = true }
 scroll = { version = "0.12.0", default-features = false, features = ["derive", "std"], optional = true }
 serde.workspace = true

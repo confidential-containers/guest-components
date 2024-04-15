@@ -327,7 +327,7 @@ dependencies = [
  "hyper-tls",
  "kbs-types",
  "log",
- "nix 0.26.4",
+ "nix 0.28.0",
  "occlum_dcap",
  "rstest",
  "scroll",
@@ -570,6 +570,26 @@ dependencies = [
  "rustc-hash",
  "shlex",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "bindgen"
+version = "0.69.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a00dc851838a2120612785d195287475a3ac45514741da670b735818822129a0"
+dependencies = [
+ "bitflags 2.4.2",
+ "cexpr",
+ "clang-sys",
+ "itertools",
+ "lazy_static",
+ "lazycell",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "rustc-hash",
+ "shlex",
+ "syn 2.0.50",
 ]
 
 [[package]]
@@ -816,6 +836,12 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "cfg_aliases"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 
 [[package]]
 name = "chrono"
@@ -1539,16 +1565,16 @@ dependencies = [
 
 [[package]]
 name = "devicemapper"
-version = "0.33.5"
+version = "0.34.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75a9fd602a98d192f7662a1f4c4cf6920a1b454c3a9e724f6490cf8e30910114"
+checksum = "68d15851812d2feb80b0b51ab7d440927e4a900c16d33b154e64a2828e0d7041"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.4.2",
  "devicemapper-sys",
- "env_logger 0.10.2",
+ "env_logger 0.11.3",
  "lazy_static",
  "log",
- "nix 0.26.4",
+ "nix 0.28.0",
  "rand 0.8.5",
  "retry",
  "semver 1.0.22",
@@ -1557,12 +1583,11 @@ dependencies = [
 
 [[package]]
 name = "devicemapper-sys"
-version = "0.1.5"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0b0f9d16560f830ae6e90b769017333c4561d2c84f39e7aa7d935d2e7bcbc4c"
+checksum = "3d6681f5413e2094480381a97b8299f548c0579f07095ee20fe58e0a28cb34b5"
 dependencies = [
- "bindgen 0.63.0",
- "nix 0.26.4",
+ "bindgen 0.69.4",
 ]
 
 [[package]]
@@ -1858,19 +1883,6 @@ checksum = "a12e6657c4c97ebab115a42dcee77225f7f482cdd841cf7088c657a42e9e00e7"
 dependencies = [
  "atty",
  "humantime",
- "log",
- "regex",
- "termcolor",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cd405aab171cb85d6735e5c8d9db038c17d3ca007a4d2c25f337935c3d90580"
-dependencies = [
- "humantime",
- "is-terminal",
  "log",
  "regex",
  "termcolor",
@@ -2607,7 +2619,7 @@ dependencies = [
  "libc",
  "log",
  "loopdev",
- "nix 0.26.4",
+ "nix 0.28.0",
  "nydus-api",
  "nydus-service",
  "oci-distribution",
@@ -3170,7 +3182,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c2a198fb6b0eada2a8df47933734e6d35d350665a33a3593d7164fa52c75c19"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.4",
 ]
 
 [[package]]
@@ -3446,6 +3458,18 @@ dependencies = [
  "libc",
  "memoffset 0.7.1",
  "pin-utils",
+]
+
+[[package]]
+name = "nix"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab2156c4fce2f8df6c499cc1c763e4394b7482525bf2a9701c9d79d215f519e4"
+dependencies = [
+ "bitflags 2.4.2",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
 ]
 
 [[package]]
@@ -4757,12 +4781,9 @@ dependencies = [
 
 [[package]]
 name = "retry"
-version = "1.3.1"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac95c60a949a63fd2822f4964939662d8f2c16c4fa0624fd954bc6e703b9a3f6"
-dependencies = [
- "rand 0.8.5",
-]
+checksum = "9166d72162de3575f950507683fac47e30f6f2c3836b71b7fbc61aa517c9c5f4"
 
 [[package]]
 name = "rfc6979"
