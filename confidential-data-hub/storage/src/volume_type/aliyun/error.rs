@@ -5,10 +5,10 @@
 
 use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, AliyunError>;
 
 #[derive(Error, Debug)]
-pub enum Error {
+pub enum AliyunError {
     #[error("Error when getting plaintext of OSS parameters")]
     GetPlaintextParameter(#[from] anyhow::Error),
 

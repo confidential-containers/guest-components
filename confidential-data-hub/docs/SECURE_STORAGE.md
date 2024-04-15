@@ -17,7 +17,7 @@ We reuse [direct block device assigned volume feature](https://github.com/kata-c
 
 [Aliyun OSS](https://www.alibabacloud.com/product/object-storage-service) is an object storage service provided by Alibaba Cloud (Aliyun).
 
-The [plugin](../storage/src/volume_type/alibaba_cloud_oss/) provides two different modes for secure mount.
+The [plugin](../storage/src/volume_type/aliyun) provides two different modes for secure mount.
 
 Confidential Data Hub's `secure_mount()` [API](../hub/protos/api.proto) will help to instrument this.
 
