@@ -47,13 +47,10 @@ impl ApiHandler for CDHClient {
 
         if let Some((api, resource_path)) = split_nth_slash(url_path, 2) {
             match api {
-                CDH_RESOURCE_URL => {
-                    let results = self
-                        .get_resource(resource_path)
-                        .await
-                        .unwrap_or_else(|e| e.to_string().into());
-                    return self.octet_stream_response(results);
-                }
+                CDH_RESOURCE_URL => match self.get_resource(resource_path).await {
+                    std::result::Result::Ok(results) => return self.octet_stream_response(results),
+                    Err(e) => return self.internal_error(e.to_string()),
+                },
                 _ => {
                     return self.not_found();
                 }
