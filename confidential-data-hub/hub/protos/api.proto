@@ -3,6 +3,8 @@ syntax = "proto3";
 package api;
 
 message UnsealSecretInput {
+    // The input `secret`` is in the following format
+    // `sealed`.`JWS header`.`JWS body (secret content)`.`signature`
     bytes secret = 1;
 }
 
