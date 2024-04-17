@@ -13,6 +13,8 @@ use crate::secret::Secret;
 pub use error::*;
 pub use kms::{Annotations, ProviderSettings};
 
+/// The input sealed secret is in the following format
+/// `sealed`.`JWS header`.`JWS body (secret content)`.`signature`
 pub async fn unseal_secret(secret: &[u8]) -> Result<Vec<u8>> {
     let sections: Vec<_> = secret.split(|c| *c == b'.').collect();
 

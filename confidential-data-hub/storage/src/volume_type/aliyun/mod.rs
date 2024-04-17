@@ -8,11 +8,9 @@ pub mod error;
 
 use std::{collections::HashMap, os::unix::fs::PermissionsExt};
 
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use async_trait::async_trait;
-use base64::{engine::general_purpose::STANDARD, Engine};
 use log::debug;
-use secret::secret::Secret;
 use serde::{Deserialize, Serialize};
 use tokio::{fs, io::AsyncWriteExt, process::Command};
 
@@ -60,33 +58,10 @@ struct OssParameters {
 
 pub(crate) struct Oss;
 
-async fn unseal_secret(secret: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-    // TODO: verify the jws signature using the key specified by `kid`
-    // in header. Here we directly get the JWS payload
-    let payload = secret
-        .split(|c| *c == b'.')
-        .nth(1)
-        .ok_or(anyhow!("illegal input sealed secret (not a JWS)"))?;
-
-    let secret_json = STANDARD
-        .decode(payload)
-        .context("illegal input sealed secret (JWS body is not standard base64 encoded)")?;
-
-    let secret: Secret = serde_json::from_slice(&secret_json)
-        .context("illegal input sealed secret format (json deseralization failed)")?;
-
-    let res = secret.unseal().await?;
-
-    Ok(res)
-}
-
 async fn get_plaintext_secret(secret: &str) -> anyhow::Result<String> {
     if secret.starts_with("sealed.") {
         debug!("detected sealed secret");
-        let tmp = secret
-            .strip_prefix("sealed.")
-            .ok_or(anyhow!("strip_prefix \"sealed.\" failed"))?;
-        let unsealed = unseal_secret(tmp.into()).await?;
+        let unsealed = secret::unseal_secret(secret.as_bytes()).await?;
 
         String::from_utf8(unsealed).context("convert to String failed")
     } else {
