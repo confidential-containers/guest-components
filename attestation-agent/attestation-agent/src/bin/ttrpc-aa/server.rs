@@ -35,7 +35,7 @@ impl AttestationAgentService for AA {
         _ctx: &::ttrpc::r#async::TtrpcContext,
         req: GetTokenRequest,
     ) -> ::ttrpc::Result<GetTokenResponse> {
-        debug!("Call AA to get token ...");
+        debug!("AA (ttrpc): get token ...");
 
         let mut attestation_agent = self.inner.lock().await;
 
@@ -43,17 +43,14 @@ impl AttestationAgentService for AA {
             .get_token(&req.TokenType)
             .await
             .map_err(|e| {
-                error!("Call AA-KBC to get token failed: {}", e);
+                error!("AA (ttrpc): get token failed\n {e:?}");
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
-                error_status.set_message(format!(
-                    "[ERROR:{}] AA-KBC get token failed: {}",
-                    AGENT_NAME, e
-                ));
+                error_status.set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get token failed"));
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
-        debug!("Get token successfully!");
+        debug!("AA (ttrpc): Get token successfully!");
 
         let mut reply = GetTokenResponse::new();
         reply.Token = token;
@@ -66,7 +63,7 @@ impl AttestationAgentService for AA {
         _ctx: &::ttrpc::r#async::TtrpcContext,
         req: GetEvidenceRequest,
     ) -> ::ttrpc::Result<GetEvidenceResponse> {
-        debug!("Call AA to get evidence ...");
+        debug!("AA (ttrpc): get evidence ...");
 
         let mut attestation_agent = self.inner.lock().await;
 
@@ -74,17 +71,15 @@ impl AttestationAgentService for AA {
             .get_evidence(&req.RuntimeData)
             .await
             .map_err(|e| {
-                error!("Call AA-KBC to get evidence failed: {}", e);
+                error!("AA (ttrpc): get evidence failed:\n {e:?}");
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
-                error_status.set_message(format!(
-                    "[ERROR:{}] AA-KBC get evidence failed: {}",
-                    AGENT_NAME, e
-                ));
+                error_status
+                    .set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get evidence failed"));
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
-        debug!("Get evidence successfully!");
+        debug!("AA (ttrpc): Get evidence successfully!");
 
         let mut reply = GetEvidenceResponse::new();
         reply.Evidence = evidence;
@@ -97,7 +92,7 @@ impl AttestationAgentService for AA {
         _ctx: &::ttrpc::r#async::TtrpcContext,
         req: ExtendRuntimeMeasurementRequest,
     ) -> ::ttrpc::Result<ExtendRuntimeMeasurementResponse> {
-        debug!("Call AA to extend runtime measurement ...");
+        debug!("AA (ttrpc): extend runtime measurement ...");
 
         let mut attestation_agent = self.inner.lock().await;
 
@@ -105,16 +100,16 @@ impl AttestationAgentService for AA {
             .extend_runtime_measurement(req.Events, req.RegisterIndex)
             .await
             .map_err(|e| {
-                error!("Call AA to extend runtime measurement failed: {}", e);
+                error!("AA (ttrpc): extend runtime measurement failed:\n {e:?}");
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
                 error_status.set_message(format!(
-                    "[ERROR:{}] AA extend runtime measurement failed: {}",
-                    AGENT_NAME, e
+                    "[ERROR:{AGENT_NAME}] AA extend runtime measurement failed"
                 ));
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
+        debug!("AA (ttrpc): extend runtime measurement succeeded.");
         let reply = ExtendRuntimeMeasurementResponse::new();
         ::ttrpc::Result::Ok(reply)
     }
