@@ -9,18 +9,27 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("get resource failed: {0}")]
-    GetResource(String),
+    #[error("kbs client initialization failed")]
+    KbsClient {
+        #[source]
+        source: kms::Error,
+    },
 
-    #[error("decrypt image (unwrap key) failed: {0}")]
-    ImageDecryption(String),
+    #[error("get resource failed")]
+    GetResource {
+        #[source]
+        source: kms::Error,
+    },
+
+    #[error("decrypt image (unwrap key) failed")]
+    ImageDecryption(#[from] image::Error),
 
     #[error("init Hub failed: {0}")]
     InitializationFailed(String),
 
-    #[error("unseal secret failed: {0}")]
-    UnsealSecret(String),
+    #[error("unseal secret failed")]
+    UnsealSecret(#[from] secret::SecretError),
 
-    #[error("secure mount failed: {0}")]
-    SecureMount(String),
+    #[error("secure mount failed")]
+    SecureMount(#[from] storage::Error),
 }

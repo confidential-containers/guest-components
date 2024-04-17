@@ -127,7 +127,7 @@ async fn main() {
                 .await
                 .expect("failed to read sealed secret");
             let secret: Secret = serde_json::from_slice(&secret_json)
-                .expect("illegal input sealed secret format (json deseralization failed)");
+                .expect("illegal input sealed secret format (json deserialization failed)");
 
             match secret.r#type {
                 SecretContent::Envelope(ref envelope) => match envelope.provider.as_str() {

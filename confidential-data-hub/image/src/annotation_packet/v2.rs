@@ -6,6 +6,7 @@
 //! This is a new version of [`AnnotationPacket`] which is compatible with
 //! the previous version.
 
+use anyhow::anyhow;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use kms::{plugins::VaultProvider, Annotations, ProviderSettings};
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,7 @@ use serde_json::Map;
 
 use crate::{Error, Result};
 
-const DEFAULT_VERSION: &str = "0.1.0";
+pub const DEFAULT_VERSION: &str = "0.1.0";
 
 /// New version format of AnnotationPacket
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
@@ -65,31 +66,33 @@ impl TryInto<super::v1::AnnotationPacket> for AnnotationPacketV2 {
 
     fn try_into(self) -> std::result::Result<super::v1::AnnotationPacket, Self::Error> {
         if self.version != DEFAULT_VERSION {
-            return Err(Error::ConvertAnnotationPacketFailed(format!(
-                "`version` must be {DEFAULT_VERSION}."
-            )));
+            return Err(Error::ParseAnnotationPacket {
+                source: anyhow!("version` must be {DEFAULT_VERSION}."),
+            });
         }
 
         if self.provider != VaultProvider::Kbs.as_ref().to_lowercase() {
-            return Err(Error::ConvertAnnotationPacketFailed(String::from(
-                "Provider must be `kbs`.",
-            )));
+            return Err(Error::ParseAnnotationPacket {
+                source: anyhow!("Provider must be `kbs`."),
+            });
         }
 
         if self.wrap_type.is_none() {
-            return Err(Error::ConvertAnnotationPacketFailed(String::from(
-                "no `WrapType` given.",
-            )));
+            return Err(Error::ParseAnnotationPacket {
+                source: anyhow!("no `WrapType` given."),
+            });
         }
 
         if self.iv.is_none() {
-            return Err(Error::ConvertAnnotationPacketFailed(String::from(
-                "no `iv` given.",
-            )));
+            return Err(Error::ParseAnnotationPacket {
+                source: anyhow!("no `iv` given."),
+            });
         }
 
         let kid = resource_uri::ResourceUri::try_from(&self.kid[..]).map_err(|e| {
-            Error::ConvertAnnotationPacketFailed(format!("illegal ResourceUri in `kid` field: {e}"))
+            Error::ParseAnnotationPacket {
+                source: anyhow!("illegal ResourceUri in `kid` field: {e}"),
+            }
         })?;
 
         let annotation_packet = super::v1::AnnotationPacket {
@@ -113,23 +116,26 @@ impl AnnotationPacketV2 {
             kms => {
                 let mut kms_client = kms::new_decryptor(kms, self.provider_settings.clone())
                     .await
-                    .map_err(|e| {
-                        Error::UnwrapAnnotationV2Failed(format!("create KMS client failed: {e}"))
+                    .map_err(|e| Error::KmsError {
+                        context: "create KMS client",
+                        source: e,
                     })?;
 
                 kms_client
                     .decrypt(
                         &STANDARD.decode(&self.wrapped_data).map_err(|e| {
-                            Error::UnwrapAnnotationV1Failed(format!(
-                                "base64 decode `wrapped_data` failed: {e}"
-                            ))
+                            Error::Base64DecodeFailed {
+                                context: "base64 decode `wrapped_data`",
+                                source: e,
+                            }
                         })?,
                         &self.kid,
                         &self.annotations,
                     )
                     .await
-                    .map_err(|e| {
-                        Error::UnwrapAnnotationV2Failed(format!("KMS decryption failed: {e}"))
+                    .map_err(|e| Error::KmsError {
+                        context: "decrypt LEK with KEK",
+                        source: e,
                     })?
             }
         };

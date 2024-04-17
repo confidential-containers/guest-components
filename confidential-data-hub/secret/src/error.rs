@@ -5,13 +5,24 @@
 
 use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, Error>;
+use crate::secret::{
+    layout::{envelope::EnvelopeError, vault::VaultError},
+    VERSION,
+};
+
+pub type Result<T> = std::result::Result<T, SecretError>;
 
 #[derive(Error, Debug)]
-pub enum Error {
-    #[error("unseal envelope secret failed: {0}")]
-    UnsealEnvelopeFailed(String),
+pub enum SecretError {
+    #[error("version not supported, only {} supported", VERSION)]
+    VersionError,
 
-    #[error("unseal vault secret failed: {0}")]
-    UnsealVaultFailed(String),
+    #[error("unseal envelope secret failed")]
+    UnsealEnvelopeFailed(#[from] EnvelopeError),
+
+    #[error("unseal vault secret failed")]
+    UnsealVaultFailed(#[from] VaultError),
+
+    #[error("parse SealedSecret failed: {0}")]
+    ParseFailed(&'static str),
 }
