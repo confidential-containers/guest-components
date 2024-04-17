@@ -2586,6 +2586,7 @@ dependencies = [
 name = "image"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "assert-json-diff",
  "base64 0.21.7",
  "crypto",
@@ -5178,6 +5179,7 @@ dependencies = [
 name = "secret"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "assert-json-diff",
  "assert_cmd",
  "async-trait",

@@ -9,12 +9,32 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Convert AnnotationPacket failed: {0}")]
-    ConvertAnnotationPacketFailed(String),
+    #[error("Unknown WrapType: {0}")]
+    UnknownWrapType(String),
 
-    #[error("unwrap key failed (Annotation V1): {0}")]
-    UnwrapAnnotationV1Failed(String),
+    #[error("kms interface when {context}")]
+    KmsError {
+        #[source]
+        source: kms::Error,
+        context: &'static str,
+    },
 
-    #[error("unwrap key failed (Annotation V2): {0}")]
-    UnwrapAnnotationV2Failed(String),
+    #[error("base64 decoding failed when {context}")]
+    Base64DecodeFailed {
+        #[source]
+        source: base64::DecodeError,
+        context: &'static str,
+    },
+
+    #[error("decrypt LEK using KEK failed")]
+    DecryptFailed {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error("malwared AnnotationPacket format")]
+    ParseAnnotationPacket {
+        #[source]
+        source: anyhow::Error,
+    },
 }

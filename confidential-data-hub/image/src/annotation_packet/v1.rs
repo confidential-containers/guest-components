@@ -32,30 +32,41 @@ impl AnnotationPacket {
         use crate::Error;
 
         let wrap_type = WrapType::try_from(&self.wrap_type[..])
-            .map_err(|e| Error::UnwrapAnnotationV1Failed(format!("parse WrapType failed: {e}")))?;
+            .map_err(|_| Error::UnknownWrapType(self.wrap_type.to_string()))?;
         let mut kbs_client =
             kms::new_getter(VaultProvider::Kbs.as_ref(), ProviderSettings::default())
                 .await
-                .map_err(|e| Error::UnwrapAnnotationV1Failed(format!("create kbc failed: {e}")))?;
+                .map_err(|e| Error::KmsError {
+                    context: "create KBC failed",
+                    source: e,
+                })?;
         let name = self.kid.whole_uri();
         let kek = kbs_client
             .get_secret(&name, &Annotations::default())
             .await
-            .map_err(|e| Error::UnwrapAnnotationV1Failed(format!("get KEK failed: {e}")))?;
+            .map_err(|e| Error::KmsError {
+                context: "get KEK failed",
+                source: e,
+            })?;
 
         let lek = crypto::decrypt(
             kek.into(),
-            STANDARD.decode(&self.wrapped_data).map_err(|e| {
-                Error::UnwrapAnnotationV1Failed(format!("base64 decode `wrapped_data` failed: {e}"))
-            })?,
-            STANDARD.decode(&self.iv).map_err(|e| {
-                Error::UnwrapAnnotationV1Failed(format!("base64 decode `iv` failed: {e}"))
-            })?,
+            STANDARD
+                .decode(&self.wrapped_data)
+                .map_err(|e| Error::Base64DecodeFailed {
+                    context: "decode `wrapped_data`",
+                    source: e,
+                })?,
+            STANDARD
+                .decode(&self.iv)
+                .map_err(|e| Error::Base64DecodeFailed {
+                    context: "decode `iv`",
+                    source: e,
+                })?,
             wrap_type,
         )
-        .map_err(|e| {
-            Error::UnwrapAnnotationV1Failed(format!("decrypt LEK using KEK failed: {e}"))
-        })?;
+        .map_err(|e| Error::DecryptFailed { source: e })?;
+
         Ok(lek)
     }
 }

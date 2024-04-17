@@ -3,13 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, error::Error as _, sync::Arc};
 
 use anyhow::Result;
 use async_trait::async_trait;
 use confidential_data_hub::{hub::Hub, DataHub};
 use lazy_static::lazy_static;
-use log::debug;
+use log::{debug, error};
 use storage::volume_type::Storage;
 use tokio::sync::RwLock;
 use ttrpc::{asynchronous::TtrpcContext, Code, Error, Status};
@@ -30,6 +30,18 @@ lazy_static! {
 }
 
 mod message;
+
+macro_rules! format_error {
+    ($err:expr) => {{
+        let mut error_string = format!("{}", $err);
+        let mut current_error = $err.source();
+        while let Some(source) = current_error {
+            error_string.push_str(&format!("\nCaused by: {}", source));
+            current_error = source.source();
+        }
+        error_string
+    }};
+}
 
 pub struct Server;
 
@@ -61,9 +73,11 @@ impl SealedSecretService for Server {
         let reader = HUB.read().await;
         let reader = reader.as_ref().expect("must be initialized");
         let plaintext = reader.unseal_secret(input.secret).await.map_err(|e| {
+            let detailed_error = format_error!(e);
+            error!("UnsealSecret :\n{detailed_error}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
-            status.set_message(format!("[CDH] [ERROR]: Unseal Secret failed: {e}"));
+            status.set_message("[CDH] [ERROR]: Unseal Secret failed".into());
             Error::RpcStatus(status)
         })?;
 
@@ -85,9 +99,11 @@ impl GetResourceService for Server {
         let reader = HUB.read().await;
         let reader = reader.as_ref().expect("must be initialized");
         let resource = reader.get_resource(req.ResourcePath).await.map_err(|e| {
+            let detailed_error = format_error!(e);
+            error!("GetResource :\n{detailed_error}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
-            status.set_message(format!("[CDH] [ERROR]: Get Resource failed: {e}"));
+            status.set_message("[CDH] [ERROR]: Get Resource failed".into());
             Error::RpcStatus(status)
         })?;
 
@@ -110,24 +126,28 @@ impl KeyProviderService for Server {
         let reader = reader.as_ref().expect("must be initialized");
         let key_provider_input: KeyProviderInput =
             serde_json::from_slice(&req.KeyProviderKeyWrapProtocolInput[..]).map_err(|e| {
+                error!("UnwrapKey parse KeyProviderInput failed : {e}");
                 let mut status = Status::new();
                 status.set_code(Code::INTERNAL);
-                status.set_message(format!("[ERROR] UnwrapKey Parse request failed: {e}"));
+                status.set_message("[ERROR] UnwrapKey Parse request failed".into());
                 Error::RpcStatus(status)
             })?;
 
         let annotation_packet = key_provider_input.get_annotation().map_err(|e| {
+            error!("UnwrapKey get AnnotationPacket failed: {e}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
-            status.set_message(format!("[ERROR] UnwrapKey Parse request failed: {e}"));
+            status.set_message("[ERROR] UnwrapKey Parse request failed".to_string());
             Error::RpcStatus(status)
         })?;
 
         debug!("Call CDH to Unwrap Key...");
         let decrypted_optsdata = reader.unwrap_key(&annotation_packet).await.map_err(|e| {
+            let detailed_error = format_error!(e);
+            error!("UnWrapKey :\n{detailed_error}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
-            status.set_message(format!("[CDH] [ERROR]: UnwrapKey failed: {e}"));
+            status.set_message("[CDH] [ERROR]: UnwrapKey failed".to_string());
             Error::RpcStatus(status)
         })?;
 
@@ -141,11 +161,10 @@ impl KeyProviderService for Server {
         };
 
         let lek = serde_json::to_vec(&output_struct).map_err(|e| {
+            error!("UnWrapKey failed to serialize LEK : {e}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
-            status.set_message(format!(
-                "[CDH] [ERROR]: UnwrapKey serialize response failed: {e}"
-            ));
+            status.set_message("[CDH] [ERROR]: UnwrapKey serialize response failed".to_string());
             Error::RpcStatus(status)
         })?;
 
@@ -172,9 +191,11 @@ impl SecureMountService for Server {
             mount_point: req.mount_point,
         };
         let resource = reader.secure_mount(storage).await.map_err(|e| {
+            let detailed_error = format_error!(e);
+            error!("Secure Mount :\n{detailed_error}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
-            status.set_message(format!("[CDH] [ERROR]: secure mount failed: {e}"));
+            status.set_message("[CDH] [ERROR]: secure mount failed".to_string());
             Error::RpcStatus(status)
         })?;
 
