@@ -65,6 +65,13 @@ pub trait ApiHandler: Send {
             .status(StatusCode::METHOD_NOT_ALLOWED)
             .body(Body::from("Method Not Allowed"))?)
     }
+
+    // Build 500 Internal Server Error response.
+    fn internal_error(&self, body: String) -> Result<Response<Body>> {
+        Ok(Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(Body::from(body))?)
+    }
 }
 
 pub struct Router {

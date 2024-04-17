@@ -56,22 +56,20 @@ impl ApiHandler for AAClient {
 
         match url_path {
             AA_TOKEN_URL => match params.get("token_type") {
-                Some(token_type) => {
-                    let results = self
-                        .get_token(token_type)
-                        .await
-                        .unwrap_or_else(|e| e.to_string().into());
-                    return self.octet_stream_response(results);
-                }
+                Some(token_type) => match self.get_token(token_type).await {
+                    std::result::Result::Ok(results) => return self.octet_stream_response(results),
+                    Err(e) => return self.internal_error(e.to_string()),
+                },
                 None => return self.bad_request(),
             },
             AA_EVIDENCE_URL => match params.get("runtime_data") {
                 Some(runtime_data) => {
-                    let results = self
-                        .get_evidence(&runtime_data.clone().into_bytes())
-                        .await
-                        .unwrap_or_else(|e| e.to_string().into());
-                    return self.octet_stream_response(results);
+                    match self.get_evidence(&runtime_data.clone().into_bytes()).await {
+                        std::result::Result::Ok(results) => {
+                            return self.octet_stream_response(results)
+                        }
+                        Err(e) => return self.internal_error(e.to_string()),
+                    }
                 }
                 None => return self.bad_request(),
             },
