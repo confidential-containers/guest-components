@@ -22,15 +22,7 @@ mod get_resource {
     tonic::include_proto!("api");
 }
 
-/// Attestation Agent's GetResource gRPC address.
-/// It's given <https://github.com/confidential-containers/guest-components/tree/main/attestation-agent#run>
-///
-/// We are now using CDH to provide the GetResource gRPC service,
-/// while gRPC is still not supported by CDH. So this feature will
-/// not work.
-/// TODO: Add gRPC support for CDH to leverage the ability of getting
-/// resources by image-rs using gRPC.
-pub const GETRESOURCE_ADDR: &str = "http://127.0.0.1:50001";
+pub const GETRESOURCE_ADDR: &str = "http://127.0.0.1:50000";
 
 pub struct Grpc {
     inner: GetResourceServiceClient<Channel>,

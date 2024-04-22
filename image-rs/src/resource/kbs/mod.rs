@@ -26,9 +26,6 @@ use tokio::fs;
 use super::Protocol;
 
 #[cfg(feature = "keywrap-grpc")]
-compile_error!("`keywrap-grpc` feature is temporarily not supported until https://github.com/confidential-containers/guest-components/issues/430 is closed");
-
-#[cfg(feature = "keywrap-grpc")]
 mod grpc;
 
 #[cfg(feature = "keywrap-ttrpc")]

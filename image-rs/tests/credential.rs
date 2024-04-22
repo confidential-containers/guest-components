@@ -3,22 +3,17 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
-use image_rs::image::ImageClient;
-#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
-use rstest::rstest;
-#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
-use serial_test::serial;
-
 pub mod common;
 
-// TODO: add `keywrap-grpc` integration test after CDH supports grpc mode
-#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
-#[rstest]
+#[cfg(all(
+    feature = "getresource",
+    any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
+))]
+#[rstest::rstest]
 #[case("liudalibj/private-busy-box", "kbs:///default/credential/test")]
 #[case("quay.io/liudalibj/private-busy-box", "kbs:///default/credential/test")]
 #[tokio::test]
-#[serial]
+#[serial_test::serial]
 async fn test_use_credential(#[case] image_ref: &str, #[case] auth_file_uri: &str) {
     common::prepare_test(common::OFFLINE_FS_KBC_RESOURCES_FILE).await;
 
@@ -37,7 +32,7 @@ async fn test_use_credential(#[case] image_ref: &str, #[case] auth_file_uri: &st
 
     // a new client for every pulling, avoid effection
     // of cache of old client.
-    let mut image_client = ImageClient::new(work_dir.path().to_path_buf());
+    let mut image_client = image_rs::image::ImageClient::new(work_dir.path().to_path_buf());
 
     // enable container auth
     image_client.config.auth = true;

@@ -11,11 +11,6 @@ set -o pipefail
 
 [ -n "${BASH_VERSION:-}" ] && set -o errtrace
 [ -n "${DEBUG:-}" ] && set -o xtrace
-if [[ -n "${TTRPC:-}" ]]; then
-    dest_dir_suffix="ttrpc"
-else
-    dest_dir_suffix="grpc"
-fi
 
 source $HOME/.cargo/env
 
@@ -24,8 +19,8 @@ CDH_DIR=$SCRIPT_DIR/../../confidential-data-hub
 
 pushd $CDH_DIR
 
-make RESOURCE_PROVIDER=none KMS_PROVIDER=none
-make DESTDIR="${SCRIPT_DIR}/${dest_dir_suffix}" install
+make RESOURCE_PROVIDER=none KMS_PROVIDER=none RPC="${RPC}"
+make DESTDIR="${SCRIPT_DIR}/${RPC}" install
 
-file "${SCRIPT_DIR}/${dest_dir_suffix}/confidential-data-hub"
+file "${SCRIPT_DIR}/${RPC}/confidential-data-hub"
 popd

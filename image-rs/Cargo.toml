@@ -95,8 +95,6 @@ encryption-openssl = ["ocicrypt-rs/block-cipher-openssl", "kbc?/openssl", "encry
 
 keywrap-cmd = ["ocicrypt-rs/keywrap-keyprovider-cmd"]
 
-# Warning: This feature is not able to compile temporarily
-# before https://github.com/confidential-containers/guest-components/issues/430 is fixed. 
 keywrap-grpc = ["ocicrypt-rs/keywrap-keyprovider-grpc", "prost", "tonic", "tonic-build"]
 keywrap-native = ["ocicrypt-rs/keywrap-keyprovider-native", "kbc/cc_kbc", "kbc/sample_kbc", "kbc/sgx-attester", "resource_uri"]
 keywrap-ttrpc = ["ocicrypt-rs/keywrap-keyprovider-ttrpc", "dep:ttrpc", "dep:protobuf", "ttrpc-codegen"]
