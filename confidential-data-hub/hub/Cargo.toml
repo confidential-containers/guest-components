@@ -7,18 +7,23 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
-name = "confidential-data-hub"
-required-features = ["bin"]
+name = "ttrpc-cdh"
+required-features = ["bin", "ttrpc"]
 
 [[bin]]
-name = "cdh-tool"
-required-features = ["bin"]
+name = "grpc-cdh"
+required-features = ["bin", "grpc"]
+
+[[bin]]
+name = "ttrpc-cdh-tool"
+required-features = ["bin", "ttrpc"]
 
 [dependencies]
 anyhow = { workspace = true, optional = true }
 async-trait.workspace = true
 attestation-agent = { path = "../../attestation-agent/attestation-agent", default-features = false, optional = true }
 base64.workspace = true
+cfg-if = { workspace = true, optional = true }
 clap = { workspace = true, features = [ "derive" ], optional = true }
 config = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
@@ -26,6 +31,7 @@ image = { path = "../image", default-features = false }
 kms = { path = "../kms", default-features = false }
 lazy_static.workspace = true
 log.workspace = true
+prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
 secret.path = "../secret"
 storage.path = "../storage"
@@ -33,9 +39,11 @@ serde = { workspace = true, optional = true }
 serde_json.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
+tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 
 [build-dependencies]
+tonic-build = { workspace = true, optional = true }
 ttrpc-codegen = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -43,7 +51,7 @@ rstest.workspace = true
 tempfile.workspace = true
 
 [features]
-default = ["kbs", "bin"]
+default = ["kbs", "bin", "ttrpc", "grpc"]
 
 # support aliyun stacks (KMS, ..)
 aliyun = ["image/aliyun", "secret/aliyun"]
@@ -57,4 +65,7 @@ sev = ["image/sev", "kms/sev", "secret/sev"]
 # support eHSM stacks (KMS, ...)
 ehsm = ["image/ehsm", "secret/ehsm"]
 
-bin = ["anyhow", "attestation-agent", "clap", "config", "env_logger", "protobuf", "serde", "tokio/signal", "ttrpc", "ttrpc-codegen"]
+# Binary RPC type
+bin = [ "anyhow", "attestation-agent", "cfg-if", "clap", "config", "env_logger", "serde" ]
+ttrpc = ["dep:ttrpc", "protobuf", "ttrpc-codegen", "tokio/signal"]
+grpc = ["prost", "tonic", "tonic-build", "tokio/signal"]
