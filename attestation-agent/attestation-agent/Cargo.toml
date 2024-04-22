@@ -58,13 +58,14 @@ kbs = ["kbs_protocol/background_check", "token"]
 # CoCoAS Attestation Token
 coco_as = ["reqwest", "token"]
 
-all-attesters = ["tdx-attester", "sgx-attester", "az-snp-vtpm-attester", "az-tdx-vtpm-attester", "snp-attester", "se-attester"]
+all-attesters = ["tdx-attester", "sgx-attester", "az-snp-vtpm-attester", "az-tdx-vtpm-attester", "snp-attester", "se-attester", "cca-attester"]
 tdx-attester = ["kbs_protocol?/tdx-attester", "attester/tdx-attester"]
 sgx-attester = ["kbs_protocol?/sgx-attester", "attester/sgx-attester"]
 az-snp-vtpm-attester = ["kbs_protocol?/az-snp-vtpm-attester", "attester/az-snp-vtpm-attester"]
 az-tdx-vtpm-attester = ["kbs_protocol?/az-tdx-vtpm-attester", "attester/az-tdx-vtpm-attester"]
 snp-attester = ["kbs_protocol?/snp-attester", "attester/snp-attester"]
 se-attester = ["kbs_protocol?/se-attester", "attester/se-attester"]
+cca-attester = ["kbs_protocol?/cca-attester", "attester/cca-attester"]
 
 # Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
 rust-crypto = ["kbs_protocol?/rust-crypto"]
