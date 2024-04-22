@@ -102,14 +102,13 @@ jobs:
         run: |
           sudo -E PATH=$PATH -s cargo test -p image-rs --features default
 
-      # TODO: delete the comment after https://github.com/confidential-containers/guest-components/issues/430
-      # - name: Run cargo test - kata-cc (rust-tls version) with keywrap-grpc + keywrap-jwe
-      #   run: |
-      #     sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-ring,keywrap-grpc,snapshot-overlayfs,signature-cosign-rustls,signature-simple,getresource,oci-distribution/rustls-tls,keywrap-jwe
+      - name: Run cargo test - kata-cc (rust-tls version) with keywrap-grpc + keywrap-jwe
+        run: |
+          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-ring,keywrap-grpc,snapshot-overlayfs,signature-cosign-rustls,signature-simple,getresource,oci-distribution/rustls-tls,keywrap-jwe
 
-      # - name: Run cargo test - kata-cc (native-tls version) with keywrap-grpc + keywrap-jwe
-      #   run: |
-      #     sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-openssl,keywrap-grpc,snapshot-overlayfs,signature-cosign-native,signature-simple,getresource,oci-distribution/native-tls,keywrap-jwe
+      - name: Run cargo test - kata-cc (native-tls version) with keywrap-grpc + keywrap-jwe
+        run: |
+          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-openssl,keywrap-grpc,snapshot-overlayfs,signature-cosign-native,signature-simple,getresource,oci-distribution/native-tls,keywrap-jwe
 
       - name: Run cargo test - kata-cc (rust-tls version) with keywrap-ttrpc (default) + keywrap-jwe
         run: |
@@ -118,6 +117,10 @@ jobs:
       - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe
         run: |
           sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-native-tls,keywrap-jwe
+      
+      - name: Clean test cache
+        run: |
+          sudo -E PATH=$PATH -s cargo clean
 
       - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe and with signatures from XRSS registry extension
         env:

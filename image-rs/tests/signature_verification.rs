@@ -6,10 +6,6 @@
 
 //! Test for signature verification.
 
-#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
-use image_rs::image::ImageClient;
-#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
-use serial_test::serial;
 use strum_macros::{Display, EnumString};
 
 pub mod common;
@@ -105,18 +101,27 @@ const _TESTS_XRSS: [_TestItem; _TEST_ITEMS_XRSS] = [
     },
 ];
 
-#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
+#[cfg(all(
+    feature = "getresource",
+    any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
+))]
 const POLICY_URI: &str = "kbs:///default/security-policy/test";
 
-#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
+#[cfg(all(
+    feature = "getresource",
+    any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
+))]
 const SIGSTORE_CONFIG_URI: &str = "kbs:///default/sigstore-config/test";
 
 /// image-rs built without support for cosign image signing cannot use a policy that includes a type that
 /// uses cosign (type: sigstoreSigned), even if the image being pulled is not signed using cosign.
 /// https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/kbc/src/sample_kbc/policy.json
-#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
+#[cfg(all(
+    feature = "getresource",
+    any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
+))]
 #[tokio::test]
-#[serial]
+#[serial_test::serial]
 async fn signature_verification() {
     do_signature_verification_tests(&_TESTS, common::OFFLINE_FS_KBC_RESOURCES_FILE, &None).await;
 }
@@ -124,10 +129,10 @@ async fn signature_verification() {
 #[cfg(all(
     feature = "signature-simple-xrss",
     feature = "getresource",
-    feature = "keywrap-ttrpc"
+    any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
 ))]
 #[tokio::test]
-#[serial]
+#[serial_test::serial]
 async fn signature_verification_xrss() {
     match std::env::var("AUTH_PASSWORD") {
         Ok(auth_password) => match !auth_password.is_empty() {
@@ -151,7 +156,10 @@ async fn signature_verification_xrss() {
     }
 }
 
-#[cfg(all(feature = "getresource", feature = "keywrap-ttrpc"))]
+#[cfg(all(
+    feature = "getresource",
+    any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
+))]
 async fn do_signature_verification_tests(
     tests: &[_TestItem<'_, '_>],
     offline_fs_kbc_resources: &str,
@@ -179,7 +187,7 @@ async fn do_signature_verification_tests(
 
         // a new client for every pulling, avoid effection
         // of cache of old client.
-        let mut image_client = ImageClient::new(work_dir.path().to_path_buf());
+        let mut image_client = image_rs::image::ImageClient::new(work_dir.path().to_path_buf());
 
         // enable signature verification
         image_client.config.security_validate = true;

@@ -79,13 +79,14 @@ pub async fn start_confidential_data_hub() -> Result<Child> {
         cfg_if::cfg_if! {
             if #[cfg(feature = "keywrap-ttrpc")] {
                 let output = Command::new(script_path)
-                    .env("TTRPC", "1")
+                    .env("RPC", "ttrpc")
                     .output()
                     .await
                     .expect("Failed to build confidential-data-hub");
                 println!("build ttrpc confidential-data-hub: {:?}", output);
             } else {
                 let output = Command::new(script_path)
+                    .env("RPC", "grpc")
                     .output()
                     .await
                     .expect("Failed to build confidential-data-hub");
@@ -102,8 +103,8 @@ pub async fn start_confidential_data_hub() -> Result<Child> {
             .spawn()
             .expect("Failed to start confidential-data-hub");
         } else {
-            // TODO: implement this after CDH supports gRPC
             let mut cdh = Command::new(cdh_path)
+            .env("AA_KBC_PARAM", AA_PARAMETER)
             .kill_on_drop(true)
             .spawn()
             .expect("Failed to start confidential-data-hub");
