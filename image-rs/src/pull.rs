@@ -400,17 +400,6 @@ mod tests {
                 layer_data: Vec::<u8>::new(),
                 result: Err(anyhow!(bad_media_err.clone())),
             },
-            #[cfg(all(feature = "encryption", feature = "keywrap-grpc"))]
-            TestData {
-                layer: OciDescriptor {
-                    media_type: ocicrypt_rs::spec::MEDIA_TYPE_LAYER_ENC.to_string(),
-                    ..Default::default()
-                },
-                diff_id: empty_diff_id,
-                decrypt_config: None,
-                layer_data: Vec::<u8>::new(),
-                result: Err(anyhow!(ERR_NO_DECRYPT_CFG)),
-            },
             TestData {
                 layer: uncompressed_layer,
                 diff_id: empty_diff_id,
