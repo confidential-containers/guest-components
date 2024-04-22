@@ -10,6 +10,19 @@ use std::collections::HashMap;
 use std::str;
 use std::vec::Vec;
 
+#[macro_export]
+macro_rules! format_error {
+    ($err:expr) => {{
+        let mut error_string = format!("{}", $err);
+        let mut current_error = $err.source();
+        while let Some(source) = current_error {
+            error_string.push_str(&format!("\nCaused by: {}", source));
+            current_error = source.source();
+        }
+        error_string
+    }};
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default, Clone)]
 pub struct KeyProviderInput {
     // Operation is either "keywrap" or "keyunwrap"

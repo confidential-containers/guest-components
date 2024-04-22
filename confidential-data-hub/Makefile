@@ -15,7 +15,7 @@ TARGET_DIR := ../target
 BIN_NAME := confidential-data-hub
 
 SOURCE_ARCH := $(shell uname -m)
-
+RPC ?= ttrpc
 ARCH ?= $(shell uname -m)
 DEBUG ?=
 LIBC ?= gnu
@@ -24,6 +24,18 @@ KMS_PROVIDER ?= aliyun,ehsm
 DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
 features ?=
+
+binary_name ?=
+
+ifeq ($(RPC), ttrpc)
+    binary = --bin ttrpc-cdh
+    features += bin,ttrpc
+    binary_name = ttrpc-cdh
+else
+    binary = --bin grpc-cdh
+    features += bin,grpc
+    binary_name = grpc-cdh
+endif
 
 ifeq ($(SOURCE_ARCH), ppc64le)
   ARCH=powerpc64le
@@ -85,7 +97,8 @@ ifneq ($(RUSTFLAGS_ARGS),)
 endif
 
 build:
-	cd hub && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features) bin" $(LIBC_FLAG)
+	cd hub && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features)" $(binary) $(LIBC_FLAG)
+	mv $(TARGET_DIR)/$(binary_name) $(TARGET)
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)
 
@@ -100,5 +113,5 @@ clean:
 
 help:
 	@echo "==========================Help========================================="
-	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [RESOURCE_PROVIDER=(kbs/sev)] [KMS_PROVIDER=aliyun/ehsm]"
+	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [RESOURCE_PROVIDER=(kbs/sev)] [KMS_PROVIDER=aliyun/ehsm] [RPC=(ttrpc/grpc)]"
 	@echo "install: make install [DESTDIR=/path/to/target] [LIBC=(musl)]"

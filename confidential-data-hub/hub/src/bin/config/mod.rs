@@ -11,7 +11,13 @@ use log::{debug, warn};
 use serde::Deserialize;
 use tokio::fs;
 
-const DEFAULT_CDH_SOCKET_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ttrpc")] {
+        const DEFAULT_CDH_SOCKET_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
+    } else {
+        const DEFAULT_CDH_SOCKET_ADDR: &str = "127.0.0.1:50000";
+    }
+}
 
 #[derive(Deserialize, Debug)]
 pub struct KbsConfig {

@@ -57,6 +57,12 @@ KMS_PROVIDER plugins (flag `KMS_PROVIDER`)
 Note:
 - If no `KMS_PROVIDER` flag is given, then all the KMS providers will be enabled by default.
 
+RPC plugins (flag `RPC`)
+| Feature name        |           Note                                                     |
+| ------------------- | -----------------------------------------------------------------  |
+| grpc                | Use grpc API to serve for requests (TCP/IP socket).                |
+| ttrpc               | Use ttrpc API to serve for requests (Unix socket).                 |
+
 ### Configuration file
 
 CDH will be launched by a configuration file by
@@ -80,14 +86,14 @@ to looking for `aa_kbc_params`.
 Finally on the abscence of a configuration, CDH will be configured with the `offline_fs_kbc` Key Broker Client (KBC).
 ### Client Tool
 
-A client tool to interact with CDH is provided. run the following to build
+A client tool to interact with ttrpc CDH is provided. run the following to build
 ```shell
 git clone https://github.com/confidential-containers/guest-components
 cd guest-components/confidential-data-hub/hub
-cargo build --bin cdh-tool --features bin
+cargo build --bin ttrpc-cdh-tool --features bin,ttrpc
 ```
 
 Install
 ```shell
-install -D -m0755 ../../target/x86_64-unknown-linux-gnu/release/cdh-tool /usr/local/bin/cdh-tool
+install -D -m0755 ../../target/x86_64-unknown-linux-gnu/release/ttrpc-cdh-tool /usr/local/bin/ttrpc-cdh-tool
 ```

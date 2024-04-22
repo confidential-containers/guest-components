@@ -4,26 +4,23 @@
 //
 
 fn main() {
-    #[cfg(feature = "bin")]
+    #[cfg(feature = "grpc")]
     {
-        use std::env;
+        tonic_build::configure()
+            .build_server(true)
+            .protoc_arg("--experimental_allow_proto3_optional")
+            .compile(
+                &["./protos/api.proto", "./protos/keyprovider.proto"],
+                &["./protos"],
+            )
+            .expect("Generate grpc protocol code failed.");
+    }
+
+    #[cfg(feature = "ttrpc")]
+    {
         use std::fs::File;
         use std::io::{Read, Write};
-        use std::path::Path;
-        use std::process::Command;
         use ttrpc_codegen::{Codegen, Customize, ProtobufCustomize};
-
-        fn replace_text_in_file(file_name: &str, from: &str, to: &str) {
-            let mut src = File::open(file_name).unwrap();
-            let mut contents = String::new();
-            src.read_to_string(&mut contents).unwrap();
-            drop(src);
-
-            let new_contents = contents.replace(from, to);
-
-            let mut dst = File::create(file_name).unwrap();
-            dst.write_all(new_contents.as_bytes()).unwrap();
-        }
 
         let protobuf_customized = ProtobufCustomize::default().gen_mod_rs(false);
 
@@ -40,8 +37,29 @@ fn main() {
             .run()
             .expect("Generate ttrpc protocol code failed.");
 
+        fn replace_text_in_file(file_name: &str, from: &str, to: &str) {
+            let mut src = File::open(file_name).unwrap();
+            let mut contents = String::new();
+            src.read_to_string(&mut contents).unwrap();
+            drop(src);
+
+            let new_contents = contents.replace(from, to);
+
+            let mut dst = File::create(file_name).unwrap();
+            dst.write_all(new_contents.as_bytes()).unwrap();
+        }
+
         // Fix clippy warnings of code generated from ttrpc_codegen
         replace_text_in_file("src/bin/protos/api_ttrpc.rs", "client: client", "client");
+    }
+
+    #[cfg(feature = "bin")]
+    {
+        use std::env;
+        use std::fs::File;
+        use std::io::Write;
+        use std::path::Path;
+        use std::process::Command;
 
         // generate an `intro` file that includes the feature information of the build
         fn feature_list(features: Vec<&str>) -> String {
@@ -79,8 +97,12 @@ fn main() {
             true => "",
             false => "(dirty)",
         };
+
+        let socket_type = feature_list(vec!["GRPC", "TTRPC"]);
+
         writeln!(f, "\n\nCommit Hash: {git_commit_hash} {git_status_output}",).unwrap();
         writeln!(f, "Resource Providers: {}", resource_providers).unwrap();
+        writeln!(f, "Socket Type: {}", socket_type).unwrap();
 
         writeln!(f, "KMS plugins: {}", kms).unwrap();
     }

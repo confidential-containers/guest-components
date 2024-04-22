@@ -14,33 +14,22 @@ use storage::volume_type::Storage;
 use tokio::sync::RwLock;
 use ttrpc::{asynchronous::TtrpcContext, Code, Error, Status};
 
-use crate::protos::{
-    api::{
-        GetResourceRequest, GetResourceResponse, SecureMountRequest, SecureMountResponse,
-        UnsealSecretInput, UnsealSecretOutput,
+use crate::{
+    format_error,
+    message::{KeyProviderInput, KeyUnwrapOutput, KeyUnwrapResults},
+    protos::{
+        api::{
+            GetResourceRequest, GetResourceResponse, SecureMountRequest, SecureMountResponse,
+            UnsealSecretInput, UnsealSecretOutput,
+        },
+        api_ttrpc::{GetResourceService, SealedSecretService, SecureMountService},
+        keyprovider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput},
+        keyprovider_ttrpc::KeyProviderService,
     },
-    api_ttrpc::{GetResourceService, SealedSecretService, SecureMountService},
-    keyprovider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput},
-    keyprovider_ttrpc::KeyProviderService,
 };
-use message::{KeyProviderInput, KeyUnwrapOutput, KeyUnwrapResults};
 
 lazy_static! {
     static ref HUB: Arc<RwLock<Option<Hub>>> = Arc::new(RwLock::new(None));
-}
-
-mod message;
-
-macro_rules! format_error {
-    ($err:expr) => {{
-        let mut error_string = format!("{}", $err);
-        let mut current_error = $err.source();
-        while let Some(source) = current_error {
-            error_string.push_str(&format!("\nCaused by: {}", source));
-            current_error = source.source();
-        }
-        error_string
-    }};
 }
 
 pub struct Server;
@@ -69,12 +58,12 @@ impl SealedSecretService for Server {
         _ctx: &TtrpcContext,
         input: UnsealSecretInput,
     ) -> ::ttrpc::Result<UnsealSecretOutput> {
-        debug!("get new UnsealSecret request");
+        debug!("[ttRPC CDH] get new UnsealSecret request");
         let reader = HUB.read().await;
         let reader = reader.as_ref().expect("must be initialized");
         let plaintext = reader.unseal_secret(input.secret).await.map_err(|e| {
             let detailed_error = format_error!(e);
-            error!("UnsealSecret :\n{detailed_error}");
+            error!("[ttRPC CDH] UnsealSecret :\n{detailed_error}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
             status.set_message("[CDH] [ERROR]: Unseal Secret failed".into());
@@ -83,7 +72,7 @@ impl SealedSecretService for Server {
 
         let mut reply = UnsealSecretOutput::new();
         reply.plaintext = plaintext;
-        debug!("send back plaintext of the sealed secret");
+        debug!("[ttRPC CDH] send back plaintext of the sealed secret");
         Ok(reply)
     }
 }
@@ -95,12 +84,12 @@ impl GetResourceService for Server {
         _ctx: &TtrpcContext,
         req: GetResourceRequest,
     ) -> ::ttrpc::Result<GetResourceResponse> {
-        debug!("get new GetResource request");
+        debug!("[ttRPC CDH] get new GetResource request");
         let reader = HUB.read().await;
         let reader = reader.as_ref().expect("must be initialized");
         let resource = reader.get_resource(req.ResourcePath).await.map_err(|e| {
             let detailed_error = format_error!(e);
-            error!("GetResource :\n{detailed_error}");
+            error!("[ttRPC CDH] GetResource :\n{detailed_error}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
             status.set_message("[CDH] [ERROR]: Get Resource failed".into());
@@ -109,7 +98,7 @@ impl GetResourceService for Server {
 
         let mut reply = GetResourceResponse::new();
         reply.Resource = resource;
-        debug!("send back the resource");
+        debug!("[ttRPC CDH] send back the resource");
         Ok(reply)
     }
 }
@@ -121,12 +110,12 @@ impl KeyProviderService for Server {
         _ctx: &TtrpcContext,
         req: KeyProviderKeyWrapProtocolInput,
     ) -> ::ttrpc::Result<KeyProviderKeyWrapProtocolOutput> {
-        debug!("get new UnWrapKey request");
+        debug!("[ttRPC CDH] get new UnWrapKey request");
         let reader = HUB.read().await;
         let reader = reader.as_ref().expect("must be initialized");
         let key_provider_input: KeyProviderInput =
             serde_json::from_slice(&req.KeyProviderKeyWrapProtocolInput[..]).map_err(|e| {
-                error!("UnwrapKey parse KeyProviderInput failed : {e}");
+                error!("[ttRPC CDH] UnwrapKey parse KeyProviderInput failed : {e}");
                 let mut status = Status::new();
                 status.set_code(Code::INTERNAL);
                 status.set_message("[ERROR] UnwrapKey Parse request failed".into());
@@ -134,17 +123,17 @@ impl KeyProviderService for Server {
             })?;
 
         let annotation_packet = key_provider_input.get_annotation().map_err(|e| {
-            error!("UnwrapKey get AnnotationPacket failed: {e}");
+            error!("[ttRPC CDH] UnwrapKey get AnnotationPacket failed: {e}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
             status.set_message("[ERROR] UnwrapKey Parse request failed".to_string());
             Error::RpcStatus(status)
         })?;
 
-        debug!("Call CDH to Unwrap Key...");
+        debug!("[ttRPC CDH] Call CDH to Unwrap Key...");
         let decrypted_optsdata = reader.unwrap_key(&annotation_packet).await.map_err(|e| {
             let detailed_error = format_error!(e);
-            error!("UnWrapKey :\n{detailed_error}");
+            error!("[ttRPC CDH] UnWrapKey :\n{detailed_error}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
             status.set_message("[CDH] [ERROR]: UnwrapKey failed".to_string());
@@ -161,7 +150,7 @@ impl KeyProviderService for Server {
         };
 
         let lek = serde_json::to_vec(&output_struct).map_err(|e| {
-            error!("UnWrapKey failed to serialize LEK : {e}");
+            error!("[ttRPC CDH] UnWrapKey failed to serialize LEK : {e}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
             status.set_message("[CDH] [ERROR]: UnwrapKey serialize response failed".to_string());
@@ -169,7 +158,7 @@ impl KeyProviderService for Server {
         })?;
 
         reply.KeyProviderKeyWrapProtocolOutput = lek;
-        debug!("send back the resource");
+        debug!("[ttRPC CDH] send back the resource");
         Ok(reply)
     }
 }
@@ -181,7 +170,7 @@ impl SecureMountService for Server {
         _ctx: &TtrpcContext,
         req: SecureMountRequest,
     ) -> ::ttrpc::Result<SecureMountResponse> {
-        debug!("get new Secure mount request");
+        debug!("[ttRPC CDH] get new Secure mount request");
         let reader = HUB.read().await;
         let reader = reader.as_ref().expect("must be initialized");
         let storage = Storage {
@@ -192,7 +181,7 @@ impl SecureMountService for Server {
         };
         let resource = reader.secure_mount(storage).await.map_err(|e| {
             let detailed_error = format_error!(e);
-            error!("Secure Mount :\n{detailed_error}");
+            error!("[ttRPC CDH] Secure Mount :\n{detailed_error}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
             status.set_message("[CDH] [ERROR]: secure mount failed".to_string());
@@ -201,7 +190,7 @@ impl SecureMountService for Server {
 
         let mut reply = SecureMountResponse::new();
         reply.mount_path = resource;
-        debug!("send back the resource");
+        debug!("[ttRPC CDH] send back the resource");
         Ok(reply)
     }
 }

@@ -14,16 +14,17 @@ use protos::{
     },
     keyprovider_ttrpc::create_key_provider_service,
 };
-use server::Server;
 use tokio::{
     fs,
     signal::unix::{signal, SignalKind},
 };
 use ttrpc::r#async::Server as TtrpcServer;
+use ttrpc_server::Server;
 
 mod config;
+mod message;
 mod protos;
-mod server;
+mod ttrpc_server;
 
 use config::*;
 
@@ -98,7 +99,7 @@ async fn main() -> Result<()> {
         .register_service(key_provider_service);
 
     info!(
-        "Confidential Data Hub starts to listen to request: {}",
+        "[ttRPC] Confidential Data Hub starts to listen to request: {}",
         config.socket
     );
     server.start().await?;
