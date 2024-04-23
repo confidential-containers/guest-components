@@ -18,6 +18,10 @@ required-features = ["bin", "grpc"]
 name = "ttrpc-cdh-tool"
 required-features = ["bin", "ttrpc"]
 
+[[bin]]
+name = "grpc-cdh-tool"
+required-features = ["bin", "grpc"]
+
 [dependencies]
 anyhow = { workspace = true, optional = true }
 async-trait.workspace = true

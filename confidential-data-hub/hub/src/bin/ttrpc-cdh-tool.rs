@@ -23,8 +23,8 @@ mod protos;
 const NANO_PER_SECOND: i64 = 1000 * 1000 * 1000;
 
 #[derive(Parser)]
-#[command(name = "cdh_client")]
-#[command(bin_name = "cdh_client")]
+#[command(name = "cdh_client_ttrpc")]
+#[command(bin_name = "cdh_client_ttrpc")]
 #[command(author, version, about, long_about = None)]
 struct Cli {
     #[command(subcommand)]
