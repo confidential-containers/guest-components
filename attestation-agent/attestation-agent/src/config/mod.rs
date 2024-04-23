@@ -5,6 +5,9 @@
 
 use anyhow::Result;
 use serde::Deserialize;
+use sha2::{Digest, Sha256, Sha384, Sha512};
+
+use crate::DEFAULT_PCR_INDEX;
 
 pub mod aa_kbc_params;
 
@@ -16,17 +19,69 @@ pub mod kbs;
 
 pub const DEFAULT_AA_CONFIG_PATH: &str = "/etc/attestation-agent.conf";
 
+pub const DEFAULT_EVENTLOG_HASH: &str = "sha384";
+
+/// Hash algorithms used to calculate runtime/init data binding
+#[derive(Deserialize, Clone, Debug, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum HashAlgorithm {
+    Sha256,
+    Sha384,
+    Sha512,
+}
+
+impl Default for HashAlgorithm {
+    fn default() -> Self {
+        Self::Sha384
+    }
+}
+
+fn hash_reportdata<D: Digest>(material: &[u8]) -> Vec<u8> {
+    D::new().chain_update(material).finalize().to_vec()
+}
+
+impl HashAlgorithm {
+    pub fn digest(&self, material: &[u8]) -> Vec<u8> {
+        match self {
+            HashAlgorithm::Sha256 => hash_reportdata::<Sha256>(material),
+            HashAlgorithm::Sha384 => hash_reportdata::<Sha384>(material),
+            HashAlgorithm::Sha512 => hash_reportdata::<Sha512>(material),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     /// configs about token
     pub token_configs: TokenConfigs,
-    // TODO: Add more fields that accessing AS needs.
+
+    /// configs about eventlog
+    pub eventlog_config: EventlogConfig,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct EventlogConfig {
+    /// Hash algorithm used to extend runtime measurement for eventlog.
+    pub eventlog_algorithm: HashAlgorithm,
+
+    /// PCR Register to extend INIT entry
+    pub init_pcr: u64,
+}
+
+impl Default for EventlogConfig {
+    fn default() -> Self {
+        Self {
+            eventlog_algorithm: HashAlgorithm::Sha384,
+            init_pcr: DEFAULT_PCR_INDEX,
+        }
+    }
 }
 
 impl Config {
     pub fn new() -> Result<Self> {
         Ok(Self {
             token_configs: TokenConfigs::new()?,
+            eventlog_config: EventlogConfig::default(),
         })
     }
 }
@@ -59,6 +114,8 @@ impl TryFrom<&str> for Config {
     fn try_from(config_path: &str) -> Result<Self, Self::Error> {
         let c = config::Config::builder()
             .add_source(config::File::with_name(config_path))
+            .set_default("eventlog_config.eventlog_algorithm", DEFAULT_EVENTLOG_HASH)?
+            .set_default("eventlog_config.init_pcr", DEFAULT_PCR_INDEX)?
             .build()?;
 
         let cfg = c.try_deserialize()?;
@@ -68,7 +125,6 @@ impl TryFrom<&str> for Config {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(all(feature = "kbs", feature = "coco_as"))]
     #[rstest::rstest]
     #[case("config.example.toml")]
     #[case("config.example.json")]
