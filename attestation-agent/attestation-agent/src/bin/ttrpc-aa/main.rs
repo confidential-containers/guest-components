@@ -57,7 +57,8 @@ pub async fn main() -> Result<()> {
     clean_previous_sock_file(&cli.attestation_sock)
         .context("clean previous attestation socket file")?;
 
-    let aa = AttestationAgent::new(cli.config_file.as_deref()).context("start AA")?;
+    let mut aa = AttestationAgent::new(cli.config_file.as_deref()).context("start AA")?;
+    aa.init().await.context("init AA")?;
     let att = server::start_ttrpc_service(aa)?;
 
     let mut atts = Server::new()

@@ -517,8 +517,12 @@ impl ::protobuf::reflect::ProtobufValue for GetTokenResponse {
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct ExtendRuntimeMeasurementRequest {
     // message fields
-    // @@protoc_insertion_point(field:attestation_agent.ExtendRuntimeMeasurementRequest.Events)
-    pub Events: ::std::vec::Vec<::std::vec::Vec<u8>>,
+    // @@protoc_insertion_point(field:attestation_agent.ExtendRuntimeMeasurementRequest.Domain)
+    pub Domain: ::std::string::String,
+    // @@protoc_insertion_point(field:attestation_agent.ExtendRuntimeMeasurementRequest.Operation)
+    pub Operation: ::std::string::String,
+    // @@protoc_insertion_point(field:attestation_agent.ExtendRuntimeMeasurementRequest.Content)
+    pub Content: ::std::string::String,
     // @@protoc_insertion_point(field:attestation_agent.ExtendRuntimeMeasurementRequest.RegisterIndex)
     pub RegisterIndex: ::std::option::Option<u64>,
     // special fields
@@ -538,12 +542,22 @@ impl ExtendRuntimeMeasurementRequest {
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(2);
+        let mut fields = ::std::vec::Vec::with_capacity(4);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
-        fields.push(::protobuf::reflect::rt::v2::make_vec_simpler_accessor::<_, _>(
-            "Events",
-            |m: &ExtendRuntimeMeasurementRequest| { &m.Events },
-            |m: &mut ExtendRuntimeMeasurementRequest| { &mut m.Events },
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "Domain",
+            |m: &ExtendRuntimeMeasurementRequest| { &m.Domain },
+            |m: &mut ExtendRuntimeMeasurementRequest| { &mut m.Domain },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "Operation",
+            |m: &ExtendRuntimeMeasurementRequest| { &m.Operation },
+            |m: &mut ExtendRuntimeMeasurementRequest| { &mut m.Operation },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "Content",
+            |m: &ExtendRuntimeMeasurementRequest| { &m.Content },
+            |m: &mut ExtendRuntimeMeasurementRequest| { &mut m.Content },
         ));
         fields.push(::protobuf::reflect::rt::v2::make_option_accessor::<_, _>(
             "RegisterIndex",
@@ -569,9 +583,15 @@ impl ::protobuf::Message for ExtendRuntimeMeasurementRequest {
         while let Some(tag) = is.read_raw_tag_or_eof()? {
             match tag {
                 10 => {
-                    self.Events.push(is.read_bytes()?);
+                    self.Domain = is.read_string()?;
                 },
-                16 => {
+                18 => {
+                    self.Operation = is.read_string()?;
+                },
+                26 => {
+                    self.Content = is.read_string()?;
+                },
+                32 => {
                     self.RegisterIndex = ::std::option::Option::Some(is.read_uint64()?);
                 },
                 tag => {
@@ -586,11 +606,17 @@ impl ::protobuf::Message for ExtendRuntimeMeasurementRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u64 {
         let mut my_size = 0;
-        for value in &self.Events {
-            my_size += ::protobuf::rt::bytes_size(1, &value);
-        };
+        if !self.Domain.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.Domain);
+        }
+        if !self.Operation.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.Operation);
+        }
+        if !self.Content.is_empty() {
+            my_size += ::protobuf::rt::string_size(3, &self.Content);
+        }
         if let Some(v) = self.RegisterIndex {
-            my_size += ::protobuf::rt::uint64_size(2, v);
+            my_size += ::protobuf::rt::uint64_size(4, v);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
@@ -598,11 +624,17 @@ impl ::protobuf::Message for ExtendRuntimeMeasurementRequest {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
-        for v in &self.Events {
-            os.write_bytes(1, &v)?;
-        };
+        if !self.Domain.is_empty() {
+            os.write_string(1, &self.Domain)?;
+        }
+        if !self.Operation.is_empty() {
+            os.write_string(2, &self.Operation)?;
+        }
+        if !self.Content.is_empty() {
+            os.write_string(3, &self.Content)?;
+        }
         if let Some(v) = self.RegisterIndex {
-            os.write_uint64(2, v)?;
+            os.write_uint64(4, v)?;
         }
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -621,14 +653,18 @@ impl ::protobuf::Message for ExtendRuntimeMeasurementRequest {
     }
 
     fn clear(&mut self) {
-        self.Events.clear();
+        self.Domain.clear();
+        self.Operation.clear();
+        self.Content.clear();
         self.RegisterIndex = ::std::option::Option::None;
         self.special_fields.clear();
     }
 
     fn default_instance() -> &'static ExtendRuntimeMeasurementRequest {
         static instance: ExtendRuntimeMeasurementRequest = ExtendRuntimeMeasurementRequest {
-            Events: ::std::vec::Vec::new(),
+            Domain: ::std::string::String::new(),
+            Operation: ::std::string::String::new(),
+            Content: ::std::string::String::new(),
             RegisterIndex: ::std::option::Option::None,
             special_fields: ::protobuf::SpecialFields::new(),
         };
@@ -1352,24 +1388,26 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \"1\n\x13GetEvidenceResponse\x12\x1a\n\x08Evidence\x18\x01\x20\x01(\x0cR\
     \x08Evidence\"/\n\x0fGetTokenRequest\x12\x1c\n\tTokenType\x18\x01\x20\
     \x01(\tR\tTokenType\"(\n\x10GetTokenResponse\x12\x14\n\x05Token\x18\x01\
-    \x20\x01(\x0cR\x05Token\"v\n\x1fExtendRuntimeMeasurementRequest\x12\x16\
-    \n\x06Events\x18\x01\x20\x03(\x0cR\x06Events\x12)\n\rRegisterIndex\x18\
-    \x02\x20\x01(\x04H\0R\rRegisterIndex\x88\x01\x01B\x10\n\x0e_RegisterInde\
-    x\"\"\n\x20ExtendRuntimeMeasurementResponse\"K\n\x11InitDataPlaintext\
-    \x12\x18\n\x07Content\x18\x01\x20\x01(\x0cR\x07Content\x12\x1c\n\tAlgori\
-    thm\x18\x02\x20\x01(\tR\tAlgorithm\".\n\x14CheckInitDataRequest\x12\x16\
-    \n\x06Digest\x18\x01\x20\x01(\x0cR\x06Digest\"\x17\n\x15CheckInitDataRes\
-    ponse\"4\n\x1aUpdateConfigurationRequest\x12\x16\n\x06config\x18\x01\x20\
-    \x01(\tR\x06config\"\x1d\n\x1bUpdateConfigurationResponse2\xac\x04\n\x17\
-    AttestationAgentService\x12\\\n\x0bGetEvidence\x12%.attestation_agent.Ge\
-    tEvidenceRequest\x1a&.attestation_agent.GetEvidenceResponse\x12S\n\x08Ge\
-    tToken\x12\".attestation_agent.GetTokenRequest\x1a#.attestation_agent.Ge\
-    tTokenResponse\x12\x83\x01\n\x18ExtendRuntimeMeasurement\x122.attestatio\
-    n_agent.ExtendRuntimeMeasurementRequest\x1a3.attestation_agent.ExtendRun\
-    timeMeasurementResponse\x12b\n\rCheckInitData\x12'.attestation_agent.Che\
-    ckInitDataRequest\x1a(.attestation_agent.CheckInitDataResponse\x12t\n\
-    \x13UpdateConfiguration\x12-.attestation_agent.UpdateConfigurationReques\
-    t\x1a..attestation_agent.UpdateConfigurationResponseb\x06proto3\
+    \x20\x01(\x0cR\x05Token\"\xae\x01\n\x1fExtendRuntimeMeasurementRequest\
+    \x12\x16\n\x06Domain\x18\x01\x20\x01(\tR\x06Domain\x12\x1c\n\tOperation\
+    \x18\x02\x20\x01(\tR\tOperation\x12\x18\n\x07Content\x18\x03\x20\x01(\tR\
+    \x07Content\x12)\n\rRegisterIndex\x18\x04\x20\x01(\x04H\0R\rRegisterInde\
+    x\x88\x01\x01B\x10\n\x0e_RegisterIndex\"\"\n\x20ExtendRuntimeMeasurement\
+    Response\"K\n\x11InitDataPlaintext\x12\x18\n\x07Content\x18\x01\x20\x01(\
+    \x0cR\x07Content\x12\x1c\n\tAlgorithm\x18\x02\x20\x01(\tR\tAlgorithm\".\
+    \n\x14CheckInitDataRequest\x12\x16\n\x06Digest\x18\x01\x20\x01(\x0cR\x06\
+    Digest\"\x17\n\x15CheckInitDataResponse\"4\n\x1aUpdateConfigurationReque\
+    st\x12\x16\n\x06config\x18\x01\x20\x01(\tR\x06config\"\x1d\n\x1bUpdateCo\
+    nfigurationResponse2\xac\x04\n\x17AttestationAgentService\x12\\\n\x0bGet\
+    Evidence\x12%.attestation_agent.GetEvidenceRequest\x1a&.attestation_agen\
+    t.GetEvidenceResponse\x12S\n\x08GetToken\x12\".attestation_agent.GetToke\
+    nRequest\x1a#.attestation_agent.GetTokenResponse\x12\x83\x01\n\x18Extend\
+    RuntimeMeasurement\x122.attestation_agent.ExtendRuntimeMeasurementReques\
+    t\x1a3.attestation_agent.ExtendRuntimeMeasurementResponse\x12b\n\rCheckI\
+    nitData\x12'.attestation_agent.CheckInitDataRequest\x1a(.attestation_age\
+    nt.CheckInitDataResponse\x12t\n\x13UpdateConfiguration\x12-.attestation_\
+    agent.UpdateConfigurationRequest\x1a..attestation_agent.UpdateConfigurat\
+    ionResponseb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
