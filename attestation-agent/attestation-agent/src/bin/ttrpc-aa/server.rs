@@ -98,7 +98,12 @@ impl AttestationAgentService for AA {
         let mut attestation_agent = self.inner.lock().await;
 
         attestation_agent
-            .extend_runtime_measurement(req.Events, req.RegisterIndex)
+            .extend_runtime_measurement(
+                &req.Domain,
+                &req.Operation,
+                &req.Content,
+                req.RegisterIndex,
+            )
             .await
             .map_err(|e| {
                 error!("AA (ttrpc): extend runtime measurement failed:\n {e:?}");

@@ -91,7 +91,12 @@ impl AttestationAgentService for AA {
         debug!("AA (grpc): extend runtime measurement ...");
 
         attestation_agent
-            .extend_runtime_measurement(request.events, request.register_index)
+            .extend_runtime_measurement(
+                &request.domain,
+                &request.operation,
+                &request.content,
+                request.register_index,
+            )
             .await
             .map_err(|e| {
                 error!("AA (grpc): extend runtime measurement failed:\n{e:?}");

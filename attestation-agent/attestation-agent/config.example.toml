@@ -29,3 +29,8 @@ DYEbQvoZIkUTc1gBUWDcAUS5ztbJg9LCb9WVtvUTqTP2lGuNymOvdsuXq+sAZh9b
 M9QaC1mzQ/OStg==
 -----END CERTIFICATE-----
 '''
+
+[eventlog_config]
+
+eventlog_algorithm = "sha384"
+init_pcr = 17

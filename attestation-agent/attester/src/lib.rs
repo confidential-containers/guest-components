@@ -83,8 +83,8 @@ pub trait Attester {
     /// to enable dynamic measurement capabilities for input data at runtime.
     async fn extend_runtime_measurement(
         &self,
-        _events: Vec<Vec<u8>>,
-        _register_index: Option<u64>,
+        _event_digest: Vec<u8>,
+        _register_index: u64,
     ) -> Result<()> {
         bail!("Unimplemented")
     }

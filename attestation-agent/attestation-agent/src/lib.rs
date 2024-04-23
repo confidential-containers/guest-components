@@ -8,12 +8,16 @@ use std::{io::Write, str::FromStr};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use attester::{detect_tee_type, BoxedAttester};
+use tokio::sync::Mutex;
 
 pub use attester::InitdataResult;
 
 pub mod config;
+mod eventlog;
 pub mod token;
 
+use config::HashAlgorithm;
+use eventlog::EventLog;
 use log::{info, warn};
 use token::*;
 
@@ -59,7 +63,9 @@ pub trait AttestationAPIs {
     /// Extend runtime measurement register
     async fn extend_runtime_measurement(
         &mut self,
-        events: Vec<Vec<u8>>,
+        domain: &str,
+        operation: &str,
+        content: &str,
         register_index: Option<u64>,
     ) -> Result<()>;
 
@@ -70,21 +76,54 @@ pub trait AttestationAPIs {
 /// Attestation agent to provide attestation service.
 pub struct AttestationAgent {
     _config: Config,
+    eventlog: Mutex<EventLog>,
 }
 
 impl Default for AttestationAgent {
     fn default() -> Self {
         if let Ok(_config) = Config::try_from(config::DEFAULT_AA_CONFIG_PATH) {
-            return AttestationAgent { _config };
+            let eventlog = Mutex::new(EventLog::new().expect("eventlog initialize"));
+            return AttestationAgent { _config, eventlog };
         }
+
+        let eventlog = Mutex::new(EventLog::new().expect("eventlog initialize"));
 
         AttestationAgent {
             _config: Config::default(),
+            eventlog,
         }
     }
 }
 
 impl AttestationAgent {
+    pub async fn init(&mut self) -> Result<()> {
+        // We should get the current platform's evidence to see the RTMR value.
+        // Here we assume RTMR is not polluted thus all be set `\0`
+        let init_entry = match self._config.eventlog_config.eventlog_algorithm {
+            HashAlgorithm::Sha256 => "INIT sha256/0000000000000000000000000000000000000000000000000000000000000000",
+            HashAlgorithm::Sha384 => "INIT sha384/000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+            HashAlgorithm::Sha512 => "INIT sha512/00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        };
+
+        let event_digest = self
+            ._config
+            .eventlog_config
+            .eventlog_algorithm
+            .digest(init_entry.as_bytes());
+
+        let tee_type = detect_tee_type();
+        let attester = TryInto::<BoxedAttester>::try_into(tee_type)?;
+        let mut eventlog = self.eventlog.lock().await;
+
+        attester
+            .extend_runtime_measurement(event_digest, self._config.eventlog_config.init_pcr)
+            .await
+            .context("write INIT entry")?;
+        eventlog.write_log(init_entry).context("write INIT log")?;
+
+        Ok(())
+    }
+
     /// Create a new instance of [AttestationAgent].
     pub fn new(config_path: Option<&str>) -> Result<Self> {
         let _config = match config_path {
@@ -98,7 +137,9 @@ impl AttestationAgent {
             }
         };
 
-        Ok(AttestationAgent { _config })
+        let eventlog = Mutex::new(EventLog::new()?);
+
+        Ok(AttestationAgent { _config, eventlog })
     }
 
     /// This is a workaround API for initdata in CoCo. Once
@@ -122,6 +163,11 @@ impl AttestationAgent {
         Ok(())
     }
 }
+
+/// Default PCR index used by AA. `17` is selected for its usage of dynamic root of trust for measurement.
+/// - [Linux TPM PCR Registry](https://uapi-group.org/specifications/specs/linux_tpm_pcr_registry/)
+/// - [TCG TRUSTED BOOT CHAIN IN EDK II](https://tianocore-docs.github.io/edk2-TrustedBootChain/release-1.00/3_TCG_Trusted_Boot_Chain_in_EDKII.html)
+const DEFAULT_PCR_INDEX: u64 = 17;
 
 #[async_trait]
 impl AttestationAPIs for AttestationAgent {
@@ -152,17 +198,41 @@ impl AttestationAPIs for AttestationAgent {
         Ok(evidence.into_bytes())
     }
 
-    /// Extend runtime measurement register
+    /// Extend runtime measurement register. Parameters
+    /// - `events`: a event slice. Any single event will be calculated into a hash digest to extend the current
+    /// platform's RTMR.
+    /// - `register_index`: a target PCR that will be used to extend RTMR. Note that different platform
+    /// would have its own strategy to map a PCR index into a architectual RTMR index. If not given, a default one
+    /// will be used.
     async fn extend_runtime_measurement(
         &mut self,
-        events: Vec<Vec<u8>>,
+        domain: &str,
+        operation: &str,
+        content: &str,
         register_index: Option<u64>,
     ) -> Result<()> {
+        let register_index = register_index.unwrap_or_else(|| {
+            info!("No PCR index provided, use default {DEFAULT_PCR_INDEX}");
+            DEFAULT_PCR_INDEX
+        });
+
+        let log_entry = format!("{domain} {operation} {content}");
+        let event_digest = self
+            ._config
+            .eventlog_config
+            .eventlog_algorithm
+            .digest(log_entry.as_bytes());
+
         let tee_type = detect_tee_type();
         let attester = TryInto::<BoxedAttester>::try_into(tee_type)?;
+        let mut eventlog = self.eventlog.lock().await;
+
         attester
-            .extend_runtime_measurement(events, register_index)
+            .extend_runtime_measurement(event_digest, register_index)
             .await?;
+
+        eventlog.write_log(&log_entry)?;
+
         Ok(())
     }
 
