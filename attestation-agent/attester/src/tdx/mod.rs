@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use self::rtmr::TdxRtmrEvent;
+
 use super::tsm_report::*;
 use super::Attester;
 use crate::utils::pad;
@@ -11,16 +13,14 @@ use anyhow::*;
 use base64::Engine;
 use scroll::Pread;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha384};
-use std::mem;
 use std::path::Path;
 use tdx_attest_rs::tdx_report_t;
 
 mod report;
+mod rtmr;
 
 const TDX_REPORT_DATA_SIZE: usize = 64;
 const CCEL_PATH: &str = "/sys/firmware/acpi/tables/data/CCEL";
-const RUNTIME_MEASUREMENT_RTMR_INDEX: u64 = 2;
 
 pub fn detect_platform() -> bool {
     TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || Path::new("/dev/tdx_guest").exists()
@@ -104,34 +104,36 @@ impl Attester for TdxAttester {
 
     async fn extend_runtime_measurement(
         &self,
-        events: Vec<Vec<u8>>,
-        _register_index: Option<u64>,
+        event_digest: Vec<u8>,
+        register_index: u64,
     ) -> Result<()> {
         if !runtime_measurement_extend_available() {
             bail!("TDX Attester: Cannot extend runtime measurement on this system");
         }
 
-        for event in events {
-            let mut event_buffer = [0u8; mem::size_of::<tdx_attest_rs::tdx_rtmr_event_t>()];
-            let mut hasher = Sha384::new();
-            hasher.update(&event);
-            let hash = hasher.finalize().to_vec();
-            let rtmr_event = unsafe {
-                &mut *(event_buffer.as_mut_ptr() as *mut tdx_attest_rs::tdx_rtmr_event_t)
-            };
-            rtmr_event.version = 1;
-            rtmr_event.rtmr_index = RUNTIME_MEASUREMENT_RTMR_INDEX;
-            rtmr_event.extend_data.copy_from_slice(&hash);
-            match tdx_attest_rs::tdx_att_extend(&event_buffer) {
-                tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
-                    log::debug!("TDX extend runtime measurement succeeded.")
-                }
-                error_code => {
-                    bail!(
-                        "TDX Attester: Failed to extend RTMR. Error code: {:?}",
-                        error_code
-                    );
-                }
+        // The match follows https://github.com/confidential-containers/td-shim/blob/main/doc/tdshim_spec.md#td-event-log
+        let rtmr_index = match register_index {
+            1 | 7 => 0,
+            2..=6 => 1,
+            8..=15 => 2,
+            _ => 3,
+        };
+
+        let extend_data: [u8; 48] = pad(&event_digest);
+        let event: Vec<u8> = TdxRtmrEvent::default()
+            .with_extend_data(extend_data)
+            .with_rtmr_index(rtmr_index)
+            .into();
+
+        match tdx_attest_rs::tdx_att_extend(&event) {
+            tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
+                log::debug!("TDX extend runtime measurement succeeded.")
+            }
+            error_code => {
+                bail!(
+                    "TDX Attester: Failed to extend RTMR. Error code: {:?}",
+                    error_code
+                );
             }
         }
 
