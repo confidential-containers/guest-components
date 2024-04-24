@@ -8,16 +8,15 @@ use attestation::attestation_agent_service_server::{
     AttestationAgentService, AttestationAgentServiceServer,
 };
 use attestation::{
-    ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse, GetEvidenceRequest,
-    GetEvidenceResponse, GetTokenRequest, GetTokenResponse,
+    CheckInitDataRequest, CheckInitDataResponse, ExtendRuntimeMeasurementRequest,
+    ExtendRuntimeMeasurementResponse, GetEvidenceRequest, GetEvidenceResponse, GetTokenRequest,
+    GetTokenResponse, UpdateConfigurationRequest, UpdateConfigurationResponse,
 };
 use attestation_agent::{AttestationAPIs, AttestationAgent};
 use log::{debug, error};
 use std::net::SocketAddr;
 use tokio::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Status};
-
-use self::attestation::{CheckInitDataRequest, CheckInitDataResponse};
 
 mod attestation {
     tonic::include_proto!("attestation_agent");
@@ -129,6 +128,32 @@ impl AttestationAgentService for AA {
         debug!("AA (grpc): Check init data successfully!");
 
         let reply = CheckInitDataResponse {};
+
+        Result::Ok(Response::new(reply))
+    }
+
+    async fn update_configuration(
+        &self,
+        request: Request<UpdateConfigurationRequest>,
+    ) -> Result<Response<UpdateConfigurationResponse>, Status> {
+        let request = request.into_inner();
+
+        let mut attestation_agent = self.inner.lock().await;
+
+        debug!("AA (grpc): update configuration ...");
+
+        attestation_agent
+            .update_configuration(&request.config)
+            .map_err(|e| {
+                error!("AA (grpc): update configuration failed:\n{e:?}");
+                Status::internal(format!(
+                    "[ERROR:{AGENT_NAME}] AA update configuration failed"
+                ))
+            })?;
+
+        debug!("AA (grpc): update configuration successfully!");
+
+        let reply = UpdateConfigurationResponse {};
 
         Result::Ok(Response::new(reply))
     }

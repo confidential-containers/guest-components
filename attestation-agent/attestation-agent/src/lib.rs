@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::str::FromStr;
+use std::{io::Write, str::FromStr};
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -99,6 +99,27 @@ impl AttestationAgent {
         };
 
         Ok(AttestationAgent { _config })
+    }
+
+    /// This is a workaround API for initdata in CoCo. Once
+    /// a better design is implemented we can deprecate the API.
+    /// See https://github.com/kata-containers/kata-containers/issues/9468
+    pub fn update_configuration(&mut self, conf: &str) -> Result<()> {
+        let mut tmpfile = tempfile::NamedTempFile::new()?;
+        let _ = tmpfile.write(conf.as_bytes())?;
+        tmpfile.flush()?;
+
+        let _config = Config::try_from(
+            tmpfile
+                .path()
+                .as_os_str()
+                .to_str()
+                .expect("tempfile will not create non-unicode char"),
+            // Here we can use `expect()` because tempfile crate will generate file name
+            // only including numbers and alphabet (0-9, a-z, A-Z)
+        )?;
+        self._config = _config;
+        Ok(())
     }
 }
 
