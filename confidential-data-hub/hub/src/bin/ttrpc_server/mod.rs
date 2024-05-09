@@ -158,7 +158,7 @@ impl KeyProviderService for Server {
         })?;
 
         reply.KeyProviderKeyWrapProtocolOutput = lek;
-        debug!("[ttRPC CDH] send back the resource");
+        debug!("[ttRPC CDH] unwrap key succeeded.");
         Ok(reply)
     }
 }
@@ -170,7 +170,7 @@ impl SecureMountService for Server {
         _ctx: &TtrpcContext,
         req: SecureMountRequest,
     ) -> ::ttrpc::Result<SecureMountResponse> {
-        debug!("[ttRPC CDH] get new Secure mount request");
+        debug!("[ttRPC CDH] get new secure mount request");
         let reader = HUB.read().await;
         let reader = reader.as_ref().expect("must be initialized");
         let storage = Storage {
@@ -190,7 +190,7 @@ impl SecureMountService for Server {
 
         let mut reply = SecureMountResponse::new();
         reply.mount_path = resource;
-        debug!("[ttRPC CDH] send back the resource");
+        debug!("[ttRPC CDH] secure mount succeeded.");
         Ok(reply)
     }
 }
