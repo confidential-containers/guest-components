@@ -31,6 +31,7 @@ pub trait ApiHandler: Send {
     }
 
     // Build json response.
+    #[allow(dead_code)]
     fn json_response(&self, json: String) -> Result<Response<Body>> {
         Ok(Response::builder()
             .status(StatusCode::OK)
