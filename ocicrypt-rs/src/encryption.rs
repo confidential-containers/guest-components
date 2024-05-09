@@ -47,7 +47,7 @@ impl EncLayerFinalizer {
             let mut b64_annotations = String::new();
             let anno = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);
             if let Some(key_annotations) = anno.get(annotations_id) {
-                b64_annotations = key_annotations.clone();
+                b64_annotations.clone_from(key_annotations);
             }
 
             let key_wrapper = get_key_wrapper(scheme)?;

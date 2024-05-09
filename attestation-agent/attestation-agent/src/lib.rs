@@ -12,7 +12,7 @@ use attester::{detect_tee_type, BoxedAttester};
 pub use attester::InitdataResult;
 
 pub mod config;
-mod token;
+pub mod token;
 
 use log::{info, warn};
 use token::*;

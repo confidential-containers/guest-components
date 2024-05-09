@@ -95,7 +95,7 @@ pub fn create_runtime_config(
         // - Config.Labels
         if let Some(labels2) = config.labels() {
             annotations.extend(labels2.clone());
-            labels = labels2.clone();
+            labels.clone_from(labels2);
         }
         if !labels.contains_key(ANNOTATION_STOP_SIGNAL) {
             if let Some(stop_signal) = config.stop_signal() {
