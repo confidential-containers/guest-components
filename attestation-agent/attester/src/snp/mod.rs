@@ -47,7 +47,7 @@ impl Attester for SnpAttester {
 
         let evidence = SnpEvidence {
             attestation_report: report,
-            cert_chain: certs,
+            cert_chain: certs.unwrap(),
         };
 
         serde_json::to_string(&evidence).context("Serialize SNP evidence failed")

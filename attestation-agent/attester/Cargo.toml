@@ -18,7 +18,7 @@ occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.7", optio
 scroll = { version = "0.12.0", default-features = false, features = ["derive", "std"], optional = true }
 serde.workspace = true
 serde_json.workspace = true
-sev = { version = "1.2.0", default-features = false, features = [
+sev = { version = "3.1.1", default-features = false, features = [
     "snp",
 ], optional = true }
 sha2.workspace = true
