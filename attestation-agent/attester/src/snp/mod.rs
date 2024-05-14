@@ -23,7 +23,7 @@ pub fn detect_platform() -> bool {
 #[derive(Serialize, Deserialize)]
 struct SnpEvidence {
     attestation_report: AttestationReport,
-    cert_chain: Vec<CertTableEntry>,
+    cert_chain: Option<Vec<CertTableEntry>>,
 }
 
 #[derive(Debug, Default)]
@@ -47,7 +47,7 @@ impl Attester for SnpAttester {
 
         let evidence = SnpEvidence {
             attestation_report: report,
-            cert_chain: certs.unwrap(),
+            cert_chain: certs,
         };
 
         serde_json::to_string(&evidence).context("Serialize SNP evidence failed")
