@@ -407,9 +407,9 @@ dependencies = [
 
 [[package]]
 name = "az-cvm-vtpm"
-version = "0.5.2"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53f5fa6fe32f6409dca8202ddd267027ac1f1de4cd91b9e21d92062c14d63cae"
+checksum = "1e2d89967f683d16dafdaacb578a2841daff9f43c856c6a6dc9939cc11272712"
 dependencies = [
  "bincode",
  "jsonwebkey",
@@ -419,7 +419,7 @@ dependencies = [
  "serde",
  "serde-big-array",
  "serde_json",
- "sev 1.2.1",
+ "sev 3.1.1",
  "sha2 0.10.8",
  "thiserror",
  "tss-esapi",
@@ -428,24 +428,24 @@ dependencies = [
 
 [[package]]
 name = "az-snp-vtpm"
-version = "0.5.2"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b394dfe2307a0ee74bf22a7ebbb2563a03739927ad44e216803300260426b5d"
+checksum = "d9da68a854978d9d32cc03ba6cd4a24b1f43fafad91eb7e15578cdf9a9cbdfe7"
 dependencies = [
  "az-cvm-vtpm",
  "bincode",
  "clap 4.2.7",
  "serde",
- "sev 1.2.1",
+ "sev 3.1.1",
  "thiserror",
  "ureq",
 ]
 
 [[package]]
 name = "az-tdx-vtpm"
-version = "0.5.2"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "199c3d801575d0e6779aa66876ef88703324892f2fc0b1daf56c2ee09a51ec98"
+checksum = "8575eeaefa72d9591355597f5acf9b4ddee8cc19d8b03d947173ae8fcf1e8c2e"
 dependencies = [
  "az-cvm-vtpm",
  "base64-url",
@@ -2091,7 +2091,7 @@ dependencies = [
  "mio",
  "nix 0.24.3",
  "vm-memory",
- "vmm-sys-util 0.11.2",
+ "vmm-sys-util",
 ]
 
 [[package]]
@@ -3024,27 +3024,6 @@ dependencies = [
  "uuid",
  "yasna 0.5.2",
  "zeroize",
-]
-
-[[package]]
-name = "kvm-bindings"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "081fbd8164229a990fbf24a1f35d287740db110c2b5d42addf460165f1b0e032"
-dependencies = [
- "vmm-sys-util 0.12.1",
-]
-
-[[package]]
-name = "kvm-ioctls"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9002dff009755414f22b962ec6ae6980b07d6d8b06e5297b1062019d72bd6a8c"
-dependencies = [
- "bitflags 2.4.2",
- "kvm-bindings",
- "libc",
- "vmm-sys-util 0.12.1",
 ]
 
 [[package]]
@@ -5487,28 +5466,6 @@ dependencies = [
 
 [[package]]
 name = "sev"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fd749a01c88a51ac718b59fe571177b31e478dfe059267977042477a0531224"
-dependencies = [
- "bincode",
- "bitfield 0.13.2",
- "bitflags 1.3.2",
- "codicon",
- "dirs",
- "hex",
- "iocuddle",
- "kvm-ioctls",
- "openssl",
- "serde",
- "serde-big-array",
- "serde_bytes",
- "static_assertions",
- "uuid",
-]
-
-[[package]]
-name = "sev"
 version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b2890179f8ef689340f441ba05f0b268bc14f672ae4b36d629cc2266d0d747ab"
@@ -5524,6 +5481,7 @@ dependencies = [
  "iocuddle",
  "lazy_static",
  "libc",
+ "openssl",
  "serde",
  "serde-big-array",
  "serde_bytes",
@@ -6706,16 +6664,6 @@ name = "vmm-sys-util"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48b7b084231214f7427041e4220d77dfe726897a6d41fddee450696e66ff2a29"
-dependencies = [
- "bitflags 1.3.2",
- "libc",
-]
-
-[[package]]
-name = "vmm-sys-util"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d1435039746e20da4f8d507a72ee1b916f7b4b05af7a91c093d2c6561934ede"
 dependencies = [
  "bitflags 1.3.2",
  "libc",

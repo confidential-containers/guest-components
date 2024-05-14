@@ -8,8 +8,8 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-az-snp-vtpm = { version = "0.5.2", default-features = false, features = ["attester"], optional = true }
-az-tdx-vtpm = { version = "0.5.2", default-features = false, features = ["attester"], optional = true }
+az-snp-vtpm = { version = "0.5.3", default-features = false, features = ["attester"], optional = true }
+az-tdx-vtpm = { version = "0.5.3", default-features = false, features = ["attester"], optional = true }
 base64.workspace = true
 kbs-types.workspace = true
 log.workspace = true
