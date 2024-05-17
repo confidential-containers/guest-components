@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	common "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/core"
 	"github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/grpc/mock"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,7 +42,7 @@ func TestGrpcUnsealEnv(t *testing.T) {
 	defer c.Close()
 
 	ctx := context.Background()
-	resp, err := c.UnsealEnv(ctx, "sealed.111")
+	resp, err := common.UnsealEnv(ctx, c, "sealed.111")
 	assert.Nil(err)
 	assert.Equal("unsealed-value:111", resp)
 }
@@ -74,7 +75,7 @@ func TestGrpcUnsealFile(t *testing.T) {
 		t.Fatalf("Failed to write sealed file: %v", err)
 	}
 
-	resp, err := c.UnsealFile(ctx, sealedFilePath)
+	resp, err := common.UnsealFile(ctx, c, sealedFilePath)
 	assert.Nil(err)
 	assert.Equal("unsealed-value:unsealed content", resp)
 }
