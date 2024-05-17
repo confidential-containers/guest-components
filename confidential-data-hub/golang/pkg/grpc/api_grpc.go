@@ -5,7 +5,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
+	"strings"
 
 	cdhgrpcapi "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/cdhgrpc"
 	"google.golang.org/grpc"
@@ -13,7 +16,8 @@ import (
 )
 
 const (
-	CDHGrpcSocket = "127.0.0.1:8043"
+	CDHGrpcSocket      = "127.0.0.1:8043"
+	SealedSecretPrefix = "sealed."
 )
 
 type cdhGrpcClient struct {
@@ -56,4 +60,28 @@ func (c *cdhGrpcClient) UnsealEnv(ctx context.Context, env string) (string, erro
 		return "", fmt.Errorf("failed to unseal secret from env, err: %w", err)
 	}
 	return unsealedValue, nil
+}
+
+func (c *cdhGrpcClient) UnsealFile(ctx context.Context, sealedFile string) (string, error) {
+	fileInfo, err := os.Stat(sealedFile)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("sealed File %s does not exist", sealedFile)
+	}
+	if !fileInfo.Mode().IsRegular() {
+		return "", fmt.Errorf("sealed File %s is not a regular file", sealedFile)
+	}
+	contents, err := os.ReadFile(sealedFile)
+	if err != nil {
+		return "", fmt.Errorf("sealed File %s is failed to read, err = %w", sealedFile, err)
+	}
+
+	if strings.HasPrefix(string(contents), SealedSecretPrefix) {
+		unsealedValue, err := c.unsealSecret(ctx, string(contents))
+		if err != nil {
+			return "", fmt.Errorf("failed to unseal secret from file, err: %w", err)
+		}
+		return unsealedValue, nil
+	} else {
+		return "", fmt.Errorf("sealed File %s is not a sealed secret", sealedFile)
+	}
 }
