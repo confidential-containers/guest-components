@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 
+	common "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/core"
 	cdhgrpcapi "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/grpc"
 )
 
@@ -26,7 +27,7 @@ func main() {
 	}
 	defer c.Close()
 	if *vFlag != "" {
-		unsealedValue, err := c.UnsealEnv(context.Background(), *vFlag)
+		unsealedValue, err := common.UnsealEnv(context.Background(), c, *vFlag)
 		if err != nil {
 			fmt.Printf("failed to get unsealed value! err = %v", err)
 			os.Exit(1)
@@ -34,7 +35,7 @@ func main() {
 		fmt.Printf("unsealed value from env = %s", unsealedValue)
 	}
 	if *fFlag != "" {
-		unsealedValue, err := c.UnsealFile(context.Background(), *fFlag)
+		unsealedValue, err := common.UnsealFile(context.Background(), c, *fFlag)
 		if err != nil {
 			fmt.Printf("failed to get unsealed value! err = %v", err)
 			os.Exit(1)
