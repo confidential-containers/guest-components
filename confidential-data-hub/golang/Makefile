@@ -11,7 +11,7 @@ BIN_NAME := cdh-go-client
 
 build:
 	@echo "Building Go binaries..."
-ifeq ($(RPC),grpc)
+ifeq ($(RPC), $(filter $(RPC), grpc ttrpc))
 	GOARCH=$(ARCH) go build -o bin/$(BIN_NAME) ./cmd/$(RPC)-client
 else
 	$(error ERROR: Unsupported RPC type $(RPC)!)
@@ -31,7 +31,7 @@ clean:
 
 help:
 	@echo "==========================Help========================================="
-	@echo "build: make [ARCH=(x86_64)] [RPC=(grpc)]"
+	@echo "build: make [ARCH=(x86_64)] [RPC=(ttrpc/grpc)]"
 	@echo "install: make install [DESTDIR=/path/to/targets]"
 	@echo "test: make test"
 	@echo "clean: make clean"
