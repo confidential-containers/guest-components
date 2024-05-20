@@ -12,7 +12,7 @@ BIN_NAME := cdh-go-client
 build:
 	@echo "Building Go binaries..."
 ifeq ($(RPC), $(filter $(RPC), grpc ttrpc))
-	GOARCH=$(ARCH) go build -o bin/$(BIN_NAME) ./cmd/$(RPC)-client
+	GOARCH=$(ARCH) go build -ldflags "-X main.clientType=$(RPC)" -o bin/$(BIN_NAME) ./cmd/$(RPC)-client
 else
 	$(error ERROR: Unsupported RPC type $(RPC)!)
 endif
