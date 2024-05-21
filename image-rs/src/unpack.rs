@@ -16,6 +16,8 @@ use tar::Archive;
 /// Unpack the contents of tarball to the destination path
 pub fn unpack<R: io::Read>(input: R, destination: &Path) -> Result<()> {
     let mut archive = Archive::new(input);
+    archive.set_preserve_ownerships(true);
+    archive.set_preserve_permissions(true);
 
     if destination.exists() {
         warn!(
