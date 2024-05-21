@@ -60,9 +60,13 @@ impl Compression {
         input: (impl AsyncRead + Unpin + 'a + Send),
     ) -> Box<dyn AsyncRead + Unpin + 'a + Send> {
         match self {
-            Self::Gzip => Box::new(async_compression::tokio::bufread::GzipDecoder::new(
-                BufReader::new(input),
-            )),
+            Self::Gzip => {
+                let mut gzip = async_compression::tokio::bufread::GzipDecoder::new(
+                    BufReader::new(input),
+                );
+                gzip.multiple_members(true);
+                Box::new(gzip)
+            },
             Self::Zstd => Box::new(async_compression::tokio::bufread::ZstdDecoder::new(
                 BufReader::new(input),
             )),
