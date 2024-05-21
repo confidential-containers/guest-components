@@ -9,7 +9,7 @@ import (
 	"net"
 	"strings"
 
-	cdhgrpc "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/cdhgrpc"
+	cdhapi "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/cdhapi"
 	"google.golang.org/grpc"
 )
 
@@ -18,12 +18,12 @@ const (
 )
 
 type CDHGrpcMockServerImp struct {
-	cdhgrpc.UnimplementedSealedSecretServiceServer
+	cdhapi.UnimplementedSealedSecretServiceServer
 }
 
-func (p *CDHGrpcMockServerImp) UnsealSecret(ctx context.Context, input *cdhgrpc.UnsealSecretInput) (*cdhgrpc.UnsealSecretOutput, error) {
+func (p *CDHGrpcMockServerImp) UnsealSecret(ctx context.Context, input *cdhapi.UnsealSecretInput) (*cdhapi.UnsealSecretOutput, error) {
 	secret := string(input.GetSecret())
-	output := cdhgrpc.UnsealSecretOutput{Plaintext: []byte("unsealed-value:" + strings.TrimPrefix(secret, SealedSecretPrefix))}
+	output := cdhapi.UnsealSecretOutput{Plaintext: []byte("unsealed-value:" + strings.TrimPrefix(secret, SealedSecretPrefix))}
 	return &output, nil
 }
 
@@ -33,7 +33,7 @@ type CDHGrpcMockServer struct {
 }
 
 func (cv *CDHGrpcMockServer) grpcRegister(s *grpc.Server) {
-	cdhgrpc.RegisterSealedSecretServiceServer(s, &CDHGrpcMockServerImp{})
+	cdhapi.RegisterSealedSecretServiceServer(s, &CDHGrpcMockServerImp{})
 }
 
 func (cv *CDHGrpcMockServer) Start(socketAddr string) error {

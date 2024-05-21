@@ -12,7 +12,7 @@ import (
 	"path"
 	"strings"
 
-	cdhttrpc "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/cdhttrpc"
+	cdhapi "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/cdhapi"
 	"github.com/containerd/ttrpc"
 )
 
@@ -48,7 +48,7 @@ type CDHTtrpcMockServer struct {
 }
 
 func (cv *CDHTtrpcMockServer) ttrpcRegister(s *ttrpc.Server) {
-	cdhttrpc.RegisterSealedSecretServiceService(s, &cv.CDHTtrpcMockServerImp)
+	cdhapi.RegisterSealedSecretServiceService(s, &cv.CDHTtrpcMockServerImp)
 }
 
 func (cv *CDHTtrpcMockServer) Start(socketAddr string) error {
@@ -91,8 +91,8 @@ func (cv *CDHTtrpcMockServer) Stop() error {
 
 type CDHTtrpcMockServerImp struct{}
 
-func (p *CDHTtrpcMockServerImp) UnsealSecret(ctx context.Context, input *cdhttrpc.UnsealSecretInput) (*cdhttrpc.UnsealSecretOutput, error) {
+func (p *CDHTtrpcMockServerImp) UnsealSecret(ctx context.Context, input *cdhapi.UnsealSecretInput) (*cdhapi.UnsealSecretOutput, error) {
 	secret := string(input.GetSecret())
-	output := cdhttrpc.UnsealSecretOutput{Plaintext: []byte("unsealed-value:" + strings.TrimPrefix(secret, SealedSecretPrefix))}
+	output := cdhapi.UnsealSecretOutput{Plaintext: []byte("unsealed-value:" + strings.TrimPrefix(secret, SealedSecretPrefix))}
 	return &output, nil
 }

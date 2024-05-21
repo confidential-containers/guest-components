@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"net"
 
-	cdhttrpcapi "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/cdhttrpc"
+	cdhapi "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/cdhapi"
 	"github.com/containerd/ttrpc"
 )
 
@@ -19,7 +19,7 @@ const (
 
 type cdhTtrpcClient struct {
 	conn               net.Conn
-	sealedSecretClient cdhttrpcapi.SealedSecretServiceService
+	sealedSecretClient cdhapi.SealedSecretServiceService
 }
 
 func CreateCDHTtrpcClient(sockAddress string) (*cdhTtrpcClient, error) {
@@ -29,7 +29,7 @@ func CreateCDHTtrpcClient(sockAddress string) (*cdhTtrpcClient, error) {
 	}
 
 	ttrpcClient := ttrpc.NewClient(conn)
-	sealedSecretClient := cdhttrpcapi.NewSealedSecretServiceClient(ttrpcClient)
+	sealedSecretClient := cdhapi.NewSealedSecretServiceClient(ttrpcClient)
 
 	c := &cdhTtrpcClient{
 		conn:               conn,
@@ -43,7 +43,7 @@ func (c *cdhTtrpcClient) Close() error {
 }
 
 func (c *cdhTtrpcClient) UnsealSecret(ctx context.Context, secret string) (string, error) {
-	input := cdhttrpcapi.UnsealSecretInput{Secret: []byte(secret)}
+	input := cdhapi.UnsealSecretInput{Secret: []byte(secret)}
 	output, err := c.sealedSecretClient.UnsealSecret(ctx, &input)
 	if err != nil {
 		return "", fmt.Errorf("failed to unseal secret: %w", err)

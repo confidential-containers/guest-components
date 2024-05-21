@@ -10,7 +10,7 @@ import (
 	"os"
 
 	common "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/core"
-	cdhgrpcapi "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/grpc"
+	cdhgrpc "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/grpc"
 )
 
 var (
@@ -23,7 +23,7 @@ func main() {
 	common.Init()
 	flag.Parse()
 
-	c, err := cdhgrpcapi.CreateCDHGrpcClient(common.Socket)
+	c, err := cdhgrpc.CreateCDHGrpcClient(common.Socket)
 	if err != nil {
 		fmt.Printf("failed to create cdh client %v", err)
 		os.Exit(1)

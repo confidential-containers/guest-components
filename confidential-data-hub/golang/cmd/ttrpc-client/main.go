@@ -10,7 +10,7 @@ import (
 	"os"
 
 	common "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/core"
-	cdhttrpcapi "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/ttrpc"
+	cdhttrpc "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/ttrpc"
 )
 
 var (
@@ -24,7 +24,7 @@ func main() {
 	common.Init()
 	flag.Parse()
 
-	c, err := cdhttrpcapi.CreateCDHTtrpcClient(common.Socket)
+	c, err := cdhttrpc.CreateCDHTtrpcClient(common.Socket)
 	if err != nil {
 		fmt.Printf("failed to create cdh client %v", err)
 		os.Exit(1)

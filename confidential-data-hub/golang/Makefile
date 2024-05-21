@@ -5,11 +5,22 @@ endif
 
 RPC ?= grpc
 DESTDIR ?= /usr/local/bin
+PROTODIR = $(CURDIR)/../hub/protos
 BIN_NAME := cdh-go-client
 
-.PHONY: build test install clean
+.PHONY: generate build test install clean
 
-build:
+generate:
+	@echo "Generating Go code..."
+ifeq ($(RPC), $(filter $(RPC), grpc ttrpc))
+	@cp ../hub/protos/api.proto ./pkg/api/api.proto
+	@sed -i 's/generators = \["go", ".*"\]/generators = ["go", "go-$(RPC)"]/' ./pkg/api/Protobuild.toml
+	@cd pkg/api/ && protobuild github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api && cd -
+else
+	$(error ERROR: Unsupported RPC type $(RPC)!)
+endif
+
+build: generate
 	@echo "Building Go binaries..."
 ifeq ($(RPC), $(filter $(RPC), grpc ttrpc))
 	GOARCH=$(ARCH) go build -ldflags "-X main.clientType=$(RPC)" -o bin/$(BIN_NAME) ./cmd/$(RPC)-client
@@ -17,9 +28,13 @@ else
 	$(error ERROR: Unsupported RPC type $(RPC)!)
 endif
 
-test:
+test: generate
 	@echo "Running unit tests..."
-	go test ./...
+ifeq ($(RPC), $(filter $(RPC), grpc ttrpc))
+	go test ./pkg/$(RPC)
+else
+	$(error ERROR: Unsupported RPC type $(RPC)!)
+endif
 
 install:
 	@echo "Installing binaries..."
