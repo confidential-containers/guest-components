@@ -135,6 +135,8 @@ mod tests {
         let mut header = Header::new_gnu();
         header.set_size(100000);
         header.set_cksum();
+        header.set_uid(0);
+        header.set_gid(0);
         ar.append_data(&mut header, "file.txt", data.as_slice())
             .unwrap();
 
@@ -175,6 +177,8 @@ mod tests {
         let mut header = Header::new_gnu();
         header.set_size(100000);
         header.set_cksum();
+        header.set_uid(0);
+        header.set_gid(0);
         ar.append_data(&mut header, "file.txt", data.as_slice())
             .unwrap();
 
