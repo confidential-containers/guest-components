@@ -4,14 +4,21 @@
 
 use anyhow::Context;
 use anyhow::{bail, Result};
+use anyhow::anyhow;
 use libc::timeval;
 use log::warn;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::ffi::CString;
 use std::fs;
 use std::io;
 use std::path::Path;
 use tar::Archive;
+use tar::Header;
+
+// See https://github.com/opencontainers/image-spec/blob/main/layer.md#whiteouts
+const WHITEOUT_PREFIX: &str = ".wh.";
+const WHITEOUT_OPAQUE_DIR: &str = ".wh..wh..opq";
 
 /// Unpack the contents of tarball to the destination path
 pub fn unpack<R: io::Read>(input: R, destination: &Path) -> Result<()> {
@@ -33,6 +40,11 @@ pub fn unpack<R: io::Read>(input: R, destination: &Path) -> Result<()> {
     let mut dirs: HashMap<CString, [timeval; 2]> = HashMap::default();
     for file in archive.entries()? {
         let mut file = file?;
+
+        if !convert_whiteout(&file.path()?, file.header(), destination)? {
+            continue;
+        }
+
         file.unpack_in(destination)?;
 
         // tar-rs crate only preserve timestamps of files,
@@ -81,6 +93,57 @@ pub fn unpack<R: io::Read>(input: R, destination: &Path) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn convert_whiteout(path: &Path, header: &Header, destination: &Path) -> Result<bool> {
+    // Handle whiteout conversion
+    let name = path
+        .file_name().ok_or(anyhow!("Bad `file name` in whiteout path"))?
+        .to_str().ok_or(anyhow!("Invalid unicode in whiteout path `file name`"))?;
+    let parent = path.parent().ok_or(anyhow!("Whiteout path parent is invalid"))?;
+
+    if name == WHITEOUT_OPAQUE_DIR {
+        xattr::set(parent, "trusted.overlay.opaque", b"y")?;
+        return Ok(false);
+    }
+
+    if name.starts_with(WHITEOUT_PREFIX) {
+        let original_name = name
+            .strip_prefix(WHITEOUT_PREFIX)
+            .ok_or(anyhow!("Failed to strip whiteout prefix"))?;
+        let original_path = parent.join(original_name);
+        let path = CString::new(format!(
+            "{}/{}",
+            destination.display(),
+            original_path.display()
+        ))?;
+
+        let ret = unsafe { libc::mknod(path.as_ptr(), libc::S_IFCHR, 0) };
+        if ret != 0 {
+            bail!("mknod: {:?} error: {:?}", path, io::Error::last_os_error());
+        }
+
+        let uid: libc::uid_t = header
+            .uid()?
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::Other, format!("UID is too large!")))?;
+        let gid: libc::gid_t = header
+            .gid()?
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::Other, format!("GID is too large!")))?;
+
+        let ret = unsafe { libc::lchown(path.as_ptr(), uid, gid) };
+        if ret != 0 {
+            bail!(
+                "change ownership: {:?} error: {:?}",
+                path,
+                io::Error::last_os_error()
+            );
+        }
+        return Ok(false);
+    }
+
+    Ok(true)
 }
 
 #[cfg(test)]
