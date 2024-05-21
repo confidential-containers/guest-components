@@ -5,28 +5,37 @@ This offers a streamlined client interface for engaging with Confidential Data H
 
 ## Getting Started
 
+### Install dependencies
+
+```bash
+$ go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+$ go install github.com/containerd/ttrpc/cmd/protoc-gen-go-ttrpc@latest
+$ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+$ go install github.com/containerd/protobuild@latest
+```
+
 ### Usage as library
 
 Import the package into your Go project:
 
 ```go
 //common interface
-import 	common "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/core"
+import common "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/core"
 
 //grpc package 
-import cdhgrpcapi "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/grpc"
+import cdhgrpc "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/grpc"
 //ttrpc package 
-import cdhttrpcapi "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/ttrpc"
+import cdhttrpc "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/ttrpc"
 ```
 
 Create a new client instance:
 
 ```go
 //cdh grpc client
-c, err := cdhgrpcapi.CreateCDHGrpcClient("127.0.0.1:8043")
+c, err := cdhgrpc.CreateCDHGrpcClient("127.0.0.1:8043")
 
 //cdh ttrpc client
-c, err := cdhttrpcapi.CreateCDHTtrpcClient("/run/confidential-containers/cdh.sock")
+c, err := cdhttrpc.CreateCDHTtrpcClient("/run/confidential-containers/cdh.sock")
 ```
 
 Interact with `CDH` using the client, for example :
@@ -38,9 +47,11 @@ unsealedValue, err := common.UnsealEnv(ctx, c, sealedSecret)
 
 Build and Install the binary, such as:
 ```bash
-$ make RPC=grpc
+$ make build RPC=grpc
+Generating Go code...
+protoc -I.:/root/go/src:/usr/local/include:/usr/include --go_out=/root/go/src --go_opt=Mgithub.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/api.proto=github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/cdhapi --go-grpc_out=/root/go/src /root/go/src/github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/api.proto
+/root/go/src/github.com/confidential-containers/guest-components/confidential-data-hub/golang
 Building Go binaries...
-GOARCH=amd64 go build -o bin/cdh-go-client ./cmd/grpc-client
 $ sudo make install
 Installing binaries...
 install -D -m0755 bin/cdh-go-client /usr/local/bin

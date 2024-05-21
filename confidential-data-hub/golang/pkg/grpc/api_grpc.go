@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	cdhgrpcapi "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/cdhgrpc"
+	cdhapi "github.com/confidential-containers/guest-components/confidential-data-hub/golang/pkg/api/cdhapi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -19,7 +19,7 @@ const (
 
 type cdhGrpcClient struct {
 	conn               *grpc.ClientConn
-	sealedSecretClient cdhgrpcapi.SealedSecretServiceClient
+	sealedSecretClient cdhapi.SealedSecretServiceClient
 }
 
 func CreateCDHGrpcClient(sockAddress string) (*cdhGrpcClient, error) {
@@ -28,7 +28,7 @@ func CreateCDHGrpcClient(sockAddress string) (*cdhGrpcClient, error) {
 		return nil, fmt.Errorf("failed to connect to cdh sock %q: %w", sockAddress, err)
 	}
 
-	sealedSecretClient := cdhgrpcapi.NewSealedSecretServiceClient(conn)
+	sealedSecretClient := cdhapi.NewSealedSecretServiceClient(conn)
 
 	c := &cdhGrpcClient{
 		conn:               conn,
@@ -42,7 +42,7 @@ func (c *cdhGrpcClient) Close() error {
 }
 
 func (c *cdhGrpcClient) UnsealSecret(ctx context.Context, secret string) (string, error) {
-	input := cdhgrpcapi.UnsealSecretInput{Secret: []byte(secret)}
+	input := cdhapi.UnsealSecretInput{Secret: []byte(secret)}
 	output, err := c.sealedSecretClient.UnsealSecret(ctx, &input)
 	if err != nil {
 		return "", fmt.Errorf("failed to unseal secret: %w", err)
