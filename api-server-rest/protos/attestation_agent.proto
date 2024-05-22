@@ -18,7 +18,32 @@ message GetTokenResponse {
     bytes Token = 1;
 }
 
+// - `events`: a event slice. Any single event will be calculated into a hash digest to extend the current
+// platform's RTMR.
+// - `register_index`: a target PCR that will be used to extend RTMR. Note that different platform
+// would have its own strategy to map a PCR index into a architectual RTMR index. If not given, a default one
+// will be used.
+// Extend RuntimeMeasurement by
+// - add a record in eventlog
+// - extend RTMR due to platform
+message ExtendRuntimeMeasurementRequest {
+    // The domain to which this event entry belongs. This domain is used to distinguish the semantics of log entries in different contexts.
+    string Domain = 1;
+
+    // Concrete operation type that this event entry records.
+    string Operation = 2;
+
+    // Detailed content of the operation that this event entry records.
+    string Content = 3;
+
+    // Which PCR will be extended with the hash of this entry.
+    optional uint64 RegisterIndex = 4;
+}
+
+message ExtendRuntimeMeasurementResponse {}
+
 service AttestationAgentService {
     rpc GetEvidence(GetEvidenceRequest) returns (GetEvidenceResponse) {};
     rpc GetToken(GetTokenRequest) returns (GetTokenResponse) {};
+    rpc ExtendRuntimeMeasurement(ExtendRuntimeMeasurementRequest) returns (ExtendRuntimeMeasurementResponse) {};
 }

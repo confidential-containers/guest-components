@@ -65,6 +65,79 @@
         }
       }
     },
+    "/aa/extend_runtime_measurement": {
+      "get": {
+        "tags": [
+          "crate"
+        ],
+        "operationId": "_extend_runtime_measurement",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "description": "Domain of event entry belongs",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "operation",
+            "in": "query",
+            "description": "Operation type of event entry records",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "content",
+            "in": "query",
+            "description": "Detaile content of the operation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "register_index",
+            "in": "query",
+            "description": "PCR registry to be extended with (optional)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "runtime measurement extend success",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": {
+                  "content": "docker.io/library/alpine",
+                  "domain": "image-rs",
+                  "operation": "CreateContainer",
+                  "register_index": "17"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request for invalid query param"
+          },
+          "403": {
+            "description": "forbid external access"
+          },
+          "405": {
+            "description": "only Get method allowed"
+          }
+        }
+      }
+    },
     "/aa/token": {
       "get": {
         "tags": [

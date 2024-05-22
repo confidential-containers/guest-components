@@ -48,6 +48,27 @@ fn _evidence() {}
 
 #[utoipa::path(
     get,
+    path = "/aa/extend_runtime_measurement",
+    params(
+        ("domain" = String, Query, description = "Domain of event entry belongs"),
+        ("operation" = String, Query, description = "Operation type of event entry records"),
+        ("content" = String, Query, description = "Detaile content of the operation"),
+        ("register_index" = String, Query, description = "PCR registry to be extended with (optional)")
+    ),
+    responses(
+        (status = 200, description = "runtime measurement extend success",
+                content_type = "application/octet-stream",
+                body = String,
+                example = json!({"domain":"image-rs","operation":"CreateContainer", "content":"docker.io/library/alpine", "register_index":"17"})),
+        (status = 400, description = "bad request for invalid query param"),
+        (status = 403, description = "forbid external access"),
+        (status = 405, description = "only Get method allowed")
+    )
+)]
+fn _extend_runtime_measurement() {}
+
+#[utoipa::path(
+    get,
     path = "/cdh/resource/{repository}/{type}/{tag}",
     responses(
         (status = 200, description = "success response",
@@ -72,7 +93,7 @@ fn generate_openapi_document() -> std::io::Result<()> {
         (url = "http://127.0.0.1:8006", description = "CoCo Restful API")
      ),
 
-    paths(_token, _evidence, _resource)
+    paths(_token, _evidence, _extend_runtime_measurement, _resource)
  )]
     struct ApiDoc;
     let mut file = File::create("openapi/api.json")?;
