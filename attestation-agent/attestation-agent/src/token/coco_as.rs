@@ -3,13 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::config::coco_as::CoCoASConfig;
+use crate::config::{aa_kbc_params, coco_as::CoCoASConfig};
 
 use super::GetToken;
 use anyhow::*;
 use async_trait::async_trait;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
+use log::warn;
 
 #[derive(Default)]
 pub struct CoCoASTokenGetter {
@@ -54,8 +55,16 @@ impl GetToken for CoCoASTokenGetter {
 
 impl CoCoASTokenGetter {
     pub fn new(config: &CoCoASConfig) -> Self {
-        Self {
-            as_uri: config.url.clone(),
-        }
+        let as_uri = match config.url.is_empty() {
+            false => config.url.clone(),
+            true => {
+                warn!("No AS url address is provided in the config file, try legacy ways to get from `aa_kbc_params`");
+                aa_kbc_params::get_params()
+                    .expect("failed to get aa_kbc_params")
+                    .uri()
+                    .to_string()
+            }
+        };
+        Self { as_uri }
     }
 }

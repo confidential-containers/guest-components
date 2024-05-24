@@ -19,6 +19,7 @@ pub const DEFAULT_AA_CONFIG_PATH: &str = "/etc/attestation-agent.conf";
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct Config {
     /// configs about token
+    #[serde(default = "TokenConfigs::default")]
     pub token_configs: TokenConfigs,
     // TODO: Add more fields that accessing AS needs.
 }
@@ -48,7 +49,6 @@ impl TryFrom<&str> for Config {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(all(feature = "kbs", feature = "coco_as"))]
     #[rstest::rstest]
     #[case("config.example.toml")]
     #[case("config.example.json")]
