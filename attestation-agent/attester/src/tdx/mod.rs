@@ -145,7 +145,9 @@ impl Attester for TdxAttester {
 
     async fn check_init_data(&self, init_data: &[u8]) -> Result<InitdataResult> {
         let mut report = tdx_report_t { d: [0; 1024] };
-        match tdx_attest_rs::tdx_att_get_report(None, &mut report) {
+        let tdx_report_data = tdx_attest_rs::tdx_report_data_t { d: [0; 64usize] };
+
+        match tdx_attest_rs::tdx_att_get_report(Some(&tdx_report_data), &mut report) {
             tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
                 debug!("Successfully get report")
             }
