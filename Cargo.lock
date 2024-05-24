@@ -303,7 +303,6 @@ dependencies = [
  "serde_json",
  "sha2 0.10.8",
  "strum",
- "tempfile",
  "thiserror",
  "tokio",
  "toml 0.8.10",
