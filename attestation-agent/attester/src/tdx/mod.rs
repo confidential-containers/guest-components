@@ -13,6 +13,7 @@ use anyhow::*;
 use base64::Engine;
 use scroll::Pread;
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::path::Path;
 use tdx_attest_rs::tdx_report_t;
 
@@ -54,6 +55,8 @@ fn runtime_measurement_extend_available() -> bool {
     true
 }
 
+pub const DEFAULT_EVENTLOG_PATH: &str = "/run/attestation-agent/eventlog";
+
 #[derive(Serialize, Deserialize)]
 struct TdxEvidence {
     // Base64 encoded CC Eventlog ACPI table
@@ -61,6 +64,8 @@ struct TdxEvidence {
     cc_eventlog: Option<String>,
     // Base64 encoded TD quote.
     quote: String,
+    // Eventlog of Attestation Agent
+    aa_eventlog: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -97,7 +102,19 @@ impl Attester for TdxAttester {
             }
         };
 
-        let evidence = TdxEvidence { cc_eventlog, quote };
+        let aa_eventlog = match fs::read_to_string(DEFAULT_EVENTLOG_PATH) {
+            Result::Ok(el) => Some(el),
+            Result::Err(e) => {
+                log::warn!("Read AA Eventlog failed: {:?}", e);
+                None
+            }
+        };
+
+        let evidence = TdxEvidence {
+            cc_eventlog,
+            quote,
+            aa_eventlog,
+        };
 
         serde_json::to_string(&evidence).context("Serialize TDX evidence failed")
     }
