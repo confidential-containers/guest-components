@@ -65,4 +65,4 @@ snp-attester = ["sev"]
 csv-attester = ["csv-rs", "codicon", "hyper", "hyper-tls", "tokio"]
 cca-attester = ["nix"]
 
-bin = ["tokio/rt", "tokio/macros", "all-attesters"]
+bin = ["tokio/rt", "tokio/macros"]

@@ -4,14 +4,14 @@
 //
 
 use attester::*;
-use codicon::Read;
+use std::io::Read;
 
 #[tokio::main]
 async fn main() {
     // report_data on all platforms is 64 bytes length.
     let mut report_data = vec![0; 64];
     std::io::stdin()
-        .read(&mut report_data)
+        .read_exact(&mut report_data)
         .expect("read input failed");
 
     let tee = detect_tee_type();
