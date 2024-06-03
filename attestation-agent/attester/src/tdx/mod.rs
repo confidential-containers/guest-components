@@ -24,13 +24,7 @@ const CCEL_PATH: &str = "/sys/firmware/acpi/tables/data/CCEL";
 const RUNTIME_MEASUREMENT_RTMR_INDEX: u64 = 2;
 
 pub fn detect_platform() -> bool {
-    TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || tdx_getquote_ioctl_is_available()
-}
-
-fn tdx_getquote_ioctl_is_available() -> bool {
-    Path::new("/dev/tdx-attest").exists()
-        || Path::new("/dev/tdx-guest").exists()
-        || Path::new("/dev/tdx_guest").exists()
+    TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || Path::new("/dev/tdx_guest").exists()
 }
 
 fn get_quote_ioctl(report_data: &Vec<u8>) -> Result<Vec<u8>> {
@@ -47,16 +41,6 @@ fn get_quote_ioctl(report_data: &Vec<u8>) -> Result<Vec<u8>> {
             error_code
         )),
     }
-}
-
-// Return true if the TD environment can extend runtime measurement,
-// else false.
-fn runtime_measurement_extend_available() -> bool {
-    if Path::new("/dev/tdx_guest").exists() || Path::new("/sys/kernel/config/tsm/report").exists() {
-        return false;
-    }
-
-    true
 }
 
 #[derive(Serialize, Deserialize)]
@@ -112,7 +96,9 @@ impl Attester for TdxAttester {
         events: Vec<Vec<u8>>,
         _register_index: Option<u64>,
     ) -> Result<()> {
-        if !runtime_measurement_extend_available() {
+        // Test if the TD can extend RTRMs. The best guess at the moment is that if "TSM reports"
+        // is available, the TD runs Linux upstream kernel and is _currently_ not able to do it.
+        if Path::new("/sys/kernel/config/tsm/report").exists() {
             bail!("TDX Attester: Cannot extend runtime measurement on this system");
         }
 
