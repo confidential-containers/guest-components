@@ -10,6 +10,7 @@ anyhow.workspace = true
 async-trait.workspace = true
 az-snp-vtpm = { version = "0.5.3", default-features = false, features = ["attester"], optional = true }
 az-tdx-vtpm = { version = "0.5.3", default-features = false, features = ["attester"], optional = true }
+cfg-if.workspace = true
 base64.workspace = true
 kbs-types.workspace = true
 log.workspace = true
@@ -54,10 +55,11 @@ all-attesters = [
 ]
 
 # tsm-report enables a module that helps attesters to use Linux TSM_REPORTS for generating
-# quotes. It's an unconditional dependency for tdx-attester since that is the only way to
+# quotes. It's an unconditional dependency for tdx-attester since that is the preferred way to
 # generate TDX quotes with upstream kernels.
 tsm-report = ["tempfile"]
-tdx-attester = ["scroll", "tsm-report", "tdx-attest-rs"]
+tdx-attester = ["tsm-report", "tdx-dcap-extras"]
+tdx-dcap-extras = ["scroll", "tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
 az-snp-vtpm-attester = ["az-snp-vtpm"]
 az-tdx-vtpm-attester = ["az-tdx-vtpm"]

@@ -5,41 +5,44 @@
 
 use super::tsm_report::*;
 use super::Attester;
-use crate::utils::pad;
-use crate::InitdataResult;
 use anyhow::*;
 use base64::Engine;
 use log::{debug, warn};
-use scroll::Pread;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha384};
-use std::mem;
 use std::path::Path;
-use tdx_attest_rs::tdx_report_t;
 
+#[cfg(feature = "tdx-dcap-extras")]
+use crate::InitdataResult;
+#[cfg(feature = "tdx-dcap-extras")]
 mod report;
 
 const TDX_REPORT_DATA_SIZE: usize = 64;
 const CCEL_PATH: &str = "/sys/firmware/acpi/tables/data/CCEL";
-const RUNTIME_MEASUREMENT_RTMR_INDEX: u64 = 2;
 
 pub fn detect_platform() -> bool {
     TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || Path::new("/dev/tdx_guest").exists()
 }
 
-fn get_quote_ioctl(report_data: &Vec<u8>) -> Result<Vec<u8>> {
-    let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
-        // report_data.resize() ensures copying report_data to
-        // tdx_attest_rs::tdx_report_data_t cannot panic.
-        d: report_data.as_slice().try_into().unwrap(),
-    };
+#[allow(unused_variables)]
+fn tdx_dcap_get_quote(report_data: &Vec<u8>) -> Result<Vec<u8>> {
+    cfg_if::cfg_if! {
+            if #[cfg(feature = "tdx-dcap-extras")] {
+                let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
+                    // report_data.resize() ensures copying report_data to
+                    // tdx_attest_rs::tdx_report_data_t cannot panic.
+                    d: report_data.as_slice().try_into().unwrap(),
+                };
 
-    match tdx_attest_rs::tdx_att_get_quote(Some(&tdx_report_data), None, None, 0) {
-        (tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS, Some(q)) => Ok(q),
-        (error_code, _) => Err(anyhow!(
-            "TDX getquote ioctl: failed with error code: {:?}",
-            error_code
-        )),
+                match tdx_attest_rs::tdx_att_get_quote(Some(&tdx_report_data), None, None, 0) {
+                    (tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS, Some(q)) => Ok(q),
+                    (error_code, _) => Err(anyhow!(
+                        "TDX DCAP get_quote: failed with error code: {:?}",
+                        error_code
+                    )),
+                }
+            } else {
+                Err(anyhow!("TDX DCAP get_quote: support not available"))
+        }
     }
 }
 
@@ -66,7 +69,7 @@ impl Attester for TdxAttester {
 
         let quote_bytes = TsmReportPath::new(TsmReportProvider::Tdx).map_or_else(
             |notsm| {
-                get_quote_ioctl(&report_data)
+                tdx_dcap_get_quote(&report_data)
                     .context(format!("TDX Attester: quote generation using ioctl() fallback failed after a TSM report error ({notsm})"))
             },
             |tsm| {
@@ -91,11 +94,16 @@ impl Attester for TdxAttester {
         serde_json::to_string(&evidence).context("Serialize TDX evidence failed")
     }
 
+    #[cfg(feature = "tdx-dcap-extras")]
     async fn extend_runtime_measurement(
         &self,
         events: Vec<Vec<u8>>,
         _register_index: Option<u64>,
     ) -> Result<()> {
+        use sha2::{Digest, Sha384};
+        use std::mem;
+
+        const RUNTIME_MEASUREMENT_RTMR_INDEX: u64 = 2;
         // Test if the TD can extend RTRMs. The best guess at the moment is that if "TSM reports"
         // is available, the TD runs Linux upstream kernel and is _currently_ not able to do it.
         if Path::new("/sys/kernel/config/tsm/report").exists() {
@@ -129,8 +137,11 @@ impl Attester for TdxAttester {
         Ok(())
     }
 
+    #[cfg(feature = "tdx-dcap-extras")]
     async fn check_init_data(&self, init_data: &[u8]) -> Result<InitdataResult> {
-        let mut report = tdx_report_t { d: [0; 1024] };
+        use crate::utils::pad;
+        use scroll::Pread;
+        let mut report = tdx_attest_rs::tdx_report_t { d: [0; 1024] };
         match tdx_attest_rs::tdx_att_get_report(None, &mut report) {
             tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
                 debug!("Successfully get report")
