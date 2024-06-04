@@ -9,7 +9,6 @@ use crate::utils::pad;
 use crate::InitdataResult;
 use anyhow::*;
 use base64::Engine;
-use log::debug;
 use scroll::Pread;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha384};
@@ -147,7 +146,7 @@ impl Attester for TdxAttester {
         let mut report = tdx_report_t { d: [0; 1024] };
         match tdx_attest_rs::tdx_att_get_report(None, &mut report) {
             tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
-                debug!("Successfully get report")
+                log::debug!("Successfully get report")
             }
             error_code => {
                 bail!(
