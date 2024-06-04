@@ -7,7 +7,8 @@ use std::time::Duration;
 
 use anyhow::{bail, Context};
 use async_trait::async_trait;
-use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response};
+use base64::{engine::general_purpose::STANDARD, Engine};
+use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response, Tee};
 use log::{debug, warn};
 use resource_uri::ResourceUri;
 use serde::Deserialize;
@@ -140,7 +141,9 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         });
         let runtime_data =
             serde_json::to_string(&runtime_data).context("serialize runtime data failed")?;
-        let evidence = self.generate_evidence(runtime_data).await?;
+        let evidence = self
+            .generate_evidence(tee, runtime_data, challenge.nonce)
+            .await?;
         debug!("get evidence with challenge: {evidence}");
 
         let attest_endpoint = format!("{}/{KBS_PREFIX}/attest", self.kbs_host_url);
@@ -179,11 +182,23 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         Ok(())
     }
 
-    async fn generate_evidence(&self, runtime_data: String) -> Result<String> {
+    async fn generate_evidence(
+        &self,
+        tee: Tee,
+        runtime_data: String,
+        nonce: String,
+    ) -> Result<String> {
+        debug!("Challenge nonce: {nonce}");
         let mut hasher = Sha384::new();
         hasher.update(runtime_data);
 
-        let ehd = hasher.finalize().to_vec();
+        let ehd = match tee {
+            // IBM SE uses nonce as runtime_data to pass attestation_request
+            Tee::Se => STANDARD
+                .decode(nonce)
+                .map_err(|e| Error::GetEvidence(e.to_string()))?,
+            _ => hasher.finalize().to_vec(),
+        };
 
         let tee_evidence = self
             .provider

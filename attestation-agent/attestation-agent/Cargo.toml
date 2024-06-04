@@ -64,6 +64,7 @@ sgx-attester = ["kbs_protocol?/sgx-attester", "attester/sgx-attester"]
 az-snp-vtpm-attester = ["kbs_protocol?/az-snp-vtpm-attester", "attester/az-snp-vtpm-attester"]
 az-tdx-vtpm-attester = ["kbs_protocol?/az-tdx-vtpm-attester", "attester/az-tdx-vtpm-attester"]
 snp-attester = ["kbs_protocol?/snp-attester", "attester/snp-attester"]
+se-attester = ["kbs_protocol/se-attester", "attester/se-attester"]
 
 # Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
 rust-crypto = ["kbs_protocol?/rust-crypto"]
