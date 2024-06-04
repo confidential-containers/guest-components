@@ -15,9 +15,11 @@ kbs-types.workspace = true
 log.workspace = true
 nix = { version = "0.28", optional = true, features = ["ioctl", "fs"] }
 occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.7", optional = true }
+pv = { version = "0.10.0", package = "s390_pv", optional = true }
 scroll = { version = "0.12.0", default-features = false, features = ["derive", "std"], optional = true }
 serde.workspace = true
 serde_json.workspace = true
+serde_with.workspace = true
 sev = { version = "3.1.1", default-features = false, features = [
     "snp",
 ], optional = true }
@@ -51,6 +53,8 @@ all-attesters = [
     "snp-attester",
     "csv-attester",
     "cca-attester",
+    # se-attester feature can work only on s390x target arch.
+    "se-attester",
 ]
 
 # tsm-report enables a module that helps attesters to use Linux TSM_REPORTS for generating
@@ -64,5 +68,6 @@ az-tdx-vtpm-attester = ["az-tdx-vtpm"]
 snp-attester = ["sev"]
 csv-attester = ["csv-rs", "codicon", "hyper", "hyper-tls", "tokio"]
 cca-attester = ["nix"]
+se-attester  = ["pv"]
 
 bin = ["tokio/rt", "tokio/macros", "all-attesters"]

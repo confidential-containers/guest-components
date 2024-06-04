@@ -43,6 +43,7 @@ The `TEE_PLATFORM` parameter can be
 - `snp`: for AMD SEV-SNP
 - `amd`: for both AMD SEV(-ES) and AMD SEV-SNP
 - `az-snp-vtpm`: for AMD SEV-SNP with Azure vTPM
+- `se`: for IBM Secure Execution (SE)
 
 by default, `kbs`/`sev` as a resource provider will be built in Confidential Data Hub. If you do not want enable any
 default except for only builtin `offline-fs-kbc`, you can build with `NO_RESOURCE_PROVIDER` flag set to `true`.

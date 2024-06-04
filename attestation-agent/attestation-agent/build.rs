@@ -59,6 +59,7 @@ fn main() -> std::io::Result<()> {
             "AZ_SNP_VTPM_ATTESTER",
             "AZ_TDX_VTPM_ATTESTER",
             "SNP_ATTESTER",
+            "SE_ATTESTER",
         ]);
 
         let out_dir = env::var("OUT_DIR").unwrap();
