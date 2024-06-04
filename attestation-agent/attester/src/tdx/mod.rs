@@ -9,7 +9,7 @@ use crate::utils::pad;
 use crate::InitdataResult;
 use anyhow::*;
 use base64::Engine;
-use log::debug;
+use log::{debug, warn};
 use scroll::Pread;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha384};
@@ -81,7 +81,7 @@ impl Attester for TdxAttester {
         let cc_eventlog = match std::fs::read(CCEL_PATH) {
             Result::Ok(el) => Some(engine.encode(el)),
             Result::Err(e) => {
-                log::warn!("Read CC Eventlog failed: {:?}", e);
+                warn!("Read CC Eventlog failed: {:?}", e);
                 None
             }
         };
@@ -115,7 +115,7 @@ impl Attester for TdxAttester {
             rtmr_event.extend_data.copy_from_slice(&hash);
             match tdx_attest_rs::tdx_att_extend(&event_buffer) {
                 tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
-                    log::debug!("TDX extend runtime measurement succeeded.")
+                    debug!("TDX extend runtime measurement succeeded.")
                 }
                 error_code => {
                     bail!(
