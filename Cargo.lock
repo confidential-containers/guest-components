@@ -322,6 +322,7 @@ dependencies = [
  "az-snp-vtpm",
  "az-tdx-vtpm",
  "base64 0.21.7",
+ "cfg-if",
  "codicon",
  "csv-rs",
  "hyper",
