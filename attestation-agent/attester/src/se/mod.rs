@@ -75,7 +75,7 @@ impl Attester for SeAttester {
             image_btph: image_btph.into(),
         };
 
-        debug!("userdata json: {:#?}", &userdata.clone());
+        debug!("userdata json: {userdata:#?}");
         // req is serialized SeAttestationRequest String bytes
         let request: SeAttestationRequest = serde_json::from_slice(req)?;
         let user_data = serde_json::to_vec(&userdata)?;
@@ -101,7 +101,7 @@ impl Attester for SeAttester {
             image_hdr_tags: request.image_hdr_tags,
         };
 
-        debug!("response json: {:#?}", response.clone());
+        debug!("response json: {response:#?}");
         Ok(serde_json::to_string(&response)?)
     }
 }
