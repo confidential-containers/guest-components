@@ -39,7 +39,7 @@ serde = { workspace = true, features = ["serde_derive", "rc"] }
 serde_json.workspace = true
 serde_yaml = { version = "0.9", optional = true }
 sha2.workspace = true
-sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "d5ba303", default-features = false, optional = true }
+sigstore = { version = "0.9.0", default-features = false, optional = true }
 strum.workspace = true
 strum_macros = "0.26"
 tar = "0.4.37"
@@ -83,12 +83,12 @@ tokio = { workspace = true, features = ["process"] }
 default = ["snapshot-overlayfs", "signature-cosign-rustls", "keywrap-grpc", "oci-distribution-rustls"]
 
 # This will be based on `ring` dependency
-kata-cc-rustls-tls = ["encryption-ring", "keywrap-ttrpc", "snapshot-overlayfs", "signature-cosign-rustls", "signature-simple", "getresource", "oci-distribution/rustls-tls"]
-enclave-cc-cckbc-rustls-tls = ["encryption-ring", "keywrap-native", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-rustls", "oci-distribution-rustls"]
+kata-cc-rustls-tls = ["encryption-ring", "keywrap-ttrpc", "snapshot-overlayfs", "signature-cosign-rustls", "signature-simple", "getresource", "oci-distribution/rustls-tls", "reqwest?/rustls-tls"]
+enclave-cc-cckbc-rustls-tls = ["encryption-ring", "keywrap-native", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-rustls", "oci-distribution-rustls", "reqwest?/rustls-tls"]
 
 # This will be based on `openssl` dependency
-kata-cc-native-tls = ["encryption-openssl", "keywrap-ttrpc", "snapshot-overlayfs", "signature-cosign-native", "signature-simple", "getresource", "oci-distribution/native-tls"]
-enclave-cc-cckbc-native-tls = ["encryption-openssl", "keywrap-native", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-native", "oci-distribution-native"]
+kata-cc-native-tls = ["encryption-openssl", "keywrap-ttrpc", "snapshot-overlayfs", "signature-cosign-native", "signature-simple", "getresource", "oci-distribution/native-tls", "reqwest?/default-tls"]
+enclave-cc-cckbc-native-tls = ["encryption-openssl", "keywrap-native", "snapshot-unionfs", "signature-simple", "getresource", "signature-cosign-native", "oci-distribution-native", "reqwest?/default-tls"]
 
 encryption = ["ocicrypt-rs/block-cipher"]
 encryption-ring = ["ocicrypt-rs/block-cipher-ring", "kbc?/rust-crypto", "encryption"]
