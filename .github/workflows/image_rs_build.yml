@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         rust:
-          - 1.72.0
+          - 1.76.0
           - stable
     steps:
       - name: Code checkout
