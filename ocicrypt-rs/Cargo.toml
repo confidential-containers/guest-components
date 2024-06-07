@@ -22,7 +22,7 @@ josekit = { version = ">=0.7", optional = true }
 kbc = { path = "../attestation-agent/kbc", default-features = false, optional = true }
 lazy_static.workspace = true
 openssl = { workspace = true, features = ["vendored"], optional = true }
-pin-project-lite = { version = "0.2.9", optional = true }
+pin-project-lite = { version = "0.2.14", optional = true }
 protobuf = { workspace = true, optional = true }
 prost = { workspace = true, optional = true }
 resource_uri = { path = "../attestation-agent/deps/resource_uri", optional = true }
