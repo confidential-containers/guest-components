@@ -34,7 +34,6 @@ pub mod csv;
 pub mod tsm_report;
 
 #[cfg(feature = "se-attester")]
-#[cfg(target_arch = "s390x")]
 pub mod se;
 
 pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
@@ -60,7 +59,6 @@ impl TryFrom<Tee> for BoxedAttester {
             #[cfg(feature = "csv-attester")]
             Tee::Csv => Box::<csv::CsvAttester>::default(),
             #[cfg(feature = "se-attester")]
-            #[cfg(target_arch = "s390x")]
             Tee::Se => Box::<se::SeAttester>::default(),
             _ => bail!("TEE is not supported!"),
         };
@@ -134,7 +132,6 @@ pub fn detect_tee_type() -> Tee {
     }
 
     #[cfg(feature = "se-attester")]
-    #[cfg(target_arch = "s390x")]
     if se::detect_platform() {
         return Tee::Se;
     }
