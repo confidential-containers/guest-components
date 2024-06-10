@@ -24,12 +24,24 @@ jobs:
     defaults:
       run:
         working-directory: ./attestation-agent
-    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
         rust:
           - stable
+        instance:
+          - ubuntu-22.04
+          - s390x
+        include:
+          - instance: ubuntu-22.04
+            make_args: ""
+            cargo_test_opts: "--features openssl,rust-crypto,all-attesters,kbs,coco_as"
+            cargo_lint_opts: "--workspace"
+          - instance: s390x
+            make_args: "ATTESTER=se-attester TEE_PLATFORM=se"
+            cargo_test_opts: "--no-default-features --features openssl,passport,se-attester,kbs,coco_as"
+            cargo_lint_opts: "--no-default-features --features openssl,se-attester,kbs,coco_as -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p crypto -p resource_uri"
+    runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
         uses: actions/checkout@v4
@@ -54,11 +66,13 @@ jobs:
           sudo echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx.gpg] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libtdx-attest-dev
+        if: matrix.instance == 'ubuntu-22.04'
 
       - name: Install TPM dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libtss2-dev
+        if: matrix.instance == 'ubuntu-22.04'
 
       - name: Install dm-verity dependencies
         run: |
@@ -67,17 +81,21 @@ jobs:
 
       - name: Gnu build and install with ttrpc
         run: |
-          make ttrpc=true && make install
+          mkdir -p ${HOME}/.local/bin
+          eval make ttrpc=true ${MAKE_ARGS} && make install PREFIX=${HOME}/.local
+        env:
+          MAKE_ARGS: ${{ matrix.make_args }}
 
       - name: Musl build with all platform
         run: |
           make LIBC=musl ttrpc=true ATTESTER=none
+        if: matrix.instance == 'ubuntu-22.04'
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --features openssl,rust-crypto,all-attesters,kbs,coco_as -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p crypto -p resource_uri
+          args: ${{ matrix.cargo_test_opts }} -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p crypto -p resource_uri
 
       - name: Run cargo fmt check
         uses: actions-rs/cargo@v1
@@ -90,4 +108,11 @@ jobs:
         with:
           command: clippy
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
-          args: --workspace -- -D warnings -A clippy::derive-partial-eq-without-eq
+          args: ${{ matrix.cargo_lint_opts }} -- -D warnings -A clippy::derive-partial-eq-without-eq
+
+      - name: Take a post-action for self-hosted runner
+        if: always()
+        run: |
+          if [ -f ${HOME}/script/post_action.sh ]; then
+            ${HOME}/script/post_action.sh cc-guest-components
+          fi
