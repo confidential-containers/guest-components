@@ -97,7 +97,7 @@ impl<'a> PullClient<'a> {
             .map(|(i, layer)| async move {
                 let layer_stream = self
                     .client
-                    .pull_blob_stream(&self.reference, &layer.digest)
+                    .pull_blob_stream(&self.reference, &layer)
                     .await
                     .map_err(|e| anyhow!("failed to async pull blob stream {}", e.to_string()))?;
                 let layer_reader = StreamReader::new(layer_stream);
