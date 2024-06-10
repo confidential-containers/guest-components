@@ -24,12 +24,15 @@ jobs:
     defaults:
       run:
         working-directory: ./confidential-data-hub
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        instance:
+          - ubuntu-latest
+          - s390x
         rust:
           - stable
+    runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
         uses: actions/checkout@v4
@@ -50,15 +53,13 @@ jobs:
 
       - name: Build and install
         run: |
-          make RESOURCE_PROVIDER=kbs,sev && make install
+          mkdir -p ${HOME}/.local/bin
+          make RESOURCE_PROVIDER=kbs,sev && make install PREFIX=${HOME}/.local
 
       - name: Musl build
         run: |
           make LIBC=musl
-
-      - name: s390x build
-        run:
-          make ARCH=s390x
+        if: matrix.instance == 'ubuntu-latest'
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
@@ -78,3 +79,10 @@ jobs:
           command: clippy
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
           args: -p kms -p confidential-data-hub -p secret -p image -- -D warnings -A clippy::derive-partial-eq-without-eq 
+
+      - name: Take a post-action for self-hosted runner
+        if: always()
+        run: |
+          if [ -f ${HOME}/script/post_action.sh ]; then
+            ${HOME}/script/post_action.sh cc-guest-components
+          fi

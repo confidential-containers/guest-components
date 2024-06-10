@@ -84,6 +84,9 @@ enum EnvelopeArgs {
     /// Intel eHSM driver to seal the envelope
     #[cfg(feature = "ehsm")]
     Ehsm(EhsmProviderArgs),
+
+    /// Dummy driver to prevent the unreachable pattern for neither aliyun nor ehsm
+    Dummy,
 }
 
 #[cfg(feature = "aliyun")]
