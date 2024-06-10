@@ -106,6 +106,22 @@ impl TdxAttester {
     }
 }
 
+fn find_stop_pos(buffer: &[u8]) -> usize {
+    let mut stop_pos: usize = 0;
+
+    const CHUNK_SIZE: usize = std::mem::size_of::<u64>();
+
+    for chunk in buffer.chunks_exact(CHUNK_SIZE) {
+        stop_pos += CHUNK_SIZE;
+
+        if u64::from_ne_bytes(chunk.try_into().unwrap()) == u64::MAX {
+            break;
+        }
+    }
+
+    stop_pos
+}
+
 #[async_trait::async_trait]
 impl Attester for TdxAttester {
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
@@ -130,7 +146,19 @@ impl Attester for TdxAttester {
         let quote = engine.encode(quote_bytes);
 
         let cc_eventlog = match std::fs::read(CCEL_PATH) {
-            Result::Ok(el) => Some(engine.encode(el)),
+            Result::Ok(el) => {
+                let stop_pos = find_stop_pos(&el);
+
+                log::debug!(
+                    "Squeezed from {} to {} bytes",
+                    std::fs::metadata(CCEL_PATH)?.len(),
+                    stop_pos,
+                );
+
+                let (data, _) = el.split_at(stop_pos);
+
+                Some(engine.encode(data))
+            }
             Result::Err(e) => {
                 log::warn!("Read CC Eventlog failed: {:?}", e);
                 None
