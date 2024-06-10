@@ -24,12 +24,15 @@ jobs:
     defaults:
       run:
         working-directory: ./api-server-rest
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        instance:
+          - ubuntu-latest
+          - s390x
         rust:
           - stable
+    runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
         uses: actions/checkout@v4
@@ -50,18 +53,23 @@ jobs:
 
       - name: Build and install with default features
         run: |
-          make && make install
+          mkdir -p ${HOME}/.local/bin
+          make && make install PREFIX=${HOME}/.local
 
       - name: Musl build with default features
         run: |
           make LIBC=musl
-
-      - name: s390x build
-        run:
-          make ARCH=s390x
+        if: matrix.instance == 'ubuntu-latest'
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: -p api-server-rest
+
+      - name: Take a post-action for self-hosted runner
+        if: always()
+        run: |
+          if [ -f ${HOME}/script/post_action.sh ]; then
+            ${HOME}/script/post_action.sh cc-guest-components
+          fi
