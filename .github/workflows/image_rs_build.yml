@@ -23,13 +23,16 @@ jobs:
     defaults:
       run:
         working-directory: ./image-rs
-    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
         rust:
           - 1.76.0
           - stable
+        instance:
+          - ubuntu-latest
+          - s390x
+    runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
         uses: actions/checkout@v4
@@ -46,7 +49,7 @@ jobs:
 
       - name: Install nettle-sys building dependence
         run: |
-          sudo apt install clang llvm pkg-config nettle-dev protobuf-compiler libprotobuf-dev
+          sudo apt install -y clang llvm pkg-config nettle-dev protobuf-compiler libprotobuf-dev
 
       - name: Install TDX dependencies
         run: |
@@ -54,20 +57,25 @@ jobs:
           sudo echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx.gpg] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libtdx-attest-dev
+        if: matrix.instance == 'ubuntu-latest'
 
       - name: Install TPM dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libtss2-dev
+        if: matrix.instance == 'ubuntu-latest'
+
       - name: Install dm-verity dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libdevmapper-dev
+        if: matrix.instance == 'ubuntu-latest'
 
       - name: Install cross-compliation support dependencies
         run: |
-          sudo apt install -y gcc-s390x-linux-gnu gcc-powerpc64le-linux-gnu
-          rustup target add s390x-unknown-linux-gnu powerpc64le-unknown-linux-gnu
+          sudo apt install -y gcc-powerpc64le-linux-gnu
+          rustup target add powerpc64le-unknown-linux-gnu
+        if: matrix.instance == 'ubuntu-latest'
 
       - name: Run cargo fmt check
         uses: actions-rs/cargo@v1
@@ -75,14 +83,18 @@ jobs:
           command: fmt
           args: -p image-rs -- --check
 
-      - name: Run rust lint check
+      - name: Run rust lint check (all platforms)
         run: |
           cargo clippy -p image-rs --all-targets --features=default -- -D warnings
           cargo clippy -p image-rs --all-targets --features=kata-cc-rustls-tls --no-default-features -- -D warnings
           cargo clippy -p image-rs --all-targets --features=kata-cc-native-tls --no-default-features -- -D warnings
-          cargo clippy -p image-rs --all-targets --features=enclave-cc-cckbc-native-tls --no-default-features -- -D warnings
           cargo clippy -p image-rs --all-targets --features=kata-cc-native-tls,signature-simple-xrss --no-default-features -- -D warnings
-          cargo clippy -p image-rs --all-targets --features=kata-cc-native-tls,nydus --no-default-features -- -D warnings
+
+      - name: Run rust lint check (x86_64 only)
+        run: |
+            cargo clippy -p image-rs --all-targets --features=enclave-cc-cckbc-native-tls --no-default-features -- -D warnings
+            cargo clippy -p image-rs --all-targets --features=kata-cc-native-tls,nydus --no-default-features -- -D warnings
+        if: matrix.instance == 'ubuntu-latest'
 
       - name: Run cargo build
         uses: actions-rs/cargo@v1
@@ -90,13 +102,10 @@ jobs:
           command: build
           args: -p image-rs --features default
 
-      - name: Run cargo build, cross-compiling for s390x
-        run: |
-          sudo -E PATH=$PATH -s RUSTFLAGS=" -C linker=s390x-linux-gnu-gcc" cargo build --target s390x-unknown-linux-gnu -p image-rs --features default
-
       - name: Run cargo build, cross-compiling for powerpc64le
         run: |
           sudo -E PATH=$PATH -s RUSTFLAGS=" -C linker=powerpc64le-linux-gnu-gcc" cargo build --target powerpc64le-unknown-linux-gnu -p image-rs --features default
+        if: matrix.instance == 'ubuntu-latest'
 
       - name: Run cargo test - default
         run: |
@@ -131,3 +140,11 @@ jobs:
       - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe + nydus
         run: |
           sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-native-tls,keywrap-jwe,nydus
+        if: matrix.instance == 'ubuntu-latest'
+
+      - name: Take a post-action for self-hosted runner
+        if: always()
+        run: |
+          if [ -f ${HOME}/script/post_action.sh ]; then
+            ${HOME}/script/post_action.sh cc-guest-components
+          fi
