@@ -65,14 +65,14 @@ const _TESTS: [_TestItem; _TEST_ITEMS] = [
     },
     #[cfg(feature = "signature-cosign")]
     _TestItem {
-        image_ref: "quay.io/kata-containers/confidential-containers:cosign-signed",
+        image_ref: "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
         allow: true,
         signing_scheme: SigningName::Cosign,
         description: "Allow pulling an unencrypted signed image with cosign-signed signature",
     },
     #[cfg(feature = "signature-cosign")]
     _TestItem {
-        image_ref: "quay.io/kata-containers/confidential-containers:cosign-signed-key2",
+        image_ref: "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed-key2",
         allow: false,
         signing_scheme: SigningName::Cosign,
         description: "Deny pulling an unencrypted signed image by cosign using a wrong public key",
