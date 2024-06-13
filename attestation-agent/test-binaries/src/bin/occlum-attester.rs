@@ -9,7 +9,7 @@ use crypto::hash_chunks;
 
 fn real_main() -> Result<String> {
     let sgx_attester = SgxDcapAttester {};
-    sgx_attester.get_evidence(hash_chunks(vec!["test".as_bytes().to_vec()]))
+    sgx_attester.get_evidence(b"test".to_vec())
 }
 
 fn main() {

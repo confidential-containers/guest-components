@@ -8,4 +8,4 @@ mv tmp.json Occlum.json
 copy_bom -f ../occlum.yaml --root image --include-dir /opt/occlum/etc/template
 
 occlum build
-OCCLUM_LOG_LEVEL=trace occlum run /bin/occlum-attester
+OCCLUM_LOG_LEVEL=info occlum run /bin/evidence_getter commandline 00000000
