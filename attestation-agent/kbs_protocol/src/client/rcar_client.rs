@@ -7,7 +7,6 @@ use std::time::Duration;
 
 use anyhow::{bail, Context};
 use async_trait::async_trait;
-use base64::{engine::general_purpose::STANDARD, Engine};
 use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response, Tee};
 use log::{debug, warn};
 use resource_uri::ResourceUri;
@@ -194,9 +193,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
 
         let ehd = match tee {
             // IBM SE uses nonce as runtime_data to pass attestation_request
-            Tee::Se => STANDARD
-                .decode(nonce)
-                .map_err(|e| Error::GetEvidence(e.to_string()))?,
+            Tee::Se => nonce.into_bytes(),
             _ => hasher.finalize().to_vec(),
         };
 
