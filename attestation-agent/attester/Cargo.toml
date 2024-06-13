@@ -11,6 +11,7 @@ async-trait.workspace = true
 az-snp-vtpm = { version = "0.5.3", default-features = false, features = ["attester"], optional = true }
 az-tdx-vtpm = { version = "0.5.3", default-features = false, features = ["attester"], optional = true }
 base64.workspace = true
+clap = { workspace = true, features = ["derive"], optional = true }
 kbs-types.workspace = true
 log.workspace = true
 nix = { version = "0.28", optional = true, features = ["ioctl", "fs"] }
@@ -70,4 +71,4 @@ csv-attester = ["csv-rs", "codicon", "hyper", "hyper-tls", "tokio"]
 cca-attester = ["nix"]
 se-attester  = ["pv"]
 
-bin = ["tokio/rt", "tokio/macros"]
+bin = ["tokio/rt", "tokio/macros", "clap"]
