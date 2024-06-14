@@ -41,54 +41,16 @@ struct AttestationResponseData {
 
 impl KbsClient<Box<dyn EvidenceProvider>> {
     /// Get a [`TeeKeyPair`] and a [`Token`] that certifies the [`TeeKeyPair`].
-    /// It will check if the client already has a valid token. If so, return
-    /// the token. If not, the client will generate a new key pair and do a new
-    /// RCAR handshaking.
+    /// If the client does not already have token or the token is invalid,
+    /// an RCAR handshake will be performed.
+    /// Otherwise, the existing token will be returned.
     pub async fn get_token(&mut self) -> Result<(Token, TeeKeyPair)> {
         if let Some(token) = &self.token {
             if token.check_valid().is_err() {
-                let mut retry_times = 1;
-                loop {
-                    let res = self
-                        .rcar_handshake()
-                        .await
-                        .map_err(|e| Error::RcarHandshake(e.to_string()));
-                    match res {
-                        Ok(_) => break,
-                        Err(e) => {
-                            if retry_times >= RCAR_MAX_ATTEMPT {
-                                return Err(Error::RcarHandshake(format!("Get token failed because of RCAR handshake retried {RCAR_MAX_ATTEMPT} times.")));
-                            } else {
-                                warn!("RCAR handshake failed: {e}, retry {retry_times}...");
-                                retry_times += 1;
-                                tokio::time::sleep(Duration::from_secs(RCAR_RETRY_TIMEOUT_SECOND))
-                                    .await;
-                            }
-                        }
-                    }
-                }
+                self.repeat_rcar_handshake().await?;
             }
         } else {
-            let mut retry_times = 1;
-            loop {
-                let res = self
-                    .rcar_handshake()
-                    .await
-                    .map_err(|e| Error::RcarHandshake(e.to_string()));
-                match res {
-                    Ok(_) => break,
-                    Err(e) => {
-                        if retry_times >= RCAR_MAX_ATTEMPT {
-                            return Err(Error::RcarHandshake(format!("Get token failed because of RCAR handshake retried {RCAR_MAX_ATTEMPT} times.")));
-                        } else {
-                            warn!("RCAR handshake failed: {e}, retry {retry_times}...");
-                            retry_times += 1;
-                            tokio::time::sleep(Duration::from_secs(RCAR_RETRY_TIMEOUT_SECOND))
-                                .await;
-                        }
-                    }
-                }
-            }
+            self.repeat_rcar_handshake().await?;
         }
 
         assert!(self.token.is_some());
@@ -96,6 +58,31 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         let token = self.token.clone().unwrap();
         let tee_key = self.tee_key.clone();
         Ok((token, tee_key))
+    }
+
+    /// Call rcar_hanshake several times and handle errors.
+    async fn repeat_rcar_handshake(&mut self) -> Result<()> {
+        let mut retry_count = 1;
+        loop {
+            let res = self
+                .rcar_handshake()
+                .await
+                .map_err(|e| Error::RcarHandshake(e.to_string()));
+
+            match res {
+                Ok(_) => break,
+                Err(e) => {
+                    if retry_count >= RCAR_MAX_ATTEMPT {
+                        return Err(Error::RcarHandshake(format!("Unable to get token. RCAR handshake retried {RCAR_MAX_ATTEMPT} times. Final attempt failed with: {e}")));
+                    } else {
+                        warn!("RCAR handshake failed: {e}, retry {retry_count}...");
+                        retry_count += 1;
+                        tokio::time::sleep(Duration::from_secs(RCAR_RETRY_TIMEOUT_SECOND)).await;
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Perform RCAR handshake with the given kbs host. If succeeds, the client will
