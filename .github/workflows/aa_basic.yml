@@ -47,6 +47,12 @@ jobs:
             cargo_lint_opts: "--no-default-features --features openssl,se-attester,kbs,coco_as -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p crypto -p resource_uri"
     runs-on: ${{ matrix.instance }}
     steps:
+    - name: Take a pre-action for self-hosted runner
+      run: |
+        if [ -f "${HOME}/script/pre_action.sh" ]; then
+          "${HOME}/script/pre_action.sh" cc-guest-components
+        fi
+
       - name: Code checkout
         uses: actions/checkout@v4
         with:

@@ -38,6 +38,12 @@ jobs:
           - s390x
     runs-on: ${{ matrix.instance }}
     steps:
+    - name: Take a pre-action for self-hosted runner
+      run: |
+        if [ -f "${HOME}/script/pre_action.sh" ]; then
+          "${HOME}/script/pre_action.sh" cc-guest-components
+        fi
+
       - name: Code checkout
         uses: actions/checkout@v4
         with:
