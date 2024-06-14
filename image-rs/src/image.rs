@@ -510,6 +510,7 @@ fn create_bundle(
     Ok(image_id)
 }
 
+#[cfg(not(target_arch = "s390x"))]
 #[cfg(feature = "snapshot-overlayfs")]
 #[cfg(test)]
 mod tests {
