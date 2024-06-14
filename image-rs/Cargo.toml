@@ -28,7 +28,7 @@ futures-util = "0.3"
 hex = { workspace = true, optional = true }
 kbc = { path = "../attestation-agent/kbc", default-features = false, optional = true }
 lazy_static = { workspace = true, optional = true }
-libc = "0.2.153"
+libc = "0.2.155"
 log = "0.4.14"
 loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27" }
 nix = { version = "0.28", optional = true, features = ["mount"] }
