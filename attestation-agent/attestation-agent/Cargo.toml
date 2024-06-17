@@ -58,7 +58,7 @@ kbs = ["kbs_protocol/background_check", "token"]
 # CoCoAS Attestation Token
 coco_as = ["reqwest", "token"]
 
-all-attesters = ["tdx-attester", "sgx-attester", "az-snp-vtpm-attester", "az-tdx-vtpm-attester", "snp-attester"]
+all-attesters = ["tdx-attester", "sgx-attester", "az-snp-vtpm-attester", "az-tdx-vtpm-attester", "snp-attester", "se-attester"]
 tdx-attester = ["kbs_protocol?/tdx-attester", "attester/tdx-attester"]
 sgx-attester = ["kbs_protocol?/sgx-attester", "attester/sgx-attester"]
 az-snp-vtpm-attester = ["kbs_protocol?/az-snp-vtpm-attester", "attester/az-snp-vtpm-attester"]
