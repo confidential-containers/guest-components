@@ -54,7 +54,6 @@ all-attesters = [
     "snp-attester",
     "csv-attester",
     "cca-attester",
-    # se-attester feature can work only on s390x target arch.
     "se-attester",
 ]
 
