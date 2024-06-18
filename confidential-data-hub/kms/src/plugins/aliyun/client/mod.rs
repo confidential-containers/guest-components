@@ -20,9 +20,9 @@ use client_key_client::ClientKeyClient;
 use ecs_ram_role_client::EcsRamRoleClient;
 
 #[derive(Clone, Debug)]
-enum Client {
+pub enum AliyunKmsClient {
     ClientKey {
-        client_key_client: ClientKeyClient,
+        inner: ClientKeyClient,
     },
     EcsRamRole {
         ecs_ram_role_client: EcsRamRoleClient,
@@ -30,10 +30,6 @@ enum Client {
     StsToken {
         client: StsTokenClient,
     },
-}
-
-pub struct AliyunKmsClient {
-    inner_client: Client,
 }
 
 const ALIYUN_IN_GUEST_DEFAULT_KEY_PATH: &str = concatcp!(_IN_GUEST_DEFAULT_KEY_PATH, "/aliyun");
@@ -54,27 +50,18 @@ impl AliyunKmsClient {
         password: &str,
         cert_pem: &str,
     ) -> Result<Self> {
-        let inner_client = Client::ClientKey {
-            client_key_client: ClientKeyClient::new(
-                client_key,
-                kms_instance_id,
-                password,
-                cert_pem,
-            )?,
-        };
+        let inner = ClientKeyClient::new(client_key, kms_instance_id, password, cert_pem)?;
 
-        Ok(Self { inner_client })
+        Ok(Self::ClientKey { inner })
     }
 
     pub fn new_ecs_ram_role_client(ecs_ram_role_name: &str, region_id: &str) -> Self {
-        let inner_client = Client::EcsRamRole {
-            ecs_ram_role_client: EcsRamRoleClient::new(
-                ecs_ram_role_name.to_string(),
-                region_id.to_string(),
-            ),
-        };
+        let ecs_ram_role_client =
+            EcsRamRoleClient::new(ecs_ram_role_name.to_string(), region_id.to_string());
 
-        Self { inner_client }
+        Self::EcsRamRole {
+            ecs_ram_role_client,
+        }
     }
 
     /// This new function is used by a in-pod client. The side-effect is to read the
@@ -95,8 +82,8 @@ impl AliyunKmsClient {
         };
 
         let inner_client = match client_type {
-            "client_key" => Client::ClientKey {
-                client_key_client: ClientKeyClient::from_provider_settings(provider_settings)
+            "client_key" => AliyunKmsClient::ClientKey {
+                inner: ClientKeyClient::from_provider_settings(provider_settings)
                     .await
                     .map_err(|e| {
                         Error::AliyunKmsError(format!(
@@ -104,7 +91,7 @@ impl AliyunKmsClient {
                         ))
                     })?,
             },
-            "ecs_ram_role" => Client::EcsRamRole {
+            "ecs_ram_role" => AliyunKmsClient::EcsRamRole {
                 ecs_ram_role_client: EcsRamRoleClient::from_provider_settings(provider_settings)
                     .await
                     .map_err(|e| {
@@ -113,7 +100,7 @@ impl AliyunKmsClient {
                         ))
                     })?,
             },
-            "sts_token" => Client::StsToken {
+            "sts_token" => AliyunKmsClient::StsToken {
                 client: StsTokenClient::from_provider_settings(provider_settings)
                     .await
                     .map_err(|e| {
@@ -125,27 +112,26 @@ impl AliyunKmsClient {
             _ => return Err(Error::AliyunKmsError("client type invalid.".to_string())),
         };
 
-        Ok(Self { inner_client })
+        Ok(inner_client)
     }
 
     /// Export the [`ProviderSettings`] of the current client. This function is to be used
     /// in the encryptor side. The [`ProviderSettings`] will be used to initial a client
     /// in the decryptor side.
     pub fn export_provider_settings(&self) -> Result<ProviderSettings> {
-        match &self.inner_client {
-            Client::ClientKey { client_key_client } => {
-                let mut provider_settings =
-                    client_key_client.export_provider_settings().map_err(|e| {
-                        Error::AliyunKmsError(format!(
-                            "ClientKeyClient `export_provider_settings()` failed: {e}"
-                        ))
-                    })?;
+        match self {
+            AliyunKmsClient::ClientKey { inner } => {
+                let mut provider_settings = inner.export_provider_settings().map_err(|e| {
+                    Error::AliyunKmsError(format!(
+                        "ClientKeyClient `export_provider_settings()` failed: {e}"
+                    ))
+                })?;
 
                 provider_settings.insert(String::from("client_type"), json!("client_key"));
 
                 Ok(provider_settings)
             }
-            Client::EcsRamRole {
+            AliyunKmsClient::EcsRamRole {
                 ecs_ram_role_client,
             } => {
                 let mut provider_settings = ecs_ram_role_client.export_provider_settings();
@@ -154,7 +140,7 @@ impl AliyunKmsClient {
 
                 Ok(provider_settings)
             }
-            Client::StsToken { client } => {
+            AliyunKmsClient::StsToken { client } => {
                 let mut provider_settings = client.export_provider_settings();
 
                 provider_settings.insert(String::from("client_type"), json!("sts_token"));
@@ -168,14 +154,12 @@ impl AliyunKmsClient {
 #[async_trait]
 impl Encrypter for AliyunKmsClient {
     async fn encrypt(&mut self, data: &[u8], key_id: &str) -> Result<(Vec<u8>, Annotations)> {
-        match &mut self.inner_client {
-            Client::ClientKey {
-                ref mut client_key_client,
-            } => client_key_client.encrypt(data, key_id).await,
-            Client::EcsRamRole { .. } => Err(Error::AliyunKmsError(
+        match &mut self {
+            AliyunKmsClient::ClientKey { ref mut inner } => inner.encrypt(data, key_id).await,
+            AliyunKmsClient::EcsRamRole { .. } => Err(Error::AliyunKmsError(
                 "Encrypter does not suppot accessing through Aliyun EcsRamRole".to_string(),
             )),
-            Client::StsToken { .. } => Err(Error::AliyunKmsError(
+            AliyunKmsClient::StsToken { .. } => Err(Error::AliyunKmsError(
                 "Encrypter does not suppot accessing through Aliyun StsToken".to_string(),
             )),
         }
@@ -190,18 +174,14 @@ impl Decrypter for AliyunKmsClient {
         key_id: &str,
         annotations: &Annotations,
     ) -> Result<Vec<u8>> {
-        match &mut self.inner_client {
-            Client::ClientKey {
-                ref mut client_key_client,
-            } => {
-                client_key_client
-                    .decrypt(ciphertext, key_id, annotations)
-                    .await
+        match &mut self {
+            AliyunKmsClient::ClientKey { ref mut inner } => {
+                inner.decrypt(ciphertext, key_id, annotations).await
             }
-            Client::EcsRamRole { .. } => Err(Error::AliyunKmsError(
+            AliyunKmsClient::EcsRamRole { .. } => Err(Error::AliyunKmsError(
                 "Encrypter does not suppot accessing through Aliyun EcsRamRole".to_string(),
             )),
-            Client::StsToken { .. } => Err(Error::AliyunKmsError(
+            AliyunKmsClient::StsToken { .. } => Err(Error::AliyunKmsError(
                 "Encrypter does not suppot accessing through Aliyun StsToken".to_string(),
             )),
         }
@@ -211,14 +191,16 @@ impl Decrypter for AliyunKmsClient {
 #[async_trait]
 impl Getter for AliyunKmsClient {
     async fn get_secret(&mut self, name: &str, annotations: &Annotations) -> Result<Vec<u8>> {
-        match &mut self.inner_client {
-            Client::ClientKey {
-                ref mut client_key_client,
-            } => client_key_client.get_secret(name, annotations).await,
-            Client::EcsRamRole {
+        match &mut self {
+            AliyunKmsClient::ClientKey { ref mut inner } => {
+                inner.get_secret(name, annotations).await
+            }
+            AliyunKmsClient::EcsRamRole {
                 ref mut ecs_ram_role_client,
             } => ecs_ram_role_client.get_secret(name, annotations).await,
-            Client::StsToken { ref mut client } => client.get_secret(name, annotations).await,
+            AliyunKmsClient::StsToken { ref mut client } => {
+                client.get_secret(name, annotations).await
+            }
         }
     }
 }
