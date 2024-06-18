@@ -6,9 +6,11 @@
 use async_trait::async_trait;
 use const_format::concatcp;
 use serde_json::json;
+use sts_token_client::StsTokenClient;
 
 mod client_key_client;
 mod ecs_ram_role_client;
+mod sts_token_client;
 
 use crate::plugins::_IN_GUEST_DEFAULT_KEY_PATH;
 use crate::{Annotations, Decrypter, Encrypter, Getter, ProviderSettings};
@@ -24,6 +26,9 @@ enum Client {
     },
     EcsRamRole {
         ecs_ram_role_client: EcsRamRoleClient,
+    },
+    StsToken {
+        client: StsTokenClient,
     },
 }
 
@@ -61,12 +66,15 @@ impl AliyunKmsClient {
         Ok(Self { inner_client })
     }
 
-    pub fn new_ecs_ram_role_client(ecs_ram_role_name: &str, region_id: &str) -> Result<Self> {
+    pub fn new_ecs_ram_role_client(ecs_ram_role_name: &str, region_id: &str) -> Self {
         let inner_client = Client::EcsRamRole {
-            ecs_ram_role_client: EcsRamRoleClient::new(ecs_ram_role_name, region_id)?,
+            ecs_ram_role_client: EcsRamRoleClient::new(
+                ecs_ram_role_name.to_string(),
+                region_id.to_string(),
+            ),
         };
 
-        Ok(Self { inner_client })
+        Self { inner_client }
     }
 
     /// This new function is used by a in-pod client. The side-effect is to read the
@@ -98,6 +106,15 @@ impl AliyunKmsClient {
             },
             "ecs_ram_role" => Client::EcsRamRole {
                 ecs_ram_role_client: EcsRamRoleClient::from_provider_settings(provider_settings)
+                    .await
+                    .map_err(|e| {
+                        Error::AliyunKmsError(format!(
+                            "build EcsRamRoleClient with `from_provider_settings()` failed: {e}"
+                        ))
+                    })?,
+            },
+            "sts_token" => Client::StsToken {
+                client: StsTokenClient::from_provider_settings(provider_settings)
                     .await
                     .map_err(|e| {
                         Error::AliyunKmsError(format!(
@@ -137,6 +154,13 @@ impl AliyunKmsClient {
 
                 Ok(provider_settings)
             }
+            Client::StsToken { client } => {
+                let mut provider_settings = client.export_provider_settings();
+
+                provider_settings.insert(String::from("client_type"), json!("sts_token"));
+
+                Ok(provider_settings)
+            }
         }
     }
 }
@@ -150,6 +174,9 @@ impl Encrypter for AliyunKmsClient {
             } => client_key_client.encrypt(data, key_id).await,
             Client::EcsRamRole { .. } => Err(Error::AliyunKmsError(
                 "Encrypter does not suppot accessing through Aliyun EcsRamRole".to_string(),
+            )),
+            Client::StsToken { .. } => Err(Error::AliyunKmsError(
+                "Encrypter does not suppot accessing through Aliyun StsToken".to_string(),
             )),
         }
     }
@@ -174,6 +201,9 @@ impl Decrypter for AliyunKmsClient {
             Client::EcsRamRole { .. } => Err(Error::AliyunKmsError(
                 "Encrypter does not suppot accessing through Aliyun EcsRamRole".to_string(),
             )),
+            Client::StsToken { .. } => Err(Error::AliyunKmsError(
+                "Encrypter does not suppot accessing through Aliyun StsToken".to_string(),
+            )),
         }
     }
 }
@@ -188,6 +218,7 @@ impl Getter for AliyunKmsClient {
             Client::EcsRamRole {
                 ref mut ecs_ram_role_client,
             } => ecs_ram_role_client.get_secret(name, annotations).await,
+            Client::StsToken { ref mut client } => client.get_secret(name, annotations).await,
         }
     }
 }

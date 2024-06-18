@@ -29,20 +29,12 @@ struct ClientKey {
     private_key_data: String,
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct Password {
-    client_key_password: String,
-}
-
 // implement CredentialClientKey related function
 impl CredentialClientKey {
     pub(crate) fn new(client_key: &str, pswd: &str) -> Result<Self> {
         let ck: ClientKey = serde_json::from_str(client_key)?;
 
-        let password: Password = serde_json::from_str(pswd)?;
-        let private_key =
-            Self::parse_private_key(ck.private_key_data, password.client_key_password)?;
+        let private_key = Self::parse_private_key(ck.private_key_data, pswd.to_string())?;
         let private_key = PKey::private_key_from_der(&private_key)?;
 
         let credential = CredentialClientKey {

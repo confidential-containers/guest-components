@@ -45,6 +45,14 @@ Else if `client_type` is set to 'ecs_ram_role', provider_settings shall be as fo
 | ------------------ | -------------------------------------------------------------------- |
 | `client_type`      | Used to specify the method of accessing KMS. ('ecs_ram_role' is set here) |
 
+Else if `client_type` is set to 'sts_token', provider_settings shall be as following:
+
+| Name               | Usage                                                                |
+| ------------------ | -------------------------------------------------------------------- |
+| `client_type`      | Used to specify the method of accessing KMS. ('sts_token' is set here) |
+| `token_path`       | STS Token path inside the pod. The format of STS token is `AK:SK:STS`|
+| `region_id`        | KMS instance region ID                                               |
+
 ### Credential files
 
 To connect to a KMS instance with `client_type` set to 'client_key', a client key is needed. A client key is actually
@@ -89,9 +97,7 @@ kst-bjj652...
 ```
 - `ClientKeyPassword.json`: The content is the password of the password of the ClientKey. Example
 ```json
-{
-    "ClientKeyPassword": "1e367c6b24..."
-}
+1e367c6b24...
 ```
 - `ClientKeyContent.json`: The content is the ClientKeyContent. Example
 ```json
