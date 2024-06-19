@@ -19,12 +19,12 @@ hex = { workspace = true, optional = true }
 kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = ["passport", "aa_token", "openssl"], optional = true }
 lazy_static.workspace = true
 log.workspace = true
-openssl = { workspace = true, optional = true }
 p12 = { version = "0.6.3", optional = true }
 prost = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true }
 resource_uri = { path = "../../attestation-agent/deps/resource_uri" }
+ring = "0.17"
 sha2 = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
@@ -50,7 +50,7 @@ tonic-build.workspace = true
 [features]
 default = ["aliyun", "kbs", "ehsm"]
 
-aliyun = ["chrono", "hex", "openssl", "p12", "prost", "rand", "reqwest/rustls-tls", "sha2", "tonic", "url", "yasna"]
+aliyun = ["chrono", "hex", "p12", "prost", "rand", "reqwest/rustls-tls", "sha2", "tonic", "url", "yasna"]
 kbs = ["kbs_protocol"]
 ehsm = ["ehsm_client"]
 sev = ["bincode", "crypto", "dep:sev", "prost", "tonic", "uuid", "zeroize"]
