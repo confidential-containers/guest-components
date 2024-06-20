@@ -33,6 +33,11 @@ If you don't want to include any RESOURCE_PROVIDER(s):
 make RESOURCE_PROVIDER=none
 ```
 
+The default CDH runs as a service daemon. If you want to build CDH to an one-shot binary (run once and exit), use flag `ONE_SHOT=true`
+```shell
+make ONE_SHOT=true
+```
+
 Please refer to [Supported Features](#supported-features) for the options.
 
 ### Supported Features

@@ -14,6 +14,8 @@ $(info DEBIANOS is: $(DEBIANOS))
 TARGET_DIR := ../target
 BIN_NAME := confidential-data-hub
 
+ONE_SHOT ?= false
+
 SOURCE_ARCH := $(shell uname -m)
 RPC ?= ttrpc
 ARCH ?= $(shell uname -m)
@@ -27,7 +29,11 @@ features ?=
 
 binary_name ?=
 
-ifeq ($(RPC), ttrpc)
+ifeq ($(ONE_SHOT), true)
+    binary = --bin cdh-oneshot
+    features += bin
+    binary_name = cdh-oneshot
+else ifeq ($(RPC), ttrpc)
     binary = --bin ttrpc-cdh
     features += bin,ttrpc
     binary_name = ttrpc-cdh
