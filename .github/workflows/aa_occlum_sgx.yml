@@ -34,10 +34,3 @@ jobs:
       - name: Run Occlum instance
         run: |
           docker run --rm -i --device /dev/sgx_enclave --device /dev/sgx_provision -v /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf -v $(pwd):/home occlum/occlum:latest-ubuntu20.04 bash -c "cd /home/attestation-agent/ci && ./occlum.sh"
-
-      - name: Take a post-action for self-hosted runner
-        if: always()
-        run: |
-          if [ -f ${HOME}/script/post_action.sh ]; then
-            ${HOME}/script/post_action.sh guest-components
-          fi
