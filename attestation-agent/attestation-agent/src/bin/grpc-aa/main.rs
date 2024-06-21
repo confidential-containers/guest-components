@@ -44,7 +44,8 @@ pub async fn main() -> Result<()> {
 
     let attestation_socket = cli.attestation_sock.parse::<SocketAddr>()?;
 
-    let aa = AttestationAgent::new(cli.config_file.as_deref()).context("start AA")?;
+    let mut aa = AttestationAgent::new(cli.config_file.as_deref()).context("start AA")?;
+    aa.init().await.context("init AA")?;
     debug!(
         "Attestation gRPC service listening on: {:?}",
         cli.attestation_sock

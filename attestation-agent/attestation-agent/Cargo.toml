@@ -20,7 +20,7 @@ attester = { path = "../attester", default-features = false }
 base64.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
 config.workspace = true
-const_format = { workspace = true, optional = true }
+const_format.workspace = true
 env_logger = { workspace = true, optional = true }
 kbs_protocol = { path = "../kbs_protocol", default-features = false, optional = true }
 log.workspace = true
@@ -73,4 +73,4 @@ openssl = ["kbs_protocol?/openssl"]
 # Binary RPC type
 bin = ["clap", "env_logger", "tokio/rt-multi-thread"]
 grpc = ["prost", "tonic", "tonic-build", "tokio/signal"]
-ttrpc = ["const_format", "dep:ttrpc", "ttrpc-codegen", "protobuf", "tokio/signal"]
+ttrpc = ["dep:ttrpc", "ttrpc-codegen", "protobuf", "tokio/signal"]
