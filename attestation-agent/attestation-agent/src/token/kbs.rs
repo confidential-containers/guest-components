@@ -3,12 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::config::kbs::KbsConfig;
+use crate::config::{aa_kbc_params, kbs::KbsConfig};
 
 use super::GetToken;
 use anyhow::*;
 use async_trait::async_trait;
 use kbs_protocol::{evidence_provider::NativeEvidenceProvider, KbsClientBuilder};
+use log::warn;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -50,8 +51,18 @@ impl GetToken for KbsTokenGetter {
 
 impl KbsTokenGetter {
     pub fn new(config: &KbsConfig) -> Self {
+        let kbs_host_url = match config.url.is_empty() {
+            false => config.url.clone(),
+            true => {
+                warn!("No KBS address is provided in the config file, try legacy ways to get from `aa_kbc_params`");
+                aa_kbc_params::get_params()
+                    .expect("failed to get aa_kbc_params")
+                    .uri()
+                    .to_string()
+            }
+        };
         Self {
-            kbs_host_url: config.url.clone(),
+            kbs_host_url,
             cert: config.cert.clone(),
         }
     }
