@@ -33,6 +33,8 @@ pub enum TsmReportError {
 
 #[derive(PartialEq, Debug, EnumString)]
 pub enum TsmReportProvider {
+    #[strum(serialize = "arm_cca_guest\n")]
+    Cca,
     #[strum(serialize = "tdx_guest\n")]
     Tdx,
     #[strum(serialize = "sev_guest\n")]
@@ -40,6 +42,7 @@ pub enum TsmReportProvider {
 }
 
 pub enum TsmReportData {
+    Cca(Vec<u8>),
     Tdx(Vec<u8>),
     Sev(u8, Vec<u8>),
 }
@@ -86,6 +89,7 @@ impl TsmReportPath {
         let report_path = self.path.as_path();
 
         let report_data = match provider_data {
+            TsmReportData::Cca(inblob) => inblob,
             TsmReportData::Tdx(inblob) => inblob,
             TsmReportData::Sev(privlevel, inblob) => {
                 // TODO: untested

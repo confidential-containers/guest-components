@@ -325,7 +325,6 @@ dependencies = [
  "hyper-tls 0.5.0",
  "kbs-types",
  "log",
- "nix 0.28.0",
  "occlum_dcap",
  "rstest",
  "s390_pv",

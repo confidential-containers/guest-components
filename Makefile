@@ -50,8 +50,10 @@ else ifeq ($(TEE_PLATFORM), amd)
   else
     RESOURCE_PROVIDER = sev,kbs
   endif
+else ifeq ($(TEE_PLATFORM), cca)
+  ATTESTER = cca-attester
 endif
-# TODO: Add support for CCA and CSV
+# TODO: Add support for CSV
 
 ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
   $(info s390x/powerpc64le only supports gnu)

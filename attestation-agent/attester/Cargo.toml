@@ -14,7 +14,6 @@ base64.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
 kbs-types.workspace = true
 log.workspace = true
-nix = { version = "0.28", optional = true, features = ["ioctl", "fs"] }
 occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.7", optional = true }
 pv = { version = "0.10.0", package = "s390_pv", optional = true }
 scroll = { version = "0.12.0", default-features = false, features = ["derive", "std"], optional = true }
@@ -67,7 +66,7 @@ az-snp-vtpm-attester = ["az-snp-vtpm"]
 az-tdx-vtpm-attester = ["az-tdx-vtpm"]
 snp-attester = ["sev"]
 csv-attester = ["csv-rs", "codicon", "hyper", "hyper-tls", "tokio"]
-cca-attester = ["nix"]
+cca-attester = ["tsm-report"]
 se-attester  = ["pv"]
 
 bin = ["tokio/rt", "tokio/macros", "clap"]

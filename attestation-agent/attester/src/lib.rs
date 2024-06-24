@@ -53,7 +53,7 @@ impl TryFrom<Tee> for BoxedAttester {
             #[cfg(feature = "az-tdx-vtpm-attester")]
             Tee::AzTdxVtpm => Box::<az_tdx_vtpm::AzTdxVtpmAttester>::default(),
             #[cfg(feature = "cca-attester")]
-            Tee::Cca => Box::<cca::CCAAttester>::default(),
+            Tee::Cca => Box::<cca::CcaAttester>::default(),
             #[cfg(feature = "snp-attester")]
             Tee::Snp => Box::<snp::SnpAttester>::default(),
             #[cfg(feature = "csv-attester")]
