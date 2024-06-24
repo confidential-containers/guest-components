@@ -17,6 +17,15 @@ pub struct AaKbcParams {
     pub uri: String,
 }
 
+impl Default for AaKbcParams {
+    fn default() -> Self {
+        Self {
+            kbc: "offline_fs_kbc".into(),
+            uri: "".into(),
+        }
+    }
+}
+
 impl TryFrom<String> for AaKbcParams {
     type Error = ParamError;
 
@@ -36,30 +45,36 @@ impl TryFrom<String> for AaKbcParams {
     }
 }
 
-pub fn get_value() -> Result<String, ParamError> {
-    // first check env
-    if let Ok(params) = env::var("AA_KBC_PARAMS") {
-        debug!("get aa_kbc_params from env.");
-        return Ok(params);
+impl AaKbcParams {
+    fn get_value() -> Result<String, ParamError> {
+        // first check env
+        if let Ok(params) = env::var("AA_KBC_PARAMS") {
+            debug!("get aa_kbc_params from env.");
+            return Ok(params);
+        }
+
+        // finally use the kernel cmdline
+        Self::from_cmdline()
     }
 
-    // finally use the kernel cmdline
-    from_cmdline()
-}
+    pub fn new() -> Result<Self, ParamError> {
+        let Ok(value) = Self::get_value() else {
+            debug!("failed to get aa_kbc_params in either both env or kernel cmdline, use `offline_fs_kbc::null` as default.");
+            return Ok(Self::default());
+        };
 
-pub fn get_params() -> Result<AaKbcParams, ParamError> {
-    let value = get_value()?;
-    value.try_into()
-}
+        value.try_into()
+    }
 
-fn from_cmdline() -> Result<String, ParamError> {
-    debug!("get aa_kbc_params from kernel cmdline");
-    let cmdline = std::fs::read_to_string("/proc/cmdline")?;
-    let value = cmdline
-        .split_ascii_whitespace()
-        .find(|para| para.starts_with("agent.aa_kbc_params="))
-        .ok_or(ParamError::MissingInCmdline)?
-        .strip_prefix("agent.aa_kbc_params=")
-        .expect("must have a prefix");
-    Ok(value.into())
+    fn from_cmdline() -> Result<String, ParamError> {
+        debug!("get aa_kbc_params from kernel cmdline");
+        let cmdline = std::fs::read_to_string("/proc/cmdline")?;
+        let value = cmdline
+            .split_ascii_whitespace()
+            .find(|para| para.starts_with("agent.aa_kbc_params="))
+            .ok_or(ParamError::MissingInCmdline)?
+            .strip_prefix("agent.aa_kbc_params=")
+            .expect("must have a prefix");
+        Ok(value.into())
+    }
 }

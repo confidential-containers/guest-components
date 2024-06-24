@@ -6,6 +6,7 @@
 use std::{env, fs, path::Path};
 
 use anyhow::*;
+use attestation_agent::config::aa_kbc_params::AaKbcParams;
 use config::{Config, File};
 use log::{debug, info};
 use serde::Deserialize;
@@ -27,24 +28,16 @@ pub struct KbsConfig {
     pub kbs_cert: Option<String>,
 }
 
-impl Default for KbsConfig {
-    fn default() -> Self {
+impl KbsConfig {
+    fn new() -> Result<Self> {
         debug!("Try to get kbc and url from env and kernel commandline.");
-        match attestation_agent::config::aa_kbc_params::get_params() {
-            std::result::Result::Ok(aa_kbc_params) => KbsConfig {
-                name: aa_kbc_params.kbc,
-                url: aa_kbc_params.uri,
-                kbs_cert: None,
-            },
-            Err(_) => {
-                debug!("Failed to get aa_kbc_params from env or kernel cmdline. Use offline_fs_kbc by default.");
-                KbsConfig {
-                    name: "offline_fs_kbc".into(),
-                    url: "".into(),
-                    kbs_cert: None,
-                }
-            }
-        }
+        let aa_kbc_params =
+            AaKbcParams::new().context("failed to read aa_kbc_params to initialize KbsConfig")?;
+        Ok(KbsConfig {
+            name: aa_kbc_params.kbc,
+            url: aa_kbc_params.uri,
+            kbs_cert: None,
+        })
     }
 }
 
@@ -62,16 +55,6 @@ pub struct CdhConfig {
     pub credentials: Vec<Credential>,
 
     pub socket: String,
-}
-
-impl Default for CdhConfig {
-    fn default() -> Self {
-        Self {
-            socket: DEFAULT_CDH_SOCKET_ADDR.into(),
-            kbc: KbsConfig::default(),
-            credentials: Vec::default(),
-        }
-    }
 }
 
 impl CdhConfig {
@@ -95,7 +78,11 @@ impl CdhConfig {
             }
             None => {
                 info!("No config path specified, use a default config.");
-                Self::default()
+                Self {
+                    kbc: KbsConfig::new()?,
+                    credentials: Vec::new(),
+                    socket: DEFAULT_CDH_SOCKET_ADDR.into(),
+                }
             }
         };
 

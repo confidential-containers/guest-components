@@ -73,13 +73,15 @@ pub struct AttestationAgent {
 }
 
 impl Default for AttestationAgent {
+    /// This function would panic if a malformed `aa_kbc_param` is given
+    /// either env or kernel cmdline
     fn default() -> Self {
         if let Ok(_config) = Config::try_from(config::DEFAULT_AA_CONFIG_PATH) {
             return AttestationAgent { _config };
         }
 
         AttestationAgent {
-            _config: Config::default(),
+            _config: Config::new().expect("AA initialize"),
         }
     }
 }
@@ -94,7 +96,7 @@ impl AttestationAgent {
             }
             None => {
                 warn!("No AA config file specified. Using a default configuration.");
-                Config::default()
+                Config::new()?
             }
         };
 

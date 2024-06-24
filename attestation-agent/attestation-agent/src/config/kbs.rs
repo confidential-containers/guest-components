@@ -3,9 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use anyhow::Result;
 use serde::Deserialize;
 
-use super::aa_kbc_params;
+use super::aa_kbc_params::AaKbcParams;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct KbsConfig {
@@ -16,12 +17,12 @@ pub struct KbsConfig {
     pub cert: Option<String>,
 }
 
-impl Default for KbsConfig {
-    fn default() -> Self {
-        let aa_kbc_params = aa_kbc_params::get_params().expect("failed to get aa_kbc_params");
-        Self {
-            url: aa_kbc_params.uri.clone(),
+impl KbsConfig {
+    pub fn new() -> Result<Self> {
+        let aa_kbc_params = AaKbcParams::new()?;
+        Ok(Self {
+            url: aa_kbc_params.uri,
             cert: None,
-        }
+        })
     }
 }
