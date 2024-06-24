@@ -17,8 +17,6 @@ mod message;
 
 use config::*;
 
-const DEFAULT_CONFIG_PATH: &str = "/etc/confidential-data-hub.conf";
-
 const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
 
 #[derive(Debug, Parser)]
@@ -31,23 +29,12 @@ struct Cli {
     config: Option<String>,
 }
 
-fn get_config_path(cli: Cli) -> String {
-    cli.config.unwrap_or_else(|| {
-        if let Ok(env_path) = env::var("CDH_CONFIG_PATH") {
-            return env_path;
-        }
-        DEFAULT_CONFIG_PATH.into()
-    })
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     let cli = Cli::parse();
-    let config_path = get_config_path(cli);
-    info!("Use configuration file {}", config_path);
 
-    let config = CdhConfig::init(&config_path).await?;
+    let config = CdhConfig::new(cli.config)?;
     config.set_configuration_envs();
 
     let cdh_socket = config.socket.parse::<SocketAddr>()?;

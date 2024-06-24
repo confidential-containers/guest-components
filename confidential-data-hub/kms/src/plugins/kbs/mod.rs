@@ -13,10 +13,10 @@ mod sev;
 
 mod offline_fs;
 
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 use async_trait::async_trait;
-use attestation_agent::config::aa_kbc_params;
+use attestation_agent::config::aa_kbc_params::AaKbcParams;
 use lazy_static::lazy_static;
 pub use resource_uri::ResourceUri;
 use tokio::sync::Mutex;
@@ -33,13 +33,15 @@ enum RealClient {
 
 impl RealClient {
     async fn new() -> Result<Self> {
-        let params = aa_kbc_params::get_params()?;
+        let params = env::var("AA_KBC_PARAMS").expect("must be initialized");
+        let params = AaKbcParams::try_from(params)
+            .map_err(|e| Error::KbsClientError(format!("Failed to parse aa_kbc_params: {e}")))?;
 
-        let c = match params.kbc() {
+        let c = match &params.kbc[..] {
             #[cfg(feature = "kbs")]
-            "cc_kbc" => RealClient::Cc(cc_kbc::CcKbc::new(params.uri()).await?),
+            "cc_kbc" => RealClient::Cc(cc_kbc::CcKbc::new(&params.uri).await?),
             #[cfg(feature = "sev")]
-            "online_sev_kbc" => RealClient::Sev(sev::OnlineSevKbc::new(params.uri()).await?),
+            "online_sev_kbc" => RealClient::Sev(sev::OnlineSevKbc::new(&params.uri).await?),
             "offline_fs_kbc" => RealClient::OfflineFs(offline_fs::OfflineFsKbc::new().await?),
             others => return Err(Error::KbsClientError(format!("unknown kbc name {others}, only support `cc_kbc`(feature `kbs`), `online_sev_kbc` (feature `sev`) and `offline_fs_kbc`."))),
         };

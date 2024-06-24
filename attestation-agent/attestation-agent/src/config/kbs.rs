@@ -20,7 +20,7 @@ impl Default for KbsConfig {
     fn default() -> Self {
         let aa_kbc_params = aa_kbc_params::get_params().expect("failed to get aa_kbc_params");
         Self {
-            url: aa_kbc_params.uri().into(),
+            url: aa_kbc_params.uri.clone(),
             cert: None,
         }
     }
