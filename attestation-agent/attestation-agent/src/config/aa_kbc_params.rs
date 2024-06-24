@@ -17,6 +17,15 @@ pub struct AaKbcParams {
     pub uri: String,
 }
 
+impl Default for AaKbcParams {
+    fn default() -> Self {
+        AaKbcParams {
+            kbc: "offline_fs_kbc".into(),
+            uri: "null".into(),
+        }
+    }
+}
+
 impl TryFrom<String> for AaKbcParams {
     type Error = ParamError;
 
@@ -48,8 +57,12 @@ pub fn get_value() -> Result<String, ParamError> {
 }
 
 pub fn get_params() -> Result<AaKbcParams, ParamError> {
-    let value = get_value()?;
-    value.try_into()
+    let Ok(value) = get_value() else {
+        debug!("Failed to get aa_kbc_params from env or kernel cmdline. Use offline_fs_kbc by default.");
+        return Ok(AaKbcParams::default());
+    };
+    let aa_kbc_params = value.try_into()?;
+    Ok(aa_kbc_params)
 }
 
 fn from_cmdline() -> Result<String, ParamError> {

@@ -48,6 +48,18 @@ impl Default for KbsConfig {
     }
 }
 
+impl KbsConfig {
+    fn new() -> Result<Self> {
+        debug!("Try to get kbc and url from env and kernel commandline.");
+        let aa_kbc_params = attestation_agent::config::aa_kbc_params::get_params()?;
+        Ok(Self {
+            name: aa_kbc_params.kbc,
+            url: aa_kbc_params.uri,
+            kbs_cert: None,
+        })
+    }
+}
+
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct Credential {
     pub resource_uri: String,
@@ -64,16 +76,6 @@ pub struct CdhConfig {
     pub socket: String,
 }
 
-impl Default for CdhConfig {
-    fn default() -> Self {
-        Self {
-            socket: DEFAULT_CDH_SOCKET_ADDR.into(),
-            kbc: KbsConfig::default(),
-            credentials: Vec::default(),
-        }
-    }
-}
-
 impl CdhConfig {
     pub fn new(config_path: Option<String>) -> Result<Self> {
         let config_path = config_path.or_else(|| {
@@ -84,19 +86,20 @@ impl CdhConfig {
             None
         });
 
-        let mut config = match config_path {
-            Some(path) => {
-                info!("Use configuration file {path}");
-                if !Path::new(&path).exists() {
-                    bail!("Config file {path} not found.")
-                }
+        if let Some(path) = &config_path {
+            if !Path::new(&path).exists() {
+                bail!("Config file {path} not found.")
+            }
 
-                Self::from_file(&path)?
-            }
-            None => {
-                info!("No config path specified, use a default config.");
-                Self::default()
-            }
+            return Self::from_file(path);
+        }
+
+        info!("No config path specified");
+        debug!("Attempt to get configuration from aa_kbc_params.");
+        let mut config = Self {
+            socket: DEFAULT_CDH_SOCKET_ADDR.into(),
+            kbc: KbsConfig::new()?,
+            credentials: Vec::default(),
         };
 
         config.extend_credentials_from_kernel_cmdline()?;
@@ -235,7 +238,7 @@ path = "/run/confidential-containers/cdh/kms-credential/aliyun/config.toml"
         let expected = CdhConfig {
             kbc: KbsConfig {
                 name: "offline_fs_kbc".into(),
-                url: "".into(),
+                url: "null".into(),
                 kbs_cert: None,
             },
             credentials: Vec::new(),
