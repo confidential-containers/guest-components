@@ -16,14 +16,22 @@ pub mod kbs;
 
 pub const DEFAULT_AA_CONFIG_PATH: &str = "/etc/attestation-agent.conf";
 
-#[derive(Clone, Debug, Deserialize, Default)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     /// configs about token
     pub token_configs: TokenConfigs,
     // TODO: Add more fields that accessing AS needs.
 }
 
-#[derive(Clone, Debug, Deserialize, Default)]
+impl Config {
+    pub fn new() -> Result<Self> {
+        Ok(Self {
+            token_configs: TokenConfigs::new()?,
+        })
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct TokenConfigs {
     /// This config item is used when `coco_as` feature is enabled.
     #[cfg(feature = "coco_as")]
@@ -32,6 +40,18 @@ pub struct TokenConfigs {
     /// This config item is used when `kbs` feature is enabled.
     #[cfg(feature = "kbs")]
     pub kbs: kbs::KbsConfig,
+}
+
+impl TokenConfigs {
+    pub fn new() -> Result<Self> {
+        Ok(Self {
+            #[cfg(feature = "coco_as")]
+            coco_as: coco_as::CoCoASConfig::new()?,
+
+            #[cfg(feature = "kbs")]
+            kbs: kbs::KbsConfig::new()?,
+        })
+    }
 }
 
 impl TryFrom<&str> for Config {
