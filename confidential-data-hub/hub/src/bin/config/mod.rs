@@ -3,13 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::env;
+use std::{env, fs, path::Path};
 
 use anyhow::*;
 use config::{Config, File};
-use log::{debug, warn};
+use log::{debug, info};
 use serde::Deserialize;
-use tokio::fs;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "ttrpc")] {
@@ -19,7 +18,7 @@ cfg_if::cfg_if! {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct KbsConfig {
     pub name: String,
 
@@ -30,21 +29,32 @@ pub struct KbsConfig {
 
 impl Default for KbsConfig {
     fn default() -> Self {
-        Self {
-            name: "offline_fs_kbc".into(),
-            url: "null".into(),
-            kbs_cert: None,
+        debug!("Try to get kbc and url from env and kernel commandline.");
+        match attestation_agent::config::aa_kbc_params::get_params() {
+            std::result::Result::Ok(aa_kbc_params) => KbsConfig {
+                name: aa_kbc_params.kbc,
+                url: aa_kbc_params.uri,
+                kbs_cert: None,
+            },
+            Err(_) => {
+                debug!("Failed to get aa_kbc_params from env or kernel cmdline. Use offline_fs_kbc by default.");
+                KbsConfig {
+                    name: "offline_fs_kbc".into(),
+                    url: "".into(),
+                    kbs_cert: None,
+                }
+            }
         }
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct Credential {
     pub resource_uri: String,
     pub path: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct CdhConfig {
     pub kbc: KbsConfig,
 
@@ -65,13 +75,31 @@ impl Default for CdhConfig {
 }
 
 impl CdhConfig {
-    pub async fn init(config_path: &str) -> Result<Self> {
-        let mut config = Self::from_file(config_path).unwrap_or_else(|e| {
-            warn!("read config file {config_path} failed {e:?}, use a default config where `aa_kbc_params` = offline_fs_kbc::null.");
-            Self::default()
+    pub fn new(config_path: Option<String>) -> Result<Self> {
+        let config_path = config_path.or_else(|| {
+            if let std::result::Result::Ok(env_path) = env::var("CDH_CONFIG_PATH") {
+                debug!("Read CDH's config path from env: {env_path}");
+                return Some(env_path);
+            }
+            None
         });
 
-        config.update_from_kernel_cmdline().await?;
+        let mut config = match config_path {
+            Some(path) => {
+                info!("Use configuration file {path}");
+                if !Path::new(&path).exists() {
+                    bail!("Config file {path} not found.")
+                }
+
+                Self::from_file(&path)?
+            }
+            None => {
+                info!("No config path specified, use a default config.");
+                Self::default()
+            }
+        };
+
+        config.extend_credentials_from_kernel_cmdline()?;
         Ok(config)
     }
 
@@ -102,10 +130,8 @@ impl CdhConfig {
     /// path.
     ///
     /// TODO: delete this way after initdata mechanism could cover CDH's launch config.
-    async fn update_from_kernel_cmdline(&mut self) -> Result<()> {
-        let cmdline = fs::read_to_string("/proc/cmdline")
-            .await
-            .context("read kernel cmdline failed")?;
+    fn extend_credentials_from_kernel_cmdline(&mut self) -> Result<()> {
+        let cmdline = fs::read_to_string("/proc/cmdline").context("read kernel cmdline failed")?;
         let kbs_resources = cmdline
             .split_ascii_whitespace()
             .find(|para| para.starts_with("cdh.kbs_resources="))
@@ -127,15 +153,13 @@ impl CdhConfig {
 
 impl CdhConfig {
     pub fn set_configuration_envs(&self) {
-        if attestation_agent::config::aa_kbc_params::get_value().is_err() {
-            debug!("No aa_kbc_params provided in kernel cmdline, env and peerpod config.");
-            // KBS configurations
+        if env::var("AA_KBC_PARAMS").is_err() {
             env::set_var(
                 "AA_KBC_PARAMS",
                 format!("{}::{}", self.kbc.name, self.kbc.url),
             );
         }
-
+        // KBS configurations
         if let Some(kbs_cert) = &self.kbc.kbs_cert {
             env::set_var("KBS_CERT", kbs_cert);
         }
@@ -144,11 +168,12 @@ impl CdhConfig {
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
+    use std::{env, io::Write};
 
+    use anyhow::anyhow;
     use rstest::rstest;
 
-    use crate::CdhConfig;
+    use crate::{config::DEFAULT_CDH_SOCKET_ADDR, CdhConfig, KbsConfig};
 
     #[rstest]
     #[case(
@@ -199,5 +224,36 @@ path = "/run/confidential-containers/cdh/kms-credential/aliyun/config.toml"
         file.write_all(config.as_bytes()).unwrap();
         let res = CdhConfig::from_file(file.path().to_str().unwrap());
         assert_eq!(res.is_ok(), successful, "{res:?}");
+    }
+
+    #[test]
+    fn test_config_path() {
+        // --config takes precedence,
+        // then env.CDH_CONFIG_PATH
+
+        let config = CdhConfig::new(None).expect("Must be successful");
+        let expected = CdhConfig {
+            kbc: KbsConfig {
+                name: "offline_fs_kbc".into(),
+                url: "".into(),
+                kbs_cert: None,
+            },
+            credentials: Vec::new(),
+            socket: DEFAULT_CDH_SOCKET_ADDR.into(),
+        };
+        assert_eq!(config, expected);
+
+        let config = CdhConfig::new(Some("/thing".into())).unwrap_err();
+        let expected = anyhow!("Config file /thing not found.");
+        assert_eq!(format!("{config}"), format!("{expected}"));
+
+        env::set_var("CDH_CONFIG_PATH", "/byenv");
+        let config = CdhConfig::new(None).unwrap_err();
+        let expected = anyhow!("Config file /byenv not found.");
+        assert_eq!(format!("{config}"), format!("{expected}"));
+
+        let config = CdhConfig::new(Some("/thing".into())).unwrap_err();
+        let expected = anyhow!("Config file /thing not found.");
+        assert_eq!(format!("{config}"), format!("{expected}"));
     }
 }
