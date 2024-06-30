@@ -3,50 +3,56 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, bail, Context, Result};
+use log::error;
 use sha2::Digest;
-use std::fs;
-use std::io::{Cursor, Read};
-use std::path::{Path, PathBuf};
-use std::sync::mpsc::{channel, Receiver};
-use tokio::io::{AsyncRead, AsyncReadExt};
+use std::{
+    path::{Path, PathBuf},
+    pin::Pin,
+    task::Poll,
+};
+use tokio::io::{AsyncRead, ReadBuf};
 
 use crate::digest::{DigestHasher, LayerDigestHasher, DIGEST_SHA256_PREFIX, DIGEST_SHA512_PREFIX};
 use crate::unpack::unpack;
 use crate::ERR_BAD_UNCOMPRESSED_DIGEST;
 
-const CAPACITY: usize = 32768;
-
-// Wrap a channel with [`Read`](std::io::Read) support.
-// This can bridge the [`AsyncRead`](tokio::io::AsyncRead) from
-// decrypt/decompress and impl Read for unpack.
-struct ChannelRead {
-    rx: Receiver<Vec<u8>>,
-    current: Cursor<Vec<u8>>,
+struct HashReader<R, H> {
+    reader: R,
+    hasher: H,
 }
 
-impl ChannelRead {
-    fn new(rx: Receiver<Vec<u8>>) -> ChannelRead {
-        ChannelRead {
-            rx,
-            current: Cursor::new(vec![]),
-        }
+impl<R, H> HashReader<R, H>
+where
+    R: AsyncRead,
+    H: DigestHasher,
+{
+    pub fn new(reader: R, hasher: H) -> Self {
+        HashReader { reader, hasher }
     }
 }
 
-impl Read for ChannelRead {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        // Receive new buffer when we finish handled previous data.
-        if self.current.position() == self.current.get_ref().len() as u64 {
-            if let Ok(buffer) = self.rx.recv() {
-                self.current = Cursor::new(buffer);
+impl<R, H> AsyncRead for HashReader<R, H>
+where
+    R: AsyncRead + Unpin,
+    H: DigestHasher + Unpin,
+{
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        let old_position = buf.filled().len();
+        let me = &mut *self;
+        match Pin::new(&mut me.reader).poll_read(cx, buf) {
+            Poll::Ready(Ok(())) => {
+                let bytes = buf.filled();
+                let new_position = bytes.len();
+                self.hasher
+                    .digest_update(&bytes[old_position..new_position]);
+                Poll::Ready(Ok(()))
             }
-
-            // When recv() finished or failed, the sender will close the channel
-            // which means EOF. The following read will also exit with EOF from
-            // the exhausted cursor.
+            other => other,
         }
-
-        std::io::Read::read(&mut self.current, buf)
     }
 }
 
@@ -66,67 +72,40 @@ pub async fn stream_processing(
         bail!("{}: {:?}", ERR_BAD_UNCOMPRESSED_DIGEST, diff_id);
     };
 
-    channel_processing(layer_reader, hasher, dest)
+    async_processing(layer_reader, hasher, dest)
         .await
         .map_err(|e| anyhow!("hasher {} {:?}", DIGEST_SHA256_PREFIX, e))
 }
 
-async fn channel_processing(
-    mut layer_reader: (impl AsyncRead + Unpin),
-    mut hasher: LayerDigestHasher,
+async fn async_processing(
+    layer_reader: (impl AsyncRead + Unpin),
+    hasher: LayerDigestHasher,
     destination: PathBuf,
 ) -> Result<String> {
-    let (tx, rx) = channel();
-    let unpack_thread = std::thread::spawn(move || {
-        let mut input = ChannelRead::new(rx);
-
-        if let Err(e) = unpack(&mut input, destination.as_path()) {
-            // TODO
-            fs::remove_dir_all(destination.as_path())
-                .context("Failed to roll back when unpacking")?;
-            return Err(e);
-        }
-
-        Result::<()>::Ok(())
-    });
-
-    loop {
-        let mut buffer = vec![0u8; CAPACITY];
-        let n = layer_reader
-            .read(&mut buffer)
+    let mut hash_reader = HashReader::new(layer_reader, hasher);
+    if let Err(e) = unpack(&mut hash_reader, destination.as_path()).await {
+        error!("failed to unpack layer: {e:?}");
+        tokio::fs::remove_dir_all(destination.as_path())
             .await
-            .map_err(|e| anyhow!("channel: read failed {:?}", e))?;
-        if n == 0 {
-            break;
-        }
-
-        buffer.resize(n, 0);
-        hasher.digest_update(&buffer);
-        tx.send(buffer)
-            .map_err(|e| anyhow!("channel: send failed {:?}", e))?;
+            .context("Failed to roll back when unpacking")?;
+        return Err(e);
     }
 
-    // Close the channel to signal EOF.
-    drop(tx);
-
-    tokio::task::spawn_blocking(|| unpack_thread.join())
-        .await?
-        .map_err(|e| anyhow!("channel: unpack thread failed {:?}", e))
-        .unwrap()?;
-
-    Ok(hasher.digest_finalize())
+    Ok(hash_reader.hasher.digest_finalize())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use ring::rand::SecureRandom;
-    use std::fs::File;
-    use std::io::BufReader;
-    use tar::{Builder, Header};
+    use tokio::{
+        fs::File,
+        io::{AsyncReadExt, BufReader},
+    };
+    use tokio_tar::{Builder, Header};
 
     #[tokio::test]
-    async fn test_channel_processing() {
+    async fn test_async_processing() {
         let mut data = [0; 100000];
         ring::rand::SystemRandom::new().fill(&mut data[..]).unwrap();
         let data_digest = sha2::Sha256::digest(data.as_slice());
@@ -138,9 +117,10 @@ mod tests {
         header.set_uid(0);
         header.set_gid(0);
         ar.append_data(&mut header, "file.txt", data.as_slice())
+            .await
             .unwrap();
 
-        let layer_data = ar.into_inner().unwrap();
+        let layer_data = ar.into_inner().await.unwrap();
 
         let layer_digest = format!(
             "{}{:x}",
@@ -154,16 +134,16 @@ mod tests {
         let hasher = LayerDigestHasher::Sha256(sha2::Sha256::new());
 
         let layer_digest_new =
-            channel_processing(layer_data.as_slice(), hasher, file_path.to_path_buf())
+            async_processing(layer_data.as_slice(), hasher, file_path.to_path_buf())
                 .await
                 .unwrap();
         assert_eq!(layer_digest, layer_digest_new);
 
-        let file = File::open(file_path.join("file.txt")).unwrap();
+        let file = File::open(file_path.join("file.txt")).await.unwrap();
         let mut reader = BufReader::new(file);
         let mut buffer = Vec::new();
 
-        reader.read_to_end(&mut buffer).unwrap();
+        reader.read_to_end(&mut buffer).await.unwrap();
         let data_digest_new = sha2::Sha256::digest(buffer);
         assert_eq!(data_digest, data_digest_new);
     }
@@ -180,9 +160,10 @@ mod tests {
         header.set_uid(0);
         header.set_gid(0);
         ar.append_data(&mut header, "file.txt", data.as_slice())
+            .await
             .unwrap();
 
-        let layer_data = ar.into_inner().unwrap();
+        let layer_data = ar.into_inner().await.unwrap();
 
         let layer_digest = format!(
             "{}{:x}",
