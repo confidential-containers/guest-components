@@ -321,6 +321,7 @@ dependencies = [
  "clap 4.2.7",
  "codicon",
  "csv-rs",
+ "hex",
  "hyper 0.14.28",
  "hyper-tls 0.5.0",
  "kbs-types",
@@ -406,15 +407,13 @@ dependencies = [
 
 [[package]]
 name = "az-cvm-vtpm"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e2d89967f683d16dafdaacb578a2841daff9f43c856c6a6dc9939cc11272712"
+version = "0.6.0"
+source = "git+http://github.com/mkulke/azure-cvm-tooling?rev=69526229dbb78fe4a5d6e8c6887a146d8c6640b0#69526229dbb78fe4a5d6e8c6887a146d8c6640b0"
 dependencies = [
  "bincode",
  "jsonwebkey",
  "memoffset 0.9.0",
  "openssl",
- "rsa",
  "serde",
  "serde-big-array",
  "serde_json",
@@ -427,9 +426,8 @@ dependencies = [
 
 [[package]]
 name = "az-snp-vtpm"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9da68a854978d9d32cc03ba6cd4a24b1f43fafad91eb7e15578cdf9a9cbdfe7"
+version = "0.6.0"
+source = "git+http://github.com/mkulke/azure-cvm-tooling?rev=69526229dbb78fe4a5d6e8c6887a146d8c6640b0#69526229dbb78fe4a5d6e8c6887a146d8c6640b0"
 dependencies = [
  "az-cvm-vtpm",
  "bincode",
@@ -442,9 +440,8 @@ dependencies = [
 
 [[package]]
 name = "az-tdx-vtpm"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8575eeaefa72d9591355597f5acf9b4ddee8cc19d8b03d947173ae8fcf1e8c2e"
+version = "0.6.0"
+source = "git+http://github.com/mkulke/azure-cvm-tooling?rev=69526229dbb78fe4a5d6e8c6887a146d8c6640b0#69526229dbb78fe4a5d6e8c6887a146d8c6640b0"
 dependencies = [
  "az-cvm-vtpm",
  "base64-url",
@@ -507,11 +504,11 @@ dependencies = [
 
 [[package]]
 name = "base64-url"
-version = "2.0.2"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb9fb9fb058cc3063b5fc88d9a21eefa2735871498a04e1650da76ed511c8569"
+checksum = "38e2b6c78c06f7288d5e3c3d683bde35a79531127c83b087e5d0d77c974b4b28"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.0",
 ]
 
 [[package]]
@@ -1398,7 +1395,7 @@ dependencies = [
  "digest 0.10.7",
  "fiat-crypto",
  "platforms",
- "rustc_version 0.4.0",
+ "rustc_version",
  "subtle",
  "zeroize",
 ]
@@ -1620,7 +1617,7 @@ dependencies = [
  "nix 0.28.0",
  "rand",
  "retry",
- "semver 1.0.22",
+ "semver",
  "serde",
 ]
 
@@ -3439,12 +3436,11 @@ checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
 
 [[package]]
 name = "mbox"
-version = "0.6.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f88d5c34d63aad11aa4321ef55ccb064af58b3ad8091079ae22bf83e5eb75d6"
+checksum = "26d142aeadbc4e8c679fc6d93fbe7efe1c021fa7d80629e615915b519e3bc6de"
 dependencies = [
  "libc",
- "rustc_version 0.3.3",
  "stable_deref_trait",
 ]
 
@@ -4976,7 +4972,7 @@ dependencies = [
  "futures",
  "futures-timer",
  "rstest_macros",
- "rustc_version 0.4.0",
+ "rustc_version",
 ]
 
 [[package]]
@@ -4988,7 +4984,7 @@ dependencies = [
  "cfg-if",
  "proc-macro2",
  "quote",
- "rustc_version 0.4.0",
+ "rustc_version",
  "syn 1.0.109",
  "unicode-ident",
 ]
@@ -5036,20 +5032,11 @@ checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rustc_version"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0dfe2087c51c460008730de8b57e6a320782fbfb312e1f4d520e6c6fae155ee"
-dependencies = [
- "semver 0.11.0",
-]
-
-[[package]]
-name = "rustc_version"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfa0f585226d2e68097d4f95d113b15b83a82e819ab25717ec0590d9584ef366"
 dependencies = [
- "semver 1.0.22",
+ "semver",
 ]
 
 [[package]]
@@ -5298,27 +5285,9 @@ dependencies = [
 
 [[package]]
 name = "semver"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f301af10236f6df4160f7c3f04eec6dbc70ace82d23326abad5edee88801c6b6"
-dependencies = [
- "semver-parser",
-]
-
-[[package]]
-name = "semver"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92d43fe69e652f3df9bdc2b85b2854a0825b86e4fb76bc44d945137d053639ca"
-
-[[package]]
-name = "semver-parser"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00b0bef5b7f9e0df16536d3961cfb6e84331c065b4066afb39768d0e319411f7"
-dependencies = [
- "pest",
-]
 
 [[package]]
 name = "sequoia-openpgp"
@@ -6398,12 +6367,13 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tss-esapi"
-version = "7.4.0"
+version = "7.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de234df360c349f78ecd33f0816ab3842db635732212b5cfad67f2638336864e"
+checksum = "a9ba6594ded739cb539f8ffcd3713f6c21d4525c47314bbc6de15c0cd251aedf"
 dependencies = [
  "bitfield 0.14.0",
  "enumflags2",
+ "getrandom",
  "hostname-validator",
  "log",
  "mbox",
