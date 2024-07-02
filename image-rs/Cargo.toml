@@ -61,7 +61,6 @@ tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 url = "2.5.1"
 walkdir = "2"
-xattr = "1.0"
 zstd = "0.12"
 
 nydus-api = { version = "0.3.0", optional = true }

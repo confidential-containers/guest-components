@@ -2944,7 +2944,6 @@ dependencies = [
  "ttrpc-codegen",
  "url",
  "walkdir",
- "xattr",
  "zstd 0.12.4",
 ]
 
