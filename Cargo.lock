@@ -2769,7 +2769,6 @@ dependencies = [
  "kbc",
  "krata-tokio-tar",
  "lazy_static",
- "libc",
  "log",
  "loopdev",
  "nix 0.28.0",

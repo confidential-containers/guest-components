@@ -5,8 +5,8 @@
 use anyhow::{bail, Context, Result};
 use filetime::FileTime;
 use futures::StreamExt;
-use libc::timeval;
 use log::warn;
+use nix::libc::timeval;
 use std::{
     collections::HashMap,
     convert::TryInto,
@@ -115,7 +115,7 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Resul
 
     // Directory timestamps need update after all files are extracted.
     for (k, v) in dirs.iter() {
-        let ret = unsafe { libc::utimes(k.as_ptr(), v.as_ptr()) };
+        let ret = unsafe { nix::libc::utimes(k.as_ptr(), v.as_ptr()) };
         if ret != 0 {
             bail!(
                 "change directory: {:?} utime error: {:?}",
@@ -142,7 +142,7 @@ async fn set_perms_ownerships(
 ) -> Result<()> {
     match chown {
         ChownType::FChown(f) => {
-            let ret = unsafe { libc::fchown(f.as_fd().as_raw_fd(), uid, gid) };
+            let ret = unsafe { nix::libc::fchown(f.as_fd().as_raw_fd(), uid, gid) };
             if ret != 0 {
                 bail!(
                     "failed to set ownerships of file: {:?} chown error: {:?}",
@@ -152,7 +152,7 @@ async fn set_perms_ownerships(
             }
         }
         ChownType::LChown => {
-            let ret = unsafe { libc::lchown(dst.as_ptr(), uid, gid) };
+            let ret = unsafe { nix::libc::lchown(dst.as_ptr(), uid, gid) };
             if ret != 0 {
                 bail!(
                     "failed to set ownerships of file: {:?} lchown error: {:?}",

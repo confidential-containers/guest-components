@@ -29,10 +29,9 @@ futures-util = "0.3"
 hex = { workspace = true, optional = true }
 kbc = { path = "../attestation-agent/kbc", default-features = false, optional = true }
 lazy_static = { workspace = true, optional = true }
-libc = "0.2.155"
 log = "0.4.14"
 loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27" }
-nix = { version = "0.28", optional = true, features = ["mount"] }
+nix = { workspace = true, optional = true, features = ["mount"] }
 oci-distribution = { version = "0.11", default-features = false, optional = true }
 oci-spec = "0.6.2"
 ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = [
@@ -74,7 +73,7 @@ ttrpc-codegen = { workspace = true, optional = true }
 
 [dev-dependencies]
 cfg-if.workspace = true
-nix = { version = "0.28", features = ["user"] }
+nix = { workspace = true, features = ["user"] }
 ring.workspace = true
 rstest.workspace = true
 serial_test = "2.0.0"
