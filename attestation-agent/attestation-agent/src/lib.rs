@@ -38,7 +38,8 @@ use crate::config::Config;
 /// use attestation_agent::AttestationAgent;
 /// use attestation_agent::AttestationAPIs;
 ///
-/// let mut aa = AttestationAgent::default();
+/// // initialize with empty config
+/// let mut aa = AttestationAgent::new(None).unwrap();
 ///
 /// let _quote = aa.get_evidence(&[0;64]);
 /// ```
@@ -69,27 +70,14 @@ pub trait AttestationAPIs {
 
 /// Attestation agent to provide attestation service.
 pub struct AttestationAgent {
-    _config: Config,
-}
-
-impl Default for AttestationAgent {
-    /// This function would panic if a malformed `aa_kbc_param` is given
-    /// either env or kernel cmdline
-    fn default() -> Self {
-        if let Ok(_config) = Config::try_from(config::DEFAULT_AA_CONFIG_PATH) {
-            return AttestationAgent { _config };
-        }
-
-        AttestationAgent {
-            _config: Config::new().expect("AA initialize"),
-        }
-    }
+    config: Config,
+    attester: BoxedAttester,
 }
 
 impl AttestationAgent {
     /// Create a new instance of [AttestationAgent].
     pub fn new(config_path: Option<&str>) -> Result<Self> {
-        let _config = match config_path {
+        let config = match config_path {
             Some(config_path) => {
                 info!("Using AA config file: {config_path}");
                 Config::try_from(config_path)?
@@ -100,7 +88,10 @@ impl AttestationAgent {
             }
         };
 
-        Ok(AttestationAgent { _config })
+        let tee_type = detect_tee_type();
+        let attester: BoxedAttester = tee_type.try_into()?;
+
+        Ok(AttestationAgent { config, attester })
     }
 
     /// This is a workaround API for initdata in CoCo. Once
@@ -111,7 +102,7 @@ impl AttestationAgent {
         let _ = tmpfile.write(conf.as_bytes())?;
         tmpfile.flush()?;
 
-        let _config = Config::try_from(
+        let config = Config::try_from(
             tmpfile
                 .path()
                 .as_os_str()
@@ -120,7 +111,7 @@ impl AttestationAgent {
             // Here we can use `expect()` because tempfile crate will generate file name
             // only including numbers and alphabet (0-9, a-z, A-Z)
         )?;
-        self._config = _config;
+        self.config = config;
         Ok(())
     }
 }
@@ -133,13 +124,13 @@ impl AttestationAPIs for AttestationAgent {
         match token_type {
             #[cfg(feature = "kbs")]
             token::TokenType::Kbs => {
-                token::kbs::KbsTokenGetter::new(&self._config.token_configs.kbs)
+                token::kbs::KbsTokenGetter::new(&self.config.token_configs.kbs)
                     .get_token()
                     .await
             }
             #[cfg(feature = "coco_as")]
             token::TokenType::CoCoAS => {
-                token::coco_as::CoCoASTokenGetter::new(&self._config.token_configs.coco_as)
+                token::coco_as::CoCoASTokenGetter::new(&self.config.token_configs.coco_as)
                     .get_token()
                     .await
             }
@@ -148,9 +139,7 @@ impl AttestationAPIs for AttestationAgent {
 
     /// Get TEE hardware signed evidence that includes the runtime data.
     async fn get_evidence(&mut self, runtime_data: &[u8]) -> Result<Vec<u8>> {
-        let tee_type = detect_tee_type();
-        let attester = TryInto::<BoxedAttester>::try_into(tee_type)?;
-        let evidence = attester.get_evidence(runtime_data.to_vec()).await?;
+        let evidence = self.attester.get_evidence(runtime_data.to_vec()).await?;
         Ok(evidence.into_bytes())
     }
 
@@ -160,9 +149,7 @@ impl AttestationAPIs for AttestationAgent {
         events: Vec<Vec<u8>>,
         register_index: Option<u64>,
     ) -> Result<()> {
-        let tee_type = detect_tee_type();
-        let attester = TryInto::<BoxedAttester>::try_into(tee_type)?;
-        attester
+        self.attester
             .extend_runtime_measurement(events, register_index)
             .await?;
         Ok(())
@@ -171,8 +158,6 @@ impl AttestationAPIs for AttestationAgent {
     /// Check the initdata binding. If current platform does not support initdata
     /// injection, return `InitdataResult::Unsupported`.
     async fn check_init_data(&mut self, init_data: &[u8]) -> Result<InitdataResult> {
-        let tee_type = detect_tee_type();
-        let attester = TryInto::<BoxedAttester>::try_into(tee_type)?;
-        attester.check_init_data(init_data).await
+        self.attester.check_init_data(init_data).await
     }
 }
