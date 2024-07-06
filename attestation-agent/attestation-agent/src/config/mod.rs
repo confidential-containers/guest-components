@@ -21,12 +21,22 @@ pub struct Config {
     /// configs about token
     pub token_configs: TokenConfigs,
     // TODO: Add more fields that accessing AS needs.
+    #[serde(default)]
+    pub attester: AttesterConfig,
+}
+
+#[derive(Clone, Debug, Deserialize, Default)]
+pub struct AttesterConfig {
+    /// The default register index to use in `extend_runtime_measurement`
+    /// operations.
+    pub default_register_index: Option<u64>,
 }
 
 impl Config {
     pub fn new() -> Result<Self> {
         Ok(Self {
             token_configs: TokenConfigs::new()?,
+            attester: AttesterConfig::default(),
         })
     }
 }
@@ -74,5 +84,15 @@ mod tests {
     #[case("config.example.json")]
     fn parse_config(#[case] config: &str) {
         let _config = super::Config::try_from(config).expect("failed to parse config file");
+    }
+
+    #[test]
+    fn parse_attester_config() {
+        let config_str = "config.example.toml";
+        let config = super::Config::try_from(config_str).expect("failed to parse config file");
+        assert_eq!(config.attester.default_register_index, Some(42));
+        let config_str = "config.example.json";
+        let config = super::Config::try_from(config_str).expect("failed to parse config file");
+        assert!(config.attester.default_register_index.is_none());
     }
 }

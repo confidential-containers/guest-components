@@ -149,6 +149,7 @@ impl AttestationAPIs for AttestationAgent {
         events: Vec<Vec<u8>>,
         register_index: Option<u64>,
     ) -> Result<()> {
+        let register_index = register_index.or(self.config.attester.default_register_index);
         self.attester
             .extend_runtime_measurement(events, register_index)
             .await?;

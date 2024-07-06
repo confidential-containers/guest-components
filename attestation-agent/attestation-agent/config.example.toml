@@ -29,3 +29,6 @@ DYEbQvoZIkUTc1gBUWDcAUS5ztbJg9LCb9WVtvUTqTP2lGuNymOvdsuXq+sAZh9b
 M9QaC1mzQ/OStg==
 -----END CERTIFICATE-----
 '''
+
+[attester]
+default_register_index = 42
