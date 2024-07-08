@@ -163,3 +163,51 @@ pub fn create_secure_mount_service(service: Arc<Box<dyn SecureMountService + Sen
     ret.insert("api.SecureMountService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
     ret
 }
+
+#[derive(Clone)]
+pub struct ImagePullServiceClient {
+    client: ::ttrpc::r#async::Client,
+}
+
+impl ImagePullServiceClient {
+    pub fn new(client: ::ttrpc::r#async::Client) -> Self {
+        ImagePullServiceClient {
+            client,
+        }
+    }
+
+    pub async fn pull_image(&self, ctx: ttrpc::context::Context, req: &super::api::ImagePullRequest) -> ::ttrpc::Result<super::api::ImagePullResponse> {
+        let mut cres = super::api::ImagePullResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "api.ImagePullService", "PullImage", cres);
+    }
+}
+
+struct PullImageMethod {
+    service: Arc<Box<dyn ImagePullService + Send + Sync>>,
+}
+
+#[async_trait]
+impl ::ttrpc::r#async::MethodHandler for PullImageMethod {
+    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
+        ::ttrpc::async_request_handler!(self, ctx, req, api, ImagePullRequest, pull_image);
+    }
+}
+
+#[async_trait]
+pub trait ImagePullService: Sync {
+    async fn pull_image(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::api::ImagePullRequest) -> ::ttrpc::Result<super::api::ImagePullResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/api.ImagePullService/PullImage is not supported".to_string())))
+    }
+}
+
+pub fn create_image_pull_service(service: Arc<Box<dyn ImagePullService + Send + Sync>>) -> HashMap<String, ::ttrpc::r#async::Service> {
+    let mut ret = HashMap::new();
+    let mut methods = HashMap::new();
+    let streams = HashMap::new();
+
+    methods.insert("PullImage".to_string(),
+                    Box::new(PullImageMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
+
+    ret.insert("api.ImagePullService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
+    ret
+}

@@ -14,5 +14,14 @@
             "path": "/run/confidential-containers/cdh/test/file",
             "resource_uri": "kbs:///default/test/file"
         }
-    ]
+    ],
+    "image": {
+        "max_concurrent_layer_downloads_per_image": 3,
+        "sigstore_config_uri": "kbs:///default/sigstore-config/test",
+        "image_security_policy_uri": "kbs:///default/security-policy/test",
+        "authenticated_registry_credentials_uri": "kbs:///default/credential/test",
+        "image_pull_proxy": "http://127.0.0.1:5432",
+        "skip_proxy_ips": "192.168.0.1,localhost",
+        "work_dir": "/run/image-rs"
+    }
 }

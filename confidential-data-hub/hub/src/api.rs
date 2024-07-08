@@ -29,4 +29,7 @@ pub trait DataHub {
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>>;
 
     async fn secure_mount(&self, storage: Storage) -> Result<String>;
+
+    /// Pull image of image url (reference), and place the merged layers in the `bundle_path/rootfs`
+    async fn pull_image(&self, _image_url: &str, _bundle_path: &str) -> Result<String>;
 }

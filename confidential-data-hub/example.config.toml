@@ -62,3 +62,77 @@ resource_uri = "kbs:///default/aliyun/ecs_ram_role"
 [[credentials]]
 path = "/run/confidential-containers/cdh/test/file"
 resource_uri = "kbs:///default/test/file"
+
+[image]
+
+# The maximum number of layers downloaded concurrently when
+# pulling one specific image.
+#
+# This defaults to 3.
+max_concurrent_layer_downloads_per_image = 3
+
+# Sigstore config file URI for simple signing scheme.
+#
+# When `image_security_policy_uri` is set and `SimpleSigning` (signedBy) is
+# used in the policy, the signatures of the images would be used for image
+# signature validation. This policy will record where the signatures is.
+#
+# Now it supports two different forms:
+# - `KBS URI`: the sigstore config file will be fetched from KBS,
+# e.g. `kbs:///default/sigstore-config/test`.
+# - `Local Path`: the sigstore config file will be fetched from somewhere locally,
+# e.g. `file:///etc/simple-signing.yaml`.
+#
+# By default this value is not set.
+sigstore_config_uri = "kbs:///default/sigstore-config/test"
+
+# If any image security policy would be used to control the image pulling
+# like signature verification, this field is used to set the URI of the
+# policy file.
+#
+# Now it supports two different forms:
+# - `KBS URI`: the iamge security policy will be fetched from KBS.
+# - `Local Path`: the security policy will be fetched from somewhere locally.
+# e.g. `file:///etc/image-policy.json`.
+#
+# The policy follows the format of
+# <https://github.com/containers/image/blob/main/docs/containers-policy.json.5.md>.
+#
+# At the same time, some enhencements based on CoCo is used, that is the
+# `keyPath` field can be filled with a KBS URI like `kbs:///default/key/1`
+#
+# By default this value is not set.
+image_security_policy_uri = "kbs:///default/security-policy/test"
+
+# If any credential auth (Base) would be used to connect to download
+# image from private registry, this field is used to set the URI of the
+# credential file.
+#
+# Now it supports two different forms:
+# - `KBS URI`: the registry auth will be fetched from KBS,
+# e.g. `kbs:///default/credential/test`.
+# - `Local Path`: the registry auth will be fetched from somewhere locally,
+# e.g. `file:///etc/image-registry-auth.json`.
+#
+# By default this value is not set.
+authenticated_registry_credentials_uri = "kbs:///default/credential/test"
+
+# Proxy that will be used to pull image
+#
+# By default this value is not set.
+image_pull_proxy = "http://127.0.0.1:5432"
+
+# No proxy env that will be used to pull image.
+#
+# This will ensure that when we access the image registry with specified
+# IPs, the `image_pull_proxy` will not be used.
+#
+# If `image_pull_proxy` is not set, this field will do nothing.
+#
+# By default this value is not set.
+skip_proxy_ips = "192.168.0.1,localhost"
+
+# The path to store the pulled image layer data.
+#
+# This value defaults to `/run/image-rs/`.
+work_dir = "/run/image-rs"

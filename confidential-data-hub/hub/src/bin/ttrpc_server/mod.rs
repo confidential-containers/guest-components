@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{collections::HashMap, error::Error as _, sync::Arc};
+use std::{error::Error as _, sync::Arc};
 
 use anyhow::Result;
 use async_trait::async_trait;
-use confidential_data_hub::{hub::Hub, DataHub};
+use confidential_data_hub::{hub::Hub, CdhConfig, DataHub};
 use lazy_static::lazy_static;
 use log::{debug, error};
 use storage::volume_type::Storage;
@@ -19,10 +19,12 @@ use crate::{
     message::{KeyProviderInput, KeyUnwrapOutput, KeyUnwrapResults},
     protos::{
         api::{
-            GetResourceRequest, GetResourceResponse, SecureMountRequest, SecureMountResponse,
-            UnsealSecretInput, UnsealSecretOutput,
+            GetResourceRequest, GetResourceResponse, ImagePullRequest, ImagePullResponse,
+            SecureMountRequest, SecureMountResponse, UnsealSecretInput, UnsealSecretOutput,
         },
-        api_ttrpc::{GetResourceService, SealedSecretService, SecureMountService},
+        api_ttrpc::{
+            GetResourceService, ImagePullService, SealedSecretService, SecureMountService,
+        },
         keyprovider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput},
         keyprovider_ttrpc::KeyProviderService,
     },
@@ -35,18 +37,18 @@ lazy_static! {
 pub struct Server;
 
 impl Server {
-    async fn init(credentials: &HashMap<String, String>) -> Result<()> {
+    async fn init(config: &CdhConfig) -> Result<()> {
         let mut writer = HUB.write().await;
         if writer.is_none() {
-            let hub = Hub::new(credentials.to_owned()).await?;
+            let hub = Hub::new(config.clone()).await?;
             *writer = Some(hub);
         }
 
         Ok(())
     }
 
-    pub async fn new(credentials: &HashMap<String, String>) -> Result<Self> {
-        Self::init(credentials).await?;
+    pub async fn new(config: &CdhConfig) -> Result<Self> {
+        Self::init(config).await?;
         Ok(Self)
     }
 }
@@ -191,6 +193,35 @@ impl SecureMountService for Server {
         let mut reply = SecureMountResponse::new();
         reply.mount_path = resource;
         debug!("[ttRPC CDH] secure mount succeeded.");
+        Ok(reply)
+    }
+}
+
+#[async_trait]
+impl ImagePullService for Server {
+    async fn pull_image(
+        &self,
+        _ctx: &TtrpcContext,
+        req: ImagePullRequest,
+    ) -> ::ttrpc::Result<ImagePullResponse> {
+        debug!("[ttRPC CDH] get new image pull request");
+        let reader = HUB.read().await;
+        let reader = reader.as_ref().expect("must be initialized");
+        let manifest_digest = reader
+            .pull_image(&req.image_url, &req.bundle_path)
+            .await
+            .map_err(|e| {
+                let detailed_error = format_error!(e);
+                error!("[ttRPC CDH] Pull Image :\n{detailed_error}");
+                let mut status = Status::new();
+                status.set_code(Code::INTERNAL);
+                status.set_message("[CDH] [ERROR]: pull image failed".to_string());
+                Error::RpcStatus(status)
+            })?;
+
+        let mut reply = ImagePullResponse::new();
+        reply.manifest_digest = manifest_digest;
+        debug!("[ttRPC CDH] pull image succeeded.");
         Ok(reply)
     }
 }
