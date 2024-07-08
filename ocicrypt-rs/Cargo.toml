@@ -41,6 +41,7 @@ ttrpc-codegen = { workspace = true, optional = true }
 
 [dev-dependencies]
 aes-gcm.workspace = true
+ctrlc = { version = "3.0", features = ["termination"] }
 openssl = { workspace = true, features = ["vendored"]}
 tokio = { workspace = true, features = ["time", "signal"] }
 

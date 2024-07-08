@@ -7,15 +7,12 @@ use std::{env, net::SocketAddr};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use confidential_data_hub::hub::Hub;
+use confidential_data_hub::{hub::Hub, CdhConfig};
 use log::info;
 use tokio::signal::unix::{signal, SignalKind};
 
-mod config;
 mod grpc_server;
 mod message;
-
-use config::*;
 
 const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
 
@@ -35,7 +32,6 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     let config = CdhConfig::new(cli.config)?;
-    config.set_configuration_envs();
 
     let cdh_socket = config.socket.parse::<SocketAddr>()?;
 
@@ -44,13 +40,7 @@ async fn main() -> Result<()> {
         config.socket
     );
 
-    let credentials = config
-        .credentials
-        .iter()
-        .map(|it| (it.path.clone(), it.resource_uri.clone()))
-        .collect();
-
-    let cdh = Hub::new(credentials).await.context("start CDH")?;
+    let cdh = Hub::new(config).await.context("start CDH")?;
 
     let mut interrupt = signal(SignalKind::interrupt())?;
     let mut hangup = signal(SignalKind::hangup())?;

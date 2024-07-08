@@ -12,3 +12,6 @@ pub use api::*;
 pub mod hub;
 
 pub mod auth;
+
+pub mod config;
+pub use config::*;

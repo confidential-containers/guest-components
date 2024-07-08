@@ -32,6 +32,7 @@ clap = { workspace = true, features = [ "derive" ], optional = true }
 config = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
 image = { path = "../image", default-features = false }
+image-rs = { path = "../../image-rs", default-features = false, features = ["kata-cc-rustls-tls"] }
 kms = { path = "../kms", default-features = false }
 lazy_static.workspace = true
 log.workspace = true
@@ -42,7 +43,7 @@ storage.path = "../storage"
 serde = { workspace = true, optional = true }
 serde_json.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
+tokio = { workspace = true, features = [ "rt-multi-thread", "macros", "sync" ] }
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 
@@ -51,7 +52,10 @@ tonic-build = { workspace = true, optional = true }
 ttrpc-codegen = { workspace = true, optional = true }
 
 [dev-dependencies]
+assert_cmd.workspace = true
+nix.workspace = true
 rstest.workspace = true
+serial_test.workspace = true
 tempfile.workspace = true
 
 [features]

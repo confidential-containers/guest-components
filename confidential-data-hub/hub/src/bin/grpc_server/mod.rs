@@ -18,12 +18,13 @@ use crate::{
 };
 use api::{
     get_resource_service_server::{GetResourceService, GetResourceServiceServer},
+    image_pull_service_server::ImagePullService,
     key_provider_service_server::{KeyProviderService, KeyProviderServiceServer},
     sealed_secret_service_server::{SealedSecretService, SealedSecretServiceServer},
     secure_mount_service_server::{SecureMountService, SecureMountServiceServer},
-    GetResourceRequest, GetResourceResponse, KeyProviderKeyWrapProtocolInput,
-    KeyProviderKeyWrapProtocolOutput, SecureMountRequest, SecureMountResponse, UnsealSecretInput,
-    UnsealSecretOutput,
+    GetResourceRequest, GetResourceResponse, ImagePullRequest, ImagePullResponse,
+    KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput, SecureMountRequest,
+    SecureMountResponse, UnsealSecretInput, UnsealSecretOutput,
 };
 
 mod api {
@@ -110,6 +111,34 @@ impl SecureMountService for Arc<Cdh> {
         debug!("[gRPC CDH] Secure mount successfully!");
 
         let reply = SecureMountResponse { mount_path };
+
+        Result::Ok(Response::new(reply))
+    }
+}
+
+#[tonic::async_trait]
+impl ImagePullService for Arc<Cdh> {
+    async fn pull_image(
+        &self,
+        request: Request<ImagePullRequest>,
+    ) -> Result<Response<ImagePullResponse>, Status> {
+        debug!("[gRPC CDH] get new ImagePull request");
+        let request = request.into_inner();
+
+        let cdh = self.inner.read().await;
+
+        let manifest_digest = cdh
+            .pull_image(&request.image_url, &request.bundle_path)
+            .await
+            .map_err(|e| {
+                let detailed_error = format_error!(e);
+                error!("[gRPC CDH] Call CDH to pull image failed:\n{detailed_error}");
+                Status::internal(format!("[ERROR] CDH image pulling failed: {}", e))
+            })?;
+
+        debug!("[gRPC CDH] Pull image successfully!");
+
+        let reply = ImagePullResponse { manifest_digest };
 
         Result::Ok(Response::new(reply))
     }

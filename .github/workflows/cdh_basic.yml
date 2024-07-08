@@ -67,10 +67,8 @@ jobs:
         if: matrix.instance == 'ubuntu-latest'
 
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --features kbs,aliyun,sev,bin -p kms -p confidential-data-hub -p secret -p image
+        run: |
+          sudo -E PATH=$PATH -s cargo test --features kbs,aliyun,sev,bin -p kms -p confidential-data-hub -p secret -p image
 
       - name: Run cargo fmt check
         uses: actions-rs/cargo@v1

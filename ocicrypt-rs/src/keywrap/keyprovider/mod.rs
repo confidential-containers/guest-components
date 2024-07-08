@@ -128,8 +128,8 @@ impl KeyProviderKeyWrapProtocolOutput {
     }
 
     #[cfg(feature = "keywrap-keyprovider-ttrpc")]
-    async fn from_ttrpc(input: Vec<u8>, conn: &str, operation: OpKey) -> Result<Self> {
-        let c = ttrpc::r#async::Client::connect(conn)?;
+    fn from_ttrpc(input: Vec<u8>, conn: &str, operation: OpKey) -> Result<Self> {
+        let c = ttrpc::Client::connect(conn)?;
 
         let kc = crate::utils::ttrpc::keyprovider_ttrpc::KeyProviderServiceClient::new(c);
         let kc1 = kc.clone();
@@ -139,7 +139,6 @@ impl KeyProviderKeyWrapProtocolOutput {
         let ttrpc_output = match operation {
             OpKey::Wrap => kc1
                 .wrap_key(ttrpc::context::with_timeout(50 * 1000 * 1000 * 1000), &req)
-                .await
                 .map_err(|_| {
                     anyhow!(
                         "keyprovider: Error from ttrpc server for {:?} operation",
@@ -149,7 +148,6 @@ impl KeyProviderKeyWrapProtocolOutput {
 
             OpKey::Unwrap => kc1
                 .un_wrap_key(ttrpc::context::with_timeout(50 * 1000 * 1000 * 1000), &req)
-                .await
                 .map_err(|e| {
                     anyhow!(
                         "keyprovider: Error from ttrpc server for {:?} operation: {e:?}",
@@ -330,7 +328,6 @@ impl KeyProviderKeyWrapper {
             let handler = std::thread::spawn(move || {
                 create_async_runtime()?.block_on(async {
                     KeyProviderKeyWrapProtocolOutput::from_ttrpc(_input, &ttrpc, OpKey::Wrap)
-                        .await
                         .map_err(|e| format!("{e}"))
                 })
             });
@@ -429,7 +426,6 @@ impl KeyProviderKeyWrapper {
             let handler = std::thread::spawn(move || {
                 create_async_runtime()?.block_on(async {
                     KeyProviderKeyWrapProtocolOutput::from_ttrpc(_input, &ttrpc, OpKey::Unwrap)
-                        .await
                         .map_err(|e| {
                             format!(
                                 "keyprovider: ttrpc provider failed to execute {} operation: {e}",
@@ -761,14 +757,13 @@ mod tests {
         use async_trait::async_trait;
         use std::fs;
         use std::path::Path;
-        use tokio::signal::unix::{signal, SignalKind};
         pub const SOCK_ADDR: &str = "unix:///tmp/ttrpc-test";
 
         #[async_trait]
         impl keyprovider_ttrpc::KeyProviderService for TestServer {
-            async fn wrap_key(
+            fn wrap_key(
                 &self,
-                _ctx: &::ttrpc::r#async::TtrpcContext,
+                _ctx: &::ttrpc::TtrpcContext,
                 req: ttrpc_input,
             ) -> ::ttrpc::Result<ttrpc_output> {
                 let key_wrap_input: super::super::KeyProviderKeyWrapProtocolInput =
@@ -803,9 +798,9 @@ mod tests {
                 }
             }
 
-            async fn un_wrap_key(
+            fn un_wrap_key(
                 &self,
-                _ctx: &::ttrpc::r#async::TtrpcContext,
+                _ctx: &::ttrpc::TtrpcContext,
                 req: ttrpc_input,
             ) -> ::ttrpc::Result<ttrpc_output> {
                 let key_wrap_input: super::super::KeyProviderKeyWrapProtocolInput =
@@ -859,20 +854,24 @@ mod tests {
 
                 remove_if_sock_exist(SOCK_ADDR).unwrap();
 
-                let mut server = ttrpc::asynchronous::Server::new()
+                let mut server = ttrpc::Server::new()
                     .bind(SOCK_ADDR)
                     .unwrap()
                     .register_service(kp_service);
 
-                let mut interrupt = signal(SignalKind::interrupt()).unwrap();
-                server.start().await.unwrap();
-                tokio::select! {
-                    _ = interrupt.recv() => {
-                        // test graceful shutdown
-                        println!("graceful shutdown");
-                        server.shutdown().await.unwrap();
-                    }
-                };
+                server.start().unwrap();
+
+                // Hold the main thread until receiving signal SIGTERM
+                let (tx, rx) = std::sync::mpsc::channel();
+                std::thread::spawn(move || {
+                    ctrlc::set_handler(move || {
+                        tx.send(()).unwrap();
+                    })
+                    .expect("Error setting Ctrl-C handler");
+                    println!("Server is running, press Ctrl + C to exit");
+                });
+
+                rx.recv().unwrap();
             });
         }
     }
