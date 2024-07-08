@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{collections::HashMap, error::Error as _, sync::Arc};
+use std::{error::Error as _, sync::Arc};
 
 use anyhow::Result;
 use async_trait::async_trait;
-use confidential_data_hub::{hub::Hub, DataHub};
+use confidential_data_hub::{hub::Hub, CdhConfig, DataHub};
 use lazy_static::lazy_static;
 use log::{debug, error};
 use storage::volume_type::Storage;
@@ -35,18 +35,18 @@ lazy_static! {
 pub struct Server;
 
 impl Server {
-    async fn init(credentials: &HashMap<String, String>) -> Result<()> {
+    async fn init(config: &CdhConfig) -> Result<()> {
         let mut writer = HUB.write().await;
         if writer.is_none() {
-            let hub = Hub::new(credentials.to_owned()).await?;
+            let hub = Hub::new(config.clone()).await?;
             *writer = Some(hub);
         }
 
         Ok(())
     }
 
-    pub async fn new(credentials: &HashMap<String, String>) -> Result<Self> {
-        Self::init(credentials).await?;
+    pub async fn new(config: &CdhConfig) -> Result<Self> {
+        Self::init(config).await?;
         Ok(Self)
     }
 }

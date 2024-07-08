@@ -63,6 +63,12 @@ RPC plugins (flag `RPC`)
 | grpc                | Use grpc API to serve for requests (TCP/IP socket).                |
 | ttrpc               | Use ttrpc API to serve for requests (Unix socket).                 |
 
+Advanced API
+
+| Feature name        |           Note                                                     |
+| ------------------- | -----------------------------------------------------------------  |
+| image-pull          | Support `pull_image` API                                           |
+
 ### Configuration file
 
 CDH will be launched by a configuration file by

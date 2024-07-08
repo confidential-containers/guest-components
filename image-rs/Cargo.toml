@@ -106,7 +106,7 @@ kata-cc-rustls-tls = [
     "signature-cosign-rustls",
     "signature-simple",
     "getresource",
-    "oci-distribution/rustls-tls",
+    "oci-distribution-rustls",
     "reqwest?/rustls-tls",
 ]
 enclave-cc-cckbc-rustls-tls = [
@@ -128,7 +128,7 @@ kata-cc-native-tls = [
     "signature-cosign-native",
     "signature-simple",
     "getresource",
-    "oci-distribution/native-tls",
+    "oci-distribution-native",
     "reqwest?/default-tls",
 ]
 enclave-cc-cckbc-native-tls = [

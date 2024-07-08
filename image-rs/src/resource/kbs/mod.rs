@@ -69,7 +69,7 @@ impl SecureChannel {
                     Box::new(native::Native::new(_decrypt_config)?)
                 } else if #[cfg(feature = "keywrap-grpc")] {
                     info!("secure channel uses gRPC");
-                    Box::new(grpc::Grpc::new().await.context("grpc client init failed")?)
+                    Box::new(grpc::Grpc::_new().await.context("grpc client init failed")?)
                 } else  {
                     compile_error!("At last one feature of `keywrap-grpc`, `keywrap-ttrpc`, and `keywrap-native` must be enabled.");
                 }

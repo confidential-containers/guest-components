@@ -19,7 +19,7 @@ cfg_if::cfg_if! {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Clone, Deserialize, Debug, PartialEq)]
 pub struct KbsConfig {
     pub name: String,
 
@@ -41,18 +41,78 @@ impl KbsConfig {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Clone, Deserialize, Debug, PartialEq)]
 pub struct Credential {
     pub resource_uri: String,
     pub path: String,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[cfg(feature = "image-pull")]
+#[derive(Clone, Deserialize, Debug, PartialEq)]
+pub struct ImageConfiguration {
+    /// Whether to enable image security validation
+    ///
+    /// This defaults to `false`.
+    pub security_validate: bool,
+
+    /// Use `auth.json` control
+    /// ///
+    /// This defaults to `false`.
+    pub auth: bool,
+
+    /// Maximum number of concurrent downloads to perform during image pull.
+    ///
+    /// This defaults to [`image_rs::config::DEFAULT_MAX_CONCURRENT_DOWNLOAD`].
+    pub max_concurrent_download: usize,
+
+    /// sigstore config file for simple signing
+    ///
+    /// This defaults to [`image_rs::config::SIG_STORE_CONFIG_DEFAULT_FILE`].
+    pub sigstore_config_uri: String,
+
+    /// Path to `Policy.json`
+    ///
+    /// This defaults to [`image_rs::config::POLICY_FILE_PATH`].
+    pub policy_uri: String,
+
+    /// Path to the auth file
+    ///
+    /// This defaults to [`image_rs::config::AUTH_FILE_PATH`].
+    pub auth_uri: String,
+
+    /// Proxy that will be used to pull image
+    pub https_proxy: String,
+
+    /// No proxy env that will be used to pull image
+    pub no_proxy: String,
+}
+
+#[cfg(feature = "image-pull")]
+impl Default for ImageConfiguration {
+    fn default() -> Self {
+        Self {
+            security_validate: false,
+            auth: false,
+            sigstore_config_uri: image_rs::config::SIG_STORE_CONFIG_DEFAULT_FILE.to_string(),
+            policy_uri: image_rs::config::POLICY_FILE_PATH.to_string(),
+            auth_uri: image_rs::config::AUTH_FILE_PATH.to_string(),
+            max_concurrent_download: image_rs::config::DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+            https_proxy: String::new(),
+            no_proxy: String::new(),
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Debug, PartialEq)]
 pub struct CdhConfig {
     pub kbc: KbsConfig,
 
     #[serde(default)]
     pub credentials: Vec<Credential>,
+
+    #[cfg(feature = "image-pull")]
+    #[serde(default)]
+    pub image: ImageConfiguration,
 
     pub socket: String,
 }
@@ -82,6 +142,9 @@ impl CdhConfig {
                     kbc: KbsConfig::new()?,
                     credentials: Vec::new(),
                     socket: DEFAULT_CDH_SOCKET_ADDR.into(),
+
+                    #[cfg(feature = "image-pull")]
+                    image: ImageConfiguration::default(),
                 }
             }
         };
@@ -171,6 +234,16 @@ socket = "unix:///run/confidential-containers/cdh.sock"
 name = "offline_fs_kbc"
 url = ""
 kbs_cert = ""
+
+[image]
+security_validate = false
+auth = false
+max_concurrent_download = 3
+sigstore_config_uri = "kbs:///default/sigstore-config/test"
+policy_uri = "kbs:///default/security-policy/test"
+auth_uri = "kbs:///default/credential/test"
+https_proxy = ""
+no_proxy = ""
     "#,
         true
     )]
@@ -199,6 +272,16 @@ kbs_cert = ""
 [[credentials]]
 resource_uri = "kbs:///default/1/1"
 path = "/run/confidential-containers/cdh/kms-credential/aliyun/config.toml"
+
+[image]
+security_validate = false
+auth = false
+max_concurrent_download = 3
+sigstore_config_uri = "kbs:///default/sigstore-config/test"
+policy_uri = "kbs:///default/security-policy/test"
+auth_uri = "kbs:///default/credential/test"
+https_proxy = ""
+no_proxy = ""
     "#,
         true
     )]
@@ -227,6 +310,9 @@ path = "/run/confidential-containers/cdh/kms-credential/aliyun/config.toml"
             },
             credentials: Vec::new(),
             socket: DEFAULT_CDH_SOCKET_ADDR.into(),
+
+            #[cfg(feature = "image-pull")]
+            image: crate::ImageConfiguration::default(),
         };
         assert_eq!(config, expected);
 
@@ -238,6 +324,7 @@ path = "/run/confidential-containers/cdh/kms-credential/aliyun/config.toml"
         let config = CdhConfig::new(None).unwrap_err();
         let expected = anyhow!("Config file /byenv not found.");
         assert_eq!(format!("{config}"), format!("{expected}"));
+        env::remove_var("CDH_CONFIG_PATH");
 
         let config = CdhConfig::new(Some("/thing".into())).unwrap_err();
         let expected = anyhow!("Config file /thing not found.");
