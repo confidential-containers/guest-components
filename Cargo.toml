@@ -43,7 +43,7 @@ lazy_static = "1.4.0"
 log = "0.4.14"
 openssl = "0.10"
 prost = "0.11"
-protobuf = "3.4.0"
+protobuf = "3.5.0"
 rand = "0.8.5"
 reqwest = { version = "0.12", default-features = false }
 resource_uri = { path = "attestation-agent/deps/resource_uri" }
