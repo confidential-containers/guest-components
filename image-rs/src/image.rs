@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, bail, Result};
-use log::warn;
 use oci_distribution::manifest::{OciDescriptor, OciImageManifest};
 use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
@@ -229,11 +228,7 @@ impl ImageClient {
                 {
                     Ok(cred) => cred,
                     Err(e) => {
-                        warn!(
-                            "get credential failed, use Anonymous auth instead: {}",
-                            e.to_string()
-                        );
-                        RegistryAuth::Anonymous
+                        bail!("failed to get registry authentication credentials: {:?}", e)
                     }
                 }
             }
