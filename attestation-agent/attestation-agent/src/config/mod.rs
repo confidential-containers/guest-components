@@ -7,7 +7,10 @@ use anyhow::Result;
 use serde::Deserialize;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
-use crate::DEFAULT_PCR_INDEX;
+/// Default PCR index used by AA. `17` is selected for its usage of dynamic root of trust for measurement.
+/// - [Linux TPM PCR Registry](https://uapi-group.org/specifications/specs/linux_tpm_pcr_registry/)
+/// - [TCG TRUSTED BOOT CHAIN IN EDK II](https://tianocore-docs.github.io/edk2-TrustedBootChain/release-1.00/3_TCG_Trusted_Boot_Chain_in_EDKII.html)
+const DEFAULT_PCR_INDEX: u64 = 17;
 
 pub mod aa_kbc_params;
 

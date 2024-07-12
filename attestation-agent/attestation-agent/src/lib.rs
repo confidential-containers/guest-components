@@ -18,7 +18,7 @@ pub mod token;
 
 use config::HashAlgorithm;
 use eventlog::{EventEntry, EventLog};
-use log::{info, warn};
+use log::{debug, info, warn};
 use token::*;
 
 use crate::config::Config;
@@ -154,11 +154,6 @@ impl AttestationAgent {
     }
 }
 
-/// Default PCR index used by AA. `17` is selected for its usage of dynamic root of trust for measurement.
-/// - [Linux TPM PCR Registry](https://uapi-group.org/specifications/specs/linux_tpm_pcr_registry/)
-/// - [TCG TRUSTED BOOT CHAIN IN EDK II](https://tianocore-docs.github.io/edk2-TrustedBootChain/release-1.00/3_TCG_Trusted_Boot_Chain_in_EDKII.html)
-const DEFAULT_PCR_INDEX: u64 = 17;
-
 #[async_trait]
 impl AttestationAPIs for AttestationAgent {
     async fn get_token(&mut self, token_type: &str) -> Result<Vec<u8>> {
@@ -200,8 +195,9 @@ impl AttestationAPIs for AttestationAgent {
         register_index: Option<u64>,
     ) -> Result<()> {
         let register_index = register_index.unwrap_or_else(|| {
-            info!("No PCR index provided, use default {DEFAULT_PCR_INDEX}");
-            DEFAULT_PCR_INDEX
+            let pcr = self.config.eventlog_config.init_pcr;
+            debug!("No PCR index provided, use default {pcr}");
+            pcr
         });
 
         let log_entry = EventEntry::new(domain, operation, content);
