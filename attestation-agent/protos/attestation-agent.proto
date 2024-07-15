@@ -53,6 +53,12 @@ message UpdateConfigurationRequest {
 
 message UpdateConfigurationResponse {}
 
+message GetTeeTypeRequest {}
+
+message GetTeeTypeResponse {
+    string tee = 1;
+}
+
 service AttestationAgentService {
     rpc GetEvidence(GetEvidenceRequest) returns (GetEvidenceResponse) {};
     rpc GetToken(GetTokenRequest) returns (GetTokenResponse) {};
@@ -63,4 +69,6 @@ service AttestationAgentService {
     // a better design is implemented we can deprecate the API.
     // See https://github.com/kata-containers/kata-containers/issues/9468
     rpc UpdateConfiguration(UpdateConfigurationRequest) returns (UpdateConfigurationResponse) {};
+
+    rpc GetTeeType(GetTeeTypeRequest) returns (GetTeeTypeResponse) {};
 }

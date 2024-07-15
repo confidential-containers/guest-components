@@ -289,6 +289,7 @@ dependencies = [
  "config",
  "const_format",
  "env_logger 0.11.3",
+ "kbs-types",
  "kbs_protocol",
  "log",
  "prost 0.11.9",

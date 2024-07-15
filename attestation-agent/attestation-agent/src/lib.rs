@@ -6,6 +6,7 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use attester::{detect_tee_type, BoxedAttester};
+use kbs_types::Tee;
 use std::{io::Write, str::FromStr};
 use tokio::sync::Mutex;
 
@@ -70,6 +71,8 @@ pub trait AttestationAPIs {
 
     /// Check the initdata binding
     async fn check_init_data(&mut self, init_data: &[u8]) -> Result<InitdataResult>;
+
+    fn get_tee_type(&mut self) -> Tee;
 }
 
 /// Attestation agent to provide attestation service.
@@ -77,6 +80,7 @@ pub struct AttestationAgent {
     config: Config,
     attester: BoxedAttester,
     eventlog: Mutex<EventLog>,
+    tee: Tee,
 }
 
 impl AttestationAgent {
@@ -111,14 +115,15 @@ impl AttestationAgent {
             }
         };
 
-        let tee_type = detect_tee_type();
-        let attester: BoxedAttester = tee_type.try_into()?;
+        let tee = detect_tee_type();
+        let attester: BoxedAttester = tee.try_into()?;
         let eventlog = Mutex::new(EventLog::new()?);
 
         Ok(AttestationAgent {
             config,
             attester,
             eventlog,
+            tee,
         })
     }
 
@@ -215,5 +220,11 @@ impl AttestationAPIs for AttestationAgent {
     /// injection, return `InitdataResult::Unsupported`.
     async fn check_init_data(&mut self, init_data: &[u8]) -> Result<InitdataResult> {
         self.attester.check_init_data(init_data).await
+    }
+
+    /// Get the tee type of current platform. If no platform is detected,
+    /// `Sample` will be returned.
+    fn get_tee_type(&mut self) -> Tee {
+        self.tee
     }
 }

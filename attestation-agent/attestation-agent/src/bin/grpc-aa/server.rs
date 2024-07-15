@@ -9,8 +9,9 @@ use attestation::attestation_agent_service_server::{
 };
 use attestation::{
     CheckInitDataRequest, CheckInitDataResponse, ExtendRuntimeMeasurementRequest,
-    ExtendRuntimeMeasurementResponse, GetEvidenceRequest, GetEvidenceResponse, GetTokenRequest,
-    GetTokenResponse, UpdateConfigurationRequest, UpdateConfigurationResponse,
+    ExtendRuntimeMeasurementResponse, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
+    GetTeeTypeResponse, GetTokenRequest, GetTokenResponse, UpdateConfigurationRequest,
+    UpdateConfigurationResponse,
 };
 use attestation_agent::{AttestationAPIs, AttestationAgent};
 use log::{debug, error};
@@ -159,6 +160,31 @@ impl AttestationAgentService for AA {
         debug!("AA (grpc): update configuration successfully!");
 
         let reply = UpdateConfigurationResponse {};
+
+        Result::Ok(Response::new(reply))
+    }
+
+    async fn get_tee_type(
+        &self,
+        _request: Request<GetTeeTypeRequest>,
+    ) -> Result<Response<GetTeeTypeResponse>, Status> {
+        let mut attestation_agent = self.inner.lock().await;
+
+        debug!("AA (grpc): get tee type ...");
+
+        let tee = attestation_agent.get_tee_type();
+
+        let tee = serde_json::to_string(&tee)
+            .map_err(|e| {
+                error!("AA (ttrpc): get tee type failed:\n {e:?}");
+                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get tee type failed"))
+            })?
+            .trim_end_matches('"')
+            .trim_start_matches('"')
+            .to_string();
+        debug!("AA (ttrpc): get tee type succeeded.");
+
+        let reply = GetTeeTypeResponse { tee };
 
         Result::Ok(Response::new(reply))
     }
