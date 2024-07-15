@@ -45,12 +45,11 @@ jobs:
           fetch-depth: 1
 
       - name: Install Rust toolchain (${{ matrix.rust }})
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
-          components: rustfmt, clippy
+        run: |
+          rustup update --no-self-update ${{ matrix.rust }}
+          rustup component add --toolchain ${{ matrix.rust }} rustfmt rustc clippy
+          rustup target add x86_64-unknown-linux-gnu
+          rustup default ${{ matrix.rust }}
 
       - name: Install protoc
         run: |
@@ -71,14 +70,10 @@ jobs:
           sudo -E PATH=$PATH -s cargo test --features kbs,aliyun,sev,bin -p kms -p confidential-data-hub -p secret -p image
 
       - name: Run cargo fmt check
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -p kms -p confidential-data-hub -p secret -p image -- --check
+        run: |
+          sudo -E PATH=$PATH -s cargo fmt -p kms -p confidential-data-hub -p secret -p image -- --check
 
       - name: Run rust lint check
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
+        run: |
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
-          args: -p kms -p confidential-data-hub -p secret -p image -- -D warnings -A clippy::derive-partial-eq-without-eq 
+          sudo -E PATH=$PATH -s cargo clippy -p kms -p confidential-data-hub -p secret -p image -- -D warnings -A clippy::derive-partial-eq-without-eq 
