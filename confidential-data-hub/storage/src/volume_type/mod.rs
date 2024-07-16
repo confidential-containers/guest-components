@@ -5,7 +5,7 @@
 
 #[cfg(feature = "aliyun")]
 pub mod aliyun;
-
+pub mod blockdevice;
 use std::{collections::HashMap, str::FromStr};
 
 use crate::Result;
@@ -20,6 +20,7 @@ pub enum Volume {
     #[cfg(feature = "aliyun")]
     #[strum(serialize = "alibaba-cloud-oss")]
     AliOss,
+    BlockDevice,
 }
 
 /// Indicating a mount point and its parameters.
@@ -58,6 +59,12 @@ impl Storage {
             Volume::AliOss => {
                 let oss = aliyun::Oss {};
                 oss.mount(&self.options, &self.flags, &self.mount_point)
+                    .await?;
+                Ok(self.mount_point.clone())
+            }
+            Volume::BlockDevice => {
+                let bd = blockdevice::BlockDevice {};
+                bd.mount(&self.options, &self.flags, &self.mount_point)
                     .await?;
                 Ok(self.mount_point.clone())
             }
