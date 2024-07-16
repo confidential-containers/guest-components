@@ -15,6 +15,9 @@ pub enum Error {
     #[error("Error when mounting Aliyun OSS")]
     AliyunOssError(#[from] volume_type::aliyun::error::AliyunError),
 
+    #[error("Error when mounting Block device")]
+    BlockDeviceError(#[from] volume_type::blockdevice::error::BlockDeviceError),
+
     #[error("Failed to recognize the storage type")]
     StorageTypeNotRecognized(#[from] strum::ParseError),
 }
