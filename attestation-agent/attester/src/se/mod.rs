@@ -14,6 +14,9 @@ use pv::{
 use serde::{Deserialize, Serialize};
 use serde_json;
 use serde_with::{base64::Base64, serde_as};
+use std::fs;
+
+const DIGEST_FILE: &str = "/run/peerpod/initdata.digest";
 
 pub fn detect_platform() -> bool {
     misc::pv_guest_bit_set()
@@ -71,7 +74,10 @@ impl Attester for SeAttester {
             encr_request_nonce,
             image_hdr_tags,
         } = request;
-        let user_data = vec![0];
+        let mut user_data = vec![0];
+        if fs::metadata(DIGEST_FILE).is_ok() {
+            user_data = fs::read(DIGEST_FILE)?;
+        }
         let mut uvc: AttestationCmd = AttestationCmd::new_request(
             request_blob.into(),
             Some(user_data.to_vec()),
