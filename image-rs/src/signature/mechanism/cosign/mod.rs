@@ -272,7 +272,7 @@ mod tests {
         &format!("\
             {{\
                 \"type\": \"sigstoreSigned\",\
-                \"keyPath\": \"{}/test_data/signature/cosign/cosign2.pub\"\
+                \"keyPath\": \"{}/test_data/signature/cosign/cosign3.pub\"\
             }}", 
             std::env::current_dir().expect("get current dir").to_str().expect("get current dir")
         ),
@@ -302,7 +302,7 @@ mod tests {
         &format!("\
             {{\
                 \"type\": \"sigstoreSigned\",\
-                \"keyPath\": \"{}/test_data/signature/cosign/cosign2.pub\"\
+                \"keyPath\": \"{}/test_data/signature/cosign/cosign3.pub\"\
             }}", 
             std::env::current_dir().expect("get current dir").to_str().expect("get current dir")
         ),
