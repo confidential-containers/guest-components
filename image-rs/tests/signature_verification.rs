@@ -51,7 +51,7 @@ const _TESTS: [_TestItem; _TEST_ITEMS] = [
         description: "Allow pulling a unencrypted signed image from a protected registry.",
     },
     _TestItem {
-        image_ref: "quay.io/kata-containers/confidential-containers:unsigned",
+        image_ref: "ghcr.io/confidential-containers/test-container-image-rs:unsigned",
         allow: false,
         signing_scheme: SigningName::None,
         description: "Deny pulling an unencrypted unsigned image from a protected registry.",
