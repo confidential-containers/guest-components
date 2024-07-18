@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 pub mod error;
+pub mod luks;
 
 use super::SecureMount;
 use async_trait::async_trait;
@@ -81,6 +82,13 @@ impl BlockDevice {
         let parameters = serde_json::to_string(options)?;
         let bd_parameter: BlockDeviceParameters = serde_json::from_str(&parameters)?;
 
+        match bd_parameter.encryption_type {
+            BlockDeviceEncryptType::LUKS => {
+                luks::LuksInterpreter
+                    .secure_device_mount(bd_parameter, mount_point)
+                    .await?;
+            }
+        }
         Ok(())
     }
 }
