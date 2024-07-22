@@ -15,7 +15,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::bundle::{create_runtime_config, BUNDLE_ROOTFS};
-use crate::config::{ImageConfig, CONFIGURATION_FILE_PATH};
+use crate::config::{ImageConfig, CONFIGURATION_FILE_NAME, DEFAULT_WORK_DIR};
 use crate::decoder::Compression;
 use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
@@ -95,8 +95,10 @@ pub struct ImageClient {
 impl Default for ImageClient {
     // construct a default instance of `ImageClient`
     fn default() -> ImageClient {
-        let config = ImageConfig::try_from(Path::new(CONFIGURATION_FILE_PATH)).unwrap_or_default();
-        let meta_store = MetaStore::try_from(Path::new(METAFILE)).unwrap_or_default();
+        let work_dir = Path::new(DEFAULT_WORK_DIR);
+        let config = ImageConfig::try_from(work_dir.join(CONFIGURATION_FILE_NAME).as_path())
+            .unwrap_or_default();
+        let meta_store = MetaStore::try_from(work_dir.join(METAFILE).as_path()).unwrap_or_default();
         let snapshots = Self::init_snapshots(&config, &meta_store);
 
         ImageClient {
@@ -153,8 +155,10 @@ impl ImageClient {
 
     /// Create an ImageClient instance with specific work directory.
     pub fn new(image_work_dir: PathBuf) -> Self {
-        let config = ImageConfig::new(image_work_dir);
-        let meta_store = MetaStore::try_from(Path::new(METAFILE)).unwrap_or_default();
+        let work_dir = image_work_dir.as_path();
+        let config = ImageConfig::try_from(work_dir.join(CONFIGURATION_FILE_NAME).as_path())
+            .unwrap_or_else(|_| ImageConfig::new(image_work_dir.clone()));
+        let meta_store = MetaStore::try_from(work_dir.join(METAFILE).as_path()).unwrap_or_default();
         let snapshots = Self::init_snapshots(&config, &meta_store);
 
         Self {
