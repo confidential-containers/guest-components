@@ -7,7 +7,7 @@ use oci_distribution::manifest::{OciDescriptor, OciImageManifest};
 use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
 use oci_spec::image::{ImageConfiguration, Os};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -38,7 +38,7 @@ use crate::nydus::{service, utils};
 pub const IMAGE_SECURITY_CONFIG_DIR: &str = "/run/image-security";
 
 /// The metadata info for container image layer.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LayerMeta {
     /// Image layer compression algorithm type.
     pub decoder: Compression,
@@ -57,7 +57,7 @@ pub struct LayerMeta {
 }
 
 /// The metadata info for container image.
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ImageMeta {
     /// The digest of the image configuration.
     pub id: String,
