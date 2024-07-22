@@ -71,7 +71,7 @@ fi
 device_name=$(sed -e 's/DEVNAME=//g;t;d' "/sys/dev/block/${device_num}/uevent")
 device_path="/dev/$device_name"
 
-opened_device_name=$(mktemp "encrypted_disk_XXXXX")
+opened_device_name=$(mktemp -u "encrypted_disk_XXXXX")
 
 if [[ -n "$device_name" && -b "$device_path" ]]; then
 
