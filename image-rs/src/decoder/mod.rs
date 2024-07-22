@@ -8,7 +8,7 @@ use std::io;
 use anyhow::{bail, Result};
 use oci_distribution::manifest;
 use oci_spec::image::MediaType;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, BufReader};
 
 /// Error message for unhandled media type.
@@ -16,7 +16,7 @@ pub const ERR_BAD_MEDIA_TYPE: &str = "unhandled media type";
 
 /// Represents the layer compression algorithm type,
 /// and allows to decompress corresponding compressed data.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Compression {
     Uncompressed,
     #[default]
