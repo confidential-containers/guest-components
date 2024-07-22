@@ -514,7 +514,7 @@ fn create_bundle(
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use std::fs;
     use test_utils::assert_retry;
 
     #[tokio::test]
@@ -631,5 +631,47 @@ mod tests {
 
         // Assert that image is pulled only once.
         assert_eq!(image_client.meta_store.lock().await.image_db.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_meta_store_reuse() {
+        let work_dir = tempfile::tempdir().unwrap();
+
+        let image = "mcr.microsoft.com/hello-world";
+
+        let mut image_client = ImageClient::new(work_dir.path().to_path_buf());
+
+        let bundle_dir = tempfile::tempdir().unwrap();
+        if let Err(e) = image_client
+            .pull_image(image, bundle_dir.path(), &None, &None)
+            .await
+        {
+            panic!("failed to download image: {}", e);
+        }
+
+        // Create a second temporary directory for the second image client
+        let work_dir_2 = tempfile::tempdir().unwrap();
+        fs::create_dir_all(work_dir_2.path()).unwrap();
+
+        // Lock the meta store and write its data to a file in the second work directory
+        // This allows the second image client to reuse the meta store and layers from the first image client
+        let store = image_client.meta_store.lock().await;
+        let meta_store_path = work_dir_2.path().to_str().unwrap().to_owned() + "/meta_store.json";
+        store.write_to_file(&meta_store_path).unwrap();
+
+        // Initialize the second image client with the second temporary directory
+        let mut image_client_2 = ImageClient::new(work_dir_2.path().to_path_buf());
+
+        let bundle_dir_2 = tempfile::tempdir().unwrap();
+        if let Err(e) = image_client_2
+            .pull_image(image, bundle_dir_2.path(), &None, &None)
+            .await
+        {
+            panic!("failed to download image: {}", e);
+        }
+
+        // Verify that the "layers" directory does not exist in the second work directory
+        // This confirms that the second image client reused the meta store and layers from the first image client
+        assert!(!work_dir_2.path().join("layers").exists());
     }
 }
