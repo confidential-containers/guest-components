@@ -38,7 +38,7 @@ pub struct VaultSecret {
 
 impl VaultSecret {
     pub(crate) async fn unseal(&self) -> Result<Vec<u8>> {
-        let mut provider = kms::new_getter(&self.provider, self.provider_settings.clone())
+        let provider = kms::new_getter(&self.provider, self.provider_settings.clone())
             .await
             .map_err(|e| VaultError::KmsError {
                 context: "create kms provider",
