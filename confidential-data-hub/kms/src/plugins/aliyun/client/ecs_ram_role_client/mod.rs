@@ -98,13 +98,13 @@ impl EcsRamRoleClient {
         Ok(credential)
     }
 
-    pub async fn get_secret(&mut self, name: &str, annotations: &Annotations) -> Result<Vec<u8>> {
+    pub async fn get_secret(&self, name: &str, annotations: &Annotations) -> Result<Vec<u8>> {
         let sts_credential = self
             .get_session_credential()
             .await
             .map_err(|e| Error::AliyunKmsError(format!("Get sts token from IMDS failed: {e}")))?;
 
-        let mut client = StsTokenClient::from_sts_token(
+        let client = StsTokenClient::from_sts_token(
             sts_credential,
             self.endpoint.clone(),
             self.region_id.clone(),

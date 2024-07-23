@@ -191,16 +191,12 @@ impl Decrypter for AliyunKmsClient {
 #[async_trait]
 impl Getter for AliyunKmsClient {
     async fn get_secret(&mut self, name: &str, annotations: &Annotations) -> Result<Vec<u8>> {
-        match &mut self {
-            AliyunKmsClient::ClientKey { ref mut inner } => {
-                inner.get_secret(name, annotations).await
-            }
+        match &self {
+            AliyunKmsClient::ClientKey { ref inner } => inner.get_secret(name, annotations).await,
             AliyunKmsClient::EcsRamRole {
-                ref mut ecs_ram_role_client,
+                ref ecs_ram_role_client,
             } => ecs_ram_role_client.get_secret(name, annotations).await,
-            AliyunKmsClient::StsToken { ref mut client } => {
-                client.get_secret(name, annotations).await
-            }
+            AliyunKmsClient::StsToken { ref client } => client.get_secret(name, annotations).await,
         }
     }
 }
