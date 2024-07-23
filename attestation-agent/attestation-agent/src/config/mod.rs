@@ -69,6 +69,9 @@ pub struct EventlogConfig {
 
     /// PCR Register to extend INIT entry
     pub init_pcr: u64,
+
+    /// Flag whether enable eventlog recording
+    pub enable_eventlog: bool,
 }
 
 impl Default for EventlogConfig {
@@ -76,6 +79,7 @@ impl Default for EventlogConfig {
         Self {
             eventlog_algorithm: HashAlgorithm::Sha384,
             init_pcr: DEFAULT_PCR_INDEX,
+            enable_eventlog: false,
         }
     }
 }
@@ -119,6 +123,7 @@ impl TryFrom<&str> for Config {
             .add_source(config::File::with_name(config_path))
             .set_default("eventlog_config.eventlog_algorithm", DEFAULT_EVENTLOG_HASH)?
             .set_default("eventlog_config.init_pcr", DEFAULT_PCR_INDEX)?
+            .set_default("eventlog_config.enable_eventlog", "false")?
             .build()?;
 
         let cfg = c.try_deserialize()?;
