@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use attester::{detect_tee_type, BoxedAttester};
 use kbs_types::Tee;
@@ -85,20 +85,23 @@ pub struct AttestationAgent {
 
 impl AttestationAgent {
     pub async fn init(&mut self) -> Result<()> {
-        let alg = self.config.eventlog_config.eventlog_algorithm;
-        let pcr = self.config.eventlog_config.init_pcr;
-        let init_entry = LogEntry::Init(alg);
-        let digest = init_entry.digest_with(alg);
-        {
-            // perform atomicly in this block
-            let mut eventlog = self.eventlog.lock().await;
-            self.attester
-                .extend_runtime_measurement(digest, pcr)
-                .await
-                .context("write INIT entry")?;
+        if self.config.eventlog_config.enable_eventlog {
+            let alg = self.config.eventlog_config.eventlog_algorithm;
+            let pcr = self.config.eventlog_config.init_pcr;
+            let init_entry = LogEntry::Init(alg);
+            let digest = init_entry.digest_with(alg);
+            {
+                // perform atomicly in this block
+                let mut eventlog = self.eventlog.lock().await;
+                self.attester
+                    .extend_runtime_measurement(digest, pcr)
+                    .await
+                    .context("write INIT entry")?;
 
-            eventlog.write_log(&init_entry).context("write INIT log")?;
-        };
+                eventlog.write_log(&init_entry).context("write INIT log")?;
+            };
+        }
+
         Ok(())
     }
 
@@ -189,6 +192,10 @@ impl AttestationAPIs for AttestationAgent {
         content: &str,
         register_index: Option<u64>,
     ) -> Result<()> {
+        if !self.config.eventlog_config.enable_eventlog {
+            bail!("Extend eventlog not enabled when launching!");
+        }
+
         let pcr = register_index.unwrap_or_else(|| {
             let pcr = self.config.eventlog_config.init_pcr;
             debug!("No PCR index provided, use default {pcr}");
