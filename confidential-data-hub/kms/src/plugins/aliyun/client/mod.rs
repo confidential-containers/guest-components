@@ -190,7 +190,7 @@ impl Decrypter for AliyunKmsClient {
 
 #[async_trait]
 impl Getter for AliyunKmsClient {
-    async fn get_secret(&mut self, name: &str, annotations: &Annotations) -> Result<Vec<u8>> {
+    async fn get_secret(&self, name: &str, annotations: &Annotations) -> Result<Vec<u8>> {
         match &self {
             AliyunKmsClient::ClientKey { ref inner } => inner.get_secret(name, annotations).await,
             AliyunKmsClient::EcsRamRole {
@@ -263,7 +263,7 @@ mod tests {
         });
         // init getter at user side
         let provider_settings = provider_settings.as_object().unwrap().to_owned();
-        let mut getter = AliyunKmsClient::from_provider_settings(&provider_settings)
+        let getter = AliyunKmsClient::from_provider_settings(&provider_settings)
             .await
             .unwrap();
 

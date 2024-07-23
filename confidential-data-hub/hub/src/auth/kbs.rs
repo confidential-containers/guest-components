@@ -29,7 +29,7 @@ impl Hub {
             }
         }
 
-        let mut kbs_client = KbcClient::new()
+        let kbs_client = KbcClient::new()
             .await
             .map_err(|e| Error::InitializationFailed(format!("kbs client creation failed: {e}")))?;
 

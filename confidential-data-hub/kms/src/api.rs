@@ -75,5 +75,5 @@ pub trait Setter: Send + Sync {
 pub trait Getter: Send + Sync {
     /// Get secret. Different secret manager will use different parameters inside
     /// `annotations`.
-    async fn get_secret(&mut self, name: &str, annotations: &Annotations) -> Result<Vec<u8>>;
+    async fn get_secret(&self, name: &str, annotations: &Annotations) -> Result<Vec<u8>>;
 }
