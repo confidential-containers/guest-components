@@ -48,7 +48,7 @@ pub struct KbsClient<T> {
     pub(crate) token: Option<Token>,
 }
 
-pub const KBS_PROTOCOL_VERSION: &str = "0.1.0";
+pub const KBS_PROTOCOL_VERSION: &str = "0.1.1";
 
 pub const KBS_GET_RESOURCE_MAX_ATTEMPT: u64 = 3;
 
