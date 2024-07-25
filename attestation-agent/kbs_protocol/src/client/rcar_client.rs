@@ -104,7 +104,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         let request = Request {
             version: String::from(KBS_PROTOCOL_VERSION),
             tee,
-            extra_params: String::new(),
+            extra_params: serde_json::Value::String(String::new()),
         };
 
         debug!("send auth request to {auth_endpoint}");
@@ -153,7 +153,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         let attest_endpoint = format!("{}/{KBS_PREFIX}/attest", self.kbs_host_url);
         let attest = Attestation {
             tee_pubkey,
-            tee_evidence: evidence,
+            tee_evidence: serde_json::from_str(&evidence)?, // TODO: change attesters to return Value?
         };
 
         debug!("send attest request.");
