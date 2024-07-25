@@ -22,15 +22,15 @@ mod get_resource {
     tonic::include_proto!("api");
 }
 
-pub const GETRESOURCE_ADDR: &str = "http://127.0.0.1:50000";
+pub const _GETRESOURCE_ADDR: &str = "http://127.0.0.1:50000";
 
 pub struct Grpc {
     inner: GetResourceServiceClient<Channel>,
 }
 
 impl Grpc {
-    pub async fn new() -> Result<Self> {
-        let inner = GetResourceServiceClient::connect(GETRESOURCE_ADDR).await?;
+    pub async fn _new() -> Result<Self> {
+        let inner = GetResourceServiceClient::connect(_GETRESOURCE_ADDR).await?;
         Ok(Self { inner })
     }
 }

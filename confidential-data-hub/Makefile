@@ -24,6 +24,7 @@ KMS_PROVIDER ?= aliyun,ehsm
 DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
 features ?=
+IMAGE_PULL ?= false
 
 binary_name ?=
 
@@ -35,6 +36,10 @@ else
     binary = --bin grpc-cdh
     features += bin,grpc
     binary_name = grpc-cdh
+endif
+
+ifeq ($(IMAGE_PULL), true)
+    features += image-pull
 endif
 
 ifeq ($(SOURCE_ARCH), ppc64le)

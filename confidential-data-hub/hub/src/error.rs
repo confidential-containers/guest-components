@@ -32,4 +32,10 @@ pub enum Error {
 
     #[error("secure mount failed")]
     SecureMount(#[from] storage::Error),
+
+    #[error("image pull failed")]
+    ImagePull {
+        #[source]
+        source: anyhow::Error,
+    },
 }

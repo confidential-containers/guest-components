@@ -32,6 +32,7 @@ clap = { workspace = true, features = [ "derive" ], optional = true }
 config = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
 image = { path = "../image", default-features = false }
+image-rs = { path = "../../image-rs", default-features = false, optional = true }
 kms = { path = "../kms", default-features = false }
 lazy_static.workspace = true
 log.workspace = true
@@ -42,7 +43,7 @@ storage.path = "../storage"
 serde = { workspace = true, optional = true }
 serde_json.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
+tokio = { workspace = true, features = [ "rt-multi-thread", "macros", "sync" ] }
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 
@@ -68,6 +69,9 @@ sev = ["image/sev", "kms/sev", "secret/sev"]
 
 # support eHSM stacks (KMS, ...)
 ehsm = ["image/ehsm", "secret/ehsm"]
+
+# suppot for image-pull API
+image-pull = ["image-rs/kata-cc-rustls-tls"]
 
 # Binary RPC type
 bin = [ "anyhow", "attestation-agent", "cfg-if", "clap", "config", "env_logger", "serde" ]

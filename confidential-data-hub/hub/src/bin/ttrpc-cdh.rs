@@ -7,6 +7,7 @@ use std::{env, path::Path, sync::Arc};
 
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
+use confidential_data_hub::CdhConfig;
 use log::info;
 use protos::{
     api_ttrpc::{
@@ -21,12 +22,9 @@ use tokio::{
 use ttrpc::r#async::Server as TtrpcServer;
 use ttrpc_server::Server;
 
-mod config;
 mod message;
 mod protos;
 mod ttrpc_server;
-
-use config::*;
 
 const UNIX_SOCKET_PREFIX: &str = "unix://";
 
@@ -56,7 +54,6 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     let config = CdhConfig::new(cli.config)?;
-    config.set_configuration_envs();
 
     let unix_socket_path = config
         .socket
@@ -66,16 +63,10 @@ async fn main() -> Result<()> {
     create_socket_parent_directory(unix_socket_path).await?;
     clean_previous_sock_file(unix_socket_path).await?;
 
-    let credentials = config
-        .credentials
-        .iter()
-        .map(|it| (it.path.clone(), it.resource_uri.clone()))
-        .collect();
-
-    let sealed_secret_service = ttrpc_service!(create_sealed_secret_service, &credentials);
-    let get_resource_service = ttrpc_service!(create_get_resource_service, &credentials);
-    let key_provider_service = ttrpc_service!(create_key_provider_service, &credentials);
-    let secure_mount_service = ttrpc_service!(create_secure_mount_service, &credentials);
+    let sealed_secret_service = ttrpc_service!(create_sealed_secret_service, &config);
+    let get_resource_service = ttrpc_service!(create_get_resource_service, &config);
+    let key_provider_service = ttrpc_service!(create_key_provider_service, &config);
+    let secure_mount_service = ttrpc_service!(create_secure_mount_service, &config);
 
     let mut server = TtrpcServer::new()
         .bind(&config.socket)

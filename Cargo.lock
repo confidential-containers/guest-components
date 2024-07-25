@@ -1052,6 +1052,7 @@ dependencies = [
  "config",
  "env_logger 0.11.3",
  "image",
+ "image-rs",
  "kms",
  "lazy_static",
  "log",
