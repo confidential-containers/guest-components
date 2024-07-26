@@ -14,7 +14,7 @@ use crate::signature::mechanism::{cosign::CosignParameters, simple::SimpleParame
 /// * `Accept`: s.t. `insecureAcceptAnything`, skip signature verification, accept the image unconditionally.
 /// * `Reject`: s.t. `reject`, reject the image directly.
 /// * `SignedBy`: s.t. `signBy`, means that the image is signed by `Simple Signing`,
-/// and the related parameters are inside the enum.
+///   and the related parameters are inside the enum.
 #[derive(Deserialize, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "type")]
 pub enum PolicyReqType {

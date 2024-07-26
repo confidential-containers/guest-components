@@ -118,9 +118,10 @@ impl CosignParameters {
     /// Verify the cosign-signed image. There will be three steps:
     /// * Get the pub key.
     /// * Download the cosign-signed image's manifest and its digest. Calculate its
-    /// signature's image.
+    ///   signature's image.
     /// * Download the signature image, gather the signatures and verify them
-    /// using the pubkey.
+    ///   using the pubkey.
+    ///
     /// If succeeds, the payloads of the signature will be returned.
     async fn verify_signature_and_get_payload(
         &self,

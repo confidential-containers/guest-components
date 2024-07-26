@@ -65,10 +65,10 @@ impl SigstoreConfig {
 
     /// Update current [`SigstoreConfig`] using another [`SigstoreConfig`].
     /// - If current [`SigstoreConfig`] does not have a `default_config` but the input [`SigstoreConfig`]
-    /// has one, the current [`SigstoreConfig`] will use the input one's `default_config`.
+    ///   has one, the current [`SigstoreConfig`] will use the input one's `default_config`.
     /// - If no duplicated `docker_namespace_config` is found in the input  [`SigstoreConfig`],
-    /// the current [`SigstoreConfig`] will be added all the input one's `docker_namespace_config`.
-    /// Any error will cause the update fail, and roll back to the original state.
+    ///   the current [`SigstoreConfig`] will be added all the input one's `docker_namespace_config`.
+    ///   Any error will cause the update fail, and roll back to the original state.
     pub fn update_self(&mut self, input: SigstoreConfig) -> Result<()> {
         let mut merged_config = self.clone();
         // The "default-docker" only allowed to be defined in one config file.

@@ -8,16 +8,16 @@
 //! To establish a connection between the client and the KMS/Vault server, two
 //! kinds of parameters are required:
 //! - Public parameters: like Region Id of the KMS/Vault, Instance Id of the KMS,
-//! etc. They are not confidential and can be seen by anyone. [`ProviderSettings`]
-//! is a json object. It is to include all the public parameters. The
-//! hashmap style makes it flexible for different kinds of KMSes/Vaults. There
-//! should be a function that takes a [`ProviderSettings`] as a input parameter
-//! and returns a client instance.
+//!   etc. They are not confidential and can be seen by anyone. [`ProviderSettings`]
+//!   is a json object. It is to include all the public parameters. The
+//!   hashmap style makes it flexible for different kinds of KMSes/Vaults. There
+//!   should be a function that takes a [`ProviderSettings`] as a input parameter
+//!   and returns a client instance.
 //! - Private parameters: like the credential to access (e.g. access key).
-//! These parameters should be captured inside the logic of `new()` rather
-//! than the input parameter. it is strongly recommended that private parameters
-//! be read from the encrypted filesystem, e.g. `/run/*` which is in TEE's
-//! encrypted memory.
+//!   These parameters should be captured inside the logic of `new()` rather
+//!   than the input parameter. it is strongly recommended that private parameters
+//!   be read from the encrypted filesystem, e.g. `/run/*` which is in TEE's
+//!   encrypted memory.
 //!
 //! ## APIs
 //! - `Decrypter`: KMS's decrypt API.
@@ -27,7 +27,7 @@
 //!
 //! The rationality to distinguish these four different traits:
 //! - `Decrypter` and `Getter` are used in-guest, while `Encrypter` and `Setter`
-//! are used userside. They do not need to be implemented by a same object.
+//!   are used userside. They do not need to be implemented by a same object.
 
 use crate::Result;
 
