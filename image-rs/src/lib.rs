@@ -16,6 +16,8 @@ pub mod meta_store;
 pub mod nydus;
 pub mod pull;
 pub mod resource;
+#[cfg(feature = "runtime-attestation")]
+pub mod runtime_attestation;
 #[cfg(feature = "signature")]
 pub mod signature;
 pub mod snapshots;

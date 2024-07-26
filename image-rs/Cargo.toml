@@ -197,3 +197,7 @@ getresource = ["lazy_static", "cfg-if"]
 nydus = ["lazy_static", "nydus-api", "nydus-service"]
 
 verity = ["devicemapper"]
+
+runtime-attestation = ["lazy_static", "cfg-if"]
+runtime-attestation-ttrpc = ["dep:ttrpc", "dep:protobuf", "ttrpc-codegen", "runtime-attestation"]
+runtime-attestation-grpc = ["prost", "tonic", "tonic-build", "runtime-attestation"]
