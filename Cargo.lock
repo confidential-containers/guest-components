@@ -4881,6 +4881,7 @@ name = "resource_uri"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "rstest",
  "serde",
  "serde_json",
  "url",
