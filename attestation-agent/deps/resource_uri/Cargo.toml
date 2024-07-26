@@ -5,6 +5,9 @@ authors = ["The Attestation Agent Authors"]
 publish = false
 edition = "2021"
 
+[dev-dependencies]
+rstest.workspace = true
+
 [dependencies]
 anyhow.workspace = true
 serde.workspace = true
