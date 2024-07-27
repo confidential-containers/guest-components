@@ -188,10 +188,9 @@ pub fn decrypt_layer_key_opts_data(
                 priv_key_given = true;
             }
 
-            if let Ok(opts_data) = pre_unwrap_key(keywrapper, dc, &b64_annotation) {
-                if !opts_data.is_empty() {
-                    return Ok(opts_data);
-                }
+            let opts_data = pre_unwrap_key(keywrapper, dc, &b64_annotation)?;
+            if !opts_data.is_empty() {
+                return Ok(opts_data);
             }
             // try next keywrapper
         }
