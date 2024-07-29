@@ -14,7 +14,8 @@ use kms::plugins::aliyun::AliyunKmsClient;
 use kms::plugins::ehsm::EhsmKmsClient;
 use kms::{Encrypter, ProviderSettings};
 use rand::Rng;
-use secret::secret::{layout::envelope::Envelope, Secret, SecretContent, VERSION};
+use secret::secret::layout::{envelope::Envelope, vault::VaultSecret};
+use secret::secret::{Secret, SecretContent, VERSION};
 #[cfg(feature = "ehsm")]
 use serde_json::Value;
 use tokio::{fs, io::AsyncWriteExt};
@@ -35,10 +36,6 @@ enum Cli {
 #[derive(Args)]
 #[command(author, version, about, long_about = None)]
 struct SealArgs {
-    /// path of the file which contains the content to be sealed
-    #[arg(short, long)]
-    file_path: String,
-
     /// Type of the Secret, i.e. `vault` or `envelope`
     #[command(subcommand)]
     r#type: TypeArgs,
@@ -53,7 +50,11 @@ struct UnsealArgs {
 
     /// path of all credential files used by provider
     #[arg(short, long)]
-    key_path: String,
+    key_path: Option<String>,
+
+    /// configuration for connecting to KBS provider
+    #[arg(short, long)]
+    aa_kbc_params: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -61,8 +62,8 @@ enum TypeArgs {
     /// Envelope format secret
     Envelope(EnvelopeCommand),
 
-    /// Vault format secret (TODO)
-    Vault,
+    /// Vault format secret
+    Vault(VaultCommand),
 }
 
 #[derive(Args)]
@@ -73,6 +74,29 @@ struct EnvelopeCommand {
     /// key id used in the KMS
     #[arg(short, long)]
     key_id: String,
+
+    /// path of the file which contains the content to be sealed
+    #[arg(short, long)]
+    file_path: String,
+}
+
+#[derive(Args)]
+struct VaultCommand {
+    /// The URI of the resource that the secret points to
+    #[arg(short, long)]
+    resource_uri: String,
+
+    /// The provider that will fulfill the secret e.g. kbs
+    #[arg(short, long)]
+    provider: String,
+
+    /// Additional settings for the provider (as JSON dictionary)
+    #[arg(long)]
+    provider_settings: Option<String>,
+
+    /// Additional fields specific to the secret (as JSON dictionary)
+    #[arg(short, long)]
+    annotations: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -126,89 +150,138 @@ async fn main() {
     let args = Cli::parse();
     match args {
         Cli::Unseal(unseal_args) => {
-            let secret_json = fs::read(&unseal_args.file_path)
-                .await
-                .expect("failed to read sealed secret");
-            let secret: Secret = serde_json::from_slice(&secret_json)
-                .expect("illegal input sealed secret format (json deserialization failed)");
-
-            match secret.r#type {
-                SecretContent::Envelope(ref envelope) => match envelope.provider.as_str() {
-                    "aliyun" => env::set_var("ALIYUN_IN_GUEST_KEY_PATH", &unseal_args.key_path),
-                    "ehsm" => env::set_var("EHSM_IN_GUEST_KEY_PATH", &unseal_args.key_path),
-                    _ => {}
-                },
-                SecretContent::Vault(_) => todo!(),
-            }
-
-            let blob = secret.unseal().await.expect("unseal failed");
-
-            let output_file_name =
-                Path::new(&format!("{}.unsealed", &unseal_args.file_path)).to_owned();
-            if output_file_name.exists() {
-                panic!("{}", format!("{:?} already exists", &output_file_name));
-            }
-            let mut output_file = fs::File::create(&output_file_name)
-                .await
-                .expect("failed to create unsealed secret file");
-
-            output_file
-                .write_all(&blob)
-                .await
-                .expect("failed to write unsealed secret");
-
-            println!(
-                "unseal success, secret is saved in newly generated file: '{:?}'",
-                &output_file_name
-            );
+            unseal_secret(&unseal_args).await;
         }
         Cli::Seal(seal_args) => {
-            let blob = fs::read(seal_args.file_path)
-                .await
-                .expect("failed to read sealed secret");
-            let sc = match &seal_args.r#type {
-                TypeArgs::Envelope(env) => {
-                    let (mut encrypter, provider_settings, provider) =
-                        handle_envelope_provider(&env.command).await;
-                    let mut iv = [0u8; 12];
-                    rand::thread_rng().fill(&mut iv);
-                    let mut key = [0u8; 32];
-                    rand::thread_rng().fill(&mut key);
-                    let encrypted_data = crypto::encrypt(
-                        Zeroizing::new(key.to_vec()),
-                        blob,
-                        iv.to_vec(),
-                        WrapType::Aes256Gcm,
-                    )
-                    .expect("encryption failed");
-
-                    let (encrypted_key, annotations) = encrypter
-                        .encrypt(&key, &env.key_id)
-                        .await
-                        .expect("encrypt the key using kms failed");
-
-                    SecretContent::Envelope(Envelope {
-                        key_id: env.key_id.clone(),
-                        encrypted_key: STANDARD.encode(encrypted_key),
-                        encrypted_data: STANDARD.encode(encrypted_data),
-                        wrap_type: WrapType::Aes256Gcm,
-                        iv: STANDARD.encode(iv),
-                        provider,
-                        provider_settings,
-                        annotations,
-                    })
-                }
-                TypeArgs::Vault => todo!(),
-            };
-
-            let secret = Secret {
-                version: VERSION.into(),
-                r#type: sc,
-            };
-            let json = serde_json::to_string(&secret).expect("serialize sealed secret failed");
-            println!("{json}");
+            seal_secret(&seal_args).await;
         }
     }
+}
+
+async fn unseal_secret(unseal_args: &UnsealArgs) {
+    let secret_json = fs::read(&unseal_args.file_path)
+        .await
+        .expect("failed to read sealed secret");
+    let secret: Secret = serde_json::from_slice(&secret_json)
+        .expect("illegal input sealed secret format (json deserialization failed)");
+
+    // Setup secret provider
+    let secret_provider = match secret.r#type {
+        SecretContent::Envelope(ref envelope) => envelope.provider.clone(),
+        SecretContent::Vault(ref vault) => vault.provider.clone(),
+    };
+
+    match secret_provider.as_str() {
+        "aliyun" => env::set_var(
+            "ALIYUN_IN_GUEST_KEY_PATH",
+            unseal_args.key_path.as_ref().expect("Key Path Required"),
+        ),
+        "ehsm" => env::set_var(
+            "EHSM_IN_GUEST_KEY_PATH",
+            unseal_args.key_path.as_ref().expect("Key Path Required"),
+        ),
+        "kbs" => env::set_var(
+            "AA_KBC_PARAMS",
+            unseal_args
+                .aa_kbc_params
+                .as_ref()
+                .expect("aa_kbc_params Required"),
+        ),
+        _ => {}
+    }
+
+    // Unseal the secret
+    let blob = secret.unseal().await.expect("unseal failed");
+
+    // Write the unsealed secret to the filesystem
+    let output_file_name = Path::new(&format!("{}.unsealed", &unseal_args.file_path)).to_owned();
+    if output_file_name.exists() {
+        panic!("{}", format!("{:?} already exists", &output_file_name));
+    }
+    let mut output_file = fs::File::create(&output_file_name)
+        .await
+        .expect("failed to create unsealed secret file");
+
+    output_file
+        .write_all(&blob)
+        .await
+        .expect("failed to write unsealed secret");
+
+    println!(
+        "unseal success, secret is saved in newly generated file: '{:?}'",
+        &output_file_name
+    );
+}
+
+async fn seal_secret(seal_args: &SealArgs) {
+    let sc = match &seal_args.r#type {
+        TypeArgs::Envelope(env) => {
+            let blob = fs::read(env.file_path.clone())
+                .await
+                .expect("failed to read sealed secret");
+
+            let (mut encrypter, provider_settings, provider) =
+                handle_envelope_provider(&env.command).await;
+            let mut iv = [0u8; 12];
+            rand::thread_rng().fill(&mut iv);
+            let mut key = [0u8; 32];
+            rand::thread_rng().fill(&mut key);
+            let encrypted_data = crypto::encrypt(
+                Zeroizing::new(key.to_vec()),
+                blob,
+                iv.to_vec(),
+                WrapType::Aes256Gcm,
+            )
+            .expect("encryption failed");
+
+            let (encrypted_key, annotations) = encrypter
+                .encrypt(&key, &env.key_id)
+                .await
+                .expect("encrypt the key using kms failed");
+
+            SecretContent::Envelope(Envelope {
+                key_id: env.key_id.clone(),
+                encrypted_key: STANDARD.encode(encrypted_key),
+                encrypted_data: STANDARD.encode(encrypted_data),
+                wrap_type: WrapType::Aes256Gcm,
+                iv: STANDARD.encode(iv),
+                provider,
+                provider_settings,
+                annotations,
+            })
+        }
+        TypeArgs::Vault(args) => {
+            println!("Warning: Secrets must be provisioned to provider separately.");
+
+            let provider_settings = match &args.provider_settings {
+                Some(settings_string) => {
+                    serde_json::from_str(settings_string).expect("Provider Settings Malformed")
+                }
+                None => serde_json::Map::new(),
+            };
+
+            let annotations = match &args.annotations {
+                Some(annotations_string) => {
+                    serde_json::from_str(annotations_string).expect("Annotations Malformed")
+                }
+                None => serde_json::Map::new(),
+            };
+
+            SecretContent::Vault(VaultSecret {
+                name: args.resource_uri.clone(),
+                provider: args.provider.clone(),
+                provider_settings,
+                annotations,
+            })
+        }
+    };
+
+    let secret = Secret {
+        version: VERSION.into(),
+        r#type: sc,
+    };
+    let json = serde_json::to_string(&secret).expect("serialize sealed secret failed");
+    println!("{json}");
 }
 
 async fn handle_envelope_provider(
