@@ -1,31 +1,55 @@
-# Kubernetes Sealed Secret
+# Sealed Secrets
 
 ## Introduction
 
+In Confidential Containers, secrets can be protected with sealing.
+A sealed secret is a way to encapsulate confidential data
+such that it can be accessed only inside an enclave
+in conjunction with an attestation.
+
+The Confidential Data Hub provides an API for unsealing secrets inside
+of a confidential guest.
+
+There is also a [secret cli](../secret/src/bin) tool that can be used to generate sealed
+secrets.
+
+## Kubernetes Secrets
+
 CoCo’s [threat model](https://github.com/confidential-containers/confidential-containers/blob/main/trust_model_personas.md)
 excludes the Kubernetes Control Plane and Host components from the
-Trusted Compute Base (TCB). With this stricter threat model, CoCo
-runtimes cannot take advantage of the existing infrastructure. to
-protect [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/),
-this document introduces Sealed Secrets that supports in-guest decryption.
+Trusted Compute Base (TCB).
+This means that CoCo workloads should not store sensitive data
+with traditional [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/).
 
-A Sealed Secret is a set of metadata to get the plaintext of the secret.
-A Sealed Secret will be unsealed inside the TEE pod transparently to users,
-and the unsealing occurs only if the remote attestation process passes,
-which means the TEE environment is as expected. Also, Sealed Secret can
-leverage commercial KMS/Secret Manager(Vault) productions in the unsealing
-process.
+Instead, Kubernetes secrets can be created from sealed secrets,
+allowing the control plane to orchestrate the secrets without
+being able to read them. This is shown in detail below.
+
+The Kata Agent, in conjunction with the CDH, can transparently
+provision these secrets as environment variables.
+
+## Comparison to Resource URI
+
+Confidential Containers also uses Resource URIs to refer to secrets.
+Unlike resource URIs, sealed secrets contain configuration metadata
+that partially decouples unsealing the secret from the general attestation
+configuration.
+
+For example, a sealed secret can be unwrapped by an HSM while all other
+secret resources are fetched from the KBS.
+Sealed secrets can be used to create complex environments where multiple
+secrets, fulfilled by different parties, can all travel along with the workload.
 
 ## Format
 
-Due to different sealing types, there are two different formats of Sealed
-Secrets.
+There are two main types of sealed secrets.
 
 ### Envelope
 
 This kind of secret uses envelope encryption scheme. An encryption key is used
-to encrypt the plaintext secret value. A sealing key insde a KMS/KBS is used to
-seal the encryption key. That is
+to encrypt the plaintext secret value. The wrapped secret is stored as part of
+the sealed secret.
+To unseal the secret, a KMS/KBS is used to unwrap the encryptd key.
 
 $$Sealed Secret := \{Enc_{Sealing key}(Encryption Key), Enc_{Encryption Key}(secret value)\}$$
 
@@ -36,7 +60,7 @@ The format of the KMS type Sealed Secret is
 	"type": "envelope",
 	"provider": "xxx",
 	"key_id": "xxx",
-	"encrypted_key": "ab27dc=", 
+	"encrypted_key": "ab27dc=",
 	"encrypted_data": "xxx",
 	"wrap_type": "A256GCM",
 	"iv": "xxx",
@@ -62,14 +86,19 @@ which is always used by the provider driver.
 - `iv`: **REQUIRED**. The Initial Vector used in the process of __encryption key__ encrypting __secret value__.
 Base64 encoded.
 - `provider_settings`: **REQUIRED**. A key-value map. Provider specific information to create the KMS client.
-- `annotations`: **OPTIONAL**. A key-value Map. Provider specific information used by the driver to	
+- `annotations`: **OPTIONAL**. A key-value Map. Provider specific information used by the driver to
 decrypt `encrypted_key` into a plaintext of __encryption key__.
 
 ### Vault
 
-A Vault secret leverages secret manager mechanism. Vault secret does not require any
-encryption. It only contains metadata with which the plaintext of the __secret value__
-can be retrieved. The format is
+A vault secret is simply a pointer to a secret that is stored elsewhere,
+either in a KMS or KBS.
+To fulfill a vault secret, the CDH will retrieve the secret itself from
+a secret provider.
+
+Creating a vault secret does not require any encryption.
+Simply create the metadata below and provision your secret
+to the provider.
 ```json
 {
 	"version" : "0.1.0",
@@ -91,7 +120,7 @@ Here,
 how to use the `annotations` field and `name` field to get the plaintext of __secret value__.
 - `name`: **REQUIRED**. To uniquely distinguish the __secret value__, which is always used by the provider driver.
 - `provider_settings`: **REQUIRED**. A key-value map. Provider specific information to create the vault client.
-- `annotations`: **OPTIONAL**. A key-value Map. Vault specific information used by the provider driver to	
+- `annotations`: **OPTIONAL**. A key-value Map. Vault specific information used by the provider driver to
 get the plaintext of the __secret value__.
 
 ## Integrity Protection of Sealed Secret
@@ -108,16 +137,31 @@ BASE64URL(UTF8(JWS Protected Header)) || '.
 We can leverage the ["kid"](https://datatracker.ietf.org/doc/html/rfc7515#section-4.1.4)
 field to specify the public key used to verify this signature.
 
+Signatures for secrets are not yet implemented, but sealed secrets are
+required to have a header and signature. A sealed secret should be of the form
+
+`sealed`.`JWS header`.`JWS body (secret content)`.`signature`
+
+Since signature verification is not yet supported, dummy values
+can be used for the header and signature. A sealed secret could look like this.
+
+```
+secret=sealed.fakejwsheader.ewogICAgInZlcnNpb24iOiAiMC4xLjAiLAogICAgInR5cGUiOiAidmF1bHQiLAogICAgIm5hbWUiOiAia2JzOi8vL2RlZmF1bHQvc2VhbGVkLXNlY3JldC90ZXN0IiwKICAgICJwcm92aWRlciI6ICJrYnMiLAogICAgInByb3ZpZGVyX3NldHRpbmdzIjoge30sCiAgICAiYW5ub3RhdGlvbnMiOiB7fQp9Cg==.fakesignature
+```
+
 ## Usage in CoCo
 
-When we get a Sealed Secret like the following
+You can create a Kubernetes secret from a sealed secret
+and Kata will automatically expose it to your workload.
+
+Start with a sealed secret such as
 ```json
 {
 	"version": "0.1.0",
 	"type": "envelope",
 	"provider": "xxx",
 	"key_id": "xxx",
-	"encrypted_key": "ab27dc=", 
+	"encrypted_key": "ab27dc=",
 	"encrypted_data": "xxx",
 	"wrap_type": "A256GCM",
 	"iv": "xxx",
@@ -129,30 +173,36 @@ When we get a Sealed Secret like the following
 	}
 }
 ```
+You can use the [secret cli](../secret/src/bin) tool to generate a sealed secret.
 
-We can encode the payload in BASE64
+Encode the payload in BASE64
 ```
 ewoJInZlcnNpb24iOiAiMC4xLjAiLAoJInR5cGUiOiAiZW52ZWxvcGUiLAoJInByb3ZpZGVyIjogInh4eCIsCgkia2V5X2lkIjogInh4eCIsCgkiZW5jcnlwdGVkX2tleSI6ICJhYjI3ZGM9IiwgCgkiZW5jcnlwdGVkX2RhdGEiOiAieHh4IiwKCSJ3cmFwX3R5cGUiOiAiQTI1NkdDTSIsCgkiaXYiOiAieHh4IiwKCSJhbm5vdGF0aW9ucyI6IHsKCQkiY3J5cHRvX2NvbnRleHQiOiB7CgkJCSJhbGdvcml0aG0iOiAiQTI1NkdDTSIKCQl9LAoJCSJwcm92aWRlcl9zZXR0aW5nIjogewoJCQkia21zX2luc3RhbmNlX2lkIjogInh4eCIKCQl9Cgl9Cn0=
 ```
-Then add a prefix `sealed.`
+Then add a prefix `sealed.` and JWS header and signature.
 
 ```
-sealed.ewoJInZlcnNpb24iOiAiMC4xLjAiLAoJInR5cGUiOiAiZW52ZWxvcGUiLAoJInByb3ZpZGVyIjogInh4eCIsCgkia2V5X2lkIjogInh4eCIsCgkiZW5jcnlwdGVkX2tleSI6ICJhYjI3ZGM9IiwgCgkiZW5jcnlwdGVkX2RhdGEiOiAieHh4IiwKCSJ3cmFwX3R5cGUiOiAiQTI1NkdDTSIsCgkiaXYiOiAieHh4IiwKCSJhbm5vdGF0aW9ucyI6IHsKCQkiY3J5cHRvX2NvbnRleHQiOiB7CgkJCSJhbGdvcml0aG0iOiAiQTI1NkdDTSIKCQl9LAoJCSJwcm92aWRlcl9zZXR0aW5nIjogewoJCQkia21zX2luc3RhbmNlX2lkIjogInh4eCIKCQl9Cgl9Cn0=
+sealed.fakejwsheader.ewoJInZlcnNpb24iOiAiMC4xLjAiLAoJInR5cGUiOiAiZW52ZWxvcGUiLAoJInByb3ZpZGVyIjogInh4eCIsCgkia2V5X2lkIjogInh4eCIsCgkiZW5jcnlwdGVkX2tleSI6ICJhYjI3ZGM9IiwgCgkiZW5jcnlwdGVkX2RhdGEiOiAieHh4IiwKCSJ3cmFwX3R5cGUiOiAiQTI1NkdDTSIsCgkiaXYiOiAieHh4IiwKCSJhbm5vdGF0aW9ucyI6IHsKCQkiY3J5cHRvX2NvbnRleHQiOiB7CgkJCSJhbGdvcml0aG0iOiAiQTI1NkdDTSIKCQl9LAoJCSJwcm92aWRlcl9zZXR0aW5nIjogewoJCQkia21zX2luc3RhbmNlX2lkIjogInh4eCIKCQl9Cgl9Cn0=.fakesignature
 ```
 
-Then we can use this in normal Kubernetes Secret. For example a Secret
-Declaration
+Create a Kubernetes secret
+
+```bash
+kubectl create secret generic sealed-secret --from-literal='secret=sealed.fakejwsheader.ewoJInZlcnNpb24i...'
+```
+
+Use this secret in a workload
 ```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: example-secret
-type: Opaque
-stringData:
-  example-key: "sealed.ewoJInZlcnNpb24i..."
+...
+    env:
+    - name: PROTECTED_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: sealed-secret
+          key: secret
 ```
 
-When this sealed secret is transferred to TEE, Confidential DataHub will help to unseal.
+Your secret will be provisioned to the `PROTECTED_SECRET` environment variable.
 
 ## Supported Providers
 
@@ -160,5 +210,5 @@ When this sealed secret is transferred to TEE, Confidential DataHub will help to
 | ------------------ | -------------------------------------------------------------------- | ------------------------- |
 | aliyun       	     |  [aliyun](kms-providers/alibaba.md)                               	| Alibaba                   |
 | ehsm       	     |  [ehsm](kms-providers/ehsm-kms.md)                              		| Intel                   	|
+| kbs                |                                                                          | CoCo                  |
 
-## Sealing & Unsealing of the Secret (TODO)
