@@ -24,6 +24,17 @@ Confidential Data Hub.
 [coco-keyprovider](attestation-agent/coco_keyprovider/)
 CoCo Keyprovider. Used to encrypt the container images.
 
+## Tools
+
+[secret-cli](confidential-data-hub/secret)
+Utility for sealing and unsealing sealed secrets
+
+[CDH Client](confidential-data-hub/hub/src/bin)
+A tool for exercising CDH endpoints
+
+[CDH Go Client](confidential-data-hub/golang)
+A Go tool for exercising CDH endpoints
+
 ## Build
 
 A `Makefile` is provided to quickly build Attestation Agent/Api Server Rest/Confidential Data Hub for a given platform.
