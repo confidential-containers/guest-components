@@ -52,12 +52,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Take a pre-action for self-hosted runner
-        run: |
-          if [ -f "${HOME}/script/pre_action.sh" ]; then
-            "${HOME}/script/pre_action.sh" cc-guest-components
-          fi
-
       - name: Install Rust toolchain (${{ matrix.rust }})
         uses: actions-rs/toolchain@v1
         with:
@@ -119,10 +113,3 @@ jobs:
           command: clippy
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
           args: ${{ matrix.cargo_lint_opts }} -- -D warnings -A clippy::derive-partial-eq-without-eq
-
-      - name: Take a post-action for self-hosted runner
-        if: always()
-        run: |
-          if [ -f ${HOME}/script/post_action.sh ]; then
-            ${HOME}/script/post_action.sh cc-guest-components
-          fi
