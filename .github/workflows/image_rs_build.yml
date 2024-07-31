@@ -121,21 +121,21 @@ jobs:
         run: |
           sudo -E PATH=$PATH -s cargo test -p image-rs --features default
 
-      - name: Run cargo test - kata-cc (rust-tls version) with keywrap-grpc + keywrap-jwe
+      - name: Run cargo test - kata-cc (rust-tls version) with keywrap-grpc + keywrap-jwe + runtime-attestation-grpc
         run: |
-          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-ring,keywrap-grpc,snapshot-overlayfs,signature-cosign-rustls,signature-simple,getresource,oci-distribution/rustls-tls,keywrap-jwe
+          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-ring,keywrap-grpc,snapshot-overlayfs,signature-cosign-rustls,signature-simple,getresource,oci-distribution/rustls-tls,keywrap-jwe,runtime-attestation-grpc
 
-      - name: Run cargo test - kata-cc (native-tls version) with keywrap-grpc + keywrap-jwe
+      - name: Run cargo test - kata-cc (native-tls version) with keywrap-grpc + keywrap-jwe + runtime-attestation-grpc
         run: |
-          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-openssl,keywrap-grpc,snapshot-overlayfs,signature-cosign-native,signature-simple,getresource,oci-distribution/native-tls,keywrap-jwe
+          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-openssl,keywrap-grpc,snapshot-overlayfs,signature-cosign-native,signature-simple,getresource,oci-distribution/native-tls,keywrap-jwe,runtime-attestation-grpc
 
-      - name: Run cargo test - kata-cc (rust-tls version) with keywrap-ttrpc (default) + keywrap-jwe
+      - name: Run cargo test - kata-cc (rust-tls version) with keywrap-ttrpc (default) + keywrap-jwe + runtime-attestation-ttrpc
         run: |
-          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-rustls-tls,keywrap-jwe
+          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-rustls-tls,keywrap-jwe,runtime-attestation-ttrpc
 
-      - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe
+      - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe + runtime-attestation-ttrpc
         run: |
-          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-native-tls,keywrap-jwe
+          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-native-tls,keywrap-jwe,runtime-attestation-ttrpc
       
       - name: Clean test cache
         run: |
