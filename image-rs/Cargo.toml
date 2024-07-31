@@ -76,7 +76,7 @@ cfg-if.workspace = true
 nix = { workspace = true, features = ["user"] }
 ring.workspace = true
 rstest.workspace = true
-serial_test = "2.0.0"
+serial_test = "3.1.1"
 strum.workspace = true
 tempfile.workspace = true
 test-utils = { path = "libs/test-utils" }
