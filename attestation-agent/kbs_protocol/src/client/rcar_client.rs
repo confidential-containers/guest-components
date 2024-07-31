@@ -109,16 +109,34 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
 
         debug!("send auth request to {auth_endpoint}");
 
-        let challenge = self
+        let resp = self
             .http_client
             .post(auth_endpoint)
             .header("Content-Type", "application/json")
             .json(&request)
             .send()
-            .await?
-            .json::<Challenge>()
             .await?;
 
+        match resp.status() {
+            reqwest::StatusCode::OK => {
+                debug!("KBS request OK");
+            }
+            reqwest::StatusCode::UNAUTHORIZED => {
+                let error_info = resp.json::<ErrorInformation>().await?;
+                bail!(
+                    "KBS request unauthorized, ErrorInformation: {:?}",
+                    error_info
+                );
+            }
+            _ => {
+                bail!(
+                    "KBS Server Internal Failed, Response: {:?}",
+                    resp.text().await?
+                );
+            }
+        }
+
+        let challenge = resp.json::<Challenge>().await?;
         debug!("get challenge: {challenge:#?}");
         let tee_pubkey = self.tee_key.export_pubkey()?;
         let runtime_data = json!({
