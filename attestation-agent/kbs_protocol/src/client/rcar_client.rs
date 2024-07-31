@@ -363,10 +363,19 @@ mod test {
             .try_into()
             .expect("resource uri");
 
-        let resource = client
-            .get_resource(resource_uri)
-            .await
-            .expect("get resource");
+        let resource = match client.get_resource(resource_uri).await {
+            Ok(resource) => resource,
+            Err(e) => {
+                // Skip the test if the kbs server returned ProtocolVersion error. Any other
+                // error is treated as a failure.
+                assert!(e
+                    .to_string()
+                    .contains("KBS Client Protocol Version Mismatch"));
+                println!("NOTE: the test is skipped due to KBS protocol incompatibility.");
+                return ();
+            }
+        };
+
         assert_eq!(resource, CONTENT);
 
         let (token, key) = client.get_token().await.expect("get token");
