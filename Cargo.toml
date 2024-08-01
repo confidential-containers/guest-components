@@ -40,7 +40,7 @@ hmac = "0.12.1"
 jwt-simple = { version = "0.12", default-features = false, features = ["pure-rust"] }
 kbs-types = "0.6.0"
 lazy_static = "1.4.0"
-log = "0.4.14"
+log = "0.4.22"
 nix = "0.28"
 openssl = "0.10"
 prost = "0.11"
