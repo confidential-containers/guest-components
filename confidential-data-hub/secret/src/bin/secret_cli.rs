@@ -14,7 +14,7 @@ use kms::plugins::aliyun::AliyunKmsClient;
 use kms::plugins::ehsm::EhsmKmsClient;
 use kms::{Encrypter, ProviderSettings};
 use rand::Rng;
-use secret::secret::layout::{envelope::Envelope, vault::VaultSecret};
+use secret::secret::layout::{envelope::EnvelopeSecret, vault::VaultSecret};
 use secret::secret::{Secret, SecretContent, VERSION};
 #[cfg(feature = "ehsm")]
 use serde_json::Value;
@@ -238,7 +238,7 @@ async fn seal_secret(seal_args: &SealArgs) {
                 .await
                 .expect("encrypt the key using kms failed");
 
-            SecretContent::Envelope(Envelope {
+            SecretContent::Envelope(EnvelopeSecret {
                 key_id: env.key_id.clone(),
                 encrypted_key: STANDARD.encode(encrypted_key),
                 encrypted_data: STANDARD.encode(encrypted_data),
