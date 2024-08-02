@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   occlum_sgx_ci:
+    if: github.event_name != 'push' || github.event.pull_request.merged == false
     runs-on: sgx
     steps:
       - name: Checkout Code
