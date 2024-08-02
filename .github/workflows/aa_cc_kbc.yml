@@ -20,6 +20,7 @@ on:
 
 jobs:
   cc_kbc_ci:
+    if: github.event_name != 'push' || github.event.pull_request.merged == false
     name: Check
     defaults:
       run:
