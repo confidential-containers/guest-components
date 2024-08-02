@@ -8,14 +8,14 @@ pub mod layout;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::{Deserialize, Serialize};
 
-use self::layout::{envelope::Envelope, vault::VaultSecret};
+use self::layout::{envelope::EnvelopeSecret, vault::VaultSecret};
 
 use crate::{Result, SecretError};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum SecretContent {
-    Envelope(Envelope),
+    Envelope(EnvelopeSecret),
     Vault(VaultSecret),
 }
 
@@ -82,7 +82,7 @@ mod tests {
     use rstest::rstest;
 
     use crate::{
-        secret::layout::{envelope::Envelope, vault::VaultSecret},
+        secret::layout::{envelope::EnvelopeSecret, vault::VaultSecret},
         Annotations, ProviderSettings,
     };
 
@@ -91,7 +91,7 @@ mod tests {
     #[rstest]
     #[case(include_str!("../../tests/envelope-1.json"), Secret {
         version: "0.1.0".into(),
-        r#type: SecretContent::Envelope(Envelope {
+        r#type: SecretContent::Envelope(EnvelopeSecret {
             provider: "aliyun".into(),
             provider_settings: ProviderSettings::default(),
             key_id: "xxx".into(),
