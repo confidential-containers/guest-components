@@ -159,11 +159,10 @@ async fn main() {
 }
 
 async fn unseal_secret(unseal_args: &UnsealArgs) {
-    let secret_json = fs::read(&unseal_args.file_path)
+    let secret_string = fs::read_to_string(&unseal_args.file_path)
         .await
         .expect("failed to read sealed secret");
-    let secret: Secret = serde_json::from_slice(&secret_json)
-        .expect("illegal input sealed secret format (json deserialization failed)");
+    let secret = Secret::from_signed_base64_string(secret_string).expect("Failed to parse secret.");
 
     // Setup secret provider
     let secret_provider = match secret.r#type {
@@ -280,8 +279,10 @@ async fn seal_secret(seal_args: &SealArgs) {
         version: VERSION.into(),
         r#type: sc,
     };
-    let json = serde_json::to_string(&secret).expect("serialize sealed secret failed");
-    println!("{json}");
+    let secret_string = secret
+        .to_signed_base64_string()
+        .expect("failed to serialize secret");
+    println!("{secret_string}");
 }
 
 async fn handle_envelope_provider(

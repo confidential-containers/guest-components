@@ -5,6 +5,7 @@
 
 pub mod layout;
 
+use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::{Deserialize, Serialize};
 
 use self::layout::{envelope::Envelope, vault::VaultSecret};
@@ -38,6 +39,39 @@ impl Secret {
             SecretContent::Envelope(env) => env.unseal().await.map_err(Into::into),
             SecretContent::Vault(v) => v.unseal().await.map_err(Into::into),
         }
+    }
+
+    // TODO: check the signature
+    pub fn from_signed_base64_string(secret: String) -> Result<Self> {
+        let sections: Vec<_> = secret.split(".").collect();
+
+        if sections.len() != 4 {
+            return Err(SecretError::ParseFailed("malformed input sealed secret"));
+        }
+
+        let secret_json = STANDARD
+            .decode(sections[2])
+            .map_err(|_| SecretError::ParseFailed("base64 decode Secret body"))?;
+
+        let secret: Secret = serde_json::from_slice(&secret_json).map_err(|_| {
+            SecretError::ParseFailed(
+                "malformed input sealed secret format (json deserialization failed)",
+            )
+        })?;
+
+        Ok(secret)
+    }
+
+    // TODO: add real signature generation
+    pub fn to_signed_base64_string(&self) -> Result<String> {
+        let secret_json = serde_json::to_string(&self)
+            .map_err(|_| SecretError::ParseFailed("JSON serialization failed"))?;
+
+        let secret_base64 = STANDARD.encode(secret_json);
+
+        let secret_string = format!("sealed.fakejwsheader.{}.fakesignature", secret_base64);
+
+        Ok(secret_string)
     }
 }
 
@@ -77,11 +111,20 @@ mod tests {
             name: "xxx".into(),
         }),
     })]
-    fn serialize_deserialize(#[case] st: &str, #[case] origin: Secret) {
-        let serialized = serde_json::to_string_pretty(&origin).expect("serialize failed");
-        assert_json_eq!(st, serialized);
+    fn serialize_deserialize(#[case] secret_json: &str, #[case] secret_object: Secret) {
+        let serialized = serde_json::to_string_pretty(&secret_object).expect("serialize failed");
+        assert_json_eq!(secret_json, serialized);
 
-        let parsed: Secret = serde_json::from_str(st).expect("deserialize failed");
-        assert_eq!(parsed, origin);
+        let parsed: Secret = serde_json::from_str(secret_json).expect("deserialize failed");
+        assert_eq!(parsed, secret_object);
+
+        let secret_string = secret_object
+            .to_signed_base64_string()
+            .expect("serialization failed");
+
+        let secret_from_string =
+            Secret::from_signed_base64_string(secret_string).expect("deserialiation failed");
+
+        assert_eq!(secret_from_string, secret_object);
     }
 }
