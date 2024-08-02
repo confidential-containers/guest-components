@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   coco_keyprovider_ci:
-    if: github.event_name != 'push' || github.event.pull_request.merged == false
+    if: github.event_name != 'push'
     name: Check
     runs-on: ubuntu-latest
     strategy:

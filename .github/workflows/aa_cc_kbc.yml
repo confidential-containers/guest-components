@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   cc_kbc_ci:
-    if: github.event_name != 'push' || github.event.pull_request.merged == false
+    if: github.event_name != 'push'
     name: Check
     defaults:
       run:
