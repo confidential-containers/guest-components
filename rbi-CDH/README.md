@@ -7,7 +7,6 @@
 
 
 - `run.sh` main script. Use `./run.sh` to run.
-- `Makefile` script to make build docker image.
 - `Dockerfile` to build docker.
 
 
