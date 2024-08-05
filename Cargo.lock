@@ -232,10 +232,11 @@ dependencies = [
 
 [[package]]
 name = "assert_cmd"
-version = "1.0.8"
+version = "2.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c98233c6673d8601ab23e77eb38f999c51100d46c5703b17288c57fddf3a1ffe"
+checksum = "bc65048dd435533bb1baf2ed9956b9a278fbfdcf90301b39ee117f06c0199d37"
 dependencies = [
+ "anstyle",
  "bstr",
  "doc-comment",
  "predicates",
@@ -721,13 +722,13 @@ dependencies = [
 
 [[package]]
 name = "bstr"
-version = "0.2.17"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba3569f383e8f1598449f1a423e72e99569137b47740b1da11ef19af3d5c3223"
+checksum = "40723b8fb387abc38f4f4a37c09073622e41dd12327033091ef8950659e6dc0c"
 dependencies = [
- "lazy_static",
  "memchr",
- "regex-automata 0.1.10",
+ "regex-automata",
+ "serde",
 ]
 
 [[package]]
@@ -3194,7 +3195,7 @@ version = "0.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "507460a910eb7b32ee961886ff48539633b788a36b65692b95f225b844c82553"
 dependencies = [
- "regex-automata 0.4.6",
+ "regex-automata",
 ]
 
 [[package]]
@@ -4389,12 +4390,12 @@ checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 
 [[package]]
 name = "predicates"
-version = "2.1.5"
+version = "3.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59230a63c37f3e18569bdb90e4a89cbf5bf8b06fea0b84e65ea10cc4df47addd"
+checksum = "7e9086cc7640c29a356d1a29fd134380bee9d8f79a17410aa76e7ad295f42c97"
 dependencies = [
+ "anstyle",
  "difflib",
- "itertools 0.10.5",
  "predicates-core",
 ]
 
@@ -4758,15 +4759,9 @@ checksum = "c117dbdfde9c8308975b6a18d71f3f385c89461f7b3fb054288ecf2a2058ba4c"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-automata 0.4.6",
+ "regex-automata",
  "regex-syntax",
 ]
-
-[[package]]
-name = "regex-automata"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c230d73fb8d8c1b9c0b3135c5142a8acee3a0558fb8db5cf1cb65f8d7862132"
 
 [[package]]
 name = "regex-automata"
