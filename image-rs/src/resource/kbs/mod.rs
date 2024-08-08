@@ -57,7 +57,7 @@ trait Client: Send + Sync {
 impl SecureChannel {
     /// Create a new [`SecureChannel`], the input parameter:
     /// * `decrypt_config`: s string with format `provider:attestation-agent:<kbc_name>::<kbs_uri>`.
-    /// This parameter is only used when in native secure channel (for enclave-cc)
+    ///   This parameter is only used when in native secure channel (for enclave-cc)
     pub async fn new(_decrypt_config: &Option<&str>) -> Result<Self> {
         let client: Box<dyn Client> = {
             cfg_if::cfg_if! {

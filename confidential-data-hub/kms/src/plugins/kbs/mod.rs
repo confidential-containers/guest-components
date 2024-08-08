@@ -70,7 +70,7 @@ pub struct KbcClient;
 
 #[async_trait]
 impl Getter for KbcClient {
-    async fn get_secret(&mut self, name: &str, _annotations: &Annotations) -> Result<Vec<u8>> {
+    async fn get_secret(&self, name: &str, _annotations: &Annotations) -> Result<Vec<u8>> {
         let resource_uri = ResourceUri::try_from(name)
             .map_err(|_| Error::KbsClientError(format!("illegal kbs resource uri: {name}")))?;
         let real_client = KBS_CLIENT.clone();

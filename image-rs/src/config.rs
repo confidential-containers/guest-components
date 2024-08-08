@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use crate::snapshots::SnapshotType;
 
-const DEFAULT_WORK_DIR: &str = "/var/lib/image-rs/";
+pub const DEFAULT_WORK_DIR: &str = "/var/lib/image-rs/";
 
 /// Default policy file path.
 pub const POLICY_FILE_PATH: &str = "kbs:///default/security-policy/test";
@@ -33,7 +33,7 @@ pub const AUTH_FILE_PATH: &str = "kbs:///default/credential/test";
 pub const DEFAULT_MAX_CONCURRENT_DOWNLOAD: usize = 3;
 
 /// Path to the configuration file to generate ImageConfiguration
-pub const CONFIGURATION_FILE_PATH: &str = "/var/lib/image-rs/config.json";
+pub const CONFIGURATION_FILE_NAME: &str = "config.json";
 
 /// `image-rs` configuration information.
 #[derive(Clone, Debug, Deserialize)]

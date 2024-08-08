@@ -24,6 +24,7 @@ concurrency:
 
 jobs:
   basic_ci:
+    if: github.event_name != 'push'
     name: Check
     defaults:
       run:
@@ -42,12 +43,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
-      - name: Take a pre-action for self-hosted runner
-        run: |
-          if [ -f "${HOME}/script/pre_action.sh" ]; then
-            "${HOME}/script/pre_action.sh" cc-guest-components
-          fi
 
       - name: Install Rust toolchain (${{ matrix.rust }})
         uses: actions-rs/toolchain@v1
@@ -76,10 +71,3 @@ jobs:
         with:
           command: test
           args: -p api-server-rest
-
-      - name: Take a post-action for self-hosted runner
-        if: always()
-        run: |
-          if [ -f ${HOME}/script/post_action.sh ]; then
-            ${HOME}/script/post_action.sh cc-guest-components
-          fi

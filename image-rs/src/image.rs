@@ -3,12 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, bail, Result};
-use log::warn;
 use oci_distribution::manifest::{OciDescriptor, OciImageManifest};
 use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
 use oci_spec::image::{ImageConfiguration, Os};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -16,7 +15,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::bundle::{create_runtime_config, BUNDLE_ROOTFS};
-use crate::config::{ImageConfig, CONFIGURATION_FILE_PATH};
+use crate::config::{ImageConfig, CONFIGURATION_FILE_NAME, DEFAULT_WORK_DIR};
 use crate::decoder::Compression;
 use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
@@ -39,7 +38,7 @@ use crate::nydus::{service, utils};
 pub const IMAGE_SECURITY_CONFIG_DIR: &str = "/run/image-security";
 
 /// The metadata info for container image layer.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LayerMeta {
     /// Image layer compression algorithm type.
     pub decoder: Compression,
@@ -58,7 +57,7 @@ pub struct LayerMeta {
 }
 
 /// The metadata info for container image.
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ImageMeta {
     /// The digest of the image configuration.
     pub id: String,
@@ -96,8 +95,10 @@ pub struct ImageClient {
 impl Default for ImageClient {
     // construct a default instance of `ImageClient`
     fn default() -> ImageClient {
-        let config = ImageConfig::try_from(Path::new(CONFIGURATION_FILE_PATH)).unwrap_or_default();
-        let meta_store = MetaStore::try_from(Path::new(METAFILE)).unwrap_or_default();
+        let work_dir = Path::new(DEFAULT_WORK_DIR);
+        let config = ImageConfig::try_from(work_dir.join(CONFIGURATION_FILE_NAME).as_path())
+            .unwrap_or_default();
+        let meta_store = MetaStore::try_from(work_dir.join(METAFILE).as_path()).unwrap_or_default();
         let snapshots = Self::init_snapshots(&config, &meta_store);
 
         ImageClient {
@@ -154,8 +155,10 @@ impl ImageClient {
 
     /// Create an ImageClient instance with specific work directory.
     pub fn new(image_work_dir: PathBuf) -> Self {
-        let config = ImageConfig::new(image_work_dir);
-        let meta_store = MetaStore::try_from(Path::new(METAFILE)).unwrap_or_default();
+        let work_dir = image_work_dir.as_path();
+        let config = ImageConfig::try_from(work_dir.join(CONFIGURATION_FILE_NAME).as_path())
+            .unwrap_or_else(|_| ImageConfig::new(image_work_dir.clone()));
+        let meta_store = MetaStore::try_from(work_dir.join(METAFILE).as_path()).unwrap_or_default();
         let snapshots = Self::init_snapshots(&config, &meta_store);
 
         Self {
@@ -229,11 +232,7 @@ impl ImageClient {
                 {
                     Ok(cred) => cred,
                     Err(e) => {
-                        warn!(
-                            "get credential failed, use Anonymous auth instead: {}",
-                            e.to_string()
-                        );
-                        RegistryAuth::Anonymous
+                        bail!("failed to get registry authentication credentials: {:?}", e)
                     }
                 }
             }
@@ -515,7 +514,7 @@ fn create_bundle(
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use std::fs;
     use test_utils::assert_retry;
 
     #[tokio::test]
@@ -632,5 +631,47 @@ mod tests {
 
         // Assert that image is pulled only once.
         assert_eq!(image_client.meta_store.lock().await.image_db.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_meta_store_reuse() {
+        let work_dir = tempfile::tempdir().unwrap();
+
+        let image = "mcr.microsoft.com/hello-world";
+
+        let mut image_client = ImageClient::new(work_dir.path().to_path_buf());
+
+        let bundle_dir = tempfile::tempdir().unwrap();
+        if let Err(e) = image_client
+            .pull_image(image, bundle_dir.path(), &None, &None)
+            .await
+        {
+            panic!("failed to download image: {}", e);
+        }
+
+        // Create a second temporary directory for the second image client
+        let work_dir_2 = tempfile::tempdir().unwrap();
+        fs::create_dir_all(work_dir_2.path()).unwrap();
+
+        // Lock the meta store and write its data to a file in the second work directory
+        // This allows the second image client to reuse the meta store and layers from the first image client
+        let store = image_client.meta_store.lock().await;
+        let meta_store_path = work_dir_2.path().to_str().unwrap().to_owned() + "/meta_store.json";
+        store.write_to_file(&meta_store_path).unwrap();
+
+        // Initialize the second image client with the second temporary directory
+        let mut image_client_2 = ImageClient::new(work_dir_2.path().to_path_buf());
+
+        let bundle_dir_2 = tempfile::tempdir().unwrap();
+        if let Err(e) = image_client_2
+            .pull_image(image, bundle_dir_2.path(), &None, &None)
+            .await
+        {
+            panic!("failed to download image: {}", e);
+        }
+
+        // Verify that the "layers" directory does not exist in the second work directory
+        // This confirms that the second image client reused the meta store and layers from the first image client
+        assert!(!work_dir_2.path().join("layers").exists());
     }
 }

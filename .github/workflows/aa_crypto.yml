@@ -14,8 +14,13 @@ on:
   create:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   crypto_ci:
+    if: github.event_name != 'push'
     name: Check
     defaults:
       run:

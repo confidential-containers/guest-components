@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use crypto::{
-    rsa::{PaddingMode, RSAKeyPair, RSA_KTY},
+    rsa::{PaddingMode, RSAKeyPair},
     WrapType,
 };
 use kbs_types::{Response, TeePubKey};
@@ -31,11 +31,10 @@ impl TeeKeyPair {
         let k_mod = URL_SAFE_NO_PAD.encode(self.keypair.n());
         let k_exp = URL_SAFE_NO_PAD.encode(self.keypair.e());
 
-        Ok(TeePubKey {
+        Ok(TeePubKey::RSA {
             alg: PaddingMode::PKCS1v15.as_ref().to_string(),
             k_mod,
             k_exp,
-            kty: RSA_KTY.to_string(),
         })
     }
 

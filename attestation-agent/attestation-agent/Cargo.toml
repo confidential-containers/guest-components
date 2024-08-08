@@ -23,6 +23,7 @@ config.workspace = true
 const_format.workspace = true
 env_logger = { workspace = true, optional = true }
 kbs_protocol = { path = "../kbs_protocol", default-features = false, optional = true }
+kbs-types.workspace = true
 log.workspace = true
 prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }

@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{io::Write, str::FromStr};
-
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use attester::{detect_tee_type, BoxedAttester};
+use kbs_types::Tee;
+use std::{io::Write, str::FromStr};
 use tokio::sync::Mutex;
 
 pub use attester::InitdataResult;
@@ -16,8 +16,7 @@ pub mod config;
 mod eventlog;
 pub mod token;
 
-use config::HashAlgorithm;
-use eventlog::{EventEntry, EventLog};
+use eventlog::{Content, EventLog, LogEntry};
 use log::{debug, info, warn};
 use token::*;
 
@@ -72,6 +71,8 @@ pub trait AttestationAPIs {
 
     /// Check the initdata binding
     async fn check_init_data(&mut self, init_data: &[u8]) -> Result<InitdataResult>;
+
+    fn get_tee_type(&mut self) -> Tee;
 }
 
 /// Attestation agent to provide attestation service.
@@ -79,31 +80,27 @@ pub struct AttestationAgent {
     config: Config,
     attester: BoxedAttester,
     eventlog: Mutex<EventLog>,
+    tee: Tee,
 }
 
 impl AttestationAgent {
     pub async fn init(&mut self) -> Result<()> {
-        // We should get the current platform's evidence to see the RTMR value.
-        // Here we assume RTMR is not polluted thus all be set `\0`
-        let init_entry = match self.config.eventlog_config.eventlog_algorithm {
-            HashAlgorithm::Sha256 => "INIT sha256/0000000000000000000000000000000000000000000000000000000000000000",
-            HashAlgorithm::Sha384 => "INIT sha384/000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-            HashAlgorithm::Sha512 => "INIT sha512/00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        };
+        if self.config.eventlog_config.enable_eventlog {
+            let alg = self.config.eventlog_config.eventlog_algorithm;
+            let pcr = self.config.eventlog_config.init_pcr;
+            let init_entry = LogEntry::Init(alg);
+            let digest = init_entry.digest_with(alg);
+            {
+                // perform atomicly in this block
+                let mut eventlog = self.eventlog.lock().await;
+                self.attester
+                    .extend_runtime_measurement(digest, pcr)
+                    .await
+                    .context("write INIT entry")?;
 
-        let event_digest = self
-            .config
-            .eventlog_config
-            .eventlog_algorithm
-            .digest(init_entry.as_bytes());
-
-        let mut eventlog = self.eventlog.lock().await;
-
-        self.attester
-            .extend_runtime_measurement(event_digest, self.config.eventlog_config.init_pcr)
-            .await
-            .context("write INIT entry")?;
-        eventlog.write_log(init_entry).context("write INIT log")?;
+                eventlog.write_log(&init_entry).context("write INIT log")?;
+            };
+        }
 
         Ok(())
     }
@@ -121,14 +118,15 @@ impl AttestationAgent {
             }
         };
 
-        let tee_type = detect_tee_type();
-        let attester: BoxedAttester = tee_type.try_into()?;
+        let tee = detect_tee_type();
+        let attester: BoxedAttester = tee.try_into()?;
         let eventlog = Mutex::new(EventLog::new()?);
 
         Ok(AttestationAgent {
             config,
             attester,
             eventlog,
+            tee,
         })
     }
 
@@ -194,23 +192,34 @@ impl AttestationAPIs for AttestationAgent {
         content: &str,
         register_index: Option<u64>,
     ) -> Result<()> {
-        let register_index = register_index.unwrap_or_else(|| {
+        if !self.config.eventlog_config.enable_eventlog {
+            bail!("Extend eventlog not enabled when launching!");
+        }
+
+        let pcr = register_index.unwrap_or_else(|| {
             let pcr = self.config.eventlog_config.init_pcr;
             debug!("No PCR index provided, use default {pcr}");
             pcr
         });
 
-        let log_entry = EventEntry::new(domain, operation, content);
-        let event_digest = log_entry.digest_with(self.config.eventlog_config.eventlog_algorithm);
+        let content: Content = content.try_into()?;
 
-        let mut eventlog = self.eventlog.lock().await;
+        let log_entry = LogEntry::Event {
+            domain,
+            operation,
+            content,
+        };
+        let alg = self.config.eventlog_config.eventlog_algorithm;
+        let digest = log_entry.digest_with(alg);
+        {
+            // perform atomicly in this block
+            let mut eventlog = self.eventlog.lock().await;
+            self.attester
+                .extend_runtime_measurement(digest, pcr)
+                .await?;
 
-        self.attester
-            .extend_runtime_measurement(event_digest, register_index)
-            .await?;
-
-        eventlog.write_log(&log_entry.to_string())?;
-
+            eventlog.write_log(&log_entry)?;
+        }
         Ok(())
     }
 
@@ -218,5 +227,11 @@ impl AttestationAPIs for AttestationAgent {
     /// injection, return `InitdataResult::Unsupported`.
     async fn check_init_data(&mut self, init_data: &[u8]) -> Result<InitdataResult> {
         self.attester.check_init_data(init_data).await
+    }
+
+    /// Get the tee type of current platform. If no platform is detected,
+    /// `Sample` will be returned.
+    fn get_tee_type(&mut self) -> Tee {
+        self.tee
     }
 }

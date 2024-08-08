@@ -45,7 +45,7 @@ impl DataHub for Hub {
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>> {
         info!("get resource called: {uri}");
         // to initialize a get_resource_provider client we do not need the ProviderSettings.
-        let mut client = kms::new_getter("kbs", ProviderSettings::default())
+        let client = kms::new_getter("kbs", ProviderSettings::default())
             .await
             .map_err(|e| Error::KbsClient { source: e })?;
 

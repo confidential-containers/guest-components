@@ -29,7 +29,7 @@ impl Hub {
             }
         }
 
-        let mut kbs_client = KbcClient::new()
+        let kbs_client = KbcClient::new()
             .await
             .map_err(|e| Error::InitializationFailed(format!("kbs client creation failed: {e}")))?;
 
@@ -75,7 +75,8 @@ impl Hub {
 /// - it does not have any `..`
 /// - it does not have any `.`
 /// - it starts with [`KBS_RESOURCE_STORAGE_DIR`]
-/// To avoid unexpected path attacks, such as putting a file
+///
+/// The checks are done avoid unexpected path attacks, such as putting a file
 /// to random path in the guest.
 fn is_path_valid(path: &str) -> bool {
     path.starts_with(KBS_RESOURCE_STORAGE_DIR) && !path.split('/').any(|it| it == ".." || it == ".")

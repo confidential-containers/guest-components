@@ -104,21 +104,39 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         let request = Request {
             version: String::from(KBS_PROTOCOL_VERSION),
             tee,
-            extra_params: String::new(),
+            extra_params: serde_json::Value::String(String::new()),
         };
 
         debug!("send auth request to {auth_endpoint}");
 
-        let challenge = self
+        let resp = self
             .http_client
             .post(auth_endpoint)
             .header("Content-Type", "application/json")
             .json(&request)
             .send()
-            .await?
-            .json::<Challenge>()
             .await?;
 
+        match resp.status() {
+            reqwest::StatusCode::OK => {
+                debug!("KBS request OK");
+            }
+            reqwest::StatusCode::UNAUTHORIZED => {
+                let error_info = resp.json::<ErrorInformation>().await?;
+                bail!(
+                    "KBS request unauthorized, ErrorInformation: {:?}",
+                    error_info
+                );
+            }
+            _ => {
+                bail!(
+                    "KBS Server Internal Failed, Response: {:?}",
+                    resp.text().await?
+                );
+            }
+        }
+
+        let challenge = resp.json::<Challenge>().await?;
         debug!("get challenge: {challenge:#?}");
         let tee_pubkey = self.tee_key.export_pubkey()?;
         let runtime_data = json!({
@@ -135,7 +153,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         let attest_endpoint = format!("{}/{KBS_PREFIX}/attest", self.kbs_host_url);
         let attest = Attestation {
             tee_pubkey,
-            tee_evidence: evidence,
+            tee_evidence: serde_json::from_str(&evidence)?, // TODO: change attesters to return Value?
         };
 
         debug!("send attest request.");
@@ -198,10 +216,13 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
 #[async_trait]
 impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
     async fn get_resource(&mut self, resource_uri: ResourceUri) -> Result<Vec<u8>> {
-        let remote_url = format!(
+        let mut remote_url = format!(
             "{}/{KBS_PREFIX}/resource/{}/{}/{}",
             self.kbs_host_url, resource_uri.repository, resource_uri.r#type, resource_uri.tag
         );
+        if let Some(ref q) = resource_uri.query {
+            remote_url = format!("{}?{}", remote_url, q);
+        }
 
         for attempt in 1..=KBS_GET_RESOURCE_MAX_ATTEMPT {
             debug!("KBS client: trying to request KBS, attempt {attempt}");
@@ -342,10 +363,19 @@ mod test {
             .try_into()
             .expect("resource uri");
 
-        let resource = client
-            .get_resource(resource_uri)
-            .await
-            .expect("get resource");
+        let resource = match client.get_resource(resource_uri).await {
+            Ok(resource) => resource,
+            Err(e) => {
+                // Skip the test if the kbs server returned ProtocolVersion error. Any other
+                // error is treated as a failure.
+                assert!(e
+                    .to_string()
+                    .contains("KBS Client Protocol Version Mismatch"));
+                println!("NOTE: the test is skipped due to KBS protocol incompatibility.");
+                return ();
+            }
+        };
+
         assert_eq!(resource, CONTENT);
 
         let (token, key) = client.get_token().await.expect("get token");

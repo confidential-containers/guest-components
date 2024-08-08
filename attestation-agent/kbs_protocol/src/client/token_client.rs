@@ -31,10 +31,14 @@ impl KbsClient<Box<dyn TokenProvider>> {
 #[async_trait]
 impl KbsClientCapabilities for KbsClient<Box<dyn TokenProvider>> {
     async fn get_resource(&mut self, resource_uri: ResourceUri) -> Result<Vec<u8>> {
-        let remote_url = format!(
+        let mut remote_url = format!(
             "{}/{KBS_PREFIX}/resource/{}/{}/{}",
             self.kbs_host_url, resource_uri.repository, resource_uri.r#type, resource_uri.tag
         );
+        if let Some(ref q) = resource_uri.query {
+            remote_url = format!("{}?{}", remote_url, q);
+        }
+
         for attempt in 1..=KBS_GET_RESOURCE_MAX_ATTEMPT {
             debug!("KBS client: trying to request KBS, attempt {attempt}");
             if self.token.is_none() {

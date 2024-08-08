@@ -19,7 +19,7 @@ use tokio::fs;
 mod config;
 mod credential;
 
-use crate::{Annotations, Decrypter, Encrypter, Getter, ProviderSettings};
+use crate::{Annotations, Decrypter, Encrypter, ProviderSettings};
 use crate::{Error, Result};
 
 use super::super::annotations::*;
@@ -238,9 +238,8 @@ impl Decrypter for ClientKeyClient {
     }
 }
 
-#[async_trait]
-impl Getter for ClientKeyClient {
-    async fn get_secret(&mut self, name: &str, annotations: &Annotations) -> Result<Vec<u8>> {
+impl ClientKeyClient {
+    pub async fn get_secret(&self, name: &str, annotations: &Annotations) -> Result<Vec<u8>> {
         let secret_settings: AliSecretAnnotations =
             serde_json::from_value(Value::Object(annotations.clone())).map_err(|e| {
                 Error::AliyunKmsError(format!(
@@ -279,9 +278,7 @@ impl Getter for ClientKeyClient {
 
         Ok(secret_data)
     }
-}
 
-impl ClientKeyClient {
     const API_VERSION: &'static str = "dkms-gcs-0.2";
     const SIGNATURE_METHOD: &'static str = "RSA_PKCS1_SHA_256";
     const CONTENT_TYPE: &'static str = "application/x-protobuf";

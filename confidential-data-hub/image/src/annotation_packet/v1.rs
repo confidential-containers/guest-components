@@ -33,13 +33,12 @@ impl AnnotationPacket {
 
         let wrap_type = WrapType::try_from(&self.wrap_type[..])
             .map_err(|_| Error::UnknownWrapType(self.wrap_type.to_string()))?;
-        let mut kbs_client =
-            kms::new_getter(VaultProvider::Kbs.as_ref(), ProviderSettings::default())
-                .await
-                .map_err(|e| Error::KmsError {
-                    context: "create KBC failed",
-                    source: e,
-                })?;
+        let kbs_client = kms::new_getter(VaultProvider::Kbs.as_ref(), ProviderSettings::default())
+            .await
+            .map_err(|e| Error::KmsError {
+                context: "create KBC failed",
+                source: e,
+            })?;
         let name = self.kid.whole_uri();
         let kek = kbs_client
             .get_secret(&name, &Annotations::default())

@@ -42,6 +42,6 @@ pub enum Error {
     #[error("KBS resource not found: {0}")]
     ResourceNotFound(String),
 
-    #[error("request unautorized")]
+    #[error("request unauthorized")]
     UnAuthorized,
 }

@@ -10,7 +10,7 @@
 //! underlying implementation is used:
 //! - `rust-crypto`: Use purely rust.
 //! - `openssl`: Use openssl. If `rust-crypto` and `openssl` are both
-//! enabled, use `openssl`.
+//!   enabled, use `openssl`.
 //!
 //! ## Components
 //!

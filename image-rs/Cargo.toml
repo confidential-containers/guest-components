@@ -29,11 +29,11 @@ futures-util = "0.3"
 hex = { workspace = true, optional = true }
 kbc = { path = "../attestation-agent/kbc", default-features = false, optional = true }
 lazy_static = { workspace = true, optional = true }
-log = "0.4.14"
+log = "0.4.22"
 loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27" }
 nix = { workspace = true, optional = true, features = ["mount"] }
 oci-distribution = { version = "0.11", default-features = false, optional = true }
-oci-spec = "0.6.2"
+oci-spec = "0.6.7"
 ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = [
     "async-io",
 ], optional = true }
@@ -76,7 +76,7 @@ cfg-if.workspace = true
 nix = { workspace = true, features = ["user"] }
 ring.workspace = true
 rstest.workspace = true
-serial_test = "2.0.0"
+serial_test = "3.1.1"
 strum.workspace = true
 tempfile.workspace = true
 test-utils = { path = "libs/test-utils" }

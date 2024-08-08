@@ -7,11 +7,11 @@
 //!
 //! There are two different kinds of KBS clients:
 //! - `RCAR Client`: s.t. `KbsClient<Box<dyn EvidenceProvider>>`. It can
-//! perform RCAR handshaking, get token and get resource using the
-//! authenticated http session.
+//!   perform RCAR handshaking, get token and get resource using the
+//!   authenticated http session.
 //! - `Token Client`: s.t. `KbsClient<Box<dyn TokenProvider>>`. It is a
-//! simpler client. It can only get resource with a valid token as its
-//! authentication materials.
+//!   simpler client. It can only get resource with a valid token as its
+//!   authentication materials.
 
 #[cfg(feature = "background_check")]
 pub mod rcar_client;
@@ -48,7 +48,7 @@ pub struct KbsClient<T> {
     pub(crate) token: Option<Token>,
 }
 
-pub const KBS_PROTOCOL_VERSION: &str = "0.1.0";
+pub const KBS_PROTOCOL_VERSION: &str = "0.1.1";
 
 pub const KBS_GET_RESOURCE_MAX_ATTEMPT: u64 = 3;
 

@@ -62,3 +62,28 @@ flowchart LR
 ```
 
 For more details, please refer to [the guide](use-cases/secure-mount-with-aliyun-oss.md).
+
+### Block Device
+
+The [plugin](../storage/src/volume_type/blockdevice) provides ways to encrypt a block device and mount it to a specific mount point. Currently only support LUKS in [cryptsetup](https://gitlab.com/cryptsetup/cryptsetup/) for block device encryption.
+
+#### LUKS Encryption
+
+In this mode, the device would be encrypted as LUKS device first, and then mount it to a target path to store the data to protect the confidentiality and integrity of the data.
+
+The architecture diagram is
+
+```mermaid
+flowchart LR
+    A[Local/Network] -- mount --> B[Block Device]
+    subgraph TEE Guest
+        B -- Check if encrypted --> F{Is Encrypted?}
+        F -- No --> G[Encrypt by cryptsetup]
+        G -- encrypt --> C[LUKS Encrypted Block Device]
+        F -- Yes --> C[LUKS Encrypted Block Device]
+        C -- open and mapping --> D[Mapped Device]
+        D -- mount --> E[Target Path]
+    end
+```
+
+For more details, please refer to [the guide](use-cases/secure-mount-with-block-device.md).

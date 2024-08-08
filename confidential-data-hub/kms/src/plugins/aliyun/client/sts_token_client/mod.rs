@@ -95,11 +95,7 @@ impl StsTokenClient {
         })
     }
 
-    pub async fn get_secret(
-        &mut self,
-        name: &str,
-        secret_settings: &Annotations,
-    ) -> Result<Vec<u8>> {
+    pub async fn get_secret(&self, name: &str, secret_settings: &Annotations) -> Result<Vec<u8>> {
         let secret_settings: AliSecretAnnotations =
             serde_json::from_value(Value::Object(secret_settings.clone())).map_err(|_| {
                 Error::AliyunKmsError("illegal Secret annotations format".to_string())

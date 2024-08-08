@@ -22,6 +22,7 @@ pub struct ResourceUri {
     pub repository: String,
     pub r#type: String,
     pub tag: String,
+    pub query: Option<String>,
 }
 
 impl TryFrom<&str> for ResourceUri {
@@ -62,6 +63,7 @@ impl TryFrom<url::Url> for ResourceUri {
                 repository: values[0].into(),
                 r#type: values[1].into(),
                 tag: values[2].into(),
+                query: value.query().map(|s| s.to_string()),
             })
         } else {
             Err(RESOURCE_ID_ERROR_INFO)
@@ -103,6 +105,7 @@ impl ResourceUri {
                 repository: values[1].into(),
                 r#type: values[2].into(),
                 tag: values[3].into(),
+                query: None,
             })
         } else {
             bail!(
@@ -112,10 +115,14 @@ impl ResourceUri {
     }
 
     pub fn whole_uri(&self) -> String {
-        format!(
+        let uri = format!(
             "{SCHEME}://{}/{}/{}/{}",
             self.kbs_addr, self.repository, self.r#type, self.tag
-        )
+        );
+        match &self.query {
+            Some(q) => format!("{uri}?{q}"),
+            None => uri,
+        }
     }
 
     /// Only return the resource path. This function is used
@@ -148,49 +155,50 @@ impl<'de> Deserialize<'de> for ResourceUri {
 #[cfg(test)]
 mod tests {
     use super::ResourceUri;
+    use rstest::rstest;
 
-    const TEST_URL: &str = "kbs:///alice/cosign-key/213";
-
-    #[test]
-    fn deserialize() {
-        let resource: ResourceUri =
-            serde_json::from_str(&format!("\"{TEST_URL}\"")).expect("deserialize failed");
-        let expected = ResourceUri {
+    #[rstest]
+    #[case("kbs:///alice/cosign-key/213", "alice", "cosign-key", "213", None)]
+    #[case(
+        "kbs:///plugin/plugname/resourcename?param1=value1&param2=value2",
+        "plugin",
+        "plugname",
+        "resourcename",
+        Some("param1=value1&param2=value2")
+    )]
+    fn test_resource_uri_serialization_conversion(
+        #[case] url: &str,
+        #[case] repository: &str,
+        #[case] r#type: &str,
+        #[case] tag: &str,
+        #[case] query: Option<&str>,
+    ) {
+        let resource = ResourceUri {
             kbs_addr: "".into(),
-            repository: "alice".into(),
-            r#type: "cosign-key".into(),
-            tag: "213".into(),
-        };
-        assert_eq!(expected, resource);
-    }
-
-    #[test]
-    fn serialize() {
-        let rid = ResourceUri {
-            kbs_addr: "".into(),
-            repository: "alice".into(),
-            r#type: "cosign-key".into(),
-            tag: "213".into(),
-        };
-
-        let res = serde_json::to_string(&rid).expect("serialize failed");
-        assert_eq!(res, format!("\"{TEST_URL}\""));
-    }
-
-    #[test]
-    fn conversions() {
-        let rid = ResourceUri {
-            kbs_addr: "".into(),
-            repository: "alice".into(),
-            r#type: "cosign-key".into(),
-            tag: "213".into(),
+            repository: repository.into(),
+            r#type: r#type.into(),
+            tag: tag.into(),
+            query: query.map(|s| s.to_string()),
         };
 
-        let url = url::Url::try_from(TEST_URL).expect("failed to parse url");
-        let try_into: url::Url = rid.clone().try_into().expect("failed to try into url");
-        assert_eq!(url, try_into);
+        // Deserialization
+        let deserialized: ResourceUri =
+            serde_json::from_str(&format!("\"{url}\"")).expect("deserialize failed");
+        assert_eq!(deserialized, resource);
 
-        let rid_try_from = ResourceUri::try_from(url).expect("failed to try from url");
-        assert_eq!(rid, rid_try_from);
+        // Serialization
+        let serialized = serde_json::to_string(&resource).expect("deserialize failed");
+        assert_eq!(serialized, format!("\"{url}\""));
+
+        // Conversion to Url
+        let url_from_string = url::Url::try_from(url).expect("failed to parse url");
+        let url_from_resource: url::Url =
+            resource.clone().try_into().expect("failed to try into url");
+        assert_eq!(url_from_string, url_from_resource);
+
+        // Conversion to ResourceUri
+        let resource_from_url =
+            ResourceUri::try_from(url_from_string).expect("failed to try from url");
+        assert_eq!(resource_from_url, resource);
     }
 }
