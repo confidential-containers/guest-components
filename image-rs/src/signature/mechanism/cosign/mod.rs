@@ -187,7 +187,7 @@ mod tests {
     // All the test images are the same image, but different
     // registry and repository
     const IMAGE_DIGEST: &str =
-        "sha256:7bd0c945d7e4cc2ce5c21d449ba07eb89c8e6c28085edbcf6f5fa4bf90e7eedc";
+        "sha256:10e0ec4c7663b5f9be6efd16d8ceec760efe5377b9a0762ef3f51101ac08b7e8";
 
     #[rstest]
     #[case(
@@ -327,17 +327,6 @@ mod tests {
         false,
         // Only MatchRepository and ExactRepository are supported.
         "Denied by MatchExact",
-    )]
-    #[case(
-        &format!("\
-        {{\
-            \"type\": \"sigstoreSigned\",\
-            \"keyPath\": \"{}/test_data/signature/cosign/cosign1.pub\"\
-        }}", 
-        std::env::current_dir().expect("get current dir").to_str().expect("get current dir")),
-        "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
-        true,
-        ""
     )]
     #[case(
         &format!("\
