@@ -10,8 +10,7 @@ use attestation::attestation_agent_service_server::{
 use attestation::{
     BindInitDataRequest, BindInitDataResponse, ExtendRuntimeMeasurementRequest,
     ExtendRuntimeMeasurementResponse, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
-    GetTeeTypeResponse, GetTokenRequest, GetTokenResponse, UpdateConfigurationRequest,
-    UpdateConfigurationResponse,
+    GetTeeTypeResponse, GetTokenRequest, GetTokenResponse,
 };
 use attestation_agent::{AttestationAPIs, AttestationAgent};
 use log::{debug, error};
@@ -127,31 +126,6 @@ impl AttestationAgentService for AA {
         debug!("AA (grpc): init data binding successfully!");
 
         let reply = BindInitDataResponse {};
-
-        Result::Ok(Response::new(reply))
-    }
-
-    async fn update_configuration(
-        &self,
-        request: Request<UpdateConfigurationRequest>,
-    ) -> Result<Response<UpdateConfigurationResponse>, Status> {
-        let request = request.into_inner();
-
-        debug!("AA (grpc): update configuration ...");
-
-        self.inner
-            .update_configuration(&request.config)
-            .await
-            .map_err(|e| {
-                error!("AA (grpc): update configuration failed:\n{e:?}");
-                Status::internal(format!(
-                    "[ERROR:{AGENT_NAME}] AA update configuration failed"
-                ))
-            })?;
-
-        debug!("AA (grpc): update configuration successfully!");
-
-        let reply = UpdateConfigurationResponse {};
 
         Result::Ok(Response::new(reply))
     }

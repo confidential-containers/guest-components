@@ -7,7 +7,7 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use attester::{detect_tee_type, BoxedAttester};
 use kbs_types::Tee;
-use std::{io::Write, str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
 
 pub use attester::InitDataResult;
@@ -124,27 +124,6 @@ impl AttestationAgent {
             eventlog: None,
             tee,
         })
-    }
-
-    /// This is a workaround API for initdata in CoCo. Once
-    /// a better design is implemented we can deprecate the API.
-    /// See https://github.com/kata-containers/kata-containers/issues/9468
-    pub async fn update_configuration(&self, conf: &str) -> Result<()> {
-        let mut tmpfile = tempfile::NamedTempFile::new()?;
-        let _ = tmpfile.write(conf.as_bytes())?;
-        tmpfile.flush()?;
-
-        let config = Config::try_from(
-            tmpfile
-                .path()
-                .as_os_str()
-                .to_str()
-                .expect("tempfile will not create non-unicode char"),
-            // Here we can use `expect()` because tempfile crate will generate file name
-            // only including numbers and alphabet (0-9, a-z, A-Z)
-        )?;
-        *(self.config.write().await) = config;
-        Ok(())
     }
 }
 
