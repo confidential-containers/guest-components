@@ -56,7 +56,7 @@ strum.workspace = true
 strum_macros = "0.26"
 krata-tokio-tar = "0.4.0"
 tokio.workspace = true
-tokio-util = "0.7.10"
+tokio-util = "0.7.11"
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 url = "2.5.2"
