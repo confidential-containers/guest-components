@@ -34,7 +34,7 @@ pub enum EnvelopeError {
     Decrypt(#[from] anyhow::Error),
 }
 
-/// An Envelope is a secret encrypted by digital envelope mechanism.
+/// An Envelope Secret is a secret encrypted by digital envelope mechanism.
 /// It can be described as
 ///
 /// {Enc(KMS, DEK), Enc(DEK, secret), paras...}
@@ -43,7 +43,7 @@ pub enum EnvelopeError {
 ///
 /// The fields inside this Struct will be flattened in a Secret wrapper.
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct Envelope {
+pub struct EnvelopeSecret {
     /// key id to locate the key inside KMS
     pub key_id: String,
 
@@ -69,7 +69,7 @@ pub struct Envelope {
     pub annotations: Annotations,
 }
 
-impl Envelope {
+impl EnvelopeSecret {
     pub(crate) async fn unseal(&self) -> Result<Vec<u8>> {
         // get encryption key
         let enc_dek = STANDARD.decode(&self.encrypted_key).map_err(|e| {
