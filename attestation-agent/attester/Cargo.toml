@@ -27,7 +27,7 @@ sev = { version = "3.1.1", default-features = false, features = [
 ], optional = true }
 sha2.workspace = true
 strum.workspace = true
-tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.20", optional = true }
+tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.21", optional = true }
 thiserror.workspace = true
 # TODO: change it to "0.1", once released.
 csv-rs = { git = "https://github.com/openanolis/csv-rs", rev = "b74aa8c", optional = true }
