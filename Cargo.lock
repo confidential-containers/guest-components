@@ -3317,7 +3317,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c2a198fb6b0eada2a8df47933734e6d35d350665a33a3593d7164fa52c75c19"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.4",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -5939,7 +5939,7 @@ checksum = "69758bda2e78f098e4ccb393021a0963bb3442eac05f135c30f61b7370bbafae"
 [[package]]
 name = "tdx-attest-rs"
 version = "0.1.2"
-source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.20#621a0850fccf531a8d8131f9293a760925f55730"
+source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.21#e945c58bff60bb96e4daca57b73c93f96b14418a"
 dependencies = [
  "tdx-attest-sys",
 ]
@@ -5947,7 +5947,7 @@ dependencies = [
 [[package]]
 name = "tdx-attest-sys"
 version = "0.1.0"
-source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.20#621a0850fccf531a8d8131f9293a760925f55730"
+source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.21#e945c58bff60bb96e4daca57b73c93f96b14418a"
 dependencies = [
  "bindgen 0.59.2",
 ]
