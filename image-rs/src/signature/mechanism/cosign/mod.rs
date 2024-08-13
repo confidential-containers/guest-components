@@ -7,7 +7,7 @@
 
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
-use oci_distribution::secrets::RegistryAuth;
+use oci_client::secrets::RegistryAuth;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "signature-cosign")]
@@ -137,15 +137,18 @@ impl CosignParameters {
         };
 
         let image_ref = OciReference::from_str(&image.reference.whole())?;
-        let auth = &Auth::from(auth);
+        let auth = match auth {
+            RegistryAuth::Anonymous => Auth::Anonymous,
+            RegistryAuth::Basic(username, pass) => Auth::Basic(username.clone(), pass.clone()),
+        };
 
         let mut client = ClientBuilder::default().build()?;
 
         // Get the cosign signature "image"'s uri and the signed image's digest
-        let (cosign_image, source_image_digest) = client.triangulate(&image_ref, auth).await?;
+        let (cosign_image, source_image_digest) = client.triangulate(&image_ref, &auth).await?;
 
         let signature_layers = client
-            .trusted_signature_layers(auth, &source_image_digest, &cosign_image)
+            .trusted_signature_layers(&auth, &source_image_digest, &cosign_image)
             .await?;
 
         // By default, the hashing algorithm is SHA256
@@ -180,7 +183,7 @@ mod tests {
         policy_requirement::PolicyReqType, ref_match::PolicyReqMatchType,
     };
 
-    use oci_distribution::Reference;
+    use oci_client::Reference;
     use rstest::rstest;
     use serial_test::serial;
 
@@ -235,10 +238,7 @@ mod tests {
             .set_manifest_digest(IMAGE_DIGEST)
             .expect("Set manifest digest failed.");
         let res = parameter
-            .verify_signature_and_get_payload(
-                &image,
-                &oci_distribution::secrets::RegistryAuth::Anonymous,
-            )
+            .verify_signature_and_get_payload(&image, &oci_client::secrets::RegistryAuth::Anonymous)
             .await;
         assert!(
             res.is_ok(),
@@ -349,7 +349,7 @@ mod tests {
     ) {
         let policy_requirement: PolicyReqType =
             serde_json::from_str(policy).expect("deserialize PolicyReqType failed.");
-        let reference = oci_distribution::Reference::try_from(image_reference)
+        let reference = oci_client::Reference::try_from(image_reference)
             .expect("deserialize OCI Reference failed.");
 
         let mut image = Image::default_with_reference(reference);
@@ -359,10 +359,7 @@ mod tests {
 
         if let PolicyReqType::Cosign(scheme) = policy_requirement {
             let res = scheme
-                .allows_image(
-                    &mut image,
-                    &oci_distribution::secrets::RegistryAuth::Anonymous,
-                )
+                .allows_image(&mut image, &oci_client::secrets::RegistryAuth::Anonymous)
                 .await;
             assert_eq!(
                 res.is_ok(),

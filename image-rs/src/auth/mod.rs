@@ -8,7 +8,7 @@ pub mod auth_config;
 use std::collections::HashMap;
 
 use anyhow::*;
-use oci_distribution::{secrets::RegistryAuth, Reference};
+use oci_client::{secrets::RegistryAuth, Reference};
 use serde::{Deserialize, Serialize};
 
 /// Hard-coded ResourceDescription of `auth.json`.

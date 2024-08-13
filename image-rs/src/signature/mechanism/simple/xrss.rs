@@ -5,7 +5,7 @@
 
 use anyhow::*;
 use base64::Engine;
-use oci_distribution::{secrets::RegistryAuth, Reference};
+use oci_client::{secrets::RegistryAuth, Reference};
 use reqwest::{header::HeaderValue, Client};
 use serde::*;
 

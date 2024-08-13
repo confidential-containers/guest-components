@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, bail, Result};
-use oci_distribution::manifest::{OciDescriptor, OciImageManifest};
-use oci_distribution::secrets::RegistryAuth;
-use oci_distribution::Reference;
+use oci_client::manifest::{OciDescriptor, OciImageManifest};
+use oci_client::secrets::RegistryAuth;
+use oci_client::Reference;
 use oci_spec::image::{ImageConfiguration, Os};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};

@@ -130,7 +130,7 @@ mod tests {
     use crate::signature::policy::ref_match::PolicyReqMatchType;
 
     use super::*;
-    use oci_distribution::Reference;
+    use oci_client::Reference;
     use serde_json::json;
 
     const SIG_PAYLOAD_JSON: &str = r#"{

@@ -4,7 +4,7 @@
 //
 
 use anyhow::*;
-use oci_distribution::Reference;
+use oci_client::Reference;
 
 pub mod digest;
 

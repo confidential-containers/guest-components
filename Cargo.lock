@@ -2754,7 +2754,7 @@ dependencies = [
  "nix 0.28.0",
  "nydus-api",
  "nydus-service",
- "oci-distribution",
+ "oci-client",
  "oci-spec",
  "ocicrypt-rs",
  "prost 0.11.9",
@@ -3862,6 +3862,31 @@ dependencies = [
  "cfg-if",
  "libc",
  "sgx_types",
+]
+
+[[package]]
+name = "oci-client"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce611137700c3ec179993d5357dddde194bd706690b361f2f6b9235d4e29830e"
+dependencies = [
+ "bytes",
+ "chrono",
+ "futures-util",
+ "http 1.1.0",
+ "http-auth",
+ "jwt",
+ "lazy_static",
+ "olpc-cjson",
+ "regex",
+ "reqwest 0.12.4",
+ "serde",
+ "serde_json",
+ "sha2 0.10.8",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "unicase",
 ]
 
 [[package]]

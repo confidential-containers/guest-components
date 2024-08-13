@@ -4,7 +4,7 @@
 //
 
 use anyhow::{anyhow, bail, Result};
-use oci_distribution::Reference;
+use oci_client::Reference;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -195,7 +195,7 @@ pub async fn get_sigs_from_specific_sigstore(sigstore_uri: url::Url) -> Result<V
 #[cfg(test)]
 mod tests {
     use super::*;
-    use oci_distribution::Reference;
+    use oci_client::Reference;
     use std::convert::TryFrom;
     use std::env;
     use std::fs;

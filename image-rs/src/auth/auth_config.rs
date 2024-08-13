@@ -10,7 +10,7 @@ use std::collections::HashMap;
 
 use anyhow::*;
 use base64::Engine;
-use oci_distribution::{secrets::RegistryAuth, Reference};
+use oci_client::{secrets::RegistryAuth, Reference};
 
 use super::DockerAuthConfig;
 
@@ -120,7 +120,7 @@ fn auth_keys_for_key(key: &str) -> Vec<String> {
 mod tests {
     use std::collections::HashMap;
 
-    use oci_distribution::{secrets::RegistryAuth, Reference};
+    use oci_client::{secrets::RegistryAuth, Reference};
     use rstest::rstest;
 
     use crate::auth::DockerAuthConfig;

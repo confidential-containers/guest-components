@@ -4,7 +4,7 @@
 //
 
 use anyhow::{bail, Result};
-use oci_distribution::Reference;
+use oci_client::Reference;
 use serde::*;
 
 use crate::signature::{image, policy::ErrorInfo};
@@ -147,7 +147,7 @@ mod tests {
     fn test_policy_matches_docker_reference() {
         struct TestData<'a> {
             match_policy: PolicyReqMatchType,
-            origin_reference: oci_distribution::Reference,
+            origin_reference: oci_client::Reference,
             signed_reference: &'a str,
         }
 
@@ -158,7 +158,7 @@ mod tests {
                         "type": "matchExact"
                     }"#
                 ).unwrap(),
-                origin_reference: oci_distribution::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
+                origin_reference: oci_client::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
                 signed_reference: "docker.io/example/busybox:latest",
             },
             TestData {
@@ -167,7 +167,7 @@ mod tests {
                         "type": "matchRepoDigestOrExact"
                     }"#
                 ).unwrap(),
-                origin_reference: oci_distribution::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
+                origin_reference: oci_client::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
                 signed_reference: "docker.io/example/busybox:latest",
             },
             TestData {
@@ -176,7 +176,7 @@ mod tests {
                         "type": "matchRepoDigestOrExact"
                     }"#
                 ).unwrap(),
-                origin_reference: oci_distribution::Reference::try_from(
+                origin_reference: oci_client::Reference::try_from(
                     "docker.io/example/busybox@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
                 ).unwrap(),
                 signed_reference: "docker.io/example/busybox:tag",
@@ -187,7 +187,7 @@ mod tests {
                         "type": "matchRepository"
                     }"#
                 ).unwrap(),
-                origin_reference: oci_distribution::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
+                origin_reference: oci_client::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
                 signed_reference: "docker.io/example/busybox:tag",
             },
             TestData {
@@ -197,7 +197,7 @@ mod tests {
                         "dockerReference": "docker.io/mylib/busybox:latest"
                     }"#
                 ).unwrap(),
-                origin_reference: oci_distribution::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
+                origin_reference: oci_client::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
                 signed_reference: "docker.io/mylib/busybox:latest",
             },
             TestData {
@@ -207,7 +207,7 @@ mod tests {
                         "dockerRepository": "docker.io/mylib/busybox"
                     }"#
                 ).unwrap(),
-                origin_reference: oci_distribution::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
+                origin_reference: oci_client::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
                 signed_reference: "docker.io/mylib/busybox:tag",
             },
             TestData {
@@ -218,7 +218,7 @@ mod tests {
                         "signedPrefix": "quay.io"
                     }"#
                 ).unwrap(),
-                origin_reference: oci_distribution::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
+                origin_reference: oci_client::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
                 signed_reference: "quay.io/example/busybox:latest",
             },
         ];
@@ -230,7 +230,7 @@ mod tests {
                         "type": "matchExact"
                     }"#
                 ).unwrap(),
-                origin_reference: oci_distribution::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
+                origin_reference: oci_client::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
                 signed_reference: "docker.io/example/busybox:tag",
             },
             TestData {
@@ -239,7 +239,7 @@ mod tests {
                         "type": "matchExact"
                     }"#
                 ).unwrap(),
-                origin_reference: oci_distribution::Reference::try_from(
+                origin_reference: oci_client::Reference::try_from(
                     "docker.io/example/busybox@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
                 ).unwrap(),
                 signed_reference: "docker.io/example/busybox@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
@@ -250,7 +250,7 @@ mod tests {
                         "type": "matchRepoDigestOrExact"
                     }"#
                 ).unwrap(),
-                origin_reference: oci_distribution::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
+                origin_reference: oci_client::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
                 signed_reference: "docker.io/example/busybox:tag",
             },
             TestData {
@@ -260,7 +260,7 @@ mod tests {
                         "dockerReference": "docker.io/mylib/busybox:latest"
                     }"#
                 ).unwrap(),
-                origin_reference: oci_distribution::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
+                origin_reference: oci_client::Reference::try_from("docker.io/example/busybox:latest").unwrap(),
                 signed_reference: "docker.io/example/busybox:latest",
             },
         ];
