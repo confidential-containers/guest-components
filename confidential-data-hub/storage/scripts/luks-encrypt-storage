@@ -99,15 +99,15 @@ if [[ -n "$device_name" && -b "$device_path" ]]; then
 		fi
 	fi
 
-	cryptsetup luksOpen -d "$storage_key_path" "$device_path" $opened_device_name
+	cryptsetup luksOpen -d "$storage_key_path" "$device_path" "$opened_device_name"
 	rm "$storage_key_path"
 
 	if [ "$data_integrity" == "false" ]; then
-		mkfs.ext4 /dev/mapper/$opened_device_name -E lazy_journal_init
+		mkfs.ext4 "/dev/mapper/$opened_device_name" -E lazy_journal_init
 	else
 		# mkfs.ext4 doesn't perform whole sector writes and this will cause checksum failures
 		# with an unwiped integrity device. Therefore, first perform a dry run.
-		output=$(mkfs.ext4 /dev/mapper/$opened_device_name -F -n)
+		output=$(mkfs.ext4 "/dev/mapper/$opened_device_name" -F -n)
 
 		# The above command will produce output like
 		# mke2fs 1.46.5 (30-Dec-2021)
@@ -136,18 +136,18 @@ if [[ -n "$device_name" && -b "$device_path" ]]; then
 		echo "Clearing page at $block_num"
 		# Zero out the page
 		dd if=/dev/zero bs=4k count=1 oflag=direct \
-		of=/dev/mapper/$opened_device_name seek="$block_num"
+		of="/dev/mapper/$opened_device_name" seek="$block_num"
 		done
 
 		# Now perform the actual ext4 format. Use lazy_journal_init so that the journal is
 		# initialized on demand. This is safe for ephemeral storage since we don't expect
 		# ephemeral storage to survice a power cycle.
-		mkfs.ext4 /dev/mapper/$opened_device_name -E lazy_journal_init
+		mkfs.ext4 "/dev/mapper/$opened_device_name" -E lazy_journal_init
 	fi
 
-	[ ! -d "$mount_point" ] && mkdir -p $mount_point
+	[ ! -d "$mount_point" ] && mkdir -p "$mount_point"
 
-	mount /dev/mapper/$opened_device_name $mount_point
+	mount "/dev/mapper/$opened_device_name" "$mount_point"
 else
 	die "Invalid device: '$device_path'"
 fi
