@@ -123,6 +123,10 @@ if [[ -n "$device_name" && -b "$device_path" ]]; then
 		# Find list of blocks
 		block_nums=$(echo  "$blocks_list" | grep -Eo '[0-9]{4,}' | sort -n)
 
+		if [ -z "$block_nums" ]; then
+			die "Block numbers not found"
+		fi
+
 		# Add zero to list of blocks
 		block_nums="0 $block_nums"
 
