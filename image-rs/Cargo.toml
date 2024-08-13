@@ -32,7 +32,7 @@ lazy_static = { workspace = true, optional = true }
 log = "0.4.22"
 loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27" }
 nix = { workspace = true, optional = true, features = ["mount"] }
-oci-distribution = { version = "0.11", default-features = false, optional = true }
+oci-client = { version = "0.12", default-features = false, optional = true }
 oci-spec = "0.6.7"
 ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = [
     "async-io",
@@ -94,7 +94,7 @@ default = [
     "snapshot-overlayfs",
     "signature-cosign-rustls",
     "keywrap-grpc",
-    "oci-distribution-rustls",
+    "oci-client-rustls",
 ]
 
 # This will be based on `ring` dependency
@@ -105,7 +105,7 @@ kata-cc-rustls-tls = [
     "signature-cosign-rustls",
     "signature-simple",
     "getresource",
-    "oci-distribution/rustls-tls",
+    "oci-client/rustls-tls",
     "reqwest?/rustls-tls",
 ]
 enclave-cc-cckbc-rustls-tls = [
@@ -115,7 +115,7 @@ enclave-cc-cckbc-rustls-tls = [
     "signature-simple",
     "getresource",
     "signature-cosign-rustls",
-    "oci-distribution-rustls",
+    "oci-client-rustls",
     "reqwest?/rustls-tls",
 ]
 
@@ -127,7 +127,7 @@ kata-cc-native-tls = [
     "signature-cosign-native",
     "signature-simple",
     "getresource",
-    "oci-distribution/native-tls",
+    "oci-client/native-tls",
     "reqwest?/default-tls",
 ]
 enclave-cc-cckbc-native-tls = [
@@ -137,7 +137,7 @@ enclave-cc-cckbc-native-tls = [
     "signature-simple",
     "getresource",
     "signature-cosign-native",
-    "oci-distribution-native",
+    "oci-client-native",
     "reqwest?/default-tls",
 ]
 
@@ -183,8 +183,8 @@ signature-cosign = ["signature", "futures"]
 signature-cosign-rustls = ["signature-cosign", "sigstore/cosign-rustls-tls"]
 signature-cosign-native = ["signature-cosign", "sigstore/cosign-native-tls"]
 
-oci-distribution-rustls = ["oci-distribution/rustls-tls"]
-oci-distribution-native = ["oci-distribution/native-tls"]
+oci-client-rustls = ["oci-client/rustls-tls"]
+oci-client-native = ["oci-client/native-tls"]
 
 signature-simple-xrss = ["signature-simple", "dep:reqwest"]
 signature-simple = ["signature", "sequoia-openpgp", "serde_yaml"]

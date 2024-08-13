@@ -4,7 +4,7 @@
 //
 
 use anyhow::{anyhow, Result};
-use oci_distribution::secrets::RegistryAuth;
+use oci_client::secrets::RegistryAuth;
 use serde::*;
 
 use crate::signature::image::Image;

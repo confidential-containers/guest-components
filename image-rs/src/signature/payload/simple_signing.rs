@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 
 use anyhow::{bail, Result};
-use oci_distribution::Reference;
+use oci_client::Reference;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 

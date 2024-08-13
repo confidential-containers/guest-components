@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
-use oci_distribution::manifest::{self, OciDescriptor};
+use oci_client::manifest::{self, OciDescriptor};
 use tokio::io::AsyncRead;
 
 /// Image layer encryption type information and associated methods to decrypt image layers.

@@ -5,7 +5,7 @@
 
 use anyhow::*;
 use async_trait::async_trait;
-use oci_distribution::secrets::RegistryAuth;
+use oci_client::secrets::RegistryAuth;
 use serde::*;
 use strum_macros::Display;
 use strum_macros::EnumString;

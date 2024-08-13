@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use nydus_api::BuildTimeInfo;
-use oci_distribution::manifest;
+use oci_client::manifest;
 
 pub fn is_nydus_data_layer(desc: &manifest::OciDescriptor) -> bool {
     desc.annotations

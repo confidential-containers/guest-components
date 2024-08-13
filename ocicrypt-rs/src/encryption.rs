@@ -1,7 +1,7 @@
 // Copyright The ocicrypt Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::io::Read;
 
 use anyhow::{anyhow, Result};
@@ -16,7 +16,7 @@ use crate::keywrap::KeyWrapper;
 use crate::{get_key_wrapper, KEY_WRAPPERS_ANNOTATIONS};
 
 lazy_static! {
-    static ref DEFAULT_ANNOTATION_MAP: HashMap<String, String> = HashMap::new();
+    static ref DEFAULT_ANNOTATION_MAP: BTreeMap<String, String> = BTreeMap::new();
 }
 
 // EncryptLayerFinalizer can get the annotations to set for the encrypted layer
@@ -30,9 +30,9 @@ impl EncLayerFinalizer {
     pub fn finalize_annotations(
         &mut self,
         ec: &EncryptConfig,
-        annotations: Option<&HashMap<String, String>>,
+        annotations: Option<&BTreeMap<String, String>>,
         finalizer: Option<&mut impl EncryptionFinalizer>,
-    ) -> Result<HashMap<String, String>> {
+    ) -> Result<BTreeMap<String, String>> {
         let mut priv_opts = vec![];
         let mut pub_opts = vec![];
         if let Some(finalizer) = finalizer {
@@ -41,7 +41,7 @@ impl EncLayerFinalizer {
             pub_opts = serde_json::to_vec(&self.lbco.public)?;
         }
 
-        let mut new_annotations = HashMap::new();
+        let mut new_annotations = BTreeMap::new();
         let mut keys_wrapped = false;
         for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
             let mut b64_annotations = String::new();
@@ -131,7 +131,7 @@ fn pre_unwrap_key(
     ))
 }
 
-fn get_layer_pub_opts(annotations: &HashMap<String, String>) -> Result<Vec<u8>> {
+fn get_layer_pub_opts(annotations: &BTreeMap<String, String>) -> Result<Vec<u8>> {
     if let Some(pub_opts) = annotations.get("org.opencontainers.image.enc.pubopts") {
         return Ok(base64::engine::general_purpose::STANDARD.decode(pub_opts)?);
     }
@@ -145,7 +145,7 @@ fn get_layer_pub_opts(annotations: &HashMap<String, String>) -> Result<Vec<u8>> 
 
 fn get_layer_key_opts(
     annotations_id: &str,
-    annotations: &HashMap<String, String>,
+    annotations: &BTreeMap<String, String>,
 ) -> Option<String> {
     // TODO: what happens if there are multiple key-providers?
     let value = if annotations_id
@@ -172,7 +172,7 @@ fn get_layer_key_opts(
 /// Unwrap layer decryption key from OCI descriptor annotations.
 pub fn decrypt_layer_key_opts_data(
     dc: &DecryptConfig,
-    annotations: Option<&HashMap<String, String>>,
+    annotations: Option<&BTreeMap<String, String>>,
 ) -> Result<Vec<u8>> {
     let mut priv_key_given = false;
     let annotations = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);
@@ -209,7 +209,7 @@ pub fn decrypt_layer_key_opts_data(
 pub fn encrypt_layer<'a, R: 'a + Read>(
     ec: &EncryptConfig,
     layer_reader: R,
-    annotations: Option<&HashMap<String, String>>,
+    annotations: Option<&BTreeMap<String, String>>,
     digest: &str,
 ) -> Result<(
     Option<impl Read + EncryptionFinalizer + 'a>,
@@ -253,7 +253,7 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
 pub fn decrypt_layer<R: Read>(
     dc: &DecryptConfig,
     layer_reader: R,
-    annotations: Option<&HashMap<String, String>>,
+    annotations: Option<&BTreeMap<String, String>>,
     unwrap_only: bool,
 ) -> Result<(Option<impl Read>, String)> {
     let priv_opts_data = decrypt_layer_key_opts_data(dc, annotations)?;
@@ -283,7 +283,7 @@ pub fn decrypt_layer<R: Read>(
 #[cfg(feature = "async-io")]
 pub fn async_decrypt_layer<R: tokio::io::AsyncRead + Send>(
     layer_reader: R,
-    annotations: Option<&HashMap<String, String>>,
+    annotations: Option<&BTreeMap<String, String>>,
     priv_opts_data: &[u8],
 ) -> Result<(impl tokio::io::AsyncRead + Send, String)> {
     let annotations = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);

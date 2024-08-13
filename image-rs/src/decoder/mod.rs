@@ -6,7 +6,7 @@ use std::fmt;
 use std::io;
 
 use anyhow::{bail, Result};
-use oci_distribution::manifest;
+use oci_client::manifest;
 use oci_spec::image::MediaType;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, BufReader};

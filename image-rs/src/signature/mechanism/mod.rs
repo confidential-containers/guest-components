@@ -16,7 +16,7 @@
 
 use anyhow::*;
 use async_trait::async_trait;
-use oci_distribution::secrets::RegistryAuth;
+use oci_client::secrets::RegistryAuth;
 
 use crate::config::Paths;
 

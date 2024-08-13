@@ -4,7 +4,7 @@
 //
 
 use anyhow::{bail, Result};
-use oci_distribution::secrets::RegistryAuth;
+use oci_client::secrets::RegistryAuth;
 use serde::Deserialize;
 use std::collections::HashMap;
 use strum_macros::{Display, EnumString};

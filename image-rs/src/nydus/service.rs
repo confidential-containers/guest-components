@@ -5,7 +5,7 @@
 use anyhow::{anyhow, bail, Result};
 use log::{error, info};
 use nix::mount::MsFlags;
-use oci_distribution::Reference;
+use oci_client::Reference;
 use oci_spec::image::Os;
 use std::convert::TryInto;
 use std::path::Path;

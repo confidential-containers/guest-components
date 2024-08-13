@@ -11,7 +11,7 @@ pub mod policy;
 use crate::{config::Paths, signature::policy::Policy};
 
 use anyhow::Result;
-use oci_distribution::secrets::RegistryAuth;
+use oci_client::secrets::RegistryAuth;
 
 /// `allows_image` will check all the `PolicyRequirements` suitable for
 /// the given image. The `PolicyRequirements` is defined in
@@ -25,7 +25,7 @@ pub async fn allows_image(
 ) -> Result<()> {
     use crate::{resource, signature::image::Image};
 
-    let reference = oci_distribution::Reference::try_from(image_reference)?;
+    let reference = oci_client::Reference::try_from(image_reference)?;
     let mut image = Image::default_with_reference(reference);
     image.set_manifest_digest(image_digest)?;
 

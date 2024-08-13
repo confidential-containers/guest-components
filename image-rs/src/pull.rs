@@ -4,8 +4,8 @@
 
 use anyhow::{anyhow, bail, Result};
 use futures_util::stream::{self, StreamExt, TryStreamExt};
-use oci_distribution::manifest::{OciDescriptor, OciImageManifest};
-use oci_distribution::{secrets::RegistryAuth, Client, Reference};
+use oci_client::manifest::{OciDescriptor, OciImageManifest};
+use oci_client::{secrets::RegistryAuth, Client, Reference};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -21,7 +21,7 @@ use crate::stream::stream_processing;
 /// The PullClient connects to remote OCI registry, pulls the container image,
 /// and save the image layers under data_dir and return the layer meta info.
 pub struct PullClient<'a> {
-    /// `oci-distribution` client to talk with remote OCI registry.
+    /// `oci-client` to talk with remote OCI registry.
     pub client: Client,
 
     /// OCI registry auth info.
@@ -100,7 +100,7 @@ impl<'a> PullClient<'a> {
                     .pull_blob_stream(&self.reference, &layer)
                     .await
                     .map_err(|e| anyhow!("failed to async pull blob stream {}", e.to_string()))?;
-                let layer_reader = StreamReader::new(layer_stream);
+                let layer_reader = StreamReader::new(layer_stream.stream);
                 self.async_handle_layer(
                     layer,
                     diff_ids[i].clone(),
@@ -201,7 +201,7 @@ mod tests {
     use crate::decoder::ERR_BAD_MEDIA_TYPE;
     use crate::ERR_BAD_UNCOMPRESSED_DIGEST;
     use flate2::write::GzEncoder;
-    use oci_distribution::manifest::IMAGE_CONFIG_MEDIA_TYPE;
+    use oci_client::manifest::IMAGE_CONFIG_MEDIA_TYPE;
     use oci_spec::image::{ImageConfiguration, MediaType};
     use std::io::Write;
 
