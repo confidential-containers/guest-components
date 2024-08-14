@@ -26,7 +26,13 @@ RUN apt-get update && apt-get install -y \
 	pkg-config
 RUN git clone https://github.com/containers/skopeo $GOPATH/src/github.com/containers/skopeo 
 WORKDIR $GOPATH/src/github.com/containers/skopeo
-RUN git checkout v1.14.1
+# The dependency on skopeo is quite fragile as there are several versions of
+# the project that would generate an encrypted image with a gzip header that
+# Confidential Containers simply cannot deal with.
+#
+# For now, let's use f64a376, from Aug 14th 2024 as, empirically, we know that
+# it works.
+RUN git reset --hard f64a376
 ENV DISABLE_DOCS=1
 RUN make bin/skopeo
 RUN make install
