@@ -324,29 +324,12 @@ impl KeyProviderKeyWrapper {
         }
         #[cfg(feature = "keywrap-keyprovider-ttrpc")]
         {
+            use anyhow::Context;
+
             let ttrpc = ttrpc.to_string();
-            let handler = std::thread::spawn(move || {
-                create_async_runtime()?.block_on(async {
-                    KeyProviderKeyWrapProtocolOutput::from_ttrpc(_input, &ttrpc, OpKey::Wrap)
-                        .map_err(|e| format!("{e}"))
-                })
-            });
-            let protocol_output = match handler.join() {
-                Ok(Ok(v)) => v,
-                Ok(Err(e)) => {
-                    return Err(anyhow!(
-                        "keyprovider: ttrpc provider failed to execute {} operation: {}",
-                        OpKey::Wrap,
-                        e
-                    ));
-                }
-                Err(e) => {
-                    return Err(anyhow!(
-                        "keyprovider: ttrpc provider failed to execute {} operation: {e:?}",
-                        OpKey::Wrap,
-                    ));
-                }
-            };
+            let protocol_output =
+                KeyProviderKeyWrapProtocolOutput::from_ttrpc(_input, &ttrpc, OpKey::Wrap)
+                    .context("keyprovider: ttrpc provider failed to execute Wrap")?;
             if let Some(result) = protocol_output.key_wrap_results {
                 Ok(result.annotation)
             } else {
@@ -422,23 +405,11 @@ impl KeyProviderKeyWrapper {
         ));
         #[cfg(feature = "keywrap-keyprovider-ttrpc")]
         {
+            use anyhow::Context;
             let ttrpc = ttrpc.to_string();
-            let handler = std::thread::spawn(move || {
-                create_async_runtime()?.block_on(async {
-                    KeyProviderKeyWrapProtocolOutput::from_ttrpc(_input, &ttrpc, OpKey::Unwrap)
-                        .map_err(|e| {
-                            format!(
-                                "keyprovider: ttrpc provider failed to execute {} operation: {e}",
-                                OpKey::Wrap,
-                            )
-                        })
-                })
-            });
-            match handler.join() {
-                Ok(Ok(v)) => Ok(v),
-                Ok(Err(e)) => bail!("failed to unwrap key by ttrpc, {e}"),
-                Err(e) => bail!("failed to unwrap key by ttrpc, {e:?}"),
-            }
+
+            KeyProviderKeyWrapProtocolOutput::from_ttrpc(_input, &ttrpc, OpKey::Unwrap)
+                .context("keyprovider: failed to unwrap key by ttrpc")
         }
     }
 
@@ -563,7 +534,6 @@ impl KeyWrapper for KeyProviderKeyWrapper {
 
 #[cfg(any(
     feature = "keywrap-keyprovider-grpc",
-    feature = "keywrap-keyprovider-ttrpc",
     feature = "keywrap-keyprovider-native"
 ))]
 fn create_async_runtime() -> std::result::Result<tokio::runtime::Runtime, String> {

@@ -143,9 +143,18 @@ impl<'a> PullClient<'a> {
 
         let decryptor = Decryptor::from_media_type(&layer.media_type);
         if decryptor.is_encrypted() {
-            let decrypt_key = decryptor
-                .get_decrypt_key(&layer, decrypt_config)
-                .map_err(|e| anyhow!("failed to get decrypt key {}", e.to_string()))?;
+            let decrypt_key = tokio::task::spawn_blocking({
+                let decryptor = decryptor.clone();
+                let layer = layer.clone();
+                let decrypt_config = decrypt_config.as_ref().map(|inner| inner.to_string());
+                move || {
+                    decryptor
+                        .get_decrypt_key(&layer, &decrypt_config.as_deref())
+                        .context("failed to get decrypt key")
+                }
+            })
+            .await
+            .context("decryptor thread failed to execute")??;
             let plaintext_layer = decryptor
                 .async_get_plaintext_layer(layer_reader, &layer, &decrypt_key)
                 .map_err(|e| anyhow!("failed to async_get_plaintext_layer: {:?}", e))?;
