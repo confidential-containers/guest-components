@@ -6,6 +6,8 @@ on:
 
 jobs:
   build-and-push-images:
+    permissions:
+      packages: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -25,4 +27,4 @@ jobs:
           file: ./attestation-agent/docker/Dockerfile.keyprovider
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/confidential-containers/coco-keyprovider:${{ github.ref_name }}, ghcr.io/confidential-containers/coco-keyprovider:latest
+          tags: ghcr.io/confidential-containers/staged-images/coco-keyprovider:${{ github.sha }}, ghcr.io/confidential-containers/staged-images/coco-keyprovider:latest

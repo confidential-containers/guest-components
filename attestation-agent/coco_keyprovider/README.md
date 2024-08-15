@@ -29,7 +29,7 @@ This example will encrypt an image from docker/library and buffer the resulting 
 ```bash
 head -c 32 /dev/urandom | openssl enc > image_key
 mkdir output
-docker run -v "$PWD/output:/output" ghcr.io/confidential-containers/coco-keyprovider /encrypt.sh \
+docker run -v "$PWD/output:/output" ghcr.io/confidential-containers/staged-images/coco-keyprovider:latest /encrypt.sh \
 	-k "$(base64 < image_key)" \
 	-i kbs:///some/key/id \
 	-s docker://nginx:stable \
@@ -45,7 +45,7 @@ skopeo copy dir:output docker://ghcr.io/confidential-containers/nginx-encrypted
 Alternatively, an authorization file can be mounted to the container to be able to access private registries directly:
 
 ```bash
-docker run -v ~/.docker/config.json:/root/.docker/config.json ghcr.io/confidential-containers/coco-keyprovider /encrypt.sh \
+docker run -v ~/.docker/config.json:/root/.docker/config.json ghcr.io/confidential-containers/staged-images/coco-keyprovider:latest /encrypt.sh \
 	-k "$(base64 < image_key)" \
 	-i kbs:///some/key/id \
 	-s docker://private.registry.io/nginx:stable \
