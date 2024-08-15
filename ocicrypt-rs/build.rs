@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .include("src/utils")
             .rust_protobuf()
             .customize(ttrpc_codegen::Customize {
-                async_all: true,
+                async_all: false,
                 ..Default::default()
             })
             .rust_protobuf_customize(ttrpc_codegen::ProtobufCustomize::default().gen_mod_rs(false))
