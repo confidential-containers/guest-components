@@ -43,7 +43,7 @@ impl Secret {
 
     // TODO: check the signature
     pub fn from_signed_base64_string(secret: String) -> Result<Self> {
-        let sections: Vec<_> = secret.split(".").collect();
+        let sections: Vec<_> = secret.split('.').collect();
 
         if sections.len() != 4 {
             return Err(SecretError::ParseFailed("malformed input sealed secret"));

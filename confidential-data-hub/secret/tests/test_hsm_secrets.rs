@@ -3,16 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{
-    fs::File,
-    io::{Read, Write},
-    process::Command,
-};
-
-use assert_cmd::prelude::*;
-use rand::{distributions::Uniform, Rng};
-use tempfile::tempdir;
-
 #[test]
 #[ignore]
 #[cfg(feature = "aliyun")]
@@ -49,7 +39,16 @@ fn test_cli_envelope_secret_lifetime_ehsm() {
     key_lifetime(base_dir, key_id, sub_cmd);
 }
 
+#[cfg(any(feature = "aliyun", feature = "ehsm"))]
 fn key_lifetime(base_dir: &str, key_id: &str, sub_cmd: Vec<&str>) {
+    use assert_cmd::prelude::*;
+    use std::{
+        fs::File,
+        io::{Read, Write},
+        process::Command,
+    };
+    use tempfile::tempdir;
+
     let dir = tempdir().expect("create temdir fail");
     let dir_path = dir.path();
 
@@ -116,7 +115,10 @@ fn key_lifetime(base_dir: &str, key_id: &str, sub_cmd: Vec<&str>) {
     assert_eq!(original_secret, unsealed_secret);
 }
 
+#[cfg(any(feature = "aliyun", feature = "ehsm"))]
 fn create_random_secret() -> Vec<u8> {
+    use rand::{distributions::Uniform, Rng};
+
     let data_length = 10;
 
     let mut rng = rand::thread_rng();
