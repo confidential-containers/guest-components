@@ -78,7 +78,7 @@ if [[ -n "$device_name" && -b "$device_path" ]]; then
 	if [ "$is_encrypted" == "false" ]; then
 
 		if [ "$data_integrity" == "false" ]; then
-			echo "YES" | cryptsetup luksFormat --type luks2 "$device_path" --sector-size 4096 \
+			cryptsetup --batch-mode luksFormat --type luks2 "$device_path" --sector-size 4096 \
 				--cipher aes-xts-plain64 "$storage_key_path"
 		else
 				# Wiping a device is a time consuming operation. To avoid a full wipe, integritysetup
@@ -93,7 +93,7 @@ if [[ -n "$device_name" && -b "$device_path" ]]; then
 				# The way to propery format the non-wiped dm-integrity device is to figure out which pages
 				# mkfs.ext4 will write to and then to write to those pages before hand so that they will
 				# have valid integrity tags.
-			echo "YES" | cryptsetup luksFormat --type luks2 "$device_path" --sector-size 4096 \
+			cryptsetup --batch-mode luksFormat --type luks2 "$device_path" --sector-size 4096 \
 				--cipher aes-xts-plain64 --integrity hmac-sha256 "$storage_key_path" \
 				--integrity-no-wipe
 		fi
