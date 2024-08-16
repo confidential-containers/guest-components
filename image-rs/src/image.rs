@@ -361,6 +361,17 @@ impl ImageClient {
             .image_db
             .insert(image_data.id.clone(), image_data.clone());
 
+        let meta_file = self
+            .config
+            .work_dir
+            .join(METAFILE)
+            .to_string_lossy()
+            .to_string();
+        self.meta_store
+            .write()
+            .await
+            .write_to_file(&meta_file)
+            .context("update meta store failed")?;
         Ok(image_id)
     }
 
