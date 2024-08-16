@@ -2,14 +2,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use futures_util::stream::{self, StreamExt, TryStreamExt};
 use oci_client::manifest::{OciDescriptor, OciImageManifest};
 use oci_client::{secrets::RegistryAuth, Client, Reference};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tokio_util::io::StreamReader;
 
 use crate::decoder::Compression;
@@ -71,7 +71,7 @@ impl<'a> PullClient<'a> {
         bootstrap_desc: OciDescriptor,
         diff_id: String,
         decrypt_config: &Option<&str>,
-        meta_store: Arc<Mutex<MetaStore>>,
+        meta_store: Arc<RwLock<MetaStore>>,
     ) -> Result<LayerMeta> {
         let layer_metas = self
             .async_pull_layers(vec![bootstrap_desc], &[diff_id], decrypt_config, meta_store)
@@ -89,7 +89,7 @@ impl<'a> PullClient<'a> {
         layer_descs: Vec<OciDescriptor>,
         diff_ids: &[String],
         decrypt_config: &Option<&str>,
-        meta_store: Arc<Mutex<MetaStore>>,
+        meta_store: Arc<RwLock<MetaStore>>,
     ) -> Result<Vec<LayerMeta>> {
         let meta_store = &meta_store;
         let layer_metas: Vec<(usize, LayerMeta)> = stream::iter(layer_descs)
@@ -126,10 +126,9 @@ impl<'a> PullClient<'a> {
         diff_id: String,
         decrypt_config: &Option<&str>,
         layer_reader: (impl tokio::io::AsyncRead + Unpin + Send),
-        ms: Arc<Mutex<MetaStore>>,
+        ms: Arc<RwLock<MetaStore>>,
     ) -> Result<LayerMeta> {
-        let layer_db = &ms.lock().await.layer_db;
-        if let Some(layer_meta) = layer_db.get(&layer.digest) {
+        if let Some(layer_meta) = ms.read().await.layer_db.get(&layer.digest) {
             return Ok(layer_meta.clone());
         }
 
@@ -245,7 +244,7 @@ mod tests {
                     image_manifest.layers.clone(),
                     diff_ids,
                     &None,
-                    Arc::new(Mutex::new(MetaStore::default())),
+                    Arc::new(RwLock::new(MetaStore::default())),
                 )
                 .await;
             if let Ok(layer_metas) = result {
@@ -292,7 +291,7 @@ mod tests {
                 image_manifest.layers.clone(),
                 diff_ids,
                 &None,
-                Arc::new(Mutex::new(MetaStore::default()))
+                Arc::new(RwLock::new(MetaStore::default()))
             );
         }
     }
@@ -337,7 +336,7 @@ mod tests {
                 image_manifest.layers.clone(),
                 diff_ids,
                 &Some(decrypt_config.to_str().unwrap()),
-                Arc::new(Mutex::new(MetaStore::default()))
+                Arc::new(RwLock::new(MetaStore::default()))
             );
         }
     }
@@ -383,7 +382,7 @@ mod tests {
         let (_image_manifest, _image_digest, _image_config) = client.pull_manifest().await.unwrap();
 
         let meta_store = MetaStore::default();
-        let ms = Arc::new(Mutex::new(meta_store));
+        let ms = Arc::new(RwLock::new(meta_store));
 
         #[derive(Debug)]
         struct TestData<'a> {
@@ -479,7 +478,7 @@ mod tests {
                     crate::nydus::utils::get_nydus_bootstrap_desc(&image_manifest).unwrap(),
                     diff_ids[diff_ids.len() - 1].to_string(),
                     &None,
-                    Arc::new(Mutex::new(MetaStore::default())),
+                    Arc::new(RwLock::new(MetaStore::default())),
                 )
                 .await
                 .is_ok());

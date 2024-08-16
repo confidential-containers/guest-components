@@ -12,7 +12,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 use crate::bundle::{create_runtime_config, BUNDLE_ROOTFS};
 use crate::config::{ImageConfig, CONFIGURATION_FILE_NAME, DEFAULT_WORK_DIR};
@@ -86,7 +86,7 @@ pub struct ImageClient {
     pub config: ImageConfig,
 
     /// The metadata database for `image-rs` client.
-    pub meta_store: Arc<Mutex<MetaStore>>,
+    pub meta_store: Arc<RwLock<MetaStore>>,
 
     /// The supported snapshots for `image-rs` client.
     pub snapshots: HashMap<SnapshotType, Box<dyn Snapshotter>>,
@@ -103,7 +103,7 @@ impl Default for ImageClient {
 
         ImageClient {
             config,
-            meta_store: Arc::new(Mutex::new(meta_store)),
+            meta_store: Arc::new(RwLock::new(meta_store)),
             snapshots,
         }
     }
@@ -163,7 +163,7 @@ impl ImageClient {
 
         Self {
             config,
-            meta_store: Arc::new(Mutex::new(meta_store)),
+            meta_store: Arc::new(RwLock::new(meta_store)),
             snapshots,
         }
     }
@@ -263,7 +263,7 @@ impl ImageClient {
         #[cfg(feature = "nydus")]
         if utils::is_nydus_image(&image_manifest) {
             {
-                let m = self.meta_store.lock().await;
+                let m = self.meta_store.read().await;
                 if let Some(image_data) = &m.image_db.get(&id) {
                     return service::create_nydus_bundle(image_data, bundle_dir, snapshot);
                 }
@@ -302,7 +302,7 @@ impl ImageClient {
 
         // If image has already been populated, just create the bundle.
         {
-            let m = self.meta_store.lock().await;
+            let m = self.meta_store.read().await;
             if let Some(image_data) = &m.image_db.get(&id) {
                 return create_bundle(image_data, bundle_dir, snapshot);
             }
@@ -345,7 +345,7 @@ impl ImageClient {
             .map(|layer| (layer.compressed_digest.clone(), layer.clone()))
             .collect();
 
-        self.meta_store.lock().await.layer_db.extend(layer_db);
+        self.meta_store.write().await.layer_db.extend(layer_db);
         if unique_layers_len != image_data.layer_metas.len() {
             bail!(
                 " {} layers failed to pull",
@@ -356,7 +356,7 @@ impl ImageClient {
         let image_id = create_bundle(&image_data, bundle_dir, snapshot)?;
 
         self.meta_store
-            .lock()
+            .write()
             .await
             .image_db
             .insert(image_data.id.clone(), image_data.clone());
@@ -397,7 +397,7 @@ impl ImageClient {
             .map(|layer| (layer.compressed_digest.clone(), layer.clone()))
             .collect();
 
-        self.meta_store.lock().await.layer_db.extend(layer_db);
+        self.meta_store.write().await.layer_db.extend(layer_db);
 
         if image_data.layer_metas.is_empty() {
             bail!("Failed to pull the bootstrap");
@@ -429,7 +429,7 @@ impl ImageClient {
         .await?;
 
         self.meta_store
-            .lock()
+            .write()
             .await
             .image_db
             .insert(image_data.id.clone(), image_data.clone());
@@ -557,7 +557,7 @@ mod tests {
         }
 
         assert_eq!(
-            image_client.meta_store.lock().await.image_db.len(),
+            image_client.meta_store.read().await.image_db.len(),
             oci_images.len()
         );
     }
@@ -591,7 +591,7 @@ mod tests {
         }
 
         assert_eq!(
-            image_client.meta_store.lock().await.image_db.len(),
+            image_client.meta_store.read().await.image_db.len(),
             nydus_images.len()
         );
     }
@@ -630,7 +630,7 @@ mod tests {
         assert!(bundle2_dir.path().join("rootfs").join("hello").exists());
 
         // Assert that image is pulled only once.
-        assert_eq!(image_client.meta_store.lock().await.image_db.len(), 1);
+        assert_eq!(image_client.meta_store.read().await.image_db.len(), 1);
     }
 
     #[tokio::test]
@@ -655,7 +655,7 @@ mod tests {
 
         // Lock the meta store and write its data to a file in the second work directory
         // This allows the second image client to reuse the meta store and layers from the first image client
-        let store = image_client.meta_store.lock().await;
+        let store = image_client.meta_store.read().await;
         let meta_store_path = work_dir_2.path().to_str().unwrap().to_owned() + "/meta_store.json";
         store.write_to_file(&meta_store_path).unwrap();
 
