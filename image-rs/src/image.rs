@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use oci_client::manifest::{OciDescriptor, OciImageManifest};
 use oci_client::secrets::RegistryAuth;
 use oci_client::Reference;
@@ -113,21 +113,14 @@ impl ImageClient {
     ///Initialize metadata database and supported snapshots.
     pub fn init_snapshots(
         config: &ImageConfig,
-        meta_store: &MetaStore,
+        _meta_store: &MetaStore,
     ) -> HashMap<SnapshotType, Box<dyn Snapshotter>> {
         let mut snapshots = HashMap::new();
 
         #[cfg(feature = "snapshot-overlayfs")]
         {
-            let overlay_index = meta_store
-                .snapshot_db
-                .get(&SnapshotType::Overlay.to_string())
-                .unwrap_or(&0);
             let data_dir = config.work_dir.join(SnapshotType::Overlay.to_string());
-            let overlayfs = OverlayFs::new(
-                data_dir,
-                std::sync::atomic::AtomicUsize::new(*overlay_index),
-            );
+            let overlayfs = OverlayFs::new(data_dir);
             snapshots.insert(
                 SnapshotType::Overlay,
                 Box::new(overlayfs) as Box<dyn Snapshotter>,
@@ -135,7 +128,7 @@ impl ImageClient {
         }
         #[cfg(feature = "snapshot-unionfs")]
         {
-            let occlum_unionfs_index = meta_store
+            let occlum_unionfs_index = _meta_store
                 .snapshot_db
                 .get(&SnapshotType::OcclumUnionfs.to_string())
                 .unwrap_or(&0);
