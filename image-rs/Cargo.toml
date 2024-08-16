@@ -190,7 +190,7 @@ oci-client-native = ["oci-client/native-tls"]
 signature-simple-xrss = ["signature-simple", "dep:reqwest"]
 signature-simple = ["signature", "sequoia-openpgp", "serde_yaml"]
 
-snapshot-overlayfs = ["nix"]
+snapshot-overlayfs = ["hex", "nix"]
 snapshot-unionfs = ["nix", "dircpy", "fs_extra"]
 
 getresource = ["lazy_static", "cfg-if"]

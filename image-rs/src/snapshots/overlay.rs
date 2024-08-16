@@ -4,22 +4,23 @@
 
 use anyhow::{anyhow, Result};
 use nix::mount::MsFlags;
+use sha2::{Digest, Sha256};
 use std::fs;
+use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::SystemTime;
 
 use crate::snapshots::{MountPoint, SnapshotType, Snapshotter};
 
 #[derive(Debug)]
 pub struct OverlayFs {
     data_dir: PathBuf,
-    index: AtomicUsize,
 }
 
 impl OverlayFs {
     /// Create a new instance of [OverlayFs].
-    pub fn new(data_dir: PathBuf, index: AtomicUsize) -> Self {
-        OverlayFs { data_dir, index }
+    pub fn new(data_dir: PathBuf) -> Self {
+        OverlayFs { data_dir }
     }
 }
 
@@ -27,8 +28,28 @@ impl Snapshotter for OverlayFs {
     fn mount(&mut self, layer_path: &[&str], mount_path: &Path) -> Result<MountPoint> {
         let fs_type = SnapshotType::Overlay.to_string();
         let overlay_lowerdir = layer_path.join(":");
-        let index = self.index.fetch_add(1, Ordering::SeqCst).to_string();
-        let work_dir = self.data_dir.join(index);
+
+        // derive an index path from the mount materials and current time
+        let mount_index = {
+            let mut hasher = Sha256::new();
+            hasher.update(layer_path.concat());
+            hasher.update(mount_path.as_os_str().as_bytes());
+
+            let now = SystemTime::now();
+            let since_unix_epoch = now
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .expect("Time went backwards");
+
+            let secs = since_unix_epoch.as_secs();
+            let nanos = since_unix_epoch.subsec_nanos();
+
+            let mut time_seed = Vec::new();
+            time_seed.extend(&secs.to_le_bytes());
+            time_seed.extend(&nanos.to_le_bytes());
+            hasher.update(time_seed);
+            hex::encode(hasher.finalize())
+        };
+        let work_dir = self.data_dir.join(mount_index);
         let overlay_upperdir = work_dir.join("upperdir");
         let overlay_workdir = work_dir.join("workdir");
 
