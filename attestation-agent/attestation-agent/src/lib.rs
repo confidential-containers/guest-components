@@ -79,7 +79,7 @@ pub trait AttestationAPIs {
 pub struct AttestationAgent {
     config: Config,
     attester: BoxedAttester,
-    eventlog: Mutex<EventLog>,
+    eventlog: Option<Mutex<EventLog>>,
     tee: Tee,
 }
 
@@ -90,16 +90,15 @@ impl AttestationAgent {
             let pcr = self.config.eventlog_config.init_pcr;
             let init_entry = LogEntry::Init(alg);
             let digest = init_entry.digest_with(alg);
-            {
-                // perform atomicly in this block
-                let mut eventlog = self.eventlog.lock().await;
-                self.attester
-                    .extend_runtime_measurement(digest, pcr)
-                    .await
-                    .context("write INIT entry")?;
+            let mut eventlog = EventLog::new()?;
+            eventlog.write_log(&init_entry).context("write INIT log")?;
 
-                eventlog.write_log(&init_entry).context("write INIT log")?;
-            };
+            self.attester
+                .extend_runtime_measurement(digest, pcr)
+                .await
+                .context("write INIT entry")?;
+
+            self.eventlog = Some(Mutex::new(eventlog));
         }
 
         Ok(())
@@ -120,12 +119,11 @@ impl AttestationAgent {
 
         let tee = detect_tee_type();
         let attester: BoxedAttester = tee.try_into()?;
-        let eventlog = Mutex::new(EventLog::new()?);
 
         Ok(AttestationAgent {
             config,
             attester,
-            eventlog,
+            eventlog: None,
             tee,
         })
     }
@@ -192,9 +190,9 @@ impl AttestationAPIs for AttestationAgent {
         content: &str,
         register_index: Option<u64>,
     ) -> Result<()> {
-        if !self.config.eventlog_config.enable_eventlog {
+        let Some(ref eventlog) = self.eventlog else {
             bail!("Extend eventlog not enabled when launching!");
-        }
+        };
 
         let pcr = register_index.unwrap_or_else(|| {
             let pcr = self.config.eventlog_config.init_pcr;
@@ -213,7 +211,7 @@ impl AttestationAPIs for AttestationAgent {
         let digest = log_entry.digest_with(alg);
         {
             // perform atomicly in this block
-            let mut eventlog = self.eventlog.lock().await;
+            let mut eventlog = eventlog.lock().await;
             self.attester
                 .extend_runtime_measurement(digest, pcr)
                 .await?;
