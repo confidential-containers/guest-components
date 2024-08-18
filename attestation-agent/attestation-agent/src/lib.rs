@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use attester::{detect_tee_type, BoxedAttester};
 use kbs_types::Tee;
 use std::{io::Write, str::FromStr};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 
 pub use attester::InitdataResult;
 
@@ -55,14 +55,14 @@ use crate::config::Config;
 #[async_trait]
 pub trait AttestationAPIs {
     /// Get attestation Token
-    async fn get_token(&mut self, token_type: &str) -> Result<Vec<u8>>;
+    async fn get_token(&self, token_type: &str) -> Result<Vec<u8>>;
 
     /// Get TEE hardware signed evidence that includes the runtime data.
-    async fn get_evidence(&mut self, runtime_data: &[u8]) -> Result<Vec<u8>>;
+    async fn get_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>>;
 
     /// Extend runtime measurement register
     async fn extend_runtime_measurement(
-        &mut self,
+        &self,
         domain: &str,
         operation: &str,
         content: &str,
@@ -70,14 +70,14 @@ pub trait AttestationAPIs {
     ) -> Result<()>;
 
     /// Check the initdata binding
-    async fn check_init_data(&mut self, init_data: &[u8]) -> Result<InitdataResult>;
+    async fn check_init_data(&self, init_data: &[u8]) -> Result<InitdataResult>;
 
-    fn get_tee_type(&mut self) -> Tee;
+    fn get_tee_type(&self) -> Tee;
 }
 
 /// Attestation agent to provide attestation service.
 pub struct AttestationAgent {
-    config: Config,
+    config: RwLock<Config>,
     attester: BoxedAttester,
     eventlog: Option<Mutex<EventLog>>,
     tee: Tee,
@@ -85,9 +85,11 @@ pub struct AttestationAgent {
 
 impl AttestationAgent {
     pub async fn init(&mut self) -> Result<()> {
-        if self.config.eventlog_config.enable_eventlog {
-            let alg = self.config.eventlog_config.eventlog_algorithm;
-            let pcr = self.config.eventlog_config.init_pcr;
+        let config = self.config.read().await;
+        if config.eventlog_config.enable_eventlog {
+            let alg = config.eventlog_config.eventlog_algorithm;
+            let pcr = config.eventlog_config.init_pcr;
+
             let init_entry = LogEntry::Init(alg);
             let digest = init_entry.digest_with(alg);
             let mut eventlog = EventLog::new()?;
@@ -116,6 +118,7 @@ impl AttestationAgent {
                 Config::new()?
             }
         };
+        let config = RwLock::new(config);
 
         let tee = detect_tee_type();
         let attester: BoxedAttester = tee.try_into()?;
@@ -131,7 +134,7 @@ impl AttestationAgent {
     /// This is a workaround API for initdata in CoCo. Once
     /// a better design is implemented we can deprecate the API.
     /// See https://github.com/kata-containers/kata-containers/issues/9468
-    pub fn update_configuration(&mut self, conf: &str) -> Result<()> {
+    pub async fn update_configuration(&self, conf: &str) -> Result<()> {
         let mut tmpfile = tempfile::NamedTempFile::new()?;
         let _ = tmpfile.write(conf.as_bytes())?;
         tmpfile.flush()?;
@@ -145,34 +148,36 @@ impl AttestationAgent {
             // Here we can use `expect()` because tempfile crate will generate file name
             // only including numbers and alphabet (0-9, a-z, A-Z)
         )?;
-        self.config = config;
+        *(self.config.write().await) = config;
         Ok(())
     }
 }
 
 #[async_trait]
 impl AttestationAPIs for AttestationAgent {
-    async fn get_token(&mut self, token_type: &str) -> Result<Vec<u8>> {
+    async fn get_token(&self, token_type: &str) -> Result<Vec<u8>> {
         let token_type = TokenType::from_str(token_type).context("Unsupported token type")?;
 
         match token_type {
             #[cfg(feature = "kbs")]
             token::TokenType::Kbs => {
-                token::kbs::KbsTokenGetter::new(&self.config.token_configs.kbs)
+                token::kbs::KbsTokenGetter::new(&self.config.read().await.token_configs.kbs)
                     .get_token()
                     .await
             }
             #[cfg(feature = "coco_as")]
             token::TokenType::CoCoAS => {
-                token::coco_as::CoCoASTokenGetter::new(&self.config.token_configs.coco_as)
-                    .get_token()
-                    .await
+                token::coco_as::CoCoASTokenGetter::new(
+                    &self.config.read().await.token_configs.coco_as,
+                )
+                .get_token()
+                .await
             }
         }
     }
 
     /// Get TEE hardware signed evidence that includes the runtime data.
-    async fn get_evidence(&mut self, runtime_data: &[u8]) -> Result<Vec<u8>> {
+    async fn get_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>> {
         let evidence = self.attester.get_evidence(runtime_data.to_vec()).await?;
         Ok(evidence.into_bytes())
     }
@@ -184,7 +189,7 @@ impl AttestationAPIs for AttestationAgent {
     /// would have its own strategy to map a PCR index into a architectual RTMR index. If not given, a default one
     /// will be used.
     async fn extend_runtime_measurement(
-        &mut self,
+        &self,
         domain: &str,
         operation: &str,
         content: &str,
@@ -194,20 +199,27 @@ impl AttestationAPIs for AttestationAgent {
             bail!("Extend eventlog not enabled when launching!");
         };
 
-        let pcr = register_index.unwrap_or_else(|| {
-            let pcr = self.config.eventlog_config.init_pcr;
-            debug!("No PCR index provided, use default {pcr}");
-            pcr
-        });
+        let (pcr, log_entry, alg) = {
+            let config = self.config.read().await;
 
-        let content: Content = content.try_into()?;
+            let pcr = register_index.unwrap_or_else(|| {
+                let pcr = config.eventlog_config.init_pcr;
+                debug!("No PCR index provided, use default {pcr}");
+                pcr
+            });
 
-        let log_entry = LogEntry::Event {
-            domain,
-            operation,
-            content,
+            let content: Content = content.try_into()?;
+
+            let log_entry = LogEntry::Event {
+                domain,
+                operation,
+                content,
+            };
+            let alg = config.eventlog_config.eventlog_algorithm;
+
+            (pcr, log_entry, alg)
         };
-        let alg = self.config.eventlog_config.eventlog_algorithm;
+
         let digest = log_entry.digest_with(alg);
         {
             // perform atomicly in this block
@@ -223,13 +235,13 @@ impl AttestationAPIs for AttestationAgent {
 
     /// Check the initdata binding. If current platform does not support initdata
     /// injection, return `InitdataResult::Unsupported`.
-    async fn check_init_data(&mut self, init_data: &[u8]) -> Result<InitdataResult> {
+    async fn check_init_data(&self, init_data: &[u8]) -> Result<InitdataResult> {
         self.attester.check_init_data(init_data).await
     }
 
     /// Get the tee type of current platform. If no platform is detected,
     /// `Sample` will be returned.
-    fn get_tee_type(&mut self) -> Tee {
+    fn get_tee_type(&self) -> Tee {
         self.tee
     }
 }
