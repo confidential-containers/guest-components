@@ -9,7 +9,6 @@ use anyhow::*;
 use async_trait::async_trait;
 use attestation_agent::{AttestationAPIs, AttestationAgent};
 use log::{debug, error};
-use tokio::sync::Mutex;
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -26,7 +25,7 @@ use crate::ttrpc_protocol::attestation_agent_ttrpc::{
 pub const AGENT_NAME: &str = "attestation-agent";
 
 pub struct AA {
-    inner: Mutex<AttestationAgent>,
+    inner: AttestationAgent,
 }
 
 #[async_trait]
@@ -38,18 +37,13 @@ impl AttestationAgentService for AA {
     ) -> ::ttrpc::Result<GetTokenResponse> {
         debug!("AA (ttrpc): get token ...");
 
-        let mut attestation_agent = self.inner.lock().await;
-
-        let token = attestation_agent
-            .get_token(&req.TokenType)
-            .await
-            .map_err(|e| {
-                error!("AA (ttrpc): get token failed\n {e:?}");
-                let mut error_status = ::ttrpc::proto::Status::new();
-                error_status.set_code(Code::INTERNAL);
-                error_status.set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get token failed"));
-                ::ttrpc::Error::RpcStatus(error_status)
-            })?;
+        let token = self.inner.get_token(&req.TokenType).await.map_err(|e| {
+            error!("AA (ttrpc): get token failed\n {e:?}");
+            let mut error_status = ::ttrpc::proto::Status::new();
+            error_status.set_code(Code::INTERNAL);
+            error_status.set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get token failed"));
+            ::ttrpc::Error::RpcStatus(error_status)
+        })?;
 
         debug!("AA (ttrpc): Get token successfully!");
 
@@ -66,9 +60,8 @@ impl AttestationAgentService for AA {
     ) -> ::ttrpc::Result<GetEvidenceResponse> {
         debug!("AA (ttrpc): get evidence ...");
 
-        let mut attestation_agent = self.inner.lock().await;
-
-        let evidence = attestation_agent
+        let evidence = self
+            .inner
             .get_evidence(&req.RuntimeData)
             .await
             .map_err(|e| {
@@ -95,9 +88,7 @@ impl AttestationAgentService for AA {
     ) -> ::ttrpc::Result<ExtendRuntimeMeasurementResponse> {
         debug!("AA (ttrpc): extend runtime measurement ...");
 
-        let mut attestation_agent = self.inner.lock().await;
-
-        attestation_agent
+        self.inner
             .extend_runtime_measurement(
                 &req.Domain,
                 &req.Operation,
@@ -127,10 +118,9 @@ impl AttestationAgentService for AA {
     ) -> ::ttrpc::Result<UpdateConfigurationResponse> {
         debug!("AA (ttrpc): update configuration ...");
 
-        let mut attestation_agent = self.inner.lock().await;
-
-        attestation_agent
+        self.inner
             .update_configuration(&req.config)
+            .await
             .map_err(|e| {
                 error!("AA (ttrpc): update configuration failed:\n {e:?}");
                 let mut error_status = ::ttrpc::proto::Status::new();
@@ -153,9 +143,7 @@ impl AttestationAgentService for AA {
     ) -> ::ttrpc::Result<GetTeeTypeResponse> {
         debug!("AA (ttrpc): get tee type ...");
 
-        let mut attestation_agent = self.inner.lock().await;
-
-        let tee = attestation_agent.get_tee_type();
+        let tee = self.inner.get_tee_type();
 
         let res = serde_json::to_string(&tee)
             .map_err(|e| {
@@ -177,8 +165,7 @@ impl AttestationAgentService for AA {
 }
 
 pub fn start_ttrpc_service(aa: AttestationAgent) -> Result<HashMap<String, Service>> {
-    let service =
-        Box::new(AA { inner: aa.into() }) as Box<dyn AttestationAgentService + Send + Sync>;
+    let service = Box::new(AA { inner: aa }) as Box<dyn AttestationAgentService + Send + Sync>;
 
     let service = Arc::new(service);
     let get_resource_service = create_attestation_agent_service(service);

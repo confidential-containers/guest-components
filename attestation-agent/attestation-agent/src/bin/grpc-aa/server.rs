@@ -16,7 +16,6 @@ use attestation::{
 use attestation_agent::{AttestationAPIs, AttestationAgent};
 use log::{debug, error};
 use std::net::SocketAddr;
-use tokio::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Status};
 
 mod attestation {
@@ -26,7 +25,7 @@ mod attestation {
 pub const AGENT_NAME: &str = "attestation-agent";
 
 pub struct AA {
-    inner: Mutex<AttestationAgent>,
+    inner: AttestationAgent,
 }
 
 #[tonic::async_trait]
@@ -37,11 +36,10 @@ impl AttestationAgentService for AA {
     ) -> Result<Response<GetTokenResponse>, Status> {
         let request = request.into_inner();
 
-        let mut attestation_agent = self.inner.lock().await;
-
         debug!("AA (grpc): get token ...");
 
-        let token = attestation_agent
+        let token = self
+            .inner
             .get_token(&request.token_type)
             .await
             .map_err(|e| {
@@ -62,11 +60,10 @@ impl AttestationAgentService for AA {
     ) -> Result<Response<GetEvidenceResponse>, Status> {
         let request = request.into_inner();
 
-        let mut attestation_agent = self.inner.lock().await;
-
         debug!("AA (grpc): get evidence ...");
 
-        let evidence = attestation_agent
+        let evidence = self
+            .inner
             .get_evidence(&request.runtime_data)
             .await
             .map_err(|e| {
@@ -87,11 +84,9 @@ impl AttestationAgentService for AA {
     ) -> Result<Response<ExtendRuntimeMeasurementResponse>, Status> {
         let request = request.into_inner();
 
-        let mut attestation_agent = self.inner.lock().await;
-
         debug!("AA (grpc): extend runtime measurement ...");
 
-        attestation_agent
+        self.inner
             .extend_runtime_measurement(
                 &request.domain,
                 &request.operation,
@@ -119,11 +114,9 @@ impl AttestationAgentService for AA {
     ) -> Result<Response<CheckInitDataResponse>, Status> {
         let request = request.into_inner();
 
-        let mut attestation_agent = self.inner.lock().await;
-
         debug!("AA (grpc): check init data ...");
 
-        attestation_agent
+        self.inner
             .check_init_data(&request.digest)
             .await
             .map_err(|e| {
@@ -144,12 +137,11 @@ impl AttestationAgentService for AA {
     ) -> Result<Response<UpdateConfigurationResponse>, Status> {
         let request = request.into_inner();
 
-        let mut attestation_agent = self.inner.lock().await;
-
         debug!("AA (grpc): update configuration ...");
 
-        attestation_agent
+        self.inner
             .update_configuration(&request.config)
+            .await
             .map_err(|e| {
                 error!("AA (grpc): update configuration failed:\n{e:?}");
                 Status::internal(format!(
@@ -168,11 +160,9 @@ impl AttestationAgentService for AA {
         &self,
         _request: Request<GetTeeTypeRequest>,
     ) -> Result<Response<GetTeeTypeResponse>, Status> {
-        let mut attestation_agent = self.inner.lock().await;
-
         debug!("AA (grpc): get tee type ...");
 
-        let tee = attestation_agent.get_tee_type();
+        let tee = self.inner.get_tee_type();
 
         let tee = serde_json::to_string(&tee)
             .map_err(|e| {
@@ -191,7 +181,7 @@ impl AttestationAgentService for AA {
 }
 
 pub async fn start_grpc_service(socket: SocketAddr, aa: AttestationAgent) -> Result<()> {
-    let service = AA { inner: aa.into() };
+    let service = AA { inner: aa };
     Server::builder()
         .add_service(AttestationAgentServiceServer::new(service))
         .serve(socket)
