@@ -52,11 +52,6 @@ impl AttestationAgentServiceClient {
         ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "CheckInitData", cres);
     }
 
-    pub async fn update_configuration(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::UpdateConfigurationRequest) -> ::ttrpc::Result<super::attestation_agent::UpdateConfigurationResponse> {
-        let mut cres = super::attestation_agent::UpdateConfigurationResponse::new();
-        ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "UpdateConfiguration", cres);
-    }
-
     pub async fn get_tee_type(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::GetTeeTypeRequest) -> ::ttrpc::Result<super::attestation_agent::GetTeeTypeResponse> {
         let mut cres = super::attestation_agent::GetTeeTypeResponse::new();
         ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetTeeType", cres);
@@ -107,17 +102,6 @@ impl ::ttrpc::r#async::MethodHandler for CheckInitDataMethod {
     }
 }
 
-struct UpdateConfigurationMethod {
-    service: Arc<Box<dyn AttestationAgentService + Send + Sync>>,
-}
-
-#[async_trait]
-impl ::ttrpc::r#async::MethodHandler for UpdateConfigurationMethod {
-    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
-        ::ttrpc::async_request_handler!(self, ctx, req, attestation_agent, UpdateConfigurationRequest, update_configuration);
-    }
-}
-
 struct GetTeeTypeMethod {
     service: Arc<Box<dyn AttestationAgentService + Send + Sync>>,
 }
@@ -143,9 +127,6 @@ pub trait AttestationAgentService: Sync {
     async fn check_init_data(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::CheckInitDataRequest) -> ::ttrpc::Result<super::attestation_agent::CheckInitDataResponse> {
         Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/CheckInitData is not supported".to_string())))
     }
-    async fn update_configuration(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::UpdateConfigurationRequest) -> ::ttrpc::Result<super::attestation_agent::UpdateConfigurationResponse> {
-        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/UpdateConfiguration is not supported".to_string())))
-    }
     async fn get_tee_type(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetTeeTypeRequest) -> ::ttrpc::Result<super::attestation_agent::GetTeeTypeResponse> {
         Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/GetTeeType is not supported".to_string())))
     }
@@ -167,9 +148,6 @@ pub fn create_attestation_agent_service(service: Arc<Box<dyn AttestationAgentSer
 
     methods.insert("CheckInitData".to_string(),
                     Box::new(CheckInitDataMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
-
-    methods.insert("UpdateConfiguration".to_string(),
-                    Box::new(UpdateConfigurationMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
 
     methods.insert("GetTeeType".to_string(),
                     Box::new(GetTeeTypeMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);

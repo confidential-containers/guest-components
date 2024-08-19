@@ -5,7 +5,8 @@
 
 use ::ttrpc::asynchronous::Server;
 use anyhow::*;
-use attestation_agent::AttestationAgent;
+use attestation_agent::{AttestationAPIs, AttestationAgent};
+use base64::Engine;
 use clap::{arg, command, Parser};
 use const_format::concatcp;
 use log::{debug, info};
@@ -43,6 +44,14 @@ struct Cli {
     /// `--config /etc/attestation-agent.conf`
     #[arg(short, long)]
     config_file: Option<String>,
+
+    /// Initdata to be verified by AA. If initdata check failed, AA will failed to launch.
+    /// The initdata should be base64 standard encoding.
+    ///
+    /// Example:
+    /// `--initdata AAAAAAAAAAAA`
+    #[arg(short, long)]
+    initdata: Option<String>,
 }
 
 #[tokio::main]
@@ -58,6 +67,23 @@ pub async fn main() -> Result<()> {
         .context("clean previous attestation socket file")?;
 
     let mut aa = AttestationAgent::new(cli.config_file.as_deref()).context("start AA")?;
+    if let Some(initdata) = cli.initdata {
+        info!("Initdata is given by parameter, try to check.");
+        let initdata = base64::engine::general_purpose::STANDARD
+            .decode(&initdata)
+            .context("base64 decode initdata")?;
+        let res = aa
+            .check_init_data(&initdata)
+            .await
+            .context("check initdata")?;
+        match res {
+            attester::InitdataResult::Ok => info!("Check initdata passed."),
+            attester::InitdataResult::Unsupported => {
+                info!("Platform does not support initdata checking. Jumping.")
+            }
+        }
+    }
+
     aa.init().await.context("init AA")?;
     let att = server::start_ttrpc_service(aa)?;
 
