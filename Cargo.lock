@@ -4108,6 +4108,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "p521"
+version = "0.13.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fc9e2161f1f215afdfce23677034ae137bbd45016a880c2eb3ba8eb95f085b2"
+dependencies = [
+ "base16ct",
+ "ecdsa",
+ "elliptic-curve",
+ "primeorder",
+ "rand_core",
+ "sha2 0.10.8",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5384,9 +5398,9 @@ checksum = "92d43fe69e652f3df9bdc2b85b2854a0825b86e4fb76bc44d945137d053639ca"
 
 [[package]]
 name = "sequoia-openpgp"
-version = "1.20.0"
+version = "1.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06f82708c8568218b8544b4abbba1f6483067dca0a946a54991c1d3f424dcade"
+checksum = "13261ee216b44d932ef93b2d4a75d45199bef77864bcc5b77ecfc7bc0ecb02d6"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -5423,6 +5437,8 @@ dependencies = [
  "num-bigint-dig",
  "once_cell",
  "p256",
+ "p384",
+ "p521",
  "rand",
  "rand_core",
  "regex",

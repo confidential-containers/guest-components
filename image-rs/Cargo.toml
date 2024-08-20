@@ -41,7 +41,7 @@ prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["json"], optional = true }
 resource_uri = { path = "../attestation-agent/deps/resource_uri", optional = true }
-sequoia-openpgp = { version = "1.7.0", default-features = false, features = [
+sequoia-openpgp = { version = "1.21.2", default-features = false, features = [
     "compression",
     "crypto-rust",
     "allow-experimental-crypto",
