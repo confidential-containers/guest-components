@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use crate::snapshots::SnapshotType;
 
-pub const DEFAULT_WORK_DIR: &str = "/var/lib/image-rs/";
+pub const DEFAULT_WORK_DIR: &str = "/run/image-rs/";
 
 /// Default policy file path.
 pub const POLICY_FILE_PATH: &str = "kbs:///default/security-policy/test";
@@ -325,7 +325,7 @@ mod tests {
     #[test]
     fn test_image_config_from_file() {
         let data = r#"{
-            "work_dir": "/var/lib/image-rs/",
+            "work_dir": "/run/image-rs/",
             "default_snapshot": "overlay",
             "security_validate": false,
             "auth": false,
@@ -357,7 +357,7 @@ mod tests {
     #[test]
     fn test_nydus_config_from_file() {
         let data = r#"{
-            "work_dir": "/var/lib/image-rs/",
+            "work_dir": "/run/image-rs/",
             "default_snapshot": "overlay",
             "security_validate": false,
             "auth": false,
