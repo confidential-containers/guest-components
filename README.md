@@ -35,6 +35,9 @@ A tool for exercising CDH endpoints
 [CDH Go Client](confidential-data-hub/golang)
 A Go tool for exercising CDH endpoints
 
+[CoCo Keyprovider](attestation-agent/coco_keyprovider)
+Keyprovider endpoint for encrypting images
+
 ## Build
 
 A `Makefile` is provided to quickly build Attestation Agent/Api Server Rest/Confidential Data Hub for a given platform.
