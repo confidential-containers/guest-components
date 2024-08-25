@@ -5,7 +5,7 @@
 use anyhow::{bail, Context, Result};
 use filetime::FileTime;
 use futures::StreamExt;
-use log::warn;
+use log::{debug, warn};
 use nix::libc::timeval;
 use std::{
     collections::HashMap,
@@ -21,18 +21,26 @@ use std::{
 };
 use tokio::{fs, io::AsyncRead};
 use tokio_tar::ArchiveBuilder;
+use xattr::FileExt;
+
+// TODO: Add unit tests for both xattr supporting case and
+// non-supporting case.
+fn is_attr_available(path: &Path) -> Result<bool> {
+    let dest = std::fs::File::open(path)?;
+    match dest.set_xattr("user.overlay.origin", b"") {
+        Ok(_) => {
+            debug!("xattrs supported for {path:?}");
+            Ok(true)
+        }
+        Err(e) => {
+            debug!("xattrs is not supported for {path:?}, because {e}");
+            Ok(false)
+        }
+    }
+}
 
 /// Unpack the contents of tarball to the destination path
 pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Result<()> {
-    let mut archive = ArchiveBuilder::new(input)
-        .set_ignore_zeros(true)
-        .set_unpack_xattrs(true)
-        .set_preserve_permissions(true)
-        .build();
-    let mut entries = archive
-        .entries()
-        .context("failed to read entries from the tar")?;
-
     if destination.exists() {
         warn!(
             "unpack destination {:?} already exists, will delete and rerwrite the layer",
@@ -44,6 +52,16 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Resul
     }
 
     fs::create_dir_all(destination).await?;
+
+    let mut archive = ArchiveBuilder::new(input)
+        .set_ignore_zeros(true)
+        .set_unpack_xattrs(is_attr_available(destination)?)
+        .set_preserve_permissions(true)
+        .build();
+
+    let mut entries = archive
+        .entries()
+        .context("failed to read entries from the tar")?;
 
     let mut dirs: HashMap<CString, [timeval; 2]> = HashMap::default();
     while let Some(file) = entries.next().await {
