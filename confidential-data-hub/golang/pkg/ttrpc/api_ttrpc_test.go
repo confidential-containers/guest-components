@@ -102,3 +102,30 @@ func TestTtrpcUnsealFile(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("unsealed-value:unsealed content", resp)
 }
+
+func TestGrpcSecureMount(t *testing.T) {
+	assert := assert.New(t)
+
+	mockURL, err := mock.GenerateCDHTtrpcMockVSock()
+	assert.NoError(err)
+	defer mock.RemoveCDHTtrpcMockVSock(mockURL)
+
+	cdhMockServer := mock.CDHTtrpcMockServer{}
+	err = cdhMockServer.Start(mockURL)
+	assert.NoError(err)
+	defer cdhMockServer.Stop()
+
+	sockurl, err := url.Parse(mockURL)
+	assert.NoError(err)
+
+	c, err := CreateCDHTtrpcClient(sockurl.Path)
+	assert.NoError(err)
+	assert.NotNil(c)
+	defer c.Close()
+
+	ctx := context.Background()
+	options := map[string]string{"deviceId": "0:1", "encryptType": "LUKS", "dataIntegrity": "True"}
+	resp, err := common.SecureMount(ctx, c, "BlockDevice", options, []string{}, "/tmp/test-mount")
+	assert.Nil(err)
+	assert.Equal("/tmp/test-mount", resp)
+}
