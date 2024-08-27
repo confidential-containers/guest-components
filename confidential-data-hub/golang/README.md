@@ -38,11 +38,6 @@ c, err := cdhgrpc.CreateCDHGrpcClient("127.0.0.1:8043")
 c, err := cdhttrpc.CreateCDHTtrpcClient("/run/confidential-containers/cdh.sock")
 ```
 
-Interact with `CDH` using the client, for example :
-```go
-unsealedValue, err := common.UnsealEnv(ctx, c, sealedSecret)
-```
-
 ### Usage as binary
 
 Build and Install the binary, such as:
@@ -57,7 +52,19 @@ Installing binaries...
 install -D -m0755 bin/cdh-go-client /usr/local/bin
 ```
 
-Interact with CDH using the binary, such as get sealed secret:
+### Supported Operations
+
+- UnsealSecret
+- SecureMount
+
+#### UnsealSecret
+
+Interact with `CDH` using the library :
+```go
+unsealedValue, err := common.UnsealEnv(ctx, c, sealedSecret)
+```
+
+Interact with CDH using the binary:
 ```bash
 $ cdh-go-client -o UnsealSecret -I UnsealEnv -socket "127.0.0.1:8043" -i sealed.fakeheader.ewogICJ2ZXJzaW9uIjogIjAuMS4wIiwKICAidHlwZSI6ICJ2YXVsdCIsCiAgIm5hbWUiOiAia2JzOi8vL2RlZmF1bHQvdHlwZS90YWciLAogICJwcm92aWRlciI6ICJrYnMiLAogICJwcm92aWRlcl9zZXR0aW5ncyI6IHt9LAogICJhbm5vdGF0aW9ucyI6IHt9Cn0K.fakesignature
 Client rpc type: grpc
@@ -71,4 +78,57 @@ EOF
 $ cdh-go-client -o UnsealSecret -I UnsealFile -socket "127.0.0.1:8043" -i sealedsecretfile 
 Client rpc type: grpc
 unsealed value from file = that's the unsealed secret
+```
+
+#### SecureMount
+
+Interact with `CDH` using the library:
+
+```go
+mountPath, err := common.SecureMount(ctx, c, volume_type, options, flags, mountpoint)
+```
+
+Interact with `CDH` using the binary:
+
+```bash
+cat <<EOF > securemount.json
+{
+    "volume_type": "BlockDevice",
+    "options": {
+        "deviceId": "7:0",
+        "encryptType": "LUKS",
+        "dataIntegrity": "true"
+    },
+    "flags": [],
+    "mountpoint": "/tmp/cdh-test"
+}
+EOF
+$ cdh-go-client -o SecureMount --socket /run/confidential-containers/cdh.sock -i ./test.json
+Successfully secure mount to /tmp/cdh-test
+
+# Verify the mount:
+
+$ lsblk --fs
+NAME      FSTYPE      FSVER    LABEL UUID                                   FSAVAIL FSUSE% MOUNTPOINTS
+loop0     crypto_LUKS 2              ee0897ec-0f0f-4f11-a1f0-38bfe3120ad1                  
+└─encrypted_disk_qMSEu_dif
+                                                                                           
+  └─encrypted_disk_qMSEu
+                                                                             870.6M     0% /tmp/cdh-test
+
+$ cryptsetup status encrypted_disk_qMSEu
+/dev/mapper/encrypted_disk_qMSEu is active and is in use.
+  type:    LUKS2
+  cipher:  aes-xts-plain64
+  keysize: 768 bits
+  key location: keyring
+  integrity: hmac(sha256)
+  integrity keysize: 256 bits
+  device:  /dev/loop0
+  loop:    /tmp/cdh-test-volume.img
+  sector size:  4096
+  offset:  0 sectors
+  size:    1983768 sectors
+  mode:    read/write
+
 ```
