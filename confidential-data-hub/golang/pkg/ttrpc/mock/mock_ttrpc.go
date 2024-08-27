@@ -49,6 +49,7 @@ type CDHTtrpcMockServer struct {
 
 func (cv *CDHTtrpcMockServer) ttrpcRegister(s *ttrpc.Server) {
 	cdhapi.RegisterSealedSecretServiceService(s, &cv.CDHTtrpcMockServerImp)
+	cdhapi.RegisterSecureMountServiceService(s, &cv.CDHTtrpcMockServerImp)
 }
 
 func (cv *CDHTtrpcMockServer) Start(socketAddr string) error {
@@ -94,5 +95,11 @@ type CDHTtrpcMockServerImp struct{}
 func (p *CDHTtrpcMockServerImp) UnsealSecret(ctx context.Context, input *cdhapi.UnsealSecretInput) (*cdhapi.UnsealSecretOutput, error) {
 	secret := string(input.GetSecret())
 	output := cdhapi.UnsealSecretOutput{Plaintext: []byte("unsealed-value:" + strings.TrimPrefix(secret, SealedSecretPrefix))}
+	return &output, nil
+}
+
+func (p *CDHTtrpcMockServerImp) SecureMount(ctx context.Context, input *cdhapi.SecureMountRequest) (*cdhapi.SecureMountResponse, error) {
+	mountpoint := input.GetMountPoint()
+	output := cdhapi.SecureMountResponse{MountPath: mountpoint}
 	return &output, nil
 }
