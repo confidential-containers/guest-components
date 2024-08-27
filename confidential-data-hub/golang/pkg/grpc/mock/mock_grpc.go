@@ -19,11 +19,18 @@ const (
 
 type CDHGrpcMockServerImp struct {
 	cdhapi.UnimplementedSealedSecretServiceServer
+	cdhapi.UnimplementedSecureMountServiceServer
 }
 
 func (p *CDHGrpcMockServerImp) UnsealSecret(ctx context.Context, input *cdhapi.UnsealSecretInput) (*cdhapi.UnsealSecretOutput, error) {
 	secret := string(input.GetSecret())
 	output := cdhapi.UnsealSecretOutput{Plaintext: []byte("unsealed-value:" + strings.TrimPrefix(secret, SealedSecretPrefix))}
+	return &output, nil
+}
+
+func (p *CDHGrpcMockServerImp) SecureMount(ctx context.Context, input *cdhapi.SecureMountRequest) (*cdhapi.SecureMountResponse, error) {
+	mountpoint := input.GetMountPoint()
+	output := cdhapi.SecureMountResponse{MountPath: mountpoint}
 	return &output, nil
 }
 
@@ -34,6 +41,7 @@ type CDHGrpcMockServer struct {
 
 func (cv *CDHGrpcMockServer) grpcRegister(s *grpc.Server) {
 	cdhapi.RegisterSealedSecretServiceServer(s, &CDHGrpcMockServerImp{})
+	cdhapi.RegisterSecureMountServiceServer(s, &CDHGrpcMockServerImp{})
 }
 
 func (cv *CDHGrpcMockServer) Start(socketAddr string) error {
