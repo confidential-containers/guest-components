@@ -20,6 +20,7 @@ const (
 type cdhTtrpcClient struct {
 	conn               net.Conn
 	sealedSecretClient cdhapi.SealedSecretServiceService
+	secureMountClient  cdhapi.SecureMountServiceService
 }
 
 func CreateCDHTtrpcClient(sockAddress string) (*cdhTtrpcClient, error) {
@@ -30,10 +31,12 @@ func CreateCDHTtrpcClient(sockAddress string) (*cdhTtrpcClient, error) {
 
 	ttrpcClient := ttrpc.NewClient(conn)
 	sealedSecretClient := cdhapi.NewSealedSecretServiceClient(ttrpcClient)
+	securelMountClient := cdhapi.NewSecureMountServiceClient(ttrpcClient)
 
 	c := &cdhTtrpcClient{
 		conn:               conn,
 		sealedSecretClient: sealedSecretClient,
+		secureMountClient:  securelMountClient,
 	}
 	return c, nil
 }
@@ -50,4 +53,14 @@ func (c *cdhTtrpcClient) UnsealSecret(ctx context.Context, secret string) (strin
 	}
 
 	return string(output.GetPlaintext()[:]), nil
+}
+
+func (c *cdhTtrpcClient) SecureMount(ctx context.Context, volume_type string, options map[string]string, flags []string, mountpoint string) (string, error) {
+	input := cdhapi.SecureMountRequest{VolumeType: volume_type, Options: options, Flags: flags, MountPoint: mountpoint}
+	output, err := c.secureMountClient.SecureMount(ctx, &input)
+	if err != nil {
+		return "", fmt.Errorf("failed to unseal secret: %w", err)
+	}
+
+	return output.GetMountPath(), nil
 }
