@@ -20,6 +20,7 @@ const (
 type cdhGrpcClient struct {
 	conn               *grpc.ClientConn
 	sealedSecretClient cdhapi.SealedSecretServiceClient
+	secureMountClient  cdhapi.SecureMountServiceClient
 }
 
 func CreateCDHGrpcClient(sockAddress string) (*cdhGrpcClient, error) {
@@ -29,10 +30,12 @@ func CreateCDHGrpcClient(sockAddress string) (*cdhGrpcClient, error) {
 	}
 
 	sealedSecretClient := cdhapi.NewSealedSecretServiceClient(conn)
+	securelMountClient := cdhapi.NewSecureMountServiceClient(conn)
 
 	c := &cdhGrpcClient{
 		conn:               conn,
 		sealedSecretClient: sealedSecretClient,
+		secureMountClient:  securelMountClient,
 	}
 	return c, nil
 }
@@ -49,4 +52,14 @@ func (c *cdhGrpcClient) UnsealSecret(ctx context.Context, secret string) (string
 	}
 
 	return string(output.GetPlaintext()[:]), nil
+}
+
+func (c *cdhGrpcClient) SecureMount(ctx context.Context, volume_type string, options map[string]string, flags []string, mountpoint string) (string, error) {
+	input := cdhapi.SecureMountRequest{VolumeType: volume_type, Options: options, Flags: flags, MountPoint: mountpoint}
+	output, err := c.secureMountClient.SecureMount(ctx, &input)
+	if err != nil {
+		return "", fmt.Errorf("failed to unseal secret: %w", err)
+	}
+
+	return output.GetMountPath(), nil
 }

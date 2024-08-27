@@ -44,3 +44,16 @@ func UnsealFile(ctx context.Context, su SecretUnsealer, sealedFile string) (stri
 
 	return su.UnsealSecret(ctx, string(contents))
 }
+
+// Common interface for clients that can secure mount
+type SecureMounter interface {
+	SecureMount(ctx context.Context, volume_type string, options map[string]string, flags []string, mountpoint string) (string, error)
+}
+
+func SecureMount(ctx context.Context, sm SecureMounter, volume_type string, options map[string]string, flags []string, mountpoint string) (string, error) {
+	mountPath, err := sm.SecureMount(ctx, volume_type, options, flags, mountpoint)
+	if err != nil {
+		return "", fmt.Errorf("failed to secure mount, err: %w", err)
+	}
+	return mountPath, nil
+}
