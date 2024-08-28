@@ -10,7 +10,7 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
-async-compression = { version = "0.4.10", features = [
+async-compression = { version = "0.4.12", features = [
     "futures-io",
     "tokio",
     "gzip",
