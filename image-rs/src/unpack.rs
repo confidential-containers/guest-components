@@ -7,6 +7,8 @@ use filetime::FileTime;
 use futures::StreamExt;
 use log::{debug, warn};
 use nix::libc::timeval;
+use nix::sys::stat::{mknod, Mode, SFlag};
+
 use std::{
     collections::HashMap,
     convert::TryInto,
@@ -80,10 +82,7 @@ async fn convert_whiteout(
         original_path.display()
     ))?;
 
-    let ret = unsafe { nix::libc::mknod(path.as_ptr(), nix::libc::S_IFCHR, 0) };
-    if ret != 0 {
-        bail!("mknod: {:?} error: {:?}", path, io::Error::last_os_error());
-    }
+    mknod(path.as_c_str(), SFlag::S_IFCHR, Mode::empty(), 0)?;
 
     set_perms_ownerships(&path, ChownType::LChown, uid, gid, mode).await
 }
