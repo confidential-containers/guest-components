@@ -62,7 +62,7 @@ ttrpc = { workspace = true, features = ["async"], optional = true }
 url = "2.5.2"
 walkdir = "2"
 xattr = "1"
-zstd = "0.12"
+zstd = "0.13"
 
 nydus-api = { version = "0.3.0", optional = true }
 nydus-service = { version = "0.3.0", features = ["coco"], optional = true }
