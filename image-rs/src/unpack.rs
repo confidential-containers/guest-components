@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use filetime::FileTime;
 use futures::StreamExt;
 use log::{debug, warn};
@@ -39,6 +39,55 @@ fn is_attr_available(path: &Path) -> Result<bool> {
     }
 }
 
+const WHITEOUT_PREFIX: &str = ".wh.";
+const WHITEOUT_OPAQUE_DIR: &str = ".wh..wh..opq";
+
+/// Returns whether the file name is a whiteout file
+fn is_whiteout(name: &str) -> bool {
+    name.starts_with(WHITEOUT_PREFIX)
+}
+
+/// Converts a whiteout file or opaque directory. See OverlayFS and Aufs documentation for details
+/// https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt
+/// https://aufs.sourceforge.net/aufs.html
+async fn convert_whiteout(
+    name: &str,
+    path: &Path,
+    uid: u32,
+    gid: u32,
+    mode: Option<u32>,
+    destination: &Path,
+) -> Result<()> {
+    let parent = path
+        .parent()
+        .ok_or(anyhow!("Invalid whiteout parent for path: {:?}", path))?;
+
+    // Handle opaque directories
+    if name == WHITEOUT_OPAQUE_DIR {
+        let destination_parent = destination.join(parent);
+        xattr::set(destination_parent, "trusted.overlay.opaque", b"y")?;
+        return Ok(());
+    }
+
+    // Handle whiteout files
+    let original_name = name
+        .strip_prefix(WHITEOUT_PREFIX)
+        .ok_or(anyhow!("Failed to strip whiteout prefix for: {}", name))?;
+    let original_path = parent.join(original_name);
+    let path = CString::new(format!(
+        "{}/{}",
+        destination.display(),
+        original_path.display()
+    ))?;
+
+    let ret = unsafe { nix::libc::mknod(path.as_ptr(), nix::libc::S_IFCHR, 0) };
+    if ret != 0 {
+        bail!("mknod: {:?} error: {:?}", path, io::Error::last_os_error());
+    }
+
+    set_perms_ownerships(&path, ChownType::LChown, uid, gid, mode).await
+}
+
 /// Unpack the contents of tarball to the destination path
 pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Result<()> {
     if destination.exists() {
@@ -53,9 +102,10 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Resul
 
     fs::create_dir_all(destination).await?;
 
+    let attr_available = is_attr_available(destination)?;
     let mut archive = ArchiveBuilder::new(input)
         .set_ignore_zeros(true)
-        .set_unpack_xattrs(is_attr_available(destination)?)
+        .set_unpack_xattrs(attr_available)
         .set_preserve_permissions(true)
         .build();
 
@@ -67,6 +117,12 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Resul
     while let Some(file) = entries.next().await {
         let mut file = file?;
 
+        let entry_path = file.path()?;
+        let entry_name = entry_path
+            .file_name()
+            .unwrap_or_default()
+            .to_str()
+            .ok_or(anyhow!("Invalid unicode in path: {:?}", entry_path))?;
         let uid = file
             .header()
             .uid()?
@@ -77,6 +133,12 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Resul
             .gid()?
             .try_into()
             .context("GID is too large!")?;
+        let mode = file.header().mode().ok();
+
+        if attr_available && is_whiteout(entry_name) {
+            convert_whiteout(entry_name, &entry_path, uid, gid, mode, destination).await?;
+            continue;
+        }
 
         file.unpack_in(destination).await?;
 
@@ -89,7 +151,6 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Resul
         let file_path = path.to_str().expect("must be utf8");
 
         let kind = file.header().entry_type();
-        let mode = file.header().mode().ok();
         let mtime = file.header().mtime()? as i64;
 
         // krata-tokio-tar crate does not provide a way to preserve permissions
@@ -195,6 +256,7 @@ async fn set_perms_ownerships(
 mod tests {
     use std::os::unix::fs::{chown, lchown, MetadataExt};
 
+    use std::os::unix::fs::FileTypeExt;
     use tokio::{
         fs::{self, File},
         io::AsyncWriteExt,
@@ -231,11 +293,36 @@ mod tests {
             .await
             .unwrap();
 
+        let path = tempdir
+            .path()
+            .join(WHITEOUT_PREFIX.to_owned() + "whiteout_file.txt");
+        File::create(&path).await.unwrap();
+        ar.append_file(
+            WHITEOUT_PREFIX.to_owned() + "whiteout_file.txt",
+            &mut File::open(&path).await.unwrap(),
+        )
+        .await
+        .unwrap();
+
         let path = tempdir.path().join("dir");
         fs::create_dir(&path).await.unwrap();
 
         filetime::set_file_mtime(&path, mtime).unwrap();
         ar.append_path_with_name(&path, "dir").await.unwrap();
+
+        let path = tempdir.path().join("whiteout_dir");
+        fs::create_dir(&path).await.unwrap();
+        ar.append_path_with_name(&path, "whiteout_dir")
+            .await
+            .unwrap();
+
+        let path = tempdir
+            .path()
+            .join("whiteout_dir/".to_owned() + WHITEOUT_OPAQUE_DIR);
+        fs::create_dir(&path).await.unwrap();
+        ar.append_path_with_name(&path, "whiteout_dir/".to_owned() + WHITEOUT_OPAQUE_DIR)
+            .await
+            .unwrap();
 
         // TODO: Add more file types like symlink, char, block devices.
         let data = ar.into_inner().await.unwrap();
@@ -262,10 +349,23 @@ mod tests {
         assert_eq!(metadata.gid(), 10);
         assert_eq!(metadata.uid(), 10);
 
+        let attr_available = is_attr_available(destination).unwrap();
+        if attr_available {
+            let path = destination.join("whiteout_file.txt");
+            let metadata = fs::metadata(path).await.unwrap();
+            assert!(metadata.file_type().is_char_device());
+        }
+
         let path = destination.join("dir");
         let metadata = fs::metadata(path).await.unwrap();
         let new_mtime = filetime::FileTime::from_last_modification_time(&metadata);
         assert_eq!(mtime, new_mtime);
+
+        if attr_available {
+            let path = destination.join("whiteout_dir");
+            let opaque = xattr::get(path, "trusted.overlay.opaque").unwrap().unwrap();
+            assert_eq!(opaque, b"y");
+        }
 
         // though destination already exists, it will be deleted
         // and rewrite
