@@ -290,7 +290,7 @@ dependencies = [
  "clap 4.2.7",
  "config",
  "const_format",
- "env_logger 0.11.3",
+ "env_logger 0.11.5",
  "kbs-types",
  "kbs_protocol",
  "log",
@@ -1001,7 +1001,7 @@ dependencies = [
  "clap 4.2.7",
  "ctr",
  "daemonize",
- "env_logger 0.11.3",
+ "env_logger 0.11.5",
  "futures",
  "jwt-simple",
  "log",
@@ -1052,7 +1052,7 @@ dependencies = [
  "cfg-if",
  "clap 4.2.7",
  "config",
- "env_logger 0.11.3",
+ "env_logger 0.11.5",
  "image",
  "kms",
  "lazy_static",
@@ -1604,7 +1604,7 @@ checksum = "68d15851812d2feb80b0b51ab7d440927e4a900c16d33b154e64a2828e0d7041"
 dependencies = [
  "bitflags 2.4.2",
  "devicemapper-sys",
- "env_logger 0.11.3",
+ "env_logger 0.11.5",
  "lazy_static",
  "log",
  "nix 0.28.0",
@@ -1919,9 +1919,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.11.3"
+version = "0.11.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38b35839ba51819680ba087cd351788c9a3c476841207e0b8cee0b04722343b9"
+checksum = "e13fa619b91fb2381732789fc5de83b45675e882f66623b7d8cb4f643017018d"
 dependencies = [
  "anstream 0.6.13",
  "anstyle",
