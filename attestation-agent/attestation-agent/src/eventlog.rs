@@ -8,7 +8,7 @@ use std::{fmt::Display, fs::File, io::Write};
 use anyhow::{bail, Context, Result};
 use const_format::concatcp;
 
-use crate::config::HashAlgorithm;
+use crypto::HashAlgorithm;
 
 /// AA's eventlog will be put into this parent directory
 pub const EVENTLOG_PARENT_DIR_PATH: &str = "/run/attestation-agent";
@@ -109,7 +109,6 @@ impl<'a> Display for LogEntry<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::HashAlgorithm;
     use rstest::rstest;
     use std::sync::{Arc, Mutex};
 

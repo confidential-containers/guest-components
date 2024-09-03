@@ -291,6 +291,7 @@ dependencies = [
  "clap 4.2.7",
  "config",
  "const_format",
+ "crypto",
  "env_logger 0.11.5",
  "kbs-types",
  "kbs_protocol",

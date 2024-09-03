@@ -4,8 +4,8 @@
 //
 
 use anyhow::Result;
+use crypto::HashAlgorithm;
 use serde::Deserialize;
-use sha2::{Digest, Sha256, Sha384, Sha512};
 
 /// Default PCR index used by AA. `17` is selected for its usage of dynamic root of trust for measurement.
 /// - [Linux TPM PCR Registry](https://uapi-group.org/specifications/specs/linux_tpm_pcr_registry/)
@@ -23,35 +23,6 @@ pub mod kbs;
 pub const DEFAULT_AA_CONFIG_PATH: &str = "/etc/attestation-agent.conf";
 
 pub const DEFAULT_EVENTLOG_HASH: &str = "sha384";
-
-/// Hash algorithms used to calculate runtime/init data binding
-#[derive(Deserialize, Clone, Debug, Copy)]
-#[serde(rename_all = "lowercase")]
-pub enum HashAlgorithm {
-    Sha256,
-    Sha384,
-    Sha512,
-}
-
-impl Default for HashAlgorithm {
-    fn default() -> Self {
-        Self::Sha384
-    }
-}
-
-fn hash_reportdata<D: Digest>(material: &[u8]) -> Vec<u8> {
-    D::new().chain_update(material).finalize().to_vec()
-}
-
-impl HashAlgorithm {
-    pub fn digest(&self, material: &[u8]) -> Vec<u8> {
-        match self {
-            HashAlgorithm::Sha256 => hash_reportdata::<Sha256>(material),
-            HashAlgorithm::Sha384 => hash_reportdata::<Sha384>(material),
-            HashAlgorithm::Sha512 => hash_reportdata::<Sha512>(material),
-        }
-    }
-}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
