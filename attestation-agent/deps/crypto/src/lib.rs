@@ -31,3 +31,6 @@ pub use symmetric::*;
 
 mod asymmetric;
 pub use asymmetric::*;
+
+mod algorithms;
+pub use algorithms::*;

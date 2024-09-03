@@ -17,6 +17,7 @@ required-features = ["bin", "ttrpc"]
 anyhow.workspace = true
 async-trait.workspace = true
 attester = { path = "../attester", default-features = false }
+crypto = { path = "../deps/crypto", default-features = false }
 base64.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
 config.workspace = true
