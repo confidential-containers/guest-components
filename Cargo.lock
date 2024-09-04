@@ -74,6 +74,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "algorithms"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "sha2 0.10.8",
+]
+
+[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -284,6 +292,7 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 name = "attestation-agent"
 version = "0.1.0"
 dependencies = [
+ "algorithms",
  "anyhow",
  "async-trait",
  "attester",
@@ -3129,6 +3138,7 @@ dependencies = [
 name = "kbs_protocol"
 version = "0.1.0"
 dependencies = [
+ "algorithms",
  "anyhow",
  "async-trait",
  "attester",

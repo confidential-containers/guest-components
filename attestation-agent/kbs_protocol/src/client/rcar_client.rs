@@ -38,6 +38,16 @@ struct AttestationResponseData {
     token: String,
 }
 
+async fn build_request(tee: Tee) -> Request {
+    let extra_params = serde_json::Value::String(String::new());
+
+    Request {
+        version: String::from(KBS_PROTOCOL_VERSION),
+        tee,
+        extra_params,
+    }
+}
+
 impl KbsClient<Box<dyn EvidenceProvider>> {
     /// Get a [`TeeKeyPair`] and a [`Token`] that certifies the [`TeeKeyPair`].
     /// If the client does not already have token or the token is invalid,
@@ -101,11 +111,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             ClientTee::_Initializated(tee) => *tee,
         };
 
-        let request = Request {
-            version: String::from(KBS_PROTOCOL_VERSION),
-            tee,
-            extra_params: serde_json::Value::String(String::new()),
-        };
+        let request = build_request(tee).await;
 
         debug!("send auth request to {auth_endpoint}");
 
