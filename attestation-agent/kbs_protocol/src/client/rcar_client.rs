@@ -7,12 +7,12 @@ use std::time::Duration;
 
 use anyhow::{bail, Context};
 use async_trait::async_trait;
+use crypto::HashAlgorithm;
 use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response, Tee};
 use log::{debug, warn};
 use resource_uri::ResourceUri;
 use serde::Deserialize;
 use serde_json::json;
-use sha2::{Digest, Sha384};
 
 use crate::{
     api::KbsClientCapabilities,
@@ -32,15 +32,36 @@ const RCAR_MAX_ATTEMPT: i32 = 5;
 /// The interval (seconds) between RCAR handshake retries.
 const RCAR_RETRY_TIMEOUT_SECOND: u64 = 1;
 
+/// JSON object added to a 'Request's extra parameters.
+const SUPPORTED_HASH_ALGORITHMS_JSON_KEY: &str = "supported-hash-algorithms";
+
+/// JSON object returned in the Challenge whose value is based on
+/// SUPPORTED_HASH_ALGORITHMS_JSON_KEY and the TEE.
+const SELECTED_HASH_ALGORITHM_JSON_KEY: &str = "selected-hash-algorithm";
+
+/// Hash algorithm to use by default.
+const DEFAULT_HASH_ALGORITHM: HashAlgorithm = HashAlgorithm::Sha384;
+
 #[derive(Deserialize, Debug, Clone)]
 struct AttestationResponseData {
     // Attestation token in JWT format
     token: String,
 }
 
-async fn build_request(tee: Tee) -> Request {
-    let extra_params = serde_json::Value::String(String::new());
+async fn get_request_extra_params() -> serde_json::Value {
+    let supported_hash_algorithms = HashAlgorithm::list_all();
 
+    let extra_params = json!({SUPPORTED_HASH_ALGORITHMS_JSON_KEY: supported_hash_algorithms});
+
+    extra_params
+}
+
+async fn build_request(tee: Tee) -> Request {
+    let extra_params = get_request_extra_params().await;
+
+    // Note that the Request includes the list of supported hash algorithms.
+    // The Challenge response will return which TEE-specific algorithm should
+    // be used for future communications.
     Request {
         version: String::from(KBS_PROTOCOL_VERSION),
         tee,
@@ -113,7 +134,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
 
         let request = build_request(tee).await;
 
-        debug!("send auth request to {auth_endpoint}");
+        debug!("send auth request {request:?} to {auth_endpoint}");
 
         let resp = self
             .http_client
@@ -144,6 +165,23 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
 
         let challenge = resp.json::<Challenge>().await?;
         debug!("get challenge: {challenge:#?}");
+
+        let extra_params = challenge.extra_params;
+
+        let algorithm = match extra_params.get(SELECTED_HASH_ALGORITHM_JSON_KEY) {
+            Some(selected_hash_algorithm) => {
+                // Note the blank string which will be handled as an error when parsed.
+                let name = selected_hash_algorithm
+                    .as_str()
+                    .unwrap_or("")
+                    .to_lowercase();
+
+                name.parse::<HashAlgorithm>()
+                    .map_err(|_| Error::InvalidHashAlgorithm(name))?
+            }
+            None => DEFAULT_HASH_ALGORITHM,
+        };
+
         let tee_pubkey = self.tee_key.export_pubkey()?;
         let runtime_data = json!({
             "tee-pubkey": tee_pubkey,
@@ -152,7 +190,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         let runtime_data =
             serde_json::to_string(&runtime_data).context("serialize runtime data failed")?;
         let evidence = self
-            .generate_evidence(tee, runtime_data, challenge.nonce)
+            .generate_evidence(tee, runtime_data, challenge.nonce, algorithm)
             .await?;
         debug!("get evidence with challenge: {evidence}");
 
@@ -192,25 +230,42 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         Ok(())
     }
 
+    /// Convert the runtime data and the nonce into a hashed representation using the
+    /// specified hash algorithm.
+    async fn hash_runtime_data(
+        &self,
+        runtime_data: String,
+        nonce: String,
+        tee: Tee,
+        algorithm: HashAlgorithm,
+    ) -> Result<Vec<u8>> {
+        debug!("Hashing {tee:?} runtime data using nonce {nonce} and algorithm {algorithm:?}");
+
+        let hashed_data = match tee {
+            // IBM SE uses nonce as runtime_data to pass attestation_request
+            Tee::Se => nonce.into_bytes(),
+            _ => algorithm.digest(runtime_data.as_bytes()),
+        };
+
+        Ok(hashed_data)
+    }
+
     async fn generate_evidence(
         &self,
         tee: Tee,
         runtime_data: String,
         nonce: String,
+        algorithm: HashAlgorithm,
     ) -> Result<String> {
-        debug!("Challenge nonce: {nonce}");
-        let mut hasher = Sha384::new();
-        hasher.update(runtime_data);
+        debug!("Challenge nonce: {nonce}, algorithm: {algorithm:?}");
 
-        let ehd = match tee {
-            // IBM SE uses nonce as runtime_data to pass attestation_request
-            Tee::Se => nonce.into_bytes(),
-            _ => hasher.finalize().to_vec(),
-        };
+        let hashed_data = self
+            .hash_runtime_data(runtime_data, nonce, tee, algorithm)
+            .await?;
 
         let tee_evidence = self
             .provider
-            .get_evidence(ehd)
+            .get_evidence(hashed_data)
             .await
             .context("Get TEE evidence failed")
             .map_err(|e| Error::GetEvidence(e.to_string()))?;
@@ -294,6 +349,7 @@ impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
 
 #[cfg(test)]
 mod test {
+    use crypto::HashAlgorithm;
     use std::{env, path::PathBuf, time::Duration};
     use testcontainers::{clients, images::generic::GenericImage};
     use tokio::fs;
@@ -301,6 +357,12 @@ mod test {
     use crate::{
         evidence_provider::NativeEvidenceProvider, KbsClientBuilder, KbsClientCapabilities,
     };
+
+    use crate::client::rcar_client::{
+        build_request, get_request_extra_params, KBS_PROTOCOL_VERSION,
+        SUPPORTED_HASH_ALGORITHMS_JSON_KEY,
+    };
+    use kbs_types::Tee;
 
     const CONTENT: &[u8] = b"test content";
 
@@ -387,5 +449,57 @@ mod test {
         let (token, key) = client.get_token().await.expect("get token");
         println!("Get token : {token:?}");
         println!("Get key: {key:?}");
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_get_request_extra_params() {
+        let extra_params = get_request_extra_params().await;
+
+        assert!(extra_params.is_object());
+
+        let algos_json = extra_params
+            .get(SUPPORTED_HASH_ALGORITHMS_JSON_KEY)
+            .unwrap();
+        assert!(algos_json.is_array());
+
+        let algos = algos_json.as_array().unwrap();
+
+        let expected_algos = HashAlgorithm::list_all();
+        let expected_length: usize = expected_algos.len();
+
+        assert!(expected_length > 0);
+
+        for algo in algos {
+            let result = algos.contains(algo);
+            assert!(result);
+        }
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_build_request() {
+        let tees = vec![
+            Tee::AzSnpVtpm,
+            Tee::AzTdxVtpm,
+            Tee::Cca,
+            Tee::Csv,
+            Tee::Se,
+            Tee::Sev,
+            Tee::Sgx,
+            Tee::Snp,
+            Tee::Tdx,
+        ];
+
+        let expected_version = String::from(KBS_PROTOCOL_VERSION);
+        let expected_extra_params = get_request_extra_params().await;
+
+        for tee in tees {
+            let request = build_request(tee).await;
+
+            assert_eq!(request.version, expected_version);
+            assert_eq!(request.tee, tee);
+            assert_eq!(request.extra_params, expected_extra_params);
+        }
     }
 }

@@ -44,4 +44,7 @@ pub enum Error {
 
     #[error("request unauthorized")]
     UnAuthorized,
+
+    #[error("invalid hash algorithm: {0}")]
+    InvalidHashAlgorithm(String),
 }
