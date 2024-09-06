@@ -9,6 +9,7 @@ use anyhow::*;
 use async_trait::async_trait;
 use kbc::{cc_kbc::Kbc as CcKbc, sample_kbc::SampleKbc, KbcInterface};
 use resource_uri::ResourceUri;
+use tokio::sync::Mutex;
 
 use super::Client;
 
@@ -18,21 +19,11 @@ enum Kbc {
 }
 
 pub struct Native {
-    inner: Kbc,
+    inner: Mutex<Kbc>,
 }
 
 impl Native {
-    pub fn new(decrypt_config: &Option<&str>) -> Result<Self> {
-        let Some(wrapped_aa_kbc_params) = decrypt_config else {
-            bail!("Secure channel creation needs aa_kbc_params.");
-        };
-
-        let aa_kbc_params = wrapped_aa_kbc_params.trim_start_matches("provider:attestation-agent:");
-
-        let Some((kbc_name, kbs_uri)) = aa_kbc_params.split_once("::") else {
-            bail!("illegal aa_kbc_params : {aa_kbc_params}");
-        };
-
+    pub fn new(kbc_name: &str, kbs_uri: &str) -> Result<Self> {
         if kbc_name.is_empty() {
             bail!("aa_kbc_params: missing KBC name");
         }
@@ -47,16 +38,17 @@ impl Native {
             other => bail!("Unsupported KBC {other}"),
         };
 
+        let inner = Mutex::new(inner);
         Ok(Self { inner })
     }
 }
 
 #[async_trait]
 impl Client for Native {
-    async fn get_resource(&mut self, resource_path: &str) -> Result<Vec<u8>> {
-        let url = ResourceUri::try_from(resource_path)
-            .map_err(|e| anyhow!("parse ResourceUri: {e:?}"))?;
-        let resource = match &mut self.inner {
+    async fn get_resource(&self, resource_path: &str) -> Result<Vec<u8>> {
+        let url =
+            ResourceUri::try_from(resource_path).map_err(|e| anyhow!("parse ResourceUri: {e}"))?;
+        let resource = match *self.inner.lock().await {
             Kbc::Sample(ref mut inner) => inner.get_resource(url).await?,
             Kbc::Cc(ref mut inner) => inner.get_resource(url).await?,
         };

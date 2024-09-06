@@ -15,15 +15,11 @@
 
 use std::path::Path;
 
-#[cfg(not(feature = "keywrap-native"))]
-use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use log::info;
 use sha2::{Digest, Sha256};
 use tokio::fs;
-
-use super::Protocol;
 
 #[cfg(feature = "keywrap-grpc")]
 mod grpc;
@@ -49,34 +45,45 @@ pub struct SecureChannel {
     pub storage_path: String,
 }
 
+impl Default for SecureChannel {
+    fn default() -> Self {
+        Self::new(
+            "sample_kbc",
+            "null",
+            Path::new(crate::config::DEFAULT_WORK_DIR),
+        )
+        .expect("initialize default secure channel")
+    }
+}
+
 #[async_trait]
 trait Client: Send + Sync {
-    async fn get_resource(&mut self, resource_path: &str) -> Result<Vec<u8>>;
+    async fn get_resource(&self, resource_path: &str) -> Result<Vec<u8>>;
 }
 
 impl SecureChannel {
     /// Create a new [`SecureChannel`], the input parameter:
     /// * `decrypt_config`: s string with format `provider:attestation-agent:<kbc_name>::<kbs_uri>`.
     ///   This parameter is only used when in native secure channel (for enclave-cc)
-    pub async fn new(_decrypt_config: &Option<&str>) -> Result<Self> {
+    pub fn new(_kbc_name: &str, _kbs_uri: &str) -> Result<Self> {
         let client: Box<dyn Client> = {
             cfg_if::cfg_if! {
                 if #[cfg(feature = "keywrap-ttrpc")] {
                     info!("secure channel uses ttrpc");
-                    Box::new(ttrpc::Ttrpc::new().context("ttrpc client init failed")?)
+                    Box::<ttrpc::Ttrpc>::default()
                 } else if #[cfg(feature = "keywrap-native")] {
                     info!("secure channel uses native-aa");
-                    Box::new(native::Native::new(_decrypt_config)?)
+                    Box::new(native::Native::new(_kbc_name, _kbs_uri)?)
                 } else if #[cfg(feature = "keywrap-grpc")] {
                     info!("secure channel uses gRPC");
-                    Box::new(grpc::Grpc::_new().await.context("grpc client init failed")?)
+                    Box::<grpc::Grpc>::default()
                 } else  {
                     compile_error!("At last one feature of `keywrap-grpc`, `keywrap-ttrpc`, and `keywrap-native` must be enabled.");
                 }
             }
         };
 
-        fs::create_dir_all(STORAGE_PATH).await?;
+        std::fs::create_dir_all(STORAGE_PATH)?;
 
         Ok(Self {
             client,
@@ -105,14 +112,13 @@ impl SecureChannel {
     }
 }
 
-#[async_trait]
-impl Protocol for SecureChannel {
+impl SecureChannel {
     /// Get resource from using, using `resource_name` as `name` in a ResourceDescription,
     /// then save the gathered data into `path`
     ///
     /// Please refer to https://github.com/confidential-containers/guest-components/blob/main/image-rs/docs/ccv1_image_security_design.md#get-resource-service
     /// for more information.
-    async fn get_resource(&mut self, resource_uri: &str) -> Result<Vec<u8>> {
+    pub async fn get_resource(&self, resource_uri: &str) -> Result<Vec<u8>> {
         if let Some(res) = self.check_local(resource_uri).await? {
             return Ok(res);
         }

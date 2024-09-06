@@ -11,69 +11,61 @@
 //! - `kbs://`: using secure channel to fetch from the KBS
 
 use anyhow::*;
-use async_trait::async_trait;
 use tokio::fs;
 
-#[cfg(feature = "getresource")]
+#[cfg(feature = "kbs")]
 pub mod kbs;
 
-#[cfg(feature = "getresource")]
-lazy_static::lazy_static! {
-    /// SecureChannel
-    pub static ref SECURE_CHANNEL: tokio::sync::Mutex<Option<kbs::SecureChannel>> = {
-        tokio::sync::Mutex::new(None)
-    };
+#[derive(Default)]
+pub struct ResourceProvider {
+    #[cfg(feature = "kbs")]
+    secure_channel: kbs::SecureChannel,
 }
 
-/// A protocol should implement this trait. For example,
-/// a `file://` scheme's
-/// - `SCHEME`: `file` string, to distinguish different uri scheme
-/// - `get_resource()`: get resource from the uri
-#[async_trait]
-#[allow(dead_code)]
-trait Protocol: Send + Sync {
-    async fn get_resource(&mut self, uri: &str) -> Result<Vec<u8>>;
-}
+impl ResourceProvider {
+    pub fn new(_kbc_name: &str, _kbs_uri: &str) -> Result<Self> {
+        #[cfg(feature = "kbs")]
+        let secure_channel = kbs::SecureChannel::new(_kbc_name, _kbs_uri)?;
+        Ok(Self {
+            #[cfg(feature = "kbs")]
+            secure_channel,
+        })
+    }
 
-/// This is a public API to retrieve resources. The input parameter `uri` should be
-/// a URL. For example `file://...`
-/// The resource will be retrieved in different ways due to different schemes.
-/// If no scheme is given, it will by default use `file://` to look for the file
-/// in the local filesystem.
-pub async fn get_resource(uri: &str) -> Result<Vec<u8>> {
-    let uri = if uri.contains("://") {
-        uri.to_string()
-    } else {
-        "file://".to_owned() + uri
-    };
+    /// This is a public API to retrieve resources. The input parameter `uri` should be
+    /// a URL. For example `file://...`
+    /// The resource will be retrieved in different ways due to different schemes.
+    /// If no scheme is given, it will by default use `file://` to look for the file
+    /// in the local filesystem.
+    pub async fn get_resource(&self, uri: &str) -> Result<Vec<u8>> {
+        let uri = if uri.contains("://") {
+            uri.to_string()
+        } else {
+            "file://".to_owned() + uri
+        };
 
-    let url = url::Url::parse(&uri).map_err(|e| anyhow!("Failed to parse: {:?}", e))?;
-    match url.scheme() {
-        "kbs" => {
-            #[cfg(feature = "getresource")]
-            {
-                SECURE_CHANNEL
-                    .lock()
-                    .await
-                    .as_mut()
-                    .ok_or_else(|| anyhow!("Uninitialized secure channel"))?
-                    .get_resource(&uri)
-                    .await
+        let url = url::Url::parse(&uri).map_err(|e| anyhow!("Failed to parse: {:?}", e))?;
+        match url.scheme() {
+            "kbs" => {
+                #[cfg(feature = "kbs")]
+                {
+                    self.secure_channel.get_resource(&uri).await
+                }
+
+                #[cfg(not(feature = "kbs"))]
+                {
+                    bail!(
+                        "`kbs` feature not enabled, cannot support fetch resource uri {}",
+                        uri
+                    )
+                }
             }
-
-            #[cfg(not(feature = "getresource"))]
-            {
-                bail!(
-                    "`getresource` feature not enabled, cannot support fetch resource uri {}",
-                    uri
-                )
+            "file" => {
+                let path = url.path();
+                let content = fs::read(path).await?;
+                Ok(content)
             }
+            others => bail!("not support scheme {}", others),
         }
-        "file" => {
-            let path = url.path();
-            let content = fs::read(path).await?;
-            Ok(content)
-        }
-        others => bail!("not support scheme {}", others),
     }
 }
