@@ -10,6 +10,8 @@
 //! - `file://`: from the local filesystem
 //! - `kbs://`: using secure channel to fetch from the KBS
 
+use std::path::Path;
+
 use anyhow::*;
 use tokio::fs;
 
@@ -23,9 +25,9 @@ pub struct ResourceProvider {
 }
 
 impl ResourceProvider {
-    pub fn new(_kbc_name: &str, _kbs_uri: &str) -> Result<Self> {
+    pub fn new(_kbc_name: &str, _kbs_uri: &str, _work_dir: &Path) -> Result<Self> {
         #[cfg(feature = "kbs")]
-        let secure_channel = kbs::SecureChannel::new(_kbc_name, _kbs_uri)?;
+        let secure_channel = kbs::SecureChannel::new(_kbc_name, _kbs_uri, _work_dir)?;
         Ok(Self {
             #[cfg(feature = "kbs")]
             secure_channel,
