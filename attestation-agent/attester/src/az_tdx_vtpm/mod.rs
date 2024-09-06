@@ -34,7 +34,7 @@ struct Evidence {
 #[async_trait::async_trait]
 impl Attester for AzTdxVtpmAttester {
     async fn get_evidence(&self, report_data: Vec<u8>) -> Result<String> {
-        let hcl_report_bytes = vtpm::get_report()?;
+        let hcl_report_bytes = vtpm::get_report_with_report_data(&report_data)?;
         let hcl_report = hcl::HclReport::new(hcl_report_bytes.clone())?;
         let td_report = hcl_report.try_into()?;
         let td_quote_bytes = imds::get_td_quote(&td_report)?;
