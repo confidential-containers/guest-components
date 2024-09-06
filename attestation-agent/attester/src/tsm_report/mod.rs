@@ -72,9 +72,8 @@ impl TsmReportPath {
         // path (rmdir way) when TsmReportPath instance goes out of scope.
         let path = p.into_path();
 
-        check_tsm_report_provider(path.as_path(), wanted).map_err(|e| {
+        check_tsm_report_provider(path.as_path(), wanted).inspect_err(|_| {
             let _ = std::fs::remove_dir(path.as_path());
-            e
         })?;
 
         Ok(Self { path })
