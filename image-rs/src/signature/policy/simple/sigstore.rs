@@ -3,11 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use oci_client::Reference;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsStr;
+use std::fmt::Debug;
+use std::path::Path;
 use tokio::fs;
 
 use crate::signature::image;
@@ -37,13 +39,13 @@ pub struct SigstoreConfig {
 
 impl SigstoreConfig {
     // loads sigstore configuration files(.yaml files) in specific dir.
-    pub async fn new_from_configs(dir: &str) -> Result<Self> {
+    pub async fn new_from_configs(dir: impl AsRef<Path> + Debug) -> Result<Self> {
         let mut merged_config = SigstoreConfig::default();
         let yaml_extension = OsStr::new("yaml");
 
         let mut dirs = fs::read_dir(dir)
             .await
-            .map_err(|e| anyhow!("Read Sigstore config Dir failed: {:?}, path: {}", e, dir))?;
+            .context("read Sigstore config dir failed")?;
 
         while let Some(entry) = dirs.next_entry().await? {
             let path = entry.path();
@@ -61,6 +63,15 @@ impl SigstoreConfig {
         }
 
         Ok(merged_config)
+    }
+
+    /// Set the content of sigstore config with files in
+    /// [`crate::config::SIG_STORE_CONFIG_DIR`]
+    pub async fn update_from_path(&mut self, workdir: &Path) -> Result<()> {
+        let sigstore_config = super::sigstore::SigstoreConfig::new_from_configs(workdir).await?;
+        self.update_self(sigstore_config)?;
+
+        Ok(())
     }
 
     /// Update current [`SigstoreConfig`] using another [`SigstoreConfig`].

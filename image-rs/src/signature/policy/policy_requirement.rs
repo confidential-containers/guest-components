@@ -3,12 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, Result};
-use oci_client::secrets::RegistryAuth;
 use serde::*;
 
-use crate::signature::image::Image;
-use crate::signature::mechanism::{cosign::CosignParameters, simple::SimpleParameters, SignScheme};
+use super::{CosignParameters, SimpleParameters};
 
 /// Policy Requirement Types.
 /// * `Accept`: s.t. `insecureAcceptAnything`, skip signature verification, accept the image unconditionally.
@@ -38,28 +35,6 @@ pub enum PolicyReqType {
     // Refer to issue: https://github.com/confidential-containers/image-rs/issues/7
 }
 
-impl PolicyReqType {
-    /// Check whether an image is allowed by a given policy requirement.
-    pub async fn allows_image(&self, image: &mut Image, auth: &RegistryAuth) -> Result<()> {
-        match self {
-            PolicyReqType::Accept => Ok(()),
-            PolicyReqType::Reject => Err(anyhow!(r#"The policy is "reject""#)),
-            PolicyReqType::SimpleSigning(inner) => inner.allows_image(image, auth).await,
-            PolicyReqType::Cosign(inner) => inner.allows_image(image, auth).await,
-        }
-    }
-
-    /// Return the `SignScheme` trait object if it is some signing scheme,
-    /// or None if not.
-    pub fn try_into_sign_scheme(&mut self) -> Option<&mut dyn SignScheme> {
-        match self {
-            PolicyReqType::SimpleSigning(scheme) => Some(scheme as &mut dyn SignScheme),
-            PolicyReqType::Cosign(scheme) => Some(scheme as &mut dyn SignScheme),
-            _ => None,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::PolicyReqType;
@@ -87,8 +62,7 @@ mod tests {
     #[cfg(feature = "signature-simple")]
     #[test]
     fn deserialize_signed_by_policy() {
-        use crate::signature::mechanism::simple::SimpleParameters;
-        use crate::signature::policy::ref_match::PolicyReqMatchType;
+        use crate::signature::policy::{ref_match::PolicyReqMatchType, SimpleParameters};
 
         let jsons = [
             r#"{
@@ -135,21 +109,18 @@ mod tests {
                 key_path: Some("/keys/public-gpg-keyring".into()),
                 key_data: None,
                 signed_identity: None,
-                ..Default::default()
             }),
             PolicyReqType::SimpleSigning(SimpleParameters {
                 key_type: "GPGKeys".into(),
                 key_path: None,
                 key_data: Some("bm9uc2Vuc2U=".into()),
                 signed_identity: None,
-                ..Default::default()
             }),
             PolicyReqType::SimpleSigning(SimpleParameters {
                 key_type: "GPGKeys".into(),
                 key_path: Some("/keys/public-gpg-keyring".into()),
                 key_data: None,
                 signed_identity: Some(PolicyReqMatchType::MatchExact),
-                ..Default::default()
             }),
             PolicyReqType::SimpleSigning(SimpleParameters {
                 key_type: "GPGKeys".into(),
@@ -158,7 +129,6 @@ mod tests {
                 signed_identity: Some(PolicyReqMatchType::ExactReference {
                     docker_reference: "docker.io/example/busybox:latest".into(),
                 }),
-                ..Default::default()
             }),
             PolicyReqType::SimpleSigning(SimpleParameters {
                 key_type: "GPGKeys".into(),
@@ -168,7 +138,6 @@ mod tests {
                     prefix: "example".into(),
                     signed_prefix: "example".into(),
                 }),
-                ..Default::default()
             }),
         ];
 
