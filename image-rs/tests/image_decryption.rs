@@ -9,23 +9,15 @@
 pub mod common;
 
 /// Ocicrypt-rs config for grpc
-#[cfg(all(
-    feature = "getresource",
-    feature = "encryption",
-    feature = "keywrap-grpc"
-))]
+#[cfg(all(feature = "kbs", feature = "encryption", feature = "keywrap-grpc"))]
 const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_grpc.conf";
 
 /// Ocicrypt-rs config for ttrpc
-#[cfg(all(
-    feature = "getresource",
-    feature = "encryption",
-    feature = "keywrap-ttrpc"
-))]
+#[cfg(all(feature = "kbs", feature = "encryption", feature = "keywrap-ttrpc"))]
 const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_ttrpc.conf";
 
 #[cfg(all(
-    feature = "getresource",
+    feature = "kbs",
     feature = "encryption",
     any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
 ))]
@@ -52,11 +44,6 @@ async fn test_decrypt_layers(#[case] image: &str) {
     let work_dir = tempfile::tempdir().unwrap();
     let bundle_dir = tempfile::tempdir().unwrap();
 
-    // clean former test files, which is needed to prevent
-    // lint from warning dead code.
-    common::clean_configs()
-        .await
-        .expect("Delete configs failed.");
     let mut image_client = image_rs::image::ImageClient::new(work_dir.path().to_path_buf());
     if cfg!(feature = "snapshot-overlayfs") {
         image_client
