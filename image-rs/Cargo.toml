@@ -18,7 +18,7 @@ async-compression = { version = "0.4.14", features = [
 ] }
 async-trait.workspace = true
 base64.workspace = true
-cfg-if = { workspace = true, optional = true }
+cfg-if.workspace = true
 devicemapper = { version = "0.34.2", optional = true }
 dircpy = { version = "0.3.19", optional = true }
 filetime = "0.2"
@@ -83,13 +83,6 @@ tempfile.workspace = true
 test-utils = { path = "libs/test-utils" }
 tokio = { workspace = true, features = ["process"] }
 
-# Remove nested workspace.
-# Unclear if test-utils is needed as a member or not.
-# Excluded member scripts/attestation_agent/app doesn't seem to exist.
-# [workspace]
-# members = ["libs/test-utils"]
-# exclude = ["scripts/attestation_agent/app"]
-
 [features]
 default = [
     "snapshot-overlayfs",
@@ -105,7 +98,7 @@ kata-cc-rustls-tls = [
     "snapshot-overlayfs",
     "signature-cosign-rustls",
     "signature-simple",
-    "getresource",
+    "kbs",
     "oci-client/rustls-tls",
     "reqwest?/rustls-tls",
 ]
@@ -114,7 +107,7 @@ enclave-cc-cckbc-rustls-tls = [
     "keywrap-native",
     "snapshot-unionfs",
     "signature-simple",
-    "getresource",
+    "kbs",
     "signature-cosign-rustls",
     "oci-client-rustls",
     "reqwest?/rustls-tls",
@@ -127,7 +120,7 @@ kata-cc-native-tls = [
     "snapshot-overlayfs",
     "signature-cosign-native",
     "signature-simple",
-    "getresource",
+    "kbs",
     "oci-client/native-tls",
     "reqwest?/default-tls",
 ]
@@ -136,7 +129,7 @@ enclave-cc-cckbc-native-tls = [
     "keywrap-native",
     "snapshot-unionfs",
     "signature-simple",
-    "getresource",
+    "kbs",
     "signature-cosign-native",
     "oci-client-native",
     "reqwest?/default-tls",
@@ -193,7 +186,11 @@ signature-simple = ["signature", "sequoia-openpgp", "serde_yaml"]
 snapshot-overlayfs = ["hex", "nix"]
 snapshot-unionfs = ["nix", "dircpy", "fs_extra"]
 
-getresource = ["lazy_static", "cfg-if"]
+# This features controls whether kbs uri scheme is supported in resource location, s.t. `kbs://...`
+# it will try to connect to a service with `GetResource` API, typically `Confidential Data Hub`.
+# The concrete way is via ttrpc (aligns with feature `keywrap-ttrpc`), gRPC (aligns with `keywrap-grpc`)
+# or directly connects to KBS (aligns with feature `keywrap-native`. This way is used in enclave-cc)
+kbs = []
 
 nydus = ["lazy_static", "nydus-api", "nydus-service"]
 
