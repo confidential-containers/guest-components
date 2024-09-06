@@ -5,6 +5,7 @@
 pub const ERR_BAD_UNCOMPRESSED_DIGEST: &str = "unsupported uncompressed digest format";
 
 pub mod auth;
+pub mod builder;
 pub mod bundle;
 pub mod config;
 pub mod decoder;
