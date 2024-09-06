@@ -7,6 +7,7 @@
 
 use anyhow::*;
 use async_trait::async_trait;
+use tokio::sync::{Mutex, OnceCell};
 use tonic::transport::Channel;
 
 use self::get_resource::{
@@ -24,23 +25,31 @@ mod get_resource {
 
 pub const _GETRESOURCE_ADDR: &str = "http://127.0.0.1:50000";
 
+#[derive(Default)]
 pub struct Grpc {
-    inner: GetResourceServiceClient<Channel>,
-}
-
-impl Grpc {
-    pub async fn _new() -> Result<Self> {
-        let inner = GetResourceServiceClient::connect(_GETRESOURCE_ADDR).await?;
-        Ok(Self { inner })
-    }
+    client: OnceCell<Mutex<GetResourceServiceClient<Channel>>>,
 }
 
 #[async_trait]
 impl Client for Grpc {
-    async fn get_resource(&mut self, resource_path: &str) -> Result<Vec<u8>> {
+    async fn get_resource(&self, resource_path: &str) -> Result<Vec<u8>> {
         let req = tonic::Request::new(GetResourceRequest {
             resource_path: resource_path.to_string(),
         });
-        Ok(self.inner.get_resource(req).await?.into_inner().resource)
+
+        let resource = self
+            .client
+            .get_or_try_init(|| async {
+                let client = GetResourceServiceClient::connect(_GETRESOURCE_ADDR).await?;
+                Ok(Mutex::new(client))
+            })
+            .await?
+            .lock()
+            .await
+            .get_resource(req)
+            .await?
+            .into_inner()
+            .resource;
+        Ok(resource)
     }
 }
