@@ -287,7 +287,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "attester",
- "base64 0.22.0",
+ "base64 0.22.1",
  "clap 4.2.7",
  "config",
  "const_format",
@@ -321,7 +321,7 @@ dependencies = [
  "async-trait",
  "az-snp-vtpm",
  "az-tdx-vtpm",
- "base64 0.22.0",
+ "base64 0.22.1",
  "clap 4.2.7",
  "codicon",
  "csv-rs",
@@ -411,9 +411,9 @@ dependencies = [
 
 [[package]]
 name = "az-cvm-vtpm"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1940b5a30bbaa585acd365e329c8c4c5c119345fef81830bd5f38f2360caa7d6"
+checksum = "f500c98db61d29b592d51d1cf56a1d996c34f9346b8b89b28008b5403e65450a"
 dependencies = [
  "bincode",
  "jsonwebkey",
@@ -422,7 +422,7 @@ dependencies = [
  "serde",
  "serde-big-array",
  "serde_json",
- "sev 3.1.1",
+ "sev 4.0.0",
  "sha2 0.10.8",
  "thiserror",
  "tss-esapi",
@@ -431,24 +431,24 @@ dependencies = [
 
 [[package]]
 name = "az-snp-vtpm"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a276bcc39a8cf650ebc32941409f89c751cf8266c67f233872ac8c50ffa5405"
+checksum = "49473355e76f066300f14aa56c6df23b1a037bea179dbb1b582ecefc8f6fd37c"
 dependencies = [
  "az-cvm-vtpm",
  "bincode",
  "clap 4.2.7",
  "serde",
- "sev 3.1.1",
+ "sev 4.0.0",
  "thiserror",
  "ureq",
 ]
 
 [[package]]
 name = "az-tdx-vtpm"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb795802e685a153ea4906349c86f5760012478a72e349538dd47012409465de"
+checksum = "55802d75ce5ef102b03f687b220dab76a626e0ca4c79e3f4af3c544734152356"
 dependencies = [
  "az-cvm-vtpm",
  "base64-url",
@@ -495,9 +495,9 @@ checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
 name = "base64"
-version = "0.22.0"
+version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9475866fec1451be56a3c2400fd081ff546538961565ccb5b7142cbd22bc7a51"
+checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
 name = "base64-serde"
@@ -515,7 +515,7 @@ version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38e2b6c78c06f7288d5e3c3d683bde35a79531127c83b087e5d0d77c974b4b28"
 dependencies = [
- "base64 0.22.0",
+ "base64 0.22.1",
 ]
 
 [[package]]
@@ -628,6 +628,12 @@ name = "bitfield"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d7e60934ceec538daadb9d8432424ed043a904d8e0243f3c6446bce549a46ac"
+
+[[package]]
+name = "bitfield"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c821a6e124197eb56d907ccc2188eab1038fb919c914f47976e64dd8dbc855d1"
 
 [[package]]
 name = "bitflags"
@@ -1004,7 +1010,7 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
- "base64 0.22.0",
+ "base64 0.22.1",
  "clap 4.2.7",
  "ctr",
  "daemonize",
@@ -1056,7 +1062,7 @@ dependencies = [
  "assert_cmd",
  "async-trait",
  "attestation-agent",
- "base64 0.22.0",
+ "base64 0.22.1",
  "cfg-if",
  "clap 4.2.7",
  "config",
@@ -1271,7 +1277,7 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
- "base64 0.22.0",
+ "base64 0.22.1",
  "ctr",
  "kbs-types",
  "openssl",
@@ -2741,7 +2747,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert-json-diff",
- "base64 0.22.0",
+ "base64 0.22.1",
  "crypto",
  "kms",
  "resource_uri",
@@ -2758,7 +2764,7 @@ dependencies = [
  "anyhow",
  "async-compression",
  "async-trait",
- "base64 0.22.0",
+ "base64 0.22.1",
  "cfg-if",
  "devicemapper",
  "dircpy",
@@ -3087,7 +3093,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "base64 0.22.0",
+ "base64 0.22.1",
  "bincode",
  "crypto",
  "foreign-types 0.5.0",
@@ -3125,7 +3131,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "attester",
- "base64 0.22.0",
+ "base64 0.22.1",
  "crypto",
  "jwt-simple",
  "kbs-types",
@@ -3155,7 +3161,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "attestation-agent",
- "base64 0.22.0",
+ "base64 0.22.1",
  "bincode",
  "chrono",
  "const_format",
@@ -3982,7 +3988,7 @@ dependencies = [
  "aes-gcm",
  "anyhow",
  "async-trait",
- "base64 0.22.0",
+ "base64 0.22.1",
  "base64-serde",
  "cfg-if",
  "crypto",
@@ -4228,7 +4234,7 @@ version = "3.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e459365e590736a54c3fa561947c84837534b8e9af6fc5bf781307e82658fae"
 dependencies = [
- "base64 0.22.0",
+ "base64 0.22.1",
  "serde",
 ]
 
@@ -4856,6 +4862,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rdrand"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d92195228612ac8eed47adbc2ed0f04e513a4ccb98175b6f2bd04d963b533655"
+dependencies = [
+ "rand_core",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4959,7 +4974,7 @@ version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7d6d2a27d57148378eb5e111173f4276ad26340ecc5c49a4a2152167a2d6a37"
 dependencies = [
- "base64 0.22.0",
+ "base64 0.22.1",
  "bytes",
  "cookie",
  "cookie_store",
@@ -5212,7 +5227,7 @@ version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29993a25686778eb88d4189742cd713c9bce943bc54251a33509dc63cbacf73d"
 dependencies = [
- "base64 0.22.0",
+ "base64 0.22.1",
  "rustls-pki-types",
 ]
 
@@ -5391,7 +5406,7 @@ dependencies = [
  "assert-json-diff",
  "assert_cmd",
  "async-trait",
- "base64 0.22.0",
+ "base64 0.22.1",
  "clap 4.2.7",
  "crypto",
  "kms",
@@ -5444,7 +5459,7 @@ dependencies = [
  "aes",
  "aes-gcm",
  "anyhow",
- "base64 0.22.0",
+ "base64 0.21.7",
  "block-padding",
  "blowfish",
  "buffered-reader",
@@ -5661,7 +5676,32 @@ dependencies = [
  "iocuddle",
  "lazy_static",
  "libc",
+ "serde",
+ "serde-big-array",
+ "serde_bytes",
+ "static_assertions",
+ "uuid",
+]
+
+[[package]]
+name = "sev"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a97bd0b2e2d937951add10c8512a2dacc6ad29b39e5c5f26565a3e443329857d"
+dependencies = [
+ "base64 0.22.1",
+ "bincode",
+ "bitfield 0.15.0",
+ "bitflags 1.3.2",
+ "byteorder",
+ "codicon",
+ "dirs",
+ "hex",
+ "iocuddle",
+ "lazy_static",
+ "libc",
  "openssl",
+ "rdrand",
  "serde",
  "serde-big-array",
  "serde_bytes",
@@ -5764,7 +5804,7 @@ version = "0.9.0"
 source = "git+https://github.com/sigstore/sigstore-rs.git?rev=1b6ccf0f64d173350ec5515bd69ab48a26a9c0a3#1b6ccf0f64d173350ec5515bd69ab48a26a9c0a3"
 dependencies = [
  "async-trait",
- "base64 0.22.0",
+ "base64 0.22.1",
  "cfg-if",
  "chrono",
  "const-oid",
@@ -5901,7 +5941,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "base64 0.22.0",
+ "base64 0.22.1",
  "kms",
  "log",
  "rand",
