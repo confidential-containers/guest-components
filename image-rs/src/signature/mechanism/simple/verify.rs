@@ -61,7 +61,7 @@ pub fn verify_sig_and_extract_payload(pubkey_ring: &[u8], sig: Vec<u8>) -> Resul
     let mut validate_key_id = SigKeyIDs::default();
 
     // Dump the keyID which recorded in the signature itself from the OnePassSig of the sig claim file.
-    // OnePassSig: https://docs.rs/sequoia-openpgp/1.7.0/sequoia_openpgp/packet/enum.OnePassSig.html
+    // OnePassSig: https://docs.rs/sequoia-openpgp/1.21.2/sequoia_openpgp/packet/enum.OnePassSig.html
     //
     // sig_packet is a sequoia-opengpg PacketPile, `path_ref()` and `path_ref_mut()`
     // returns a reference to the packet at the location described by
