@@ -6,7 +6,7 @@
 pub mod common;
 
 #[cfg(all(
-    feature = "getresource",
+    feature = "kbs",
     any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
 ))]
 #[rstest::rstest]
@@ -22,23 +22,16 @@ async fn test_use_credential(#[case] image_ref: &str, #[case] auth_file_uri: &st
         .await
         .expect("Failed to start confidential data hub!");
 
-    // clean former test files, which is needed to prevent
-    // lint from warning dead code.
-    common::clean_configs()
-        .await
-        .expect("Delete configs failed.");
-
     let work_dir = tempfile::tempdir().unwrap();
 
     // a new client for every pulling, avoid effection
     // of cache of old client.
-    let mut image_client = image_rs::image::ImageClient::new(work_dir.path().to_path_buf());
-
-    // enable container auth
-    image_client.config.auth = true;
-
-    // set credential file uri
-    image_client.config.file_paths.auth_file = auth_file_uri.into();
+    let mut image_client = image_rs::builder::ClientBuilder::default()
+        .authenticated_registry_credentials_uri(auth_file_uri.to_string())
+        .work_dir(work_dir.into_path())
+        .build()
+        .await
+        .unwrap();
 
     let bundle_dir = tempfile::tempdir().unwrap();
 

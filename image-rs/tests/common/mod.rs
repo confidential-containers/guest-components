@@ -5,7 +5,6 @@
 //
 
 use anyhow::Result;
-use image_rs::image::IMAGE_SECURITY_CONFIG_DIR;
 use std::path::Path;
 use tokio::process::{Child, Command};
 
@@ -122,12 +121,4 @@ pub async fn start_confidential_data_hub() -> Result<Child> {
 pub fn umount_bundle(bundle_dir: &tempfile::TempDir) {
     let rootfs_path = bundle_dir.path().join("rootfs");
     nix::mount::umount(&rootfs_path).expect("failed to umount rootfs");
-}
-
-pub async fn clean_configs() -> Result<()> {
-    if Path::new(IMAGE_SECURITY_CONFIG_DIR).exists() {
-        tokio::fs::remove_dir_all(IMAGE_SECURITY_CONFIG_DIR).await?;
-    }
-
-    Ok(())
 }
