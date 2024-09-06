@@ -2,7 +2,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
+use log::info;
 use oci_client::manifest::{OciDescriptor, OciImageManifest};
 use oci_client::secrets::RegistryAuth;
 use oci_client::Reference;
@@ -14,11 +15,13 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use crate::auth::Auth;
 use crate::bundle::{create_runtime_config, BUNDLE_ROOTFS};
 use crate::config::{ImageConfig, CONFIGURATION_FILE_NAME, DEFAULT_WORK_DIR};
 use crate::decoder::Compression;
 use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
+use crate::signature::SignatureValidator;
 use crate::snapshots::{SnapshotType, Snapshotter};
 
 #[cfg(feature = "snapshot-unionfs")]
@@ -28,14 +31,6 @@ use crate::snapshots::overlay::OverlayFs;
 
 #[cfg(feature = "nydus")]
 use crate::nydus::{service, utils};
-
-/// Image security config dir contains important information such as
-/// security policy configuration file and signature verification configuration file.
-/// Therefore, it is necessary to ensure that the directory is stored in a safe place.
-///
-/// The reason for using the `/run` directory here is that in general HW-TEE,
-/// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
-pub const IMAGE_SECURITY_CONFIG_DIR: &str = "/run/image-security";
 
 /// The metadata info for container image layer.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -82,14 +77,22 @@ pub struct ImageMeta {
 /// pulling, image signing verfication, image layer
 /// decryption/unpack/store and management.
 pub struct ImageClient {
-    /// The config for `image-rs` client.
-    pub config: ImageConfig,
+    /// The registry auths to authenticate to private registries
+    pub(crate) registry_auth: Option<Auth>,
+
+    /// The image pull security module
+    /// it is used to filter image pull requests against a
+    /// policy
+    pub(crate) signature_validator: Option<SignatureValidator>,
 
     /// The metadata database for `image-rs` client.
-    pub meta_store: Arc<RwLock<MetaStore>>,
+    pub(crate) meta_store: Arc<RwLock<MetaStore>>,
 
     /// The supported snapshots for `image-rs` client.
-    pub snapshots: HashMap<SnapshotType, Box<dyn Snapshotter>>,
+    pub(crate) snapshots: HashMap<SnapshotType, Box<dyn Snapshotter>>,
+
+    /// The config
+    pub(crate) config: ImageConfig,
 }
 
 impl Default for ImageClient {
@@ -99,12 +102,13 @@ impl Default for ImageClient {
         let config = ImageConfig::try_from(work_dir.join(CONFIGURATION_FILE_NAME).as_path())
             .unwrap_or_default();
         let meta_store = MetaStore::try_from(work_dir.join(METAFILE).as_path()).unwrap_or_default();
-        let snapshots = Self::init_snapshots(&config, &meta_store);
-
+        let snapshots = Self::init_snapshots(&config.work_dir, &meta_store);
         ImageClient {
-            config,
+            registry_auth: None,
             meta_store: Arc::new(RwLock::new(meta_store)),
             snapshots,
+            signature_validator: None,
+            config,
         }
     }
 }
@@ -112,14 +116,14 @@ impl Default for ImageClient {
 impl ImageClient {
     ///Initialize metadata database and supported snapshots.
     pub fn init_snapshots(
-        config: &ImageConfig,
+        work_dir: &Path,
         _meta_store: &MetaStore,
     ) -> HashMap<SnapshotType, Box<dyn Snapshotter>> {
         let mut snapshots = HashMap::new();
 
         #[cfg(feature = "snapshot-overlayfs")]
         {
-            let data_dir = config.work_dir.join(SnapshotType::Overlay.to_string());
+            let data_dir = work_dir.join(SnapshotType::Overlay.to_string());
             let overlayfs = OverlayFs::new(data_dir);
             snapshots.insert(
                 SnapshotType::Overlay,
@@ -133,9 +137,7 @@ impl ImageClient {
                 .get(&SnapshotType::OcclumUnionfs.to_string())
                 .unwrap_or(&0);
             let occlum_unionfs = Unionfs {
-                data_dir: config
-                    .work_dir
-                    .join(SnapshotType::OcclumUnionfs.to_string()),
+                data_dir: work_dir.join(SnapshotType::OcclumUnionfs.to_string()),
                 index: std::sync::atomic::AtomicUsize::new(*occlum_unionfs_index),
             };
             snapshots.insert(
@@ -147,17 +149,18 @@ impl ImageClient {
     }
 
     /// Create an ImageClient instance with specific work directory.
-    pub fn new(image_work_dir: PathBuf) -> Self {
-        let work_dir = image_work_dir.as_path();
+    pub fn new(work_dir: PathBuf) -> Self {
         let config = ImageConfig::try_from(work_dir.join(CONFIGURATION_FILE_NAME).as_path())
-            .unwrap_or_else(|_| ImageConfig::new(image_work_dir.clone()));
+            .unwrap_or_else(|_| ImageConfig::new(work_dir.clone()));
         let meta_store = MetaStore::try_from(work_dir.join(METAFILE).as_path()).unwrap_or_default();
-        let snapshots = Self::init_snapshots(&config, &meta_store);
+        let snapshots = Self::init_snapshots(&config.work_dir, &meta_store);
 
         Self {
-            config,
             meta_store: Arc::new(RwLock::new(meta_store)),
             snapshots,
+            registry_auth: None,
+            signature_validator: None,
+            config,
         }
     }
 
@@ -182,62 +185,31 @@ impl ImageClient {
     ) -> Result<String> {
         let reference = Reference::try_from(image_url)?;
 
-        // Try to get auth using input param.
-        let auth = if let Some(auth_info) = auth_info {
-            if let Some((username, password)) = auth_info.split_once(':') {
-                let auth = RegistryAuth::Basic(username.to_string(), password.to_string());
-                Some(auth)
-            } else {
-                bail!("Invalid authentication info ({:?})", auth_info);
-            }
-        } else {
-            None
-        };
-
-        // If one of self.config.auth and self.config.security_validate is enabled,
-        // there will establish a secure channel
-        #[cfg(feature = "getresource")]
-        if self.config.auth || self.config.security_validate {
-            // Both we need a [`IMAGE_SECURITY_CONFIG_DIR`] dir
-            if !Path::new(IMAGE_SECURITY_CONFIG_DIR).exists() {
-                tokio::fs::create_dir_all(IMAGE_SECURITY_CONFIG_DIR)
-                    .await
-                    .map_err(|e| {
-                        anyhow!("Create image security runtime config dir failed: {:?}", e)
-                    })?;
-            }
-
-            let mut channel = crate::resource::SECURE_CHANNEL.lock().await;
-            *channel = Some(crate::resource::kbs::SecureChannel::new(decrypt_config).await?);
-        };
-
-        // If no valid auth is given and config.auth is enabled, try to load
-        // auth from `auth.json` of given place.
-        // If a proper auth is given, use this auth.
-        // If no valid auth is given and config.auth is disabled, use Anonymous auth.
-        let auth = match (self.config.auth, auth.is_none()) {
-            (true, true) => {
-                match crate::auth::credential_for_reference(
-                    &reference,
-                    &self.config.file_paths.auth_file,
-                )
-                .await
-                {
-                    Ok(cred) => cred,
-                    Err(e) => {
-                        bail!("failed to get registry authentication credentials: {:?}", e)
-                    }
+        // Try to find a valid registry auth. Logic order
+        // 1. the input parameter
+        // 2. from self.registry_auth
+        // 3. use Anonymous auth
+        let auth = match auth_info {
+            Some(input_auth) => match input_auth.split_once(':') {
+                Some((username, password)) => {
+                    RegistryAuth::Basic(username.to_string(), password.to_string())
                 }
-            }
-            (false, true) => RegistryAuth::Anonymous,
-            _ => auth.expect("unexpected uninitialized auth"),
+                None => bail!("Invalid authentication info ({:?})", auth_info),
+            },
+            None => match &self.registry_auth {
+                Some(registry_auth) => registry_auth.credential_for_reference(&reference).await?,
+                None => {
+                    info!("Use Anonymous image registry auth");
+                    RegistryAuth::Anonymous
+                }
+            },
         };
 
         let mut client = PullClient::new(
             reference,
             &self.config.work_dir.join("layers"),
             &auth,
-            self.config.max_concurrent_download,
+            self.config.max_concurrent_layer_downloads_per_image,
         )?;
         let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
 
@@ -263,15 +235,11 @@ impl ImageClient {
             }
 
             #[cfg(feature = "signature")]
-            if self.config.security_validate {
-                crate::signature::allows_image(
-                    image_url,
-                    &image_digest,
-                    &auth,
-                    &self.config.file_paths,
-                )
-                .await
-                .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
+            if let Some(signature_validator) = &self.signature_validator {
+                signature_validator
+                    .check_image_signature(image_url, &image_digest, &auth)
+                    .await
+                    .context("image security validation failed")?;
             }
 
             let (mut image_data, _, _) = create_image_meta(
@@ -302,15 +270,11 @@ impl ImageClient {
         }
 
         #[cfg(feature = "signature")]
-        if self.config.security_validate {
-            crate::signature::allows_image(
-                image_url,
-                &image_digest,
-                &auth,
-                &self.config.file_paths,
-            )
-            .await
-            .map_err(|e| anyhow!("Security validate failed: {:?}", e))?;
+        if let Some(signature_validator) = &self.signature_validator {
+            signature_validator
+                .check_image_signature(image_url, &image_digest, &auth)
+                .await
+                .context("image security validation failed")?;
         }
 
         let (mut image_data, unique_layers, unique_diff_ids) = create_image_meta(
@@ -385,7 +349,7 @@ impl ImageClient {
         };
 
         let bootstrap = utils::get_nydus_bootstrap_desc(image_manifest)
-            .ok_or_else(|| anyhow!("Faild to get bootstrap oci descriptor"))?;
+            .ok_or_else(|| anyhow::anyhow!("Faild to get bootstrap oci descriptor"))?;
         let layer_metas = client
             .pull_bootstrap(
                 bootstrap,
