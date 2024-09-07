@@ -188,10 +188,11 @@ pub fn process_fuse_daemon(
         prefetch_files: fuse_config.prefetch_files.clone(),
     };
     let vfs = create_vfs_backend(FsBackendType::Rafs, true, false)?;
-    let p = (&fuse_config.fail_over_policy).try_into().map_err(|e| {
-        error!("Invalid failover policy");
-        e
-    })?;
+    let p = (&fuse_config.fail_over_policy)
+        .try_into()
+        .inspect_err(|_| {
+            error!("Invalid failover policy");
+        })?;
 
     let daemon = {
         create_fuse_daemon(
@@ -208,9 +209,8 @@ pub fn process_fuse_daemon(
             Some(cmd),
             BTI.to_owned(),
         )
-        .map(|d| {
+        .inspect(|_| {
             info!("Fuse daemon started!");
-            d
         })
         .map_err(|e| {
             error!("Failed in starting fuse daemon: {}", e);
