@@ -555,6 +555,7 @@ mod tests {
 
     ///Test runner which mocks binary executable for key wrapping and unwrapping
     #[derive(Clone, Copy)]
+    #[cfg(feature = "keywrap-keyprovider-cmd")]
     pub struct TestRunner {}
 
     ///Mock annotation packet, which goes into container image manifest
@@ -567,6 +568,10 @@ mod tests {
 
     ///grpc server with mock api implementation for serving the clients with mock WrapKey and Unwrapkey grpc method implementations
     #[derive(Default)]
+    #[cfg(any(
+        feature = "keywrap-keyprovider-grpc",
+        feature = "keywrap-keyprovider-ttrpc"
+    ))]
     struct TestServer {}
 
     #[cfg(any(
