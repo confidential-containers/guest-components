@@ -1255,14 +1255,8 @@ mod tests {
     #[cfg(feature = "keywrap-keyprovider-native")]
     #[test]
     fn test_key_provider_native_succuss() {
-        let annotation_from_sample_kbc: Vec<u8> = {
-            let res = std::fs::read("data/sample_kbc_annotation.json");
-            if let Ok(out) = res {
-                out
-            } else {
-                vec![]
-            }
-        };
+        let annotation_from_sample_kbc: Vec<u8> =
+            { std::fs::read("data/sample_kbc_annotation.json").unwrap_or_default() };
 
         let mut provider = std::collections::HashMap::new();
         let attrs = crate::config::KeyProviderAttrs {
