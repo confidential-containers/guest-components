@@ -47,4 +47,7 @@ pub enum Error {
 
     #[error("invalid hash algorithm: {0}")]
     InvalidHashAlgorithm(String),
+
+    #[error("unexpected JSON data type: expected {0}, got {1}")]
+    UnexpectedJSONDataType(String, String),
 }
