@@ -3196,13 +3196,14 @@ dependencies = [
 
 [[package]]
 name = "krata-tokio-tar"
-version = "0.4.0"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba844968838c1c5892da2116e5f744bceab2b43af34539abdd6cd3975eaca973"
+checksum = "e8bd5fee9b96acb5fc36b401896d601e6fdcce52b0e651ce24a3b21fb524e79f"
 dependencies = [
  "filetime",
  "futures-core",
  "libc",
+ "portable-atomic",
  "redox_syscall 0.3.5",
  "tokio",
  "tokio-stream",
@@ -4462,6 +4463,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "portable-atomic"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da544ee218f0d287a911e9c99a39a8c9bc8fcad3cb8db5959940044ecfc67265"
+
+[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5459,7 +5466,7 @@ dependencies = [
  "aes",
  "aes-gcm",
  "anyhow",
- "base64 0.21.7",
+ "base64 0.22.1",
  "block-padding",
  "blowfish",
  "buffered-reader",

@@ -54,7 +54,7 @@ sha2.workspace = true
 sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "1b6ccf0f64d173350ec5515bd69ab48a26a9c0a3", default-features = false, optional = true }
 strum.workspace = true
 strum_macros = "0.26"
-krata-tokio-tar = "0.4.0"
+krata-tokio-tar = "0.4.2"
 tokio.workspace = true
 tokio-util = "0.7.11"
 tonic = { workspace = true, optional = true }
