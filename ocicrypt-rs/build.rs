@@ -6,7 +6,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
         .build_server(true)
         .out_dir("src/utils/grpc/")
-        .compile(&["src/utils/proto/keyprovider.proto"], &["src/utils"])?;
+        .compile_protos(&["src/utils/proto/keyprovider.proto"], &["src/utils"])?;
 
     #[cfg(feature = "gen-proto-ttrpc")]
     {

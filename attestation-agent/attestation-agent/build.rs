@@ -12,7 +12,7 @@ fn main() -> std::io::Result<()> {
         tonic_build::configure()
             .build_server(true)
             .protoc_arg("--experimental_allow_proto3_optional")
-            .compile(&["../protos/attestation-agent.proto"], &["../protos"])?;
+            .compile_protos(&["../protos/attestation-agent.proto"], &["../protos"])?;
     }
 
     #[cfg(feature = "ttrpc")]
