@@ -9,7 +9,7 @@ fn main() {
         tonic_build::configure()
             .build_server(true)
             .protoc_arg("--experimental_allow_proto3_optional")
-            .compile(
+            .compile_protos(
                 &["./protos/api.proto", "./protos/keyprovider.proto"],
                 &["./protos"],
             )

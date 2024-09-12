@@ -15,7 +15,7 @@ fn main() -> std::io::Result<()> {
         tonic_build::configure()
             .build_server(true)
             .out_dir("src/online_sev_kbc/")
-            .compile(&["src/online_sev_kbc/getsecret.proto"], &[""])?;
+            .compile_protos(&["src/online_sev_kbc/getsecret.proto"], &[""])?;
     }
 
     Ok(())

@@ -14,7 +14,7 @@ fn main() -> Result<()> {
     tonic_build::configure()
         .build_server(true)
         .out_dir("./src/plugins/kbs/sev")
-        .compile(&["./src/plugins/kbs/sev/protos/getsecret.proto"], &[""])?;
+        .compile_protos(&["./src/plugins/kbs/sev/protos/getsecret.proto"], &[""])?;
 
     Ok(())
 }
