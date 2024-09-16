@@ -10,7 +10,7 @@ use std::fmt;
 use std::str::FromStr;
 
 /// Hash algorithms used to calculate runtime/init data binding
-#[derive(Serialize, Deserialize, Clone, Debug, Display, Copy)]
+#[derive(Serialize, Deserialize, Clone, Debug, Display, Copy, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum HashAlgorithm {
     Sha256,
