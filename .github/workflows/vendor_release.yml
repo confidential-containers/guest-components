@@ -1,0 +1,24 @@
+name: Generate vendored content for the release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  generate-and-publish-vendored-code:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate and publish cargo vendored tarball
+        run: |
+          tag=$(echo $GITHUB_REF | sed 's|refs/tags/||')
+          tarball_name="guest-components-${tag}-vendor.tar.gz"
+          mkdir -p .cargo
+          cargo vendor --locked >> .cargo/config.toml
+
+          tar -cvzf ${tarball_name} vendor .cargo/config.toml 
+          gh release upload ${tag} ${tarball_name}
+        env:
+          GH_TOKEN: ${{ github.token }}
