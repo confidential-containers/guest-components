@@ -45,12 +45,12 @@ or explicitly specify the platform it supports. Taking `tdx` as example:
 make ATTESTER=tdx-attester
 ```
 
-with no platform supprted
+with no platform supported
 ```shell
 make ATTESTER=none
 ```
 
-with all platforms supprted
+with all platforms supported
 ```shell
 make ATTESTER=all-attesters
 ```
