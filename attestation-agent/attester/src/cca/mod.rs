@@ -30,7 +30,7 @@ struct CcaEvidence {
 impl Attester for CcaAttester {
     async fn get_evidence(&self, mut challenge: Vec<u8>) -> Result<String> {
         if challenge.len() > CCA_CHALLENGE_SIZE {
-            bail!("CCA Attester: Challenge size must be {CCA_CHALLENGE_SIZE} or less.");
+            bail!("CCA Attester: Challenge size must be {CCA_CHALLENGE_SIZE} bytes or less.");
         }
 
         challenge.resize(CCA_CHALLENGE_SIZE, 0);
