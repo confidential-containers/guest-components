@@ -56,14 +56,14 @@ impl KeyProviderService for KeyProvider {
         )
         .map_err(|e| {
             Status::invalid_argument(format!(
-                "key_provider_key_wrap_protocol_input is not legal utf8 string: {e}"
+                "key_provider_key_wrap_protocol_input is not legal utf8 string: {e:?}"
             ))
         })?;
 
         debug!("WrapKey API Request Input: {}", input_string);
         let input: KeyProviderInput = serde_json::from_str::<KeyProviderInput>(&input_string)
             .map_err(|e| {
-                Status::invalid_argument(format!("parse key provider input failed: {e}"))
+                Status::invalid_argument(format!("parse key provider input failed: {e:?}"))
             })?;
         let optsdata = input
             .keywrapparams
@@ -101,7 +101,7 @@ impl KeyProviderService for KeyProvider {
             params,
         )
         .await
-        .map_err(|e| Status::internal(format!("encrypt failed: {e}")))?;
+        .map_err(|e| Status::internal(format!("encrypt failed: {e:?}")))?;
 
         let output_struct = KeyWrapOutput {
             keywrapresults: KeyWrapResults {
@@ -109,13 +109,13 @@ impl KeyProviderService for KeyProvider {
             },
         };
         let output = serde_json::to_string(&output_struct)
-            .map_err(|e| Status::internal(format!("serde json failed: {e}")))?
+            .map_err(|e| Status::internal(format!("serde json failed: {e:?}")))?
             .as_bytes()
             .to_vec();
         debug!(
             "WrapKey API output: {}",
             serde_json::to_string(&output_struct)
-                .map_err(|e| Status::internal(format!("serde json failed: {e}")))?
+                .map_err(|e| Status::internal(format!("serde json failed: {e:?}")))?
         );
         let reply = KeyProviderKeyWrapProtocolOutput {
             key_provider_key_wrap_protocol_output: output,

@@ -86,7 +86,7 @@ impl KeyProviderKeyWrapProtocolOutput {
         let channel = tonic::transport::Channel::builder(uri)
             .connect()
             .await
-            .map_err(|e| anyhow!("keyprovider: error while creating channel: {e}"))?;
+            .map_err(|e| anyhow!("keyprovider: error while creating channel: {e:?}"))?;
 
         let mut client =
             crate::utils::grpc::keyprovider::key_provider_service_client::KeyProviderServiceClient::new(
@@ -257,7 +257,7 @@ impl KeyProviderKeyWrapper {
                 )
                 .map_err(|e| {
                     anyhow!(
-                        "keyprovider: error from binary provider for {} operation: {e}",
+                        "keyprovider: error from binary provider for {} operation: {e:?}",
                         OpKey::Wrap,
                     )
                 })?;
@@ -287,7 +287,7 @@ impl KeyProviderKeyWrapper {
                 create_async_runtime()?.block_on(async {
                     KeyProviderKeyWrapProtocolOutput::from_grpc(_input, &grpc, OpKey::Wrap)
                         .await
-                        .map_err(|e| format!("{e}"))
+                        .map_err(|e| format!("{e:?}"))
                 })
             });
             let protocol_output = match handler.join() {
@@ -350,7 +350,7 @@ impl KeyProviderKeyWrapper {
             {
                 KeyProviderKeyWrapProtocolOutput::from_command(_input, _cmd, _runner).map_err(|e| {
                     anyhow!(
-                        "keyprovider: error from binary provider for {} operation: {e}",
+                        "keyprovider: error from binary provider for {} operation: {e:?}",
                         OpKey::Unwrap,
                     )
                 })
@@ -379,7 +379,7 @@ impl KeyProviderKeyWrapper {
                         .await
                         .map_err(|e| {
                             format!(
-                                "keyprovider: grpc provider failed to execute {} operation: {e}",
+                                "keyprovider: grpc provider failed to execute {} operation: {e:?}",
                                 OpKey::Wrap,
                             )
                         })
@@ -387,7 +387,7 @@ impl KeyProviderKeyWrapper {
             });
             match handler.join() {
                 Ok(Ok(v)) => Ok(v),
-                Ok(Err(e)) => bail!("failed to unwrap key by gRPC, {e}"),
+                Ok(Err(e)) => bail!("failed to unwrap key by gRPC, {e:?}"),
                 Err(e) => bail!("failed to unwrap key by gRPC, {e:?}"),
             }
         }
@@ -425,7 +425,7 @@ impl KeyProviderKeyWrapper {
             let content = String::from_utf8(_json_string.to_vec())?;
             KeyProviderKeyWrapProtocolOutput::from_native(&content, _dc_config).map_err(|e| {
                 anyhow!(
-                    "keyprovider: error from crate provider for {} operation: {e}",
+                    "keyprovider: error from crate provider for {} operation: {e:?}",
                     OpKey::Unwrap,
                 )
             })
@@ -542,7 +542,9 @@ fn create_async_runtime() -> std::result::Result<tokio::runtime::Runtime, String
         .enable_time()
         .build()
     {
-        Err(e) => Err(format!("keyprovider: failed to create async runtime, {e}")),
+        Err(e) => Err(format!(
+            "keyprovider: failed to create async runtime, {e:?}"
+        )),
         Ok(rt) => Ok(rt),
     }
 }
@@ -709,7 +711,7 @@ mod tests {
 
                 tokio::spawn(async move {
                     if let Err(e) = serve.await {
-                        eprintln!("Error = {e}");
+                        eprintln!("Error = {e:?}");
                     }
 
                     tx.send(()).unwrap();

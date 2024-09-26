@@ -91,7 +91,7 @@ impl TryInto<super::v1::AnnotationPacket> for AnnotationPacketV2 {
 
         let kid = resource_uri::ResourceUri::try_from(&self.kid[..]).map_err(|e| {
             Error::ParseAnnotationPacket {
-                source: anyhow!("illegal ResourceUri in `kid` field: {e}"),
+                source: anyhow!("illegal ResourceUri in `kid` field: {e:?}"),
             }
         })?;
 

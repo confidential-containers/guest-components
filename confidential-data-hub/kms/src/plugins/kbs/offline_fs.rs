@@ -53,18 +53,20 @@ impl OfflineFsKbc {
         let file = match fs::read(path).await {
             Ok(f) => f,
             Err(e) => {
-                warn!("Failed to read file {path} to init offline-fs-kbc: {e}");
+                warn!("Failed to read file {path} to init offline-fs-kbc: {e:?}");
                 return Ok(());
             }
         };
 
         let map: HashMap<String, String> = serde_json::from_slice(&file).map_err(|e| {
-            Error::KbsClientError(format!("offline-fs-kbc: illegal resource file {path}: {e}"))
+            Error::KbsClientError(format!(
+                "offline-fs-kbc: illegal resource file {path}: {e:?}"
+            ))
         })?;
         for (k, v) in &map {
             let value = STANDARD.decode(v).map_err(|e| {
                 Error::KbsClientError(format!(
-                    "offline-fs-kbc: decode value from file {path} failed: {e}"
+                    "offline-fs-kbc: decode value from file {path} failed: {e:?}"
                 ))
             })?;
             if self.resources.insert(k.to_owned(), value).is_some() {

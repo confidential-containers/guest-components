@@ -55,17 +55,18 @@ impl EhsmKmsClient {
         info!("EHSM_IN_GUEST_KEY_PATH = {}", key_path);
 
         let provider_settings: EhsmProviderSettings =
-            serde_json::from_value(Value::Object(provider_settings.clone()))
-                .map_err(|e| Error::EhsmKmsError(format!("parse provider setting failed: {e}")))?;
+            serde_json::from_value(Value::Object(provider_settings.clone())).map_err(|e| {
+                Error::EhsmKmsError(format!("parse provider setting failed: {e:?}"))
+            })?;
 
         let credential_path = format!("{}/credential_{}.json", key_path, provider_settings.app_id);
 
         let api_key = {
             let cred = fs::read_to_string(credential_path)
                 .await
-                .map_err(|e| Error::EhsmKmsError(format!("read credential failed: {e}")))?;
+                .map_err(|e| Error::EhsmKmsError(format!("read credential failed: {e:?}")))?;
             let cred: Credential = serde_json::from_str(&cred)
-                .map_err(|e| Error::EhsmKmsError(format!("serialize credential failed: {e}")))?;
+                .map_err(|e| Error::EhsmKmsError(format!("serialize credential failed: {e:?}")))?;
             cred.api_key
         };
 
@@ -86,7 +87,7 @@ impl EhsmKmsClient {
         };
 
         let provider_settings = serde_json::to_value(provider_settings)
-            .map_err(|e| Error::EhsmKmsError(format!("serialize ProviderSettings failed: {e}")))?
+            .map_err(|e| Error::EhsmKmsError(format!("serialize ProviderSettings failed: {e:?}")))?
             .as_object()
             .expect("must be an object")
             .to_owned();
@@ -102,7 +103,7 @@ impl Encrypter for EhsmKmsClient {
             .client
             .encrypt(key_id, &STANDARD.encode(data), None)
             .await
-            .map_err(|e| Error::EhsmKmsError(format!("EHSM-KMS encrypt failed: {e}")))?;
+            .map_err(|e| Error::EhsmKmsError(format!("EHSM-KMS encrypt failed: {e:?}")))?;
 
         let annotations = Annotations::new();
 
@@ -123,14 +124,14 @@ impl Decrypter for EhsmKmsClient {
             .decrypt(
                 key_id,
                 std::str::from_utf8(ciphertext).map_err(|e| {
-                    Error::EhsmKmsError(format!("decrypt &[u8] to &str failed: {e}"))
+                    Error::EhsmKmsError(format!("decrypt &[u8] to &str failed: {e:?}"))
                 })?,
                 None,
             )
             .await
-            .map_err(|e| Error::EhsmKmsError(format!("EHSM-KMS decrypt failed: {e}")))?;
+            .map_err(|e| Error::EhsmKmsError(format!("EHSM-KMS decrypt failed: {e:?}")))?;
         let plaintext = STANDARD.decode(plaintext_b64).map_err(|e| {
-            Error::EhsmKmsError(format!("decode plaintext for decryption failed: {e}"))
+            Error::EhsmKmsError(format!("decode plaintext for decryption failed: {e:?}"))
         })?;
 
         Ok(plaintext)
@@ -145,7 +146,7 @@ impl EhsmKmsClient {
             .client
             .create_key(key_spec, origin, keyusage)
             .await
-            .map_err(|e| Error::EhsmKmsError(format!("EHSM-KMS create key failed: {e}")))?;
+            .map_err(|e| Error::EhsmKmsError(format!("EHSM-KMS create key failed: {e:?}")))?;
 
         Ok(key_id)
     }

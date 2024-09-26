@@ -47,7 +47,7 @@ impl StsTokenClient {
         let http_client = ClientBuilder::new()
             .use_rustls_tls()
             .build()
-            .map_err(|e| Error::AliyunKmsError(format!("build http client failed: {e}")))?;
+            .map_err(|e| Error::AliyunKmsError(format!("build http client failed: {e:?}")))?;
         Ok(Self {
             ak: sts.ak,
             sk: sts.sk,
@@ -83,7 +83,7 @@ impl StsTokenClient {
         let http_client = ClientBuilder::new()
             .use_rustls_tls()
             .build()
-            .map_err(|e| Error::AliyunKmsError(format!("build http client failed: {e}")))?;
+            .map_err(|e| Error::AliyunKmsError(format!("build http client failed: {e:?}")))?;
 
         Ok(Self {
             ak: sections[0].to_string(),
@@ -108,27 +108,30 @@ impl StsTokenClient {
         ]);
 
         let headers = self.build_headers("GetSecretValue").map_err(|e| {
-            Error::AliyunKmsError(format!("build get_secret request http header failed: {e}"))
+            Error::AliyunKmsError(format!(
+                "build get_secret request http header failed: {e:?}"
+            ))
         })?;
 
         let params = self
             .build_params("GetSecretValue", get_secret_request)
             .await
             .map_err(|e| {
-                Error::AliyunKmsError(format!("build get_secret request http param failed: {e}"))
+                Error::AliyunKmsError(format!("build get_secret request http param failed: {e:?}"))
             })?;
 
-        let res = self
-            .do_request(headers, params)
-            .await
-            .map_err(|e| Error::AliyunKmsError(format!("do request to kms server failed: {e}")))?;
+        let res = self.do_request(headers, params).await.map_err(|e| {
+            Error::AliyunKmsError(format!("do request to kms server failed: {e:?}"))
+        })?;
 
         let res_string: String = String::from_utf8(res).map_err(|e| {
-            Error::AliyunKmsError(format!("get_secret response using `from_utf8` failed: {e}"))
+            Error::AliyunKmsError(format!(
+                "get_secret response using `from_utf8` failed: {e:?}"
+            ))
         })?;
         let get_secret_response: Value = serde_json::from_str(&res_string).map_err(|e| {
             Error::AliyunKmsError(format!(
-                "get_secret response using `serde_json` failed: {e}"
+                "get_secret response using `serde_json` failed: {e:?}"
             ))
         })?;
         let secret_data = if let Some(secret_data_str) = get_secret_response["SecretData"].as_str()

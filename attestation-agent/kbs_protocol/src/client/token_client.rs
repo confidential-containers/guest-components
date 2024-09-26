@@ -53,7 +53,7 @@ impl KbsClientCapabilities for KbsClient<Box<dyn TokenProvider>> {
                 .bearer_auth(&token.content)
                 .send()
                 .await
-                .map_err(|e| Error::HttpError(format!("get failed: {e}")))?;
+                .map_err(|e| Error::HttpError(format!("get failed: {e:?}")))?;
 
             match res.status() {
                 reqwest::StatusCode::OK => {

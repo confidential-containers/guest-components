@@ -123,9 +123,9 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
                 Ok(_) => break,
                 Err(e) => {
                     if retry_count >= RCAR_MAX_ATTEMPT {
-                        return Err(Error::RcarHandshake(format!("Unable to get token. RCAR handshake retried {RCAR_MAX_ATTEMPT} times. Final attempt failed with: {e}")));
+                        return Err(Error::RcarHandshake(format!("Unable to get token. RCAR handshake retried {RCAR_MAX_ATTEMPT} times. Final attempt failed with: {e:?}")));
                     } else {
-                        warn!("RCAR handshake failed: {e}, retry {retry_count}...");
+                        warn!("RCAR handshake failed: {e:?}, retry {retry_count}...");
                         retry_count += 1;
                         tokio::time::sleep(Duration::from_secs(RCAR_RETRY_TIMEOUT_SECOND)).await;
                     }
@@ -301,7 +301,7 @@ impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
                 .get(&remote_url)
                 .send()
                 .await
-                .map_err(|e| Error::HttpError(format!("get failed: {e}")))?;
+                .map_err(|e| Error::HttpError(format!("get failed: {e:?}")))?;
 
             match res.status() {
                 reqwest::StatusCode::OK => {

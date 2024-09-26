@@ -47,8 +47,9 @@ pub struct ClientKeyClient {
 
 impl ClientKeyClient {
     fn read_kms_instance_cert(cert_pem: &[u8]) -> Result<Certificate> {
-        let kms_instance_ca_cert = Certificate::from_pem(cert_pem)
-            .map_err(|e| Error::AliyunKmsError(format!("read kms instance ca cert failed: {e}")))?;
+        let kms_instance_ca_cert = Certificate::from_pem(cert_pem).map_err(|e| {
+            Error::AliyunKmsError(format!("read kms instance ca cert failed: {e:?}"))
+        })?;
         Ok(kms_instance_ca_cert)
     }
 
@@ -60,7 +61,7 @@ impl ClientKeyClient {
     ) -> Result<Self> {
         let credential = CredentialClientKey::new(client_key, password).map_err(|e| {
             Error::AliyunKmsError(format!(
-                "create client_key credential of the kms instance failed: {e}"
+                "create client_key credential of the kms instance failed: {e:?}"
             ))
         })?;
 
@@ -72,7 +73,7 @@ impl ClientKeyClient {
             .use_rustls_tls()
             .add_root_certificate(cert)
             .build()
-            .map_err(|e| Error::AliyunKmsError(format!("build http client failed: {e}")))?;
+            .map_err(|e| Error::AliyunKmsError(format!("build http client failed: {e:?}")))?;
 
         Ok(Self {
             credential,
@@ -91,7 +92,7 @@ impl ClientKeyClient {
 
         let provider_settings: AliClientKeyProviderSettings =
             serde_json::from_value(Value::Object(provider_settings.clone())).map_err(|e| {
-                Error::AliyunKmsError(format!("parse client_key provider setting failed: {e}"))
+                Error::AliyunKmsError(format!("parse client_key provider setting failed: {e:?}"))
             })?;
 
         let cert_path = format!(
@@ -108,13 +109,13 @@ impl ClientKeyClient {
         );
 
         let cert_pem = fs::read_to_string(cert_path).await.map_err(|e| {
-            Error::AliyunKmsError(format!("read kms instance pem cert failed: {e}"))
+            Error::AliyunKmsError(format!("read kms instance pem cert failed: {e:?}"))
         })?;
         let pswd = fs::read_to_string(pswd_path).await.map_err(|e| {
-            Error::AliyunKmsError(format!("read password of the credential failed: {e}"))
+            Error::AliyunKmsError(format!("read password of the credential failed: {e:?}"))
         })?;
         let client_key = fs::read_to_string(client_key_path).await.map_err(|e| {
-            Error::AliyunKmsError(format!("read client key of the credential failed: {e}"))
+            Error::AliyunKmsError(format!("read client key of the credential failed: {e:?}"))
         })?;
 
         Self::new(
@@ -135,7 +136,9 @@ impl ClientKeyClient {
         };
 
         let provider_settings = serde_json::to_value(client_key_provider_settings)
-            .map_err(|e| Error::AliyunKmsError(format!("serialize ProviderSettings failed: {e}")))?
+            .map_err(|e| {
+                Error::AliyunKmsError(format!("serialize ProviderSettings failed: {e:?}"))
+            })?
             .as_object()
             .expect("must be an object")
             .to_owned();
@@ -159,29 +162,29 @@ impl Encrypter for ClientKeyClient {
         let mut body = Vec::new();
         encrypt_request.encode(&mut body).map_err(|e| {
             Error::AliyunKmsError(format!(
-                "encode encrypt request body using protobuf failed: {e}"
+                "encode encrypt request body using protobuf failed: {e:?}"
             ))
         })?;
         let headers = self.build_headers("Encrypt", &body).map_err(|e| {
-            Error::AliyunKmsError(format!("build encrypt request http header failed: {e}"))
+            Error::AliyunKmsError(format!("build encrypt request http header failed: {e:?}"))
         })?;
 
-        let res = self
-            .do_request(body, headers)
-            .await
-            .map_err(|e| Error::AliyunKmsError(format!("do request to kms server failed: {e}")))?;
+        let res = self.do_request(body, headers).await.map_err(|e| {
+            Error::AliyunKmsError(format!("do request to kms server failed: {e:?}"))
+        })?;
 
         let encrypt_response = dkms_api::EncryptResponse::decode(&res[..]).map_err(|e| {
             Error::AliyunKmsError(format!(
-                "decrypt encrypt response using protobuf failed: {e}"
+                "decrypt encrypt response using protobuf failed: {e:?}"
             ))
         })?;
         let annotations = AliCryptAnnotations {
             iv: STANDARD.encode(encrypt_response.iv),
         };
 
-        let annotations = serde_json::to_value(annotations)
-            .map_err(|e| Error::AliyunKmsError(format!("serialize SecretSettings failed: {e}")))?;
+        let annotations = serde_json::to_value(annotations).map_err(|e| {
+            Error::AliyunKmsError(format!("serialize SecretSettings failed: {e:?}"))
+        })?;
         let annotations = annotations
             .as_object()
             .expect("must be an object")
@@ -201,13 +204,13 @@ impl Decrypter for ClientKeyClient {
         let secret_settings: AliCryptAnnotations =
             serde_json::from_value(Value::Object(annotations.clone())).map_err(|e| {
                 Error::AliyunKmsError(format!(
-                    "deserialize SecretSettings for decryption failed: {e}"
+                    "deserialize SecretSettings for decryption failed: {e:?}"
                 ))
             })?;
 
-        let iv = STANDARD
-            .decode(secret_settings.iv)
-            .map_err(|e| Error::AliyunKmsError(format!("decode iv for decryption failed: {e}")))?;
+        let iv = STANDARD.decode(secret_settings.iv).map_err(|e| {
+            Error::AliyunKmsError(format!("decode iv for decryption failed: {e:?}"))
+        })?;
         let decrypt_request = dkms_api::DecryptRequest {
             aad: vec![],
             iv,
@@ -218,20 +221,21 @@ impl Decrypter for ClientKeyClient {
         };
         let mut body = Vec::new();
         decrypt_request.encode(&mut body).map_err(|e| {
-            Error::AliyunKmsError(format!("encode decrypt request using protobuf failed: {e}"))
+            Error::AliyunKmsError(format!(
+                "encode decrypt request using protobuf failed: {e:?}"
+            ))
         })?;
         let headers = self.build_headers("Decrypt", &body).map_err(|e| {
-            Error::AliyunKmsError(format!("build decrypt request http header failed: {e}"))
+            Error::AliyunKmsError(format!("build decrypt request http header failed: {e:?}"))
         })?;
 
-        let res = self
-            .do_request(body, headers)
-            .await
-            .map_err(|e| Error::AliyunKmsError(format!("do request to kms server failed: {e}")))?;
+        let res = self.do_request(body, headers).await.map_err(|e| {
+            Error::AliyunKmsError(format!("do request to kms server failed: {e:?}"))
+        })?;
 
         let decrypt_response = dkms_api::DecryptResponse::decode(&res[..]).map_err(|e| {
             Error::AliyunKmsError(format!(
-                "decode decrypt response using protobuf failed: {e}"
+                "decode decrypt response using protobuf failed: {e:?}"
             ))
         })?;
         Ok(decrypt_response.plaintext)
@@ -243,7 +247,7 @@ impl ClientKeyClient {
         let secret_settings: AliSecretAnnotations =
             serde_json::from_value(Value::Object(annotations.clone())).map_err(|e| {
                 Error::AliyunKmsError(format!(
-                    "deserialize SecretSettings for get_secret failed: {e}"
+                    "deserialize SecretSettings for get_secret failed: {e:?}"
                 ))
             })?;
 
@@ -256,22 +260,23 @@ impl ClientKeyClient {
         };
         get_secret_request.encode(&mut body).map_err(|e| {
             Error::AliyunKmsError(format!(
-                "encode get_secret request using protobuf failed: {e}"
+                "encode get_secret request using protobuf failed: {e:?}"
             ))
         })?;
         let headers = self.build_headers("GetSecretValue", &body).map_err(|e| {
-            Error::AliyunKmsError(format!("build get_secret request http header failed: {e}"))
+            Error::AliyunKmsError(format!(
+                "build get_secret request http header failed: {e:?}"
+            ))
         })?;
 
-        let res = self
-            .do_request(body, headers)
-            .await
-            .map_err(|e| Error::AliyunKmsError(format!("do request to kms server failed: {e}")))?;
+        let res = self.do_request(body, headers).await.map_err(|e| {
+            Error::AliyunKmsError(format!("do request to kms server failed: {e:?}"))
+        })?;
 
         let get_secret_response =
             dkms_api::GetSecretValueResponse::decode(&res[..]).map_err(|e| {
                 Error::AliyunKmsError(format!(
-                    "decode get_secret response using protobuf failed: {e}"
+                    "decode get_secret response using protobuf failed: {e:?}"
                 ))
             })?;
         let secret_data = get_secret_response.secret_data.as_bytes().to_vec();

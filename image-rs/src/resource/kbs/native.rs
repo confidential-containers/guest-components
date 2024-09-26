@@ -54,8 +54,8 @@ impl Native {
 #[async_trait]
 impl Client for Native {
     async fn get_resource(&mut self, resource_path: &str) -> Result<Vec<u8>> {
-        let url =
-            ResourceUri::try_from(resource_path).map_err(|e| anyhow!("parse ResourceUri: {e}"))?;
+        let url = ResourceUri::try_from(resource_path)
+            .map_err(|e| anyhow!("parse ResourceUri: {e:?}"))?;
         let resource = match &mut self.inner {
             Kbc::Sample(ref mut inner) => inner.get_resource(url).await?,
             Kbc::Cc(ref mut inner) => inner.get_resource(url).await?,
