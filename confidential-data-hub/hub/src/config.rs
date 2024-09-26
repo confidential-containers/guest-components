@@ -176,7 +176,6 @@ impl CdhConfig {
         let c = Config::builder()
             .set_default("socket", DEFAULT_CDH_SOCKET_ADDR)?
             .set_default("kbc.url", "")?
-            .set_default("kbc.kbs_cert", "")?
             .add_source(File::with_name(config_path))
             .build()?;
 
@@ -301,7 +300,7 @@ name = "offline_fs_kbc"
         kbc: KbsConfig {
             name: "offline_fs_kbc".to_string(),
             url: "".to_string(),
-            kbs_cert: Some("".to_string()),
+            kbs_cert: None,
         },
         credentials: vec![],
         image: ImageConfiguration {
@@ -328,7 +327,7 @@ some_undefined_field = "unknown value"
         kbc: KbsConfig {
             name: "offline_fs_kbc".to_string(),
             url: "".to_string(),
-            kbs_cert: Some("".to_string()),
+            kbs_cert: None,
         },
         credentials: vec![],
         image: ImageConfiguration {
