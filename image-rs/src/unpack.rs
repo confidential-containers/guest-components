@@ -35,7 +35,7 @@ fn is_attr_available(path: &Path) -> Result<bool> {
             Ok(true)
         }
         Err(e) => {
-            debug!("xattrs is not supported for {path:?}, because {e}");
+            debug!("xattrs is not supported for {path:?}, because {e:?}");
             Ok(false)
         }
     }

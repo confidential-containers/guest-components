@@ -87,7 +87,7 @@ impl AliyunKmsClient {
                     .await
                     .map_err(|e| {
                         Error::AliyunKmsError(format!(
-                            "build ClientKeyClient with `from_provider_settings()` failed: {e}"
+                            "build ClientKeyClient with `from_provider_settings()` failed: {e:?}"
                         ))
                     })?,
             },
@@ -96,7 +96,7 @@ impl AliyunKmsClient {
                     .await
                     .map_err(|e| {
                         Error::AliyunKmsError(format!(
-                            "build EcsRamRoleClient with `from_provider_settings()` failed: {e}"
+                            "build EcsRamRoleClient with `from_provider_settings()` failed: {e:?}"
                         ))
                     })?,
             },
@@ -105,7 +105,7 @@ impl AliyunKmsClient {
                     .await
                     .map_err(|e| {
                         Error::AliyunKmsError(format!(
-                            "build EcsRamRoleClient with `from_provider_settings()` failed: {e}"
+                            "build EcsRamRoleClient with `from_provider_settings()` failed: {e:?}"
                         ))
                     })?,
             },
@@ -123,7 +123,7 @@ impl AliyunKmsClient {
             AliyunKmsClient::ClientKey { inner } => {
                 let mut provider_settings = inner.export_provider_settings().map_err(|e| {
                     Error::AliyunKmsError(format!(
-                        "ClientKeyClient `export_provider_settings()` failed: {e}"
+                        "ClientKeyClient `export_provider_settings()` failed: {e:?}"
                     ))
                 })?;
 

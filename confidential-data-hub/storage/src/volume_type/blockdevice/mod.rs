@@ -62,7 +62,7 @@ async fn get_plaintext_key(resource: &str) -> anyhow::Result<Vec<u8>> {
             .get_secret(resource, &Annotations::default())
             .await
             .map_err(|e| {
-                error!("get keys from kbs failed: {e}");
+                error!("get keys from kbs failed: {e:?}");
                 BlockDeviceError::GetKeysFailure(e.into())
             })?;
         return Ok(secret);

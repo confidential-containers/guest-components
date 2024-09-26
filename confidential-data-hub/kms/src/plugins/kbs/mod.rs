@@ -35,7 +35,7 @@ impl RealClient {
     async fn new() -> Result<Self> {
         let params = env::var("AA_KBC_PARAMS").expect("must be initialized");
         let params = AaKbcParams::try_from(params)
-            .map_err(|e| Error::KbsClientError(format!("Failed to parse aa_kbc_params: {e}")))?;
+            .map_err(|e| Error::KbsClientError(format!("Failed to parse aa_kbc_params: {e:?}")))?;
 
         let c = match &params.kbc[..] {
             #[cfg(feature = "kbs")]

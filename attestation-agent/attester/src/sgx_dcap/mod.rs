@@ -68,7 +68,7 @@ impl Attester for SgxDcapAttester {
                     report_data.as_ptr() as *const sgx_report_data_t,
                 ) {
                     Ok(_) => occlum_quote,
-                    Err(e) => bail!("generate quote: {e}"),
+                    Err(e) => bail!("generate quote: {e:?}"),
                 }
             }
             SgxLibOsType::Gramine => {

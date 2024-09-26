@@ -80,7 +80,8 @@ impl<T> KbsClientBuilder<T> {
             .timeout(Duration::from_secs(KBS_REQ_TIMEOUT_SEC));
 
         for customer_root_cert in &self.kbs_certs {
-            let cert = reqwest::Certificate::from_pem(customer_root_cert.as_bytes())?;
+            let cert = reqwest::Certificate::from_pem(customer_root_cert.as_bytes())
+                .context("read KBS public key cert")?;
             http_client_builder = http_client_builder.add_root_certificate(cert);
         }
 
@@ -90,12 +91,12 @@ impl<T> KbsClientBuilder<T> {
         }
 
         let tee_key = match self.tee_key {
-            Some(key) => TeeKeyPair::from_pkcs1_pem(&key[..])?,
+            Some(key) => TeeKeyPair::from_pkcs1_pem(&key[..]).context("read tee public key")?,
             None => TeeKeyPair::new()?,
         };
 
         let token = match self.token {
-            Some(t) => Some(Token::new(t)?),
+            Some(t) => Some(Token::new(t).context("read token")?),
             None => None,
         };
 

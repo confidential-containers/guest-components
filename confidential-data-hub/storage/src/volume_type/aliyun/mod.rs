@@ -151,7 +151,7 @@ impl Oss {
                 .args(parameters)
                 .spawn()
                 .map_err(|e| {
-                    error!("oss cmd fork failed: {e}");
+                    error!("oss cmd fork failed: {e:?}");
                     AliyunError::OssfsMountFailed
                 })?;
             let oss_res = oss.wait().await?;
@@ -222,7 +222,7 @@ impl Oss {
                 .args(parameters)
                 .spawn()
                 .map_err(|e| {
-                    error!("oss cmd fork failed: {e}");
+                    error!("oss cmd fork failed: {e:?}");
                     AliyunError::OssfsMountFailed
                 })?;
             let oss_res = oss.wait().await?;

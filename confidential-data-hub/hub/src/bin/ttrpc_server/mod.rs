@@ -117,7 +117,7 @@ impl KeyProviderService for Server {
         let reader = reader.as_ref().expect("must be initialized");
         let key_provider_input: KeyProviderInput =
             serde_json::from_slice(&req.KeyProviderKeyWrapProtocolInput[..]).map_err(|e| {
-                error!("[ttRPC CDH] UnwrapKey parse KeyProviderInput failed : {e}");
+                error!("[ttRPC CDH] UnwrapKey parse KeyProviderInput failed : {e:?}");
                 let mut status = Status::new();
                 status.set_code(Code::INTERNAL);
                 status.set_message("[ERROR] UnwrapKey Parse request failed".into());
@@ -125,7 +125,7 @@ impl KeyProviderService for Server {
             })?;
 
         let annotation_packet = key_provider_input.get_annotation().map_err(|e| {
-            error!("[ttRPC CDH] UnwrapKey get AnnotationPacket failed: {e}");
+            error!("[ttRPC CDH] UnwrapKey get AnnotationPacket failed: {e:?}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
             status.set_message("[ERROR] UnwrapKey Parse request failed".to_string());
@@ -152,7 +152,7 @@ impl KeyProviderService for Server {
         };
 
         let lek = serde_json::to_vec(&output_struct).map_err(|e| {
-            error!("[ttRPC CDH] UnWrapKey failed to serialize LEK : {e}");
+            error!("[ttRPC CDH] UnWrapKey failed to serialize LEK : {e:?}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
             status.set_message("[CDH] [ERROR]: UnwrapKey serialize response failed".to_string());

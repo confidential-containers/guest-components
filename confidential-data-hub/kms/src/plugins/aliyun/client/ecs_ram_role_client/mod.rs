@@ -53,13 +53,13 @@ impl EcsRamRoleClient {
 
         let ecs_ram_role_str = fs::read_to_string(ecs_ram_role_path).await.map_err(|e| {
             Error::AliyunKmsError(format!(
-                "read ecs_ram_role with `fs::read_to_string()` failed: {e}"
+                "read ecs_ram_role with `fs::read_to_string()` failed: {e:?}"
             ))
         })?;
 
         let ecs_ram_role_json: EcsRamRoleJson =
             serde_json::from_str(&ecs_ram_role_str).map_err(|e| {
-                Error::AliyunKmsError(format!("parse ecs_ram_role JSON file failed: {e}"))
+                Error::AliyunKmsError(format!("parse ecs_ram_role JSON file failed: {e:?}"))
             })?;
 
         Ok(Self::new(
@@ -102,7 +102,7 @@ impl EcsRamRoleClient {
         let sts_credential = self
             .get_session_credential()
             .await
-            .map_err(|e| Error::AliyunKmsError(format!("Get sts token from IMDS failed: {e}")))?;
+            .map_err(|e| Error::AliyunKmsError(format!("Get sts token from IMDS failed: {e:?}")))?;
 
         let client = StsTokenClient::from_sts_token(
             sts_credential,
@@ -110,7 +110,7 @@ impl EcsRamRoleClient {
             self.region_id.clone(),
         )
         .map_err(|e| {
-            Error::AliyunKmsError(format!("Failed to create HTTP client to get secret: {e}"))
+            Error::AliyunKmsError(format!("Failed to create HTTP client to get secret: {e:?}"))
         })?;
 
         client.get_secret(name, annotations).await

@@ -16,7 +16,7 @@ pub struct NativeEvidenceProvider(BoxedAttester);
 impl NativeEvidenceProvider {
     pub fn new() -> Result<Self> {
         let tee = detect_tee_type().try_into().map_err(|e| {
-            Error::NativeEvidenceProvider(format!("failed to initialize tee driver: {e}"))
+            Error::NativeEvidenceProvider(format!("failed to initialize tee driver: {e:?}"))
         })?;
         Ok(Self(tee))
     }

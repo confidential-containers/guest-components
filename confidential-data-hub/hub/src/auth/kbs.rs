@@ -29,9 +29,9 @@ impl Hub {
             }
         }
 
-        let kbs_client = KbcClient::new()
-            .await
-            .map_err(|e| Error::InitializationFailed(format!("kbs client creation failed: {e}")))?;
+        let kbs_client = KbcClient::new().await.map_err(|e| {
+            Error::InitializationFailed(format!("kbs client creation failed: {e:?}"))
+        })?;
 
         fs::create_dir_all(KBS_RESOURCE_STORAGE_DIR)
             .await
@@ -46,7 +46,7 @@ impl Hub {
                 .get_secret(v, &Annotations::default())
                 .await
                 .map_err(|e| {
-                    Error::InitializationFailed(format!("kbs client get resource failed: {e}"))
+                    Error::InitializationFailed(format!("kbs client get resource failed: {e:?}"))
                 })?;
 
             let target_path = PathBuf::from(k);

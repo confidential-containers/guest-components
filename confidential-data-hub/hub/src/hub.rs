@@ -61,7 +61,7 @@ impl Hub {
         // Current the whole process of CDH would be influenced by the HTTPS_PROXY env
         if let Some(https_proxy) = config.image.image_pull_proxy {
             match env::var("HTTPS_PROXY") {
-                Ok(e) => warn!("`image_pull_proxy` is given from config but the current process has a `HTTPS_PROXY` env value {e}, skip override."),
+                Ok(e) => warn!("`image_pull_proxy` is given from config but the current process has a `HTTPS_PROXY` env value {e:?}, skip override."),
                 Err(env::VarError::NotPresent) => {
                     info!("image_pull_proxy is set to: {}", https_proxy);
                     env::set_var("HTTPS_PROXY", https_proxy);
@@ -72,7 +72,7 @@ impl Hub {
 
         if let Some(no_proxy) = config.image.skip_proxy_ips {
             match env::var("NO_PROXY") {
-                Ok(e) => warn!("`skip_proxy_ips` is given from config but the current process has one `NO_PROXY` env value {e}, skip override."),
+                Ok(e) => warn!("`skip_proxy_ips` is given from config but the current process has one `NO_PROXY` env value {e:?}, skip override."),
                 Err(env::VarError::NotPresent) => {
                     info!("no_proxy is set to: {}", no_proxy);
                     env::set_var("NO_PROXY", no_proxy);

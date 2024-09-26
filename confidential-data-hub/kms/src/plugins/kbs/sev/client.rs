@@ -44,33 +44,33 @@ struct RealKbc {
 impl RealKbc {
     async fn new(kbs_uri: &str) -> Result<Self> {
         sev::mount_security_fs().map_err(|e| {
-            Error::KbsClientError(format!("online-sev-kbc: mount security fs failed: {e}"))
+            Error::KbsClientError(format!("online-sev-kbc: mount security fs failed: {e:?}"))
         })?;
         let _secret_module = sev::SecretKernelModule::new().map_err(|e| {
             Error::KbsClientError(format!(
-                "online-sev-kbc: create SecretKernelModule failed: {e}"
+                "online-sev-kbc: create SecretKernelModule failed: {e:?}"
             ))
         })?;
 
-        let connection_json = fs::read_to_string(KEYS_PATH)
-            .await
-            .map_err(|e| Error::KbsClientError(format!("online-sev-kbc: Read keys failed: {e}")))?;
+        let connection_json = fs::read_to_string(KEYS_PATH).await.map_err(|e| {
+            Error::KbsClientError(format!("online-sev-kbc: Read keys failed: {e:?}"))
+        })?;
         fs::remove_file(KEYS_PATH)
             .await
             .expect("Failed to remove secret file");
 
         let connection: Connection = serde_json::from_str(&connection_json).map_err(|e| {
-            Error::KbsClientError(format!("online-sev-kbc: deserialze keys failed: {e}"))
+            Error::KbsClientError(format!("online-sev-kbc: deserialze keys failed: {e:?}"))
         })?;
 
         let key = STANDARD.decode(connection.key).map_err(|e| {
             Error::KbsClientError(format!(
-                "online-sev-kbc: base64 decode connection key failed: {e}"
+                "online-sev-kbc: base64 decode connection key failed: {e:?}"
             ))
         })?;
 
         let kbs_uri = format!("http://{kbs_uri}").parse::<Uri>().map_err(|e| {
-            Error::KbsClientError(format!("online-sev-kbc: parse kbs uri failed: {e}"))
+            Error::KbsClientError(format!("online-sev-kbc: parse kbs uri failed: {e:?}"))
         })?;
         let kbc = RealKbc {
             client_id: connection.client_id,
@@ -122,31 +122,33 @@ impl OnlineSevKbc {
             .get_online_secret(request)
             .await
             .map_err(|e| {
-                Error::KbsClientError(format!("online-sev-kbc: sev get online secret failed: {e}"))
+                Error::KbsClientError(format!(
+                    "online-sev-kbc: sev get online secret failed: {e:?}"
+                ))
             })?
             .into_inner();
         let decrypted_payload = crypto::decrypt(
             Zeroizing::new(kbc.key.clone()),
             STANDARD.decode(response.payload).map_err(|e| {
                 Error::KbsClientError(format!(
-                    "online-sev-kbc: base64 decode response.payload failed: {e}"
+                    "online-sev-kbc: base64 decode response.payload failed: {e:?}"
                 ))
             })?,
             STANDARD.decode(response.iv).map_err(|e| {
                 Error::KbsClientError(format!(
-                    "online-sev-kbc: base64 decode response.iv failed: {e}"
+                    "online-sev-kbc: base64 decode response.iv failed: {e:?}"
                 ))
             })?,
             WrapType::Aes256Gcm,
         )
         .map_err(|e| {
-            Error::KbsClientError(format!("online-sev-kbc: decrypt payload failed: {e}"))
+            Error::KbsClientError(format!("online-sev-kbc: decrypt payload failed: {e:?}"))
         })?;
 
         let payload_dict: HashMap<String, Vec<u8>> = bincode::deserialize(&decrypted_payload)
             .map_err(|e| {
                 Error::KbsClientError(format!(
-                    "online-sev-kbc: deserailize payload dictionary failed: {e}"
+                    "online-sev-kbc: deserailize payload dictionary failed: {e:?}"
                 ))
             })?;
         let res = payload_dict
