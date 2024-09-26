@@ -24,6 +24,9 @@ Confidential Data Hub.
 [coco-keyprovider](attestation-agent/coco_keyprovider/)
 CoCo Keyprovider. Used to encrypt the container images.
 
+[trustee-client](trustee-client)
+A simple client to fetch secrets from Trustee
+
 ## Tools
 
 [secret-cli](confidential-data-hub/secret)

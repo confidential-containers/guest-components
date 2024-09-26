@@ -1,0 +1,17 @@
+[package]
+name = "trustee-client"
+version = "0.10.0"
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+base64.workspace = true
+clap = { workspace = true, features = ["derive"] }
+config.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
+env_logger.workspace = true
+log.workspace = true
+kbs_protocol = { path = "../attestation-agent/kbs_protocol", features=["openssl", "all-attesters", "background_check", "passport" ] }
+rstest.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
