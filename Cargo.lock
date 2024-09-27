@@ -3373,7 +3373,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c2a198fb6b0eada2a8df47933734e6d35d350665a33a3593d7164fa52c75c19"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -6589,9 +6589,9 @@ dependencies = [
 
 [[package]]
 name = "ttrpc"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55ea338db445bee75c596cf8a478fbfcefad5a943c9e92a7e1c805c65ed39551"
+checksum = "e376927d4422245ae3e0a0d7df0e805f99652536999b5c671144de9fe4120d8c"
 dependencies = [
  "async-trait",
  "byteorder",
@@ -6622,9 +6622,9 @@ dependencies = [
 
 [[package]]
 name = "ttrpc-compiler"
-version = "0.6.2"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0672eb06e5663ad190c7b93b2973f5d730259859b62e4e3381301a12a7441107"
+checksum = "04c4c51f20209ae3ec2579b947b54cf52685825238002bc2e5af8e1e075d4813"
 dependencies = [
  "derive-new",
  "prost 0.8.0",
