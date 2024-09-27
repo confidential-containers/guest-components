@@ -103,7 +103,7 @@ cat <<EOF > securemount.json
     "mountpoint": "/tmp/cdh-test"
 }
 EOF
-$ cdh-go-client -o SecureMount --socket /run/confidential-containers/cdh.sock -i ./test.json
+$ cdh-go-client -o SecureMount --socket /run/confidential-containers/cdh.sock -i ./securemount.json
 Successfully secure mount to /tmp/cdh-test
 
 # Verify the mount:
