@@ -165,8 +165,7 @@ impl AttestationAgentService for AA {
 }
 
 pub fn start_ttrpc_service(aa: AttestationAgent) -> Result<HashMap<String, Service>> {
-    let service = Box::new(AA { inner: aa }) as Box<dyn AttestationAgentService + Send + Sync>;
-
+    let service = AA { inner: aa };
     let service = Arc::new(service);
     let get_resource_service = create_attestation_agent_service(service);
     Ok(get_resource_service)

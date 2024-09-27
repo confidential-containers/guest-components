@@ -3,15 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{error::Error as _, sync::Arc};
+use std::error::Error as _;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use confidential_data_hub::{hub::Hub, CdhConfig, DataHub};
-use lazy_static::lazy_static;
 use log::{debug, error};
 use storage::volume_type::Storage;
-use tokio::sync::RwLock;
 use ttrpc::{asynchronous::TtrpcContext, Code, Error, Status};
 
 use crate::{
@@ -30,26 +28,15 @@ use crate::{
     },
 };
 
-lazy_static! {
-    static ref HUB: Arc<RwLock<Option<Hub>>> = Arc::new(RwLock::new(None));
+pub struct Server {
+    hub: Hub,
 }
 
-pub struct Server;
-
 impl Server {
-    async fn init(config: &CdhConfig) -> Result<()> {
-        let mut writer = HUB.write().await;
-        if writer.is_none() {
-            let hub = Hub::new(config.clone()).await?;
-            *writer = Some(hub);
-        }
-
-        Ok(())
-    }
-
     pub async fn new(config: &CdhConfig) -> Result<Self> {
-        Self::init(config).await?;
-        Ok(Self)
+        let hub = Hub::new(config.clone()).await?;
+
+        Ok(Self { hub })
     }
 }
 
@@ -61,9 +48,7 @@ impl SealedSecretService for Server {
         input: UnsealSecretInput,
     ) -> ::ttrpc::Result<UnsealSecretOutput> {
         debug!("[ttRPC CDH] get new UnsealSecret request");
-        let reader = HUB.read().await;
-        let reader = reader.as_ref().expect("must be initialized");
-        let plaintext = reader.unseal_secret(input.secret).await.map_err(|e| {
+        let plaintext = self.hub.unseal_secret(input.secret).await.map_err(|e| {
             let detailed_error = format_error!(e);
             error!("[ttRPC CDH] UnsealSecret :\n{detailed_error}");
             let mut status = Status::new();
@@ -87,9 +72,7 @@ impl GetResourceService for Server {
         req: GetResourceRequest,
     ) -> ::ttrpc::Result<GetResourceResponse> {
         debug!("[ttRPC CDH] get new GetResource request");
-        let reader = HUB.read().await;
-        let reader = reader.as_ref().expect("must be initialized");
-        let resource = reader.get_resource(req.ResourcePath).await.map_err(|e| {
+        let resource = self.hub.get_resource(req.ResourcePath).await.map_err(|e| {
             let detailed_error = format_error!(e);
             error!("[ttRPC CDH] GetResource :\n{detailed_error}");
             let mut status = Status::new();
@@ -113,8 +96,6 @@ impl KeyProviderService for Server {
         req: KeyProviderKeyWrapProtocolInput,
     ) -> ::ttrpc::Result<KeyProviderKeyWrapProtocolOutput> {
         debug!("[ttRPC CDH] get new UnWrapKey request");
-        let reader = HUB.read().await;
-        let reader = reader.as_ref().expect("must be initialized");
         let key_provider_input: KeyProviderInput =
             serde_json::from_slice(&req.KeyProviderKeyWrapProtocolInput[..]).map_err(|e| {
                 error!("[ttRPC CDH] UnwrapKey parse KeyProviderInput failed : {e:?}");
@@ -133,7 +114,7 @@ impl KeyProviderService for Server {
         })?;
 
         debug!("[ttRPC CDH] Call CDH to Unwrap Key...");
-        let decrypted_optsdata = reader.unwrap_key(&annotation_packet).await.map_err(|e| {
+        let decrypted_optsdata = self.hub.unwrap_key(&annotation_packet).await.map_err(|e| {
             let detailed_error = format_error!(e);
             error!("[ttRPC CDH] UnWrapKey :\n{detailed_error}");
             let mut status = Status::new();
@@ -173,15 +154,13 @@ impl SecureMountService for Server {
         req: SecureMountRequest,
     ) -> ::ttrpc::Result<SecureMountResponse> {
         debug!("[ttRPC CDH] get new secure mount request");
-        let reader = HUB.read().await;
-        let reader = reader.as_ref().expect("must be initialized");
         let storage = Storage {
             volume_type: req.volume_type,
             options: req.options,
             flags: req.flags,
             mount_point: req.mount_point,
         };
-        let resource = reader.secure_mount(storage).await.map_err(|e| {
+        let resource = self.hub.secure_mount(storage).await.map_err(|e| {
             let detailed_error = format_error!(e);
             error!("[ttRPC CDH] Secure Mount :\n{detailed_error}");
             let mut status = Status::new();
@@ -205,9 +184,8 @@ impl ImagePullService for Server {
         req: ImagePullRequest,
     ) -> ::ttrpc::Result<ImagePullResponse> {
         debug!("[ttRPC CDH] get new image pull request");
-        let reader = HUB.read().await;
-        let reader = reader.as_ref().expect("must be initialized");
-        let manifest_digest = reader
+        let manifest_digest = self
+            .hub
             .pull_image(&req.image_url, &req.bundle_path)
             .await
             .map_err(|e| {
