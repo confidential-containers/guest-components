@@ -37,14 +37,14 @@ ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
   OPENSSL=1
 endif
 
-ifeq ($(ttrpc), true)
-    binary = --bin ttrpc-aa
-    features += bin,ttrpc
-    binary_name = ttrpc-aa
-else
+ifeq ($(ttrpc), false)
     binary = --bin grpc-aa
     features += bin,grpc
     binary_name = grpc-aa
+else
+    binary = --bin ttrpc-aa
+    features += bin,ttrpc
+    binary_name = ttrpc-aa
 endif
 
 ifdef ATTESTER
