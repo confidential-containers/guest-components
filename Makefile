@@ -21,8 +21,8 @@ else ifeq ($(TEE_PLATFORM), fs)
   ATTESTER = none
 else ifeq ($(TEE_PLATFORM), tdx)
   ATTESTER = tdx-attester
-else ifeq ($(TEE_PLATFORM), az-tdx-vtpm)
-  ATTESTER = az-tdx-vtpm-attester
+else ifeq ($(TEE_PLATFORM), az-cvm-vtpm)
+  ATTESTER = az-snp-vtpm-attester,az-tdx-vtpm-attester
 else ifeq ($(TEE_PLATFORM), sev)
   ATTESTER = none
   ifeq ($(NO_RESOURCE_PROVIDER), true)
@@ -32,8 +32,6 @@ else ifeq ($(TEE_PLATFORM), sev)
   endif
 else ifeq ($(TEE_PLATFORM), snp)
   ATTESTER = snp-attester
-else ifeq ($(TEE_PLATFORM), az-snp-vtpm)
-  ATTESTER = az-snp-vtpm-attester
 else ifeq ($(TEE_PLATFORM), se)
   ATTESTER = se-attester
 else ifeq ($(TEE_PLATFORM), all)

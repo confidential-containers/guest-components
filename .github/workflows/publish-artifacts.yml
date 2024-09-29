@@ -1,0 +1,186 @@
+name: Publish artifacts to ORAS
+
+on:
+  push:
+    branches:
+    - main
+
+env:
+  RUST_TOOLCHAIN: 1.76.0
+
+jobs:
+  publish-aa:
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      matrix:
+        tee:
+        - none
+        - amd
+        - az-cvm-vtpm
+        - tdx
+        - se
+        - cca
+        arch:
+        - x86_64
+        - s390x
+        exclude:
+        - tee: amd
+          arch: s390x
+        - tee: az-cvm-vtpm
+          arch: s390x
+        - tee: tdx
+          arch: s390x
+        - tee: se
+          arch: x86_64
+        - tee: cca
+          arch: s390x
+        include:
+        - tee: none
+          arch: x86_64
+          libc: musl
+        - tee: none
+          arch: s390x
+          libc: gnu
+        - tee: amd
+          arch: x86_64
+          libc: musl
+        - tee: az-cvm-vtpm
+          arch: x86_64
+          libc: gnu
+        - tee: tdx
+          arch: x86_64
+          libc: gnu
+        - tee: se
+          arch: s390x
+          libc: gnu
+        - tee: cca
+          arch: x86_64
+          libc: musl
+    runs-on: ${{ matrix.arch == 's390x' && 's390x' || 'ubuntu-22.04' }}
+    env:
+      TEE_PLATFORM: ${{ matrix.tee }}
+      LIBC: ${{ matrix.libc }}
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+    steps:
+    - name: Log in to the Container registry
+      uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: oras-project/setup-oras@v1
+      with:
+        version: 1.2.0
+
+    - uses: actions/checkout@v4
+
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: ${{ env.RUST_TOOLCHAIN }}
+        target: ${{ matrix.arch }}-unknown-linux-${{ matrix.libc }}
+        override: true
+
+    - name: Install tpm dependencies
+      if: matrix.tee == 'az-cvm-vtpm'
+      run: |
+        sudo apt-get install -y --no-install-recommends libtss2-dev
+
+    - name: Install tdx dependencies
+      if: matrix.tee == 'tdx'
+      run: |
+        sudo curl -sL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo gpg --dearmor --output /usr/share/keyrings/intel-sgx.gpg
+        sudo echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx.gpg] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends libtdx-attest-dev
+
+    - uses: actions/checkout@v4
+
+    - name: Build
+      run: make ./target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/attestation-agent
+
+    - name: Publish to ORAS
+      env:
+        ARCH: ${{ matrix.arch == 'x86_64' && 'amd64' || matrix.arch }}
+      run: |
+        mkdir oras
+        cd oras
+        cp ../target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/attestation-agent .
+        tar cJf attestation-agent.tar.xz attestation-agent
+        arch_tag="${{ github.sha }}-${{ matrix.tee }}_${{ matrix.arch }}"
+        image="${REGISTRY}/${IMAGE_NAME}/attestation-agent"
+        tag="${{ github.sha }}-${{ matrix.tee }}"
+        arch_tag="${tag}_${ARCH}"
+        oras push "${image}:${arch_tag}" attestation-agent.tar.xz
+        # We need to create the platform annotations with docker, since oras 1.2 doesn't support
+        # pushing with platform yet.
+        docker manifest create "${image}:${tag}" --amend "${image}:${arch_tag}"
+        docker manifest annotate --arch "$ARCH" --os linux "${image}:${tag}" "${image}:${arch_tag}"
+        docker manifest push "${image}:${tag}"
+
+  publish-cdh-and-asr:
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      matrix:
+        arch:
+        - x86_64
+        - s390x
+        include:
+        - arch: x86_64
+          libc: musl
+        - arch: s390x
+          libc: gnu
+    runs-on: ${{ matrix.arch == 's390x' && 's390x' || 'ubuntu-22.04' }}
+    env:
+      LIBC: ${{ matrix.libc }}
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+    steps:
+    - name: Log in to the Container registry
+      uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: oras-project/setup-oras@v1
+      with:
+        version: 1.2.0
+
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: ${{ env.RUST_TOOLCHAIN }}
+        target: ${{ matrix.arch }}-unknown-linux-${{ matrix.libc }}
+        override: true
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          libdevmapper-dev \
+          protobuf-compiler
+
+    - uses: actions/checkout@v4
+
+    - name: Build CDH
+      run: make ./target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/confidential-data-hub
+
+    - name: Build ASR
+      run: make ./target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/api-server-rest
+
+    - name: Publish to ORAS
+      run: |
+        mkdir oras
+        cd oras
+        cp ../target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/{confidential-data-hub,api-server-rest} .
+        tar cJf confidential-data-hub.tar.xz confidential-data-hub
+        tar cJf api-server-rest.tar.xz api-server-rest
+        oras push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/confidential-data-hub:${{ github.sha }}-${{ matrix.arch }} confidential-data-hub.tar.xz
+        oras push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api-server-rest:${{ github.sha }}-${{ matrix.arch }} api-server-rest.tar.xz
