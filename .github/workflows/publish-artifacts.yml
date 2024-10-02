@@ -4,6 +4,7 @@ on:
   push:
     branches:
     - main
+    - mkulke/test
 
 env:
   RUST_TOOLCHAIN: 1.76.0
@@ -14,6 +15,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
+      attestations: write
     strategy:
       matrix:
         tee:
@@ -101,6 +103,7 @@ jobs:
       run: make ./target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/attestation-agent
 
     - name: Publish to ORAS
+      id: publish
       env:
         ARCH: ${{ matrix.arch == 'x86_64' && 'amd64' || matrix.arch }}
       run: |
@@ -118,12 +121,23 @@ jobs:
         docker manifest create "${image}:${tag}" --amend "${image}:${arch_tag}"
         docker manifest annotate --arch "$ARCH" --os linux "${image}:${tag}" "${image}:${arch_tag}"
         docker manifest push "${image}:${tag}"
+        # add image and digest to output for attestation
+        echo "image=${image}" >> "$GITHUB_OUTPUT"
+        digest="$(oras manifest fetch "${image}:${arch_tag}" --descriptor | jq -r .digest)"
+        echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/attest-build-provenance@v1
+      with:
+        subject-name: ${{ steps.publish.outputs.image }}
+        subject-digest: ${{ steps.publish.outputs.digest }}
+        push-to-registry: true
 
   publish-cdh-and-asr:
     permissions:
       contents: read
       packages: write
       id-token: write
+      attestations: write
     strategy:
       matrix:
         arch:
@@ -172,12 +186,36 @@ jobs:
     - name: Build ASR
       run: make ./target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/api-server-rest
 
-    - name: Publish to ORAS
+    - name: Publish CDH + ASR to ORAS
+      id: publish
       run: |
+        tag="${{ github.sha }}-${{ matrix.arch }}"
         mkdir oras
         cd oras
         cp ../target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/{confidential-data-hub,api-server-rest} .
+
         tar cJf confidential-data-hub.tar.xz confidential-data-hub
+        image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/confidential-data-hub"
+        oras push "${image}:${tag}" confidential-data-hub.tar.xz
+        echo "cdh-image=${image}" >> "$GITHUB_OUTPUT"
+        digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
+        echo "cdh-digest=${digest}" >> "$GITHUB_OUTPUT"
+
         tar cJf api-server-rest.tar.xz api-server-rest
-        oras push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/confidential-data-hub:${{ github.sha }}-${{ matrix.arch }} confidential-data-hub.tar.xz
-        oras push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api-server-rest:${{ github.sha }}-${{ matrix.arch }} api-server-rest.tar.xz
+        image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api-server-rest"
+        oras push "${image}:${tag}" api-server-rest.tar.xz
+        echo "asr-image=${image}" >> "$GITHUB_OUTPUT"
+        digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
+        echo "asr-digest=${digest}" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/attest-build-provenance@v1
+      with:
+        subject-name: ${{ steps.publish.outputs.cdh-image }}
+        subject-digest: ${{ steps.publish.outputs.cdh-digest }}
+        push-to-registry: true
+
+    - uses: actions/attest-build-provenance@v1
+      with:
+        subject-name: ${{ steps.publish.outputs.asr-image }}
+        subject-digest: ${{ steps.publish.outputs.asr-digest }}
+        push-to-registry: true
