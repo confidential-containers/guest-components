@@ -35,10 +35,10 @@ jobs:
         rust:
           - stable
         instance:
-          - ubuntu-22.04
+          - ubuntu-24.04
           - s390x
         include:
-          - instance: ubuntu-22.04
+          - instance: ubuntu-24.04
             make_args: ""
             cargo_test_opts: "--features openssl,rust-crypto,all-attesters,kbs,coco_as"
             cargo_lint_opts: "--workspace"
@@ -67,14 +67,14 @@ jobs:
 
       - uses: ./.github/actions/install-intel-dcap
         with:
-          ubuntu-version: jammy
-        if: matrix.instance == 'ubuntu-22.04'
+          ubuntu-version: noble
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Install TPM dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libtss2-dev
-        if: matrix.instance == 'ubuntu-22.04'
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Install dm-verity dependencies
         run: |
@@ -91,7 +91,7 @@ jobs:
       - name: Musl build with all platform
         run: |
           make LIBC=musl ttrpc=true ATTESTER=none
-        if: matrix.instance == 'ubuntu-22.04'
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1

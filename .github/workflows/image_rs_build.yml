@@ -35,7 +35,7 @@ jobs:
           - 1.76.0
           - stable
         instance:
-          - ubuntu-latest
+          - ubuntu-24.04
           - s390x
     runs-on: ${{ matrix.instance }}
     steps:
@@ -58,26 +58,26 @@ jobs:
 
       - uses: ./.github/actions/install-intel-dcap
         with:
-          ubuntu-version: jammy
-        if: matrix.instance == 'ubuntu-latest'
+          ubuntu-version: noble
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Install TPM dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libtss2-dev
-        if: matrix.instance == 'ubuntu-latest'
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Install dm-verity dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libdevmapper-dev
-        if: matrix.instance == 'ubuntu-latest'
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Install cross-compliation support dependencies
         run: |
           sudo apt install -y gcc-powerpc64le-linux-gnu
           rustup target add powerpc64le-unknown-linux-gnu
-        if: matrix.instance == 'ubuntu-latest'
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Run cargo fmt check
         uses: actions-rs/cargo@v1
@@ -96,7 +96,7 @@ jobs:
         run: |
             cargo clippy -p image-rs --all-targets --features=enclave-cc-cckbc-native-tls --no-default-features -- -D warnings
             cargo clippy -p image-rs --all-targets --features=kata-cc-native-tls,nydus --no-default-features -- -D warnings
-        if: matrix.instance == 'ubuntu-latest'
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Run cargo build
         uses: actions-rs/cargo@v1
@@ -107,7 +107,7 @@ jobs:
       - name: Run cargo build, cross-compiling for powerpc64le
         run: |
           sudo -E PATH=$PATH -s RUSTFLAGS=" -C linker=powerpc64le-linux-gnu-gcc" cargo build --target powerpc64le-unknown-linux-gnu -p image-rs --features default
-        if: matrix.instance == 'ubuntu-latest'
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Run cargo test - default
         run: |
@@ -142,4 +142,4 @@ jobs:
       - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe + nydus
         run: |
           sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-native-tls,keywrap-jwe,nydus
-        if: matrix.instance == 'ubuntu-latest'
+        if: matrix.instance == 'ubuntu-24.04'
