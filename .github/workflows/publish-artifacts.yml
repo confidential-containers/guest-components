@@ -4,7 +4,6 @@ on:
   push:
     branches:
     - main
-    - mkulke/test
 
 env:
   RUST_TOOLCHAIN: 1.76.0
@@ -18,55 +17,22 @@ jobs:
       attestations: write
     strategy:
       matrix:
-        tee:
-        - none
-        - amd
-        - az-cvm-vtpm
-        - tdx
-        - se
-        - cca
-        arch:
-        - x86_64
-        - s390x
-        exclude:
-        - tee: amd
-          arch: s390x
-        - tee: az-cvm-vtpm
-          arch: s390x
-        - tee: tdx
-          arch: s390x
-        - tee: se
-          arch: x86_64
-        - tee: cca
-          arch: s390x
-        include:
-        - tee: none
-          arch: x86_64
-          libc: musl
-        - tee: none
-          arch: s390x
-          libc: gnu
-        - tee: amd
-          arch: x86_64
-          libc: musl
-        - tee: az-cvm-vtpm
-          arch: x86_64
-          libc: gnu
-        - tee: tdx
-          arch: x86_64
-          libc: gnu
-        - tee: se
-          arch: s390x
-          libc: gnu
-        - tee: cca
-          arch: x86_64
-          libc: musl
-    runs-on: ${{ matrix.arch == 's390x' && 's390x' || 'ubuntu-22.04' }}
+        platform: [
+          { tee: none,        arch: x86_64, libc: musl },
+          { tee: none,        arch: s390x,  libc: gnu  },
+          { tee: amd,         arch: x86_64, libc: musl },
+          { tee: az-cvm-vtpm, arch: x86_64, libc: gnu  },
+          { tee: tdx,         arch: x86_64, libc: gnu  },
+          { tee: cca,         arch: x86_64, libc: musl },
+          { tee: se,          arch: s390x,  libc: gnu  },
+        ]
+    runs-on: ${{ matrix.platform.arch == 's390x' && 's390x' || 'ubuntu-22.04' }}
     env:
-      TEE_PLATFORM: ${{ matrix.tee }}
-      LIBC: ${{ matrix.libc }}
+      TEE_PLATFORM: ${{ matrix.platform.tee }}
+      LIBC: ${{ matrix.platform.libc }}
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
+      RUST_TARGET: ${{ matrix.platform.arch }}-unknown-linux-${{ matrix.platform.libc }}
     steps:
     - name: Log in to the Container registry
       uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
@@ -84,32 +50,32 @@ jobs:
     - uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
         toolchain: ${{ env.RUST_TOOLCHAIN }}
-        target: ${{ matrix.arch }}-unknown-linux-${{ matrix.libc }}
+        target: ${{ env.RUST_TARGET }}
         override: true
 
     - name: Install tpm dependencies
-      if: matrix.tee == 'az-cvm-vtpm'
+      if: matrix.platform.tee == 'az-cvm-vtpm'
       run: |
         sudo apt-get install -y --no-install-recommends libtss2-dev
 
     - uses: ./.github/actions/install-intel-dcap
       with:
         ubuntu-version: jammy
-      if: matrix.tee == 'tdx'
+      if: matrix.platform.tee == 'tdx'
 
     - uses: actions/checkout@v4
 
     - name: Build
-      run: make ./target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/attestation-agent
+      run: make ./target/${{ env.RUST_TARGET }}/release/attestation-agent
 
     - name: Publish to ORAS
       id: publish
       env:
-        ARCH: ${{ matrix.arch == 'x86_64' && 'amd64' || matrix.arch }}
+        OCI_ARCH: ${{ matrix.platform.arch == 'x86_64' && 'amd64' || matrix.platform.arch }}
       run: |
         mkdir oras
         cd oras
-        cp ../target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/attestation-agent .
+        cp ../target/${{ env.RUST_TARGET }}/release/attestation-agent .
         tar cJf attestation-agent.tar.xz attestation-agent
         arch_tag="${{ github.sha }}-${{ matrix.tee }}_${{ matrix.arch }}"
         image="${REGISTRY}/${IMAGE_NAME}/attestation-agent"
@@ -119,7 +85,7 @@ jobs:
         # We need to create the platform annotations with docker, since oras 1.2 doesn't support
         # pushing with platform yet.
         docker manifest create "${image}:${tag}" --amend "${image}:${arch_tag}"
-        docker manifest annotate --arch "$ARCH" --os linux "${image}:${tag}" "${image}:${arch_tag}"
+        docker manifest annotate --arch "$OCI_ARCH" --os linux "${image}:${tag}" "${image}:${arch_tag}"
         docker manifest push "${image}:${tag}"
         # add image and digest to output for attestation
         echo "image=${image}" >> "$GITHUB_OUTPUT"
@@ -153,6 +119,7 @@ jobs:
       LIBC: ${{ matrix.libc }}
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
+      RUST_TARGET: ${{ matrix.arch }}-unknown-linux-${{ matrix.libc }}
     steps:
     - name: Log in to the Container registry
       uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
@@ -168,7 +135,7 @@ jobs:
     - uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
         toolchain: ${{ env.RUST_TOOLCHAIN }}
-        target: ${{ matrix.arch }}-unknown-linux-${{ matrix.libc }}
+        target: ${{ env.RUST_TARGET }}
         override: true
 
     - name: Install dependencies
@@ -181,10 +148,10 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Build CDH
-      run: make ./target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/confidential-data-hub
+      run: make ./target/${{ env.RUST_TARGET }}/release/confidential-data-hub
 
     - name: Build ASR
-      run: make ./target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/api-server-rest
+      run: make ./target/${{ env.RUST_TARGET }}/release/api-server-rest
 
     - name: Publish CDH + ASR to ORAS
       id: publish
@@ -192,7 +159,7 @@ jobs:
         tag="${{ github.sha }}-${{ matrix.arch }}"
         mkdir oras
         cd oras
-        cp ../target/${{ matrix.arch }}-unknown-linux-${{ matrix.libc}}/release/{confidential-data-hub,api-server-rest} .
+        cp ../target/${{ env.RUST_TARGET }}/release/{confidential-data-hub,api-server-rest} .
 
         tar cJf confidential-data-hub.tar.xz confidential-data-hub
         image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/confidential-data-hub"
