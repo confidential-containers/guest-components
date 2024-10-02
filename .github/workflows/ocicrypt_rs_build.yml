@@ -25,7 +25,7 @@ jobs:
   ci:
     if: github.event_name != 'push'
     name: Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:

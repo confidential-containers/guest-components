@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         instance:
-          - ubuntu-latest
+          - ubuntu-24.04
           - s390x
         rust:
           - stable
@@ -64,7 +64,7 @@ jobs:
       - name: Musl build with default features
         run: |
           make LIBC=musl
-        if: matrix.instance == 'ubuntu-latest'
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
