@@ -6,7 +6,6 @@ The encrypted image can be decrypted using the following Key Broker Client (KBC)
  * offline-fs-kbc
  * offline-sev-kbc
  * online-sev-kbc
- * eaa-kbc
  * sample kbc (toy KBC still supported for historical reason)
 
 The following guide will help make an encrypted image using [skopeo](https://github.com/containers/skopeo) and CoCo keyprovider, inspect the image as well as decrypt it.

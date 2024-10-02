@@ -37,7 +37,6 @@ Here are the steps.
 3. `Attestation-Agent` will parse the annotation into an `AnnotationPacket`.
 4. `Attestation-Agent` will use the `AnnotationPacket` to call related KBC's `decrypt_payload()` api to retrieve the `PLBCO`.
     * For `*_sev_kbc`, `offline_fs_kbc`, `get_key()` helps to get the `KEK` due to the `key id`, and then `crypto` module decrypts the PLBCO.
-    * For `eaa_kbc` and those KBCes who do not expose the plaintext of the `KEK`, `decrypt_payload()` api will perform its own decryption action.
 7. `ocicrypt-rs` uses `PLBCO` to decrypt the layer.
 
 ## Specs
