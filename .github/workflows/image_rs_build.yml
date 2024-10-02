@@ -56,12 +56,9 @@ jobs:
         run: |
           sudo apt install -y clang llvm pkg-config nettle-dev protobuf-compiler libprotobuf-dev
 
-      - name: Install TDX dependencies
-        run: |
-          sudo curl -sL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo gpg --dearmor --output /usr/share/keyrings/intel-sgx.gpg
-          sudo echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx.gpg] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libtdx-attest-dev
+      - uses: ./.github/actions/install-intel-dcap
+        with:
+          ubuntu-version: jammy
         if: matrix.instance == 'ubuntu-latest'
 
       - name: Install TPM dependencies
