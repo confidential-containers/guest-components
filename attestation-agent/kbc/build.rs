@@ -4,12 +4,6 @@
 //
 
 fn main() -> std::io::Result<()> {
-    #[cfg(feature = "eaa_kbc")]
-    {
-        println!("cargo:rustc-link-search=native=/usr/local/lib/rats-tls");
-        println!("cargo:rustc-link-lib=dylib=rats_tls");
-    }
-
     #[cfg(feature = "gen-proto")]
     {
         tonic_build::configure()
