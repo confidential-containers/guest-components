@@ -68,7 +68,7 @@ jobs:
     - name: Build
       run: make ./target/${{ env.RUST_TARGET }}/release/attestation-agent
 
-    - name: Publish to ORAS
+    - name: Publish with ORAS
       id: publish
       env:
         OCI_ARCH: ${{ matrix.platform.arch == 'x86_64' && 'amd64' || matrix.platform.arch }}
