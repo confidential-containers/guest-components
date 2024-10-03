@@ -153,7 +153,7 @@ jobs:
     - name: Build ASR
       run: make ./target/${{ env.RUST_TARGET }}/release/api-server-rest
 
-    - name: Publish CDH + ASR to ORAS
+    - name: Publish CDH + ASR with ORAS
       id: publish
       run: |
         tag="${{ github.sha }}-${{ matrix.arch }}"
