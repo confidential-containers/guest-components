@@ -1,4 +1,4 @@
-name: Publish artifacts to ORAS
+name: Publish artifacts with ORAS
 
 on:
   push:
