@@ -50,11 +50,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "client: client",
             "client",
         )?;
-        replace_text_in_file(
-            "src/utils/ttrpc/keyprovider_ttrpc.rs",
-            "#![allow(box_pointers)]\n",
-            "",
-        )?;
     }
 
     Ok(())

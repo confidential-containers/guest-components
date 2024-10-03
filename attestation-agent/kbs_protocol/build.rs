@@ -46,11 +46,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "client: client",
             "client",
         )?;
-        replace_text_in_file(
-            "src/token_provider/aa/attestation_agent_ttrpc.rs",
-            "#![allow(box_pointers)]\n",
-            "",
-        )?;
     }
 
     Ok(())
