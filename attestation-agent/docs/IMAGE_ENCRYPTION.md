@@ -2,7 +2,7 @@
 
 ## Introduction
 
-As stated in [CCv0 image security design](../../image-rs/docs/ccv1_image_security_design.md), CoCo uses image encryption machanism compatible with [ocicrypt](https://github.com/containers/ocicrypt) and [ocicrypt-rs](../../ocicrypt-rs).
+As stated in [CCv0 image security design](../../image-rs/docs/ccv1_image_security_design.md), CoCo uses image encryption mechanism compatible with [ocicrypt](https://github.com/containers/ocicrypt) and [ocicrypt-rs](../../ocicrypt-rs).
 
 Attestation-Agent as a [Key Provider](../../image-rs/docs/ccv1_image_security_design.md#update-manifest) implements API `unwrapkey`, which works together
 with the [Sample Key Provider](../coco_keyprovider/) who implements API `wrapkey`.
