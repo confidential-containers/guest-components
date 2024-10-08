@@ -132,6 +132,7 @@ jobs:
     - uses: oras-project/setup-oras@v1
       with:
         version: 1.2.0
+      if: matrix.platform.arch != 's390x'
 
     - uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
