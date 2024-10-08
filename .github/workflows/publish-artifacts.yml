@@ -78,10 +78,9 @@ jobs:
         cd oras
         cp ../target/${{ env.RUST_TARGET }}/release/attestation-agent .
         tar cJf attestation-agent.tar.xz attestation-agent
-        arch_tag="${{ github.sha }}-${{ matrix.tee }}_${{ matrix.arch }}"
+        arch_tag="${{ github.sha }}-${{ matrix.platform.tee }}_${{ matrix.platform.arch }}"
         image="${REGISTRY}/${IMAGE_NAME}/attestation-agent"
-        tag="${{ github.sha }}-${{ matrix.tee }}"
-        arch_tag="${tag}_${ARCH}"
+        tag="${{ github.sha }}-${{ matrix.platform.tee }}"
         oras push "${image}:${arch_tag}" attestation-agent.tar.xz
         # We need to create the platform annotations with docker, since oras 1.2 doesn't support
         # pushing with platform yet.
