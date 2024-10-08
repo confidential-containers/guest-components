@@ -108,11 +108,25 @@ else
     features := $(features),rust-crypto
 endif
 
+ifeq ($(ARCH), s390x)
+    LINT_OPTION = lint-s390x
+else
+    LINT_OPTION = lint-default
+endif
+
 build:
 	cd attestation-agent && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features)" $(binary) $(LIBC_FLAG)
 	mv $(TARGET_DIR)/$(binary_name) $(TARGET)
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)
+
+lint: $(LINT_OPTION)
+
+lint-default:
+	cd attestation-agent && cargo clippy --features kbs,coco_as,bin,grpc,ttrpc,all-attesters
+
+lint-s390x:
+	cd attestation-agent && cargo clippy --no-default-features --features openssl,kbs,coco_as,bin,grpc,ttrpc
 
 install: 
 	install -D -m0755 $(TARGET) $(DESTDIR)/$(BIN_NAME)
