@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, Result};
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -14,15 +14,7 @@ pub const DEFAULT_WORK_DIR: &str = "/run/image-rs/";
 /// Default policy file path.
 pub const POLICY_FILE_PATH: &str = "kbs:///default/security-policy/test";
 
-/// Dir of Sigstore Config file.
-/// The reason for using the `/run` directory here is that in general HW-TEE,
-/// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
-pub const SIG_STORE_CONFIG_DIR: &str = "/run/image-security/simple_signing/sigstore_config";
-
 pub const SIG_STORE_CONFIG_DEFAULT_FILE: &str = "kbs:///default/sigstore-config/test";
-
-/// Path to the gpg pubkey ring of the signature
-pub const GPG_KEY_RING: &str = "/run/image-security/simple_signing/pubkey.gpg";
 
 /// The reason for using the `/run` directory here is that in general HW-TEE,
 /// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
@@ -36,48 +28,122 @@ pub const DEFAULT_MAX_CONCURRENT_DOWNLOAD: usize = 3;
 pub const CONFIGURATION_FILE_NAME: &str = "config.json";
 
 /// `image-rs` configuration information.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct ImageConfig {
     /// The location for `image-rs` to store data.
+    #[serde(default = "default_work_dir")]
     pub work_dir: PathBuf,
 
     /// The default snapshot for `image-rs` to use.
+    #[serde(default = "SnapshotType::default")]
     pub default_snapshot: SnapshotType,
 
-    /// Security validation control
-    pub security_validate: bool,
+    /// If any image security policy would be used to control the image pulling
+    /// like signature verification, this field is used to set the URI of the
+    /// policy file.
+    ///
+    /// Now it supports two different forms:
+    /// - `KBS URI`: the iamge security policy will be fetched from KBS.
+    ///     e.g. [`POLICY_FILE_PATH`]
+    /// - `Local Path`: the security policy will be fetched from somewhere locally.
+    ///     e.g. `file:///etc/image-policy.json`.
+    ///
+    /// The policy follows the format of
+    /// <https://github.com/containers/image/blob/main/docs/containers-policy.json.5.md>.
+    ///
+    /// At the same time, some enhencements based on CoCo is used, that is the
+    /// `keyPath` field can be filled with a KBS URI like `kbs:///default/key/1`
+    ///
+    /// This value defaults to `None`.
+    #[serde(default = "Option::default")]
+    pub image_security_policy_uri: Option<String>,
 
-    /// Use `auth.json` control
-    pub auth: bool,
+    /// Sigstore config file URI for simple signing scheme.
+    ///
+    /// When `image_security_policy_uri` is set and `SimpleSigning` (signedBy) is
+    /// used in the policy, the signatures of the images would be used for image
+    /// signature validation. This policy will record where the signatures is.
+    ///
+    /// Now it supports two different forms:
+    /// - `KBS URI`: the sigstore config file will be fetched from KBS,
+    ///     e.g. [`SIG_STORE_CONFIG_DEFAULT_FILE`].
+    /// - `Local Path`: the sigstore config file will be fetched from somewhere locally,
+    ///     e.g. `file:///etc/simple-signing.yaml`.
+    ///
+    /// This value defaults to `None`.
+    #[serde(default = "Option::default")]
+    pub sigstore_config_uri: Option<String>,
 
-    /// Records different configurable paths
-    #[serde(
-        default = "Paths::default",
-        deserialize_with = "deserialize_null_default"
-    )]
-    pub file_paths: Paths,
+    /// If any credential auth (Base) would be used to connect to download
+    /// image from private registry, this field is used to set the URI of the
+    /// credential file.
+    ///
+    /// Now it supports two different forms:
+    /// - `KBS URI`: the registry auth will be fetched from KBS,
+    ///     e.g. [`AUTH_FILE_PATH`].
+    /// - `Local Path`: the registry auth will be fetched from somewhere locally,
+    ///     e.g. `file:///etc/image-registry-auth.json`.
+    ///
+    /// This value defaults to `None`.
+    #[serde(default = "Option::default")]
+    pub authenticated_registry_credentials_uri: Option<String>,
 
-    /// Maximum number of concurrent downloads to perform during image pull.
+    /// The maximum number of layers downloaded concurrently when
+    /// pulling one specific image.
     ///
     /// This defaults to [`DEFAULT_MAX_CONCURRENT_DOWNLOAD`].
-    pub max_concurrent_download: usize,
+    #[serde(default = "default_max_concurrent_layer_downloads_per_image")]
+    pub max_concurrent_layer_downloads_per_image: usize,
+
+    /// Proxy that will be used to pull image
+    ///
+    /// This value defaults to `None`.
+    pub image_pull_proxy: Option<String>,
+
+    /// No proxy env that will be used to pull image.
+    ///
+    /// This will ensure that when we access the image registry with specified
+    /// IPs, the `image_pull_proxy` will not be used.
+    ///
+    /// If `image_pull_proxy` is not set, this field will do nothing.
+    ///
+    /// This value defaults to `None`.
+    pub skip_proxy_ips: Option<String>,
 
     /// Nydus services configuration
     #[serde(rename = "nydus")]
     pub nydus_config: Option<NydusConfig>,
+
+    #[cfg(feature = "keywrap-native")]
+    #[serde(default = "default_kbc")]
+    pub kbc: String,
+
+    #[cfg(feature = "keywrap-native")]
+    #[serde(default = "default_kbs_uri")]
+    pub kbs_uri: String,
 }
 
-/// This function used to parse from string. When it is an
-/// empty string, return the default value of the parsed
-/// struct.
-fn deserialize_null_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
-where
-    T: Default + Deserialize<'de>,
-    D: Deserializer<'de>,
-{
-    let opt = Option::deserialize(deserializer)?;
-    Ok(opt.unwrap_or_default())
+macro_rules! __default_deserialization_value {
+    ($name: ident, $type: ident, $value: expr) => {
+        fn $name() -> $type {
+            $value
+        }
+    };
 }
+
+__default_deserialization_value!(
+    default_max_concurrent_layer_downloads_per_image,
+    usize,
+    DEFAULT_MAX_CONCURRENT_DOWNLOAD
+);
+
+__default_deserialization_value!(default_work_dir, PathBuf, PathBuf::from(DEFAULT_WORK_DIR));
+
+#[cfg(feature = "keywrap-native")]
+__default_deserialization_value!(default_kbc, String, "sample_kbc".into());
+
+#[cfg(feature = "keywrap-native")]
+__default_deserialization_value!(default_kbs_uri, String, "null".into());
 
 impl Default for ImageConfig {
     // Construct a default instance of `ImageConfig`
@@ -88,14 +154,22 @@ impl Default for ImageConfig {
             default_snapshot: SnapshotType::Overlay,
             #[cfg(not(feature = "snapshot-overlayfs"))]
             default_snapshot: SnapshotType::Unknown,
-            security_validate: false,
-            auth: false,
-            file_paths: Paths::default(),
-            max_concurrent_download: DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+            max_concurrent_layer_downloads_per_image: DEFAULT_MAX_CONCURRENT_DOWNLOAD,
             #[cfg(feature = "nydus")]
             nydus_config: Some(NydusConfig::default()),
             #[cfg(not(feature = "nydus"))]
             nydus_config: None,
+            image_security_policy_uri: None,
+            sigstore_config_uri: None,
+            authenticated_registry_credentials_uri: None,
+            image_pull_proxy: None,
+            skip_proxy_ips: None,
+
+            #[cfg(feature = "keywrap-native")]
+            kbc: default_kbc(),
+
+            #[cfg(feature = "keywrap-native")]
+            kbs_uri: default_kbs_uri(),
         }
     }
 }
@@ -150,31 +224,9 @@ impl ImageConfig {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
-pub struct Paths {
-    /// sigstore config file for simple signing
-    pub sigstore_config: String,
-
-    /// Path to `Policy.json`
-    pub policy_path: String,
-
-    /// Path to the auth file
-    pub auth_file: String,
-}
-
-impl Default for Paths {
-    fn default() -> Self {
-        Self {
-            sigstore_config: SIG_STORE_CONFIG_DEFAULT_FILE.into(),
-            policy_path: POLICY_FILE_PATH.into(),
-            auth_file: AUTH_FILE_PATH.into(),
-        }
-    }
-}
-
 /// Nydus daemon service configuration
 /// support fs driver including fusedev and fscache.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct NydusConfig {
     /// Type of daemon service
     #[serde(rename = "type")]
@@ -245,7 +297,7 @@ impl NydusConfig {
 }
 
 /// Nydus daemon fs backend configuration for fusedev
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct FuseConfig {
     /// FUSE server failover policy
     pub fail_over_policy: String,
@@ -276,7 +328,7 @@ impl Default for FuseConfig {
 }
 
 /// Nydus daemon fs backend configuration for fusedev
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct FscacheConfig {
     /// Working directory for Linux fscache driver to store cache files
     pub fscache: Option<PathBuf>,
@@ -312,7 +364,7 @@ mod tests {
         assert_eq!(config.work_dir, work_dir);
         assert_eq!(config.default_snapshot, SnapshotType::Overlay);
         assert_eq!(
-            config.max_concurrent_download,
+            config.max_concurrent_layer_downloads_per_image,
             DEFAULT_MAX_CONCURRENT_DOWNLOAD
         );
 
@@ -327,9 +379,9 @@ mod tests {
         let data = r#"{
             "work_dir": "/run/image-rs/",
             "default_snapshot": "overlay",
-            "security_validate": false,
-            "auth": false,
-	    "max_concurrent_download": 1
+            "image_security_policy_uri": "file:///etc/image-policy.json",
+            "authenticated_registry_credentials_uri": "file:///etc/image-auth.json",
+	        "max_concurrent_layer_downloads_per_image": 1
         }"#;
 
         let tempdir = tempfile::tempdir().unwrap();
@@ -345,7 +397,15 @@ mod tests {
 
         assert_eq!(config.work_dir, work_dir);
         assert_eq!(config.default_snapshot, SnapshotType::Overlay);
-        assert_eq!(config.max_concurrent_download, 1);
+        assert_eq!(config.max_concurrent_layer_downloads_per_image, 1);
+        assert_eq!(
+            config.image_security_policy_uri,
+            Some("file:///etc/image-policy.json".to_string())
+        );
+        assert_eq!(
+            config.authenticated_registry_credentials_uri,
+            Some("file:///etc/image-auth.json".to_string())
+        );
 
         let invalid_config_file = tempdir.path().join("does-not-exist");
         assert!(!invalid_config_file.exists());
@@ -359,8 +419,6 @@ mod tests {
         let data = r#"{
             "work_dir": "/run/image-rs/",
             "default_snapshot": "overlay",
-            "security_validate": false,
-            "auth": false,
             "nydus": {
                 "type": "fuse",
                 "id": "nydus_id",
@@ -369,7 +427,7 @@ mod tests {
                     "fuse_threads": 4
                 }
             },
-            "max_concurrent_download": 1
+            "max_concurrent_layer_downloads_per_image": 1
         }"#;
 
         let tempdir = tempfile::tempdir().unwrap();

@@ -11,31 +11,31 @@ use anyhow::*;
 use oci_client::{secrets::RegistryAuth, Reference};
 use serde::{Deserialize, Serialize};
 
-/// Hard-coded ResourceDescription of `auth.json`.
-pub const RESOURCE_DESCRIPTION: &str = "Credential";
-
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Default)]
 pub struct DockerConfigFile {
     auths: HashMap<String, DockerAuthConfig>,
     // TODO: support credential helpers
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Default)]
 pub struct DockerAuthConfig {
     auth: String,
 }
 
-/// Get a credential (RegistryAuth) for the given Reference.
-/// The path can be from different places. Like `path://` or
-/// `kbs://`.
-pub async fn credential_for_reference(
-    reference: &Reference,
-    auth_file_path: &str,
-) -> Result<RegistryAuth> {
-    let auth = crate::resource::get_resource(auth_file_path).await?;
+#[derive(Default)]
+pub struct Auth {
+    docker_config_file: DockerConfigFile,
+}
 
-    let config: DockerConfigFile = serde_json::from_slice(&auth)?;
+impl Auth {
+    pub fn new(auth_file: &[u8]) -> Result<Self> {
+        let docker_config_file: DockerConfigFile = serde_json::from_slice(auth_file)?;
+        Ok(Self { docker_config_file })
+    }
 
-    // TODO: support credential helpers
-    auth_config::credential_from_auth_config(reference, &config.auths)
+    /// Get a credential (RegistryAuth) for the given Reference.
+    pub async fn credential_for_reference(&self, reference: &Reference) -> Result<RegistryAuth> {
+        // TODO: support credential helpers
+        auth_config::credential_from_auth_config(reference, &self.docker_config_file.auths)
+    }
 }
