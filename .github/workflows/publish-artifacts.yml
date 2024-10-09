@@ -26,7 +26,7 @@ jobs:
           { tee: cca,         arch: x86_64, libc: musl },
           { tee: se,          arch: s390x,  libc: gnu  },
         ]
-    runs-on: ${{ matrix.platform.arch == 's390x' && 's390x' || 'ubuntu-22.04' }}
+    runs-on: ${{ matrix.platform.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
     env:
       TEE_PLATFORM: ${{ matrix.platform.tee }}
       LIBC: ${{ matrix.platform.libc }}
@@ -61,7 +61,7 @@ jobs:
 
     - uses: ./.github/actions/install-intel-dcap
       with:
-        ubuntu-version: jammy
+        ubuntu-version: noble
       if: matrix.platform.tee == 'tdx'
 
     - uses: actions/checkout@v4
@@ -114,7 +114,7 @@ jobs:
           libc: musl
         - arch: s390x
           libc: gnu
-    runs-on: ${{ matrix.arch == 's390x' && 's390x' || 'ubuntu-22.04' }}
+    runs-on: ${{ matrix.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
     env:
       LIBC: ${{ matrix.libc }}
       REGISTRY: ghcr.io
