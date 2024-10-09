@@ -8,8 +8,7 @@ use std::{collections::HashMap, path::Path};
 use async_trait::async_trait;
 use image_rs::{builder::ClientBuilder, config::ImageConfig, image::ImageClient};
 use kms::{Annotations, ProviderSettings};
-use log::{debug, info, warn};
-use std::env;
+use log::{debug, info};
 use storage::volume_type::Storage;
 use tokio::sync::{Mutex, OnceCell};
 
@@ -98,29 +97,6 @@ impl DataHub for Hub {
 
 async fn initialize_image_client(config: ImageConfig) -> Result<Mutex<ImageClient>> {
     debug!("Image client lazy initializing...");
-    // TODO: move the proxy envs to image-rs' PullClient once it supports
-    // Current the whole process of CDH would be influenced by the HTTPS_PROXY env
-    if let Some(https_proxy) = &config.image_pull_proxy {
-        match env::var("HTTPS_PROXY") {
-                Ok(e) => warn!("`image_pull_proxy` is given from config but the current process has a `HTTPS_PROXY` env value {e}, skip override."),
-                Err(env::VarError::NotPresent) => {
-                    info!("image_pull_proxy is set to: {}", https_proxy);
-                    env::set_var("HTTPS_PROXY", https_proxy);
-                }
-                Err(env::VarError::NotUnicode(_)) => warn!("`image_pull_proxy` is given from config but the current process has a non-unicode `HTTPS_PROXY`, skip override."),
-            }
-    }
-
-    if let Some(no_proxy) = &config.skip_proxy_ips {
-        match env::var("NO_PROXY") {
-                Ok(e) => warn!("`skip_proxy_ips` is given from config but the current process has one `NO_PROXY` env value {e}, skip override."),
-                Err(env::VarError::NotPresent) => {
-                    info!("no_proxy is set to: {}", no_proxy);
-                    env::set_var("NO_PROXY", no_proxy);
-                }
-                Err(env::VarError::NotUnicode(_)) => warn!("`skip_proxy_ips` is given from config but the current process has a non-unicode env `NO_PROXY`, skip override."),
-            }
-    }
 
     let image_client = Into::<ClientBuilder>::into(config)
         .build()
