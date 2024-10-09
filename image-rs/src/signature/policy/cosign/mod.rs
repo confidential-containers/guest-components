@@ -113,6 +113,8 @@ impl CosignParameters {
             RegistryAuth::Basic(username, pass) => Auth::Basic(username.clone(), pass.clone()),
         };
 
+        // TODO: Add proxy for client
+        // Wait for https://github.com/sigstore/sigstore-rs/pull/392 to get merged.
         let mut client = ClientBuilder::default().build()?;
 
         // Get the cosign signature "image"'s uri and the signed image's digest
