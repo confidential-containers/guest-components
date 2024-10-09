@@ -41,14 +41,6 @@ struct Cli {
     config: Option<String>,
 }
 
-macro_rules! ttrpc_service {
-    ($func: expr, $conf: expr) => {{
-        let server = Server::new($conf).await?;
-        let server = Arc::new(Box::new(server) as _);
-        $func(server)
-    }};
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
@@ -64,20 +56,17 @@ async fn main() -> Result<()> {
     create_socket_parent_directory(unix_socket_path).await?;
     clean_previous_sock_file(unix_socket_path).await?;
 
-    let sealed_secret_service = ttrpc_service!(create_sealed_secret_service, &config);
-    let get_resource_service = ttrpc_service!(create_get_resource_service, &config);
-    let key_provider_service = ttrpc_service!(create_key_provider_service, &config);
-    let secure_mount_service = ttrpc_service!(create_secure_mount_service, &config);
-    let image_pull_service = ttrpc_service!(create_image_pull_service, &config);
+    let server = Server::new(&config).await.context("create CDH instance")?;
+    let server = Arc::new(server);
 
     let mut server = TtrpcServer::new()
         .bind(&config.socket)
         .context("cannot bind cdh ttrpc service")?
-        .register_service(sealed_secret_service)
-        .register_service(get_resource_service)
-        .register_service(secure_mount_service)
-        .register_service(key_provider_service)
-        .register_service(image_pull_service);
+        .register_service(create_sealed_secret_service(server.clone() as _))
+        .register_service(create_get_resource_service(server.clone() as _))
+        .register_service(create_key_provider_service(server.clone() as _))
+        .register_service(create_secure_mount_service(server.clone() as _))
+        .register_service(create_image_pull_service(server.clone() as _));
 
     info!(
         "[ttRPC] Confidential Data Hub starts to listen to request: {}",

@@ -51,16 +51,6 @@ fn main() {
 
         // Fix clippy warnings of code generated from ttrpc_codegen
         replace_text_in_file("src/bin/protos/api_ttrpc.rs", "client: client", "client");
-        replace_text_in_file(
-            "src/bin/protos/api_ttrpc.rs",
-            "#![allow(box_pointers)]\n",
-            "",
-        );
-        replace_text_in_file(
-            "src/bin/protos/keyprovider_ttrpc.rs",
-            "#![allow(box_pointers)]\n",
-            "",
-        );
     }
 
     #[cfg(feature = "bin")]
