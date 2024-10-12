@@ -184,6 +184,8 @@ max_concurrent_layer_downloads_per_image = 3
 sigstore_config_uri = "kbs:///default/sigstore-config/test"
 image_security_policy_uri = "kbs:///default/security-policy/test"
 authenticated_registry_credentials_uri = "kbs:///default/credential/test"
+extra_root_certificates = ["cert1", "cert2"]
+image_pull_proxy = "http://127.0.0.1:8080"
     "#,
         Some(CdhConfig {
             kbc: KbsConfig {
@@ -197,8 +199,9 @@ authenticated_registry_credentials_uri = "kbs:///default/credential/test"
                 sigstore_config_uri: Some("kbs:///default/sigstore-config/test".to_string()),
                 image_security_policy_uri: Some("kbs:///default/security-policy/test".to_string()),
                 authenticated_registry_credentials_uri: Some("kbs:///default/credential/test".to_string()),
-                image_pull_proxy: None,
+                image_pull_proxy: Some("http://127.0.0.1:8080".into()),
                 skip_proxy_ips: None,
+                extra_root_certificates: vec!["cert1".into(), "cert2".into()],
                 ..Default::default()
             },
             socket: "unix:///run/confidential-containers/cdh.sock".to_string(),
