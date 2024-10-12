@@ -212,6 +212,7 @@ impl ImageClient {
             self.config.max_concurrent_layer_downloads_per_image,
             self.config.skip_proxy_ips.as_deref(),
             self.config.image_pull_proxy.as_deref(),
+            self.config.extra_root_certificates.clone(),
         )?;
         let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
 

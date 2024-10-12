@@ -113,7 +113,7 @@ impl CosignParameters {
             RegistryAuth::Basic(username, pass) => Auth::Basic(username.clone(), pass.clone()),
         };
 
-        // TODO: Add proxy for client
+        // TODO: Add proxy and extra_trusted_root_certificates for client
         // Wait for https://github.com/sigstore/sigstore-rs/pull/392 to get merged.
         let mut client = ClientBuilder::default().build()?;
 
