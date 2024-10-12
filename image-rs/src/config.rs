@@ -110,6 +110,12 @@ pub struct ImageConfig {
     /// This value defaults to `None`.
     pub skip_proxy_ips: Option<String>,
 
+    /// To support registries with self signed certs. This config item
+    /// is used to add extra trusted root certifications. The certificates
+    /// must be encoded by PEM.
+    #[serde(default = "Vec::default")]
+    pub extra_root_certificates: Vec<String>,
+
     /// Nydus services configuration
     #[serde(rename = "nydus")]
     pub nydus_config: Option<NydusConfig>,
@@ -164,6 +170,7 @@ impl Default for ImageConfig {
             authenticated_registry_credentials_uri: None,
             image_pull_proxy: None,
             skip_proxy_ips: None,
+            extra_root_certificates: Vec::new(),
 
             #[cfg(feature = "keywrap-native")]
             kbc: default_kbc(),
