@@ -33,7 +33,7 @@ log = "0.4.22"
 loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27" }
 nix = { workspace = true, optional = true, features = ["mount", "fs"] }
 oci-client = { version = "0.12", default-features = false, optional = true }
-oci-spec = "0.6.7"
+oci-spec = "0.7.0"
 ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = [
     "async-io",
 ], optional = true }
