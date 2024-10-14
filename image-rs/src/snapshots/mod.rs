@@ -22,6 +22,18 @@ pub enum SnapshotType {
     OcclumUnionfs,
 }
 
+impl Default for SnapshotType {
+    fn default() -> Self {
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "snapshot-overlayfs")] {
+                Self::Overlay
+            } else {
+                Self::Unknown
+            }
+        }
+    }
+}
+
 impl std::fmt::Display for SnapshotType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let out = match self {

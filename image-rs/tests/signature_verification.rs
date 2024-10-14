@@ -102,13 +102,13 @@ const _TESTS_XRSS: [_TestItem; _TEST_ITEMS_XRSS] = [
 ];
 
 #[cfg(all(
-    feature = "getresource",
+    feature = "kbs",
     any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
 ))]
 const POLICY_URI: &str = "kbs:///default/security-policy/test";
 
 #[cfg(all(
-    feature = "getresource",
+    feature = "kbs",
     any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
 ))]
 const SIGSTORE_CONFIG_URI: &str = "kbs:///default/sigstore-config/test";
@@ -117,7 +117,7 @@ const SIGSTORE_CONFIG_URI: &str = "kbs:///default/sigstore-config/test";
 /// uses cosign (type: sigstoreSigned), even if the image being pulled is not signed using cosign.
 /// https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/kbc/src/sample_kbc/policy.json
 #[cfg(all(
-    feature = "getresource",
+    feature = "kbs",
     any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
 ))]
 #[tokio::test]
@@ -128,7 +128,7 @@ async fn signature_verification() {
 
 #[cfg(all(
     feature = "signature-simple-xrss",
-    feature = "getresource",
+    feature = "kbs",
     any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
 ))]
 #[tokio::test]
@@ -157,7 +157,7 @@ async fn signature_verification_xrss() {
 }
 
 #[cfg(all(
-    feature = "getresource",
+    feature = "kbs",
     any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
 ))]
 async fn do_signature_verification_tests(
@@ -177,29 +177,19 @@ async fn do_signature_verification_tests(
             test_auth_info = &None;
         }
 
-        // clean former test files
-        common::clean_configs()
-            .await
-            .expect("Delete configs failed.");
-
         // Init tempdirs
         let work_dir = tempfile::tempdir().unwrap();
 
-        // a new client for every pulling, avoid effection
-        // of cache of old client.
-        let mut image_client = image_rs::image::ImageClient::new(work_dir.path().to_path_buf());
-
-        // enable signature verification
-        image_client.config.security_validate = true;
-
-        // set the image security policy
-        image_client.config.file_paths.policy_path = POLICY_URI.into();
+        let mut client_builder = image_rs::builder::ClientBuilder::default()
+            .image_security_policy_uri(POLICY_URI.to_string())
+            .work_dir(work_dir.into_path());
 
         #[cfg(feature = "signature-simple")]
         {
-            image_client.config.file_paths.sigstore_config = SIGSTORE_CONFIG_URI.into();
+            client_builder = client_builder.sigstore_config_uri(SIGSTORE_CONFIG_URI.into());
         }
 
+        let mut image_client = client_builder.build().await.unwrap();
         let bundle_dir = tempfile::tempdir().unwrap();
 
         let _res = image_client

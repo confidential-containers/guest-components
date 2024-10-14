@@ -4,6 +4,7 @@
 
 use anyhow::{anyhow, bail, Context, Result};
 use futures_util::stream::{self, StreamExt, TryStreamExt};
+use oci_client::client::{Certificate, CertificateEncoding, ClientConfig};
 use oci_client::manifest::{OciDescriptor, OciImageManifest};
 use oci_client::{secrets::RegistryAuth, Client, Reference};
 use std::collections::BTreeMap;
@@ -45,8 +46,28 @@ impl<'a> PullClient<'a> {
         data_dir: &Path,
         auth: &'a RegistryAuth,
         max_concurrent_download: usize,
+        no_proxy: Option<&str>,
+        https_proxy: Option<&str>,
+        extra_root_certificates: Vec<String>,
     ) -> Result<PullClient<'a>> {
-        let client = Client::default();
+        let mut client_config = ClientConfig::default();
+        if let Some(no_proxy) = no_proxy {
+            client_config.no_proxy = Some(no_proxy.to_string())
+        }
+
+        if let Some(https_proxy) = https_proxy {
+            client_config.https_proxy = Some(https_proxy.to_string())
+        }
+
+        let certs = extra_root_certificates
+            .into_iter()
+            .map(|pem| pem.into_bytes())
+            .map(|data| Certificate {
+                encoding: CertificateEncoding::Pem,
+                data,
+            });
+        client_config.extra_root_certificates.extend(certs);
+        let client = Client::try_from(client_config)?;
 
         Ok(PullClient {
             client,
@@ -227,6 +248,9 @@ mod tests {
             tempdir.path(),
             &RegistryAuth::Anonymous,
             DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+            None,
+            None,
+            vec![],
         )
         .unwrap();
         let (image_manifest, _image_digest, image_config) = client.pull_manifest().await.unwrap();
@@ -275,6 +299,9 @@ mod tests {
                 tempdir.path(),
                 &RegistryAuth::Anonymous,
                 DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+                None,
+                None,
+                vec![],
             )
             .unwrap();
             let (image_manifest, _image_digest, image_config) =
@@ -311,6 +338,9 @@ mod tests {
                 tempdir.path(),
                 &RegistryAuth::Anonymous,
                 DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+                None,
+                None,
+                vec![],
             )
             .unwrap();
             let (image_manifest, _image_digest, image_config) =
@@ -376,6 +406,9 @@ mod tests {
             tempdir.path(),
             &RegistryAuth::Anonymous,
             DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+            None,
+            None,
+            vec![],
         )
         .unwrap();
 
@@ -465,6 +498,9 @@ mod tests {
                 tempdir.path(),
                 &RegistryAuth::Anonymous,
                 DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+                None,
+                None,
+                vec![],
             )
             .unwrap();
             let (image_manifest, _image_digest, image_config) =
