@@ -13,7 +13,7 @@ clap = { workspace = true, features = ["derive"] }
 ctr.workspace = true
 daemonize = "0.5.0"
 env_logger.workspace = true
-futures = "0.3.5"
+futures = "0.3.31"
 jwt-simple.workspace = true
 log.workspace = true
 prost.workspace = true
