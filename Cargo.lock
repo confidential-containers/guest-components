@@ -6566,6 +6566,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "trustee-client"
+version = "0.10.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "clap",
+ "config",
+ "env_logger",
+ "kbs_protocol",
+ "log",
+ "rstest",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
