@@ -5,7 +5,7 @@
 
 //! Payload format of simple signing
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use anyhow::{bail, Result};
 use oci_client::Reference;
@@ -115,12 +115,12 @@ pub struct Optional {
     pub timestamp: Option<i64>,
 
     #[serde(flatten)]
-    pub extra: HashMap<String, Value>,
+    pub extra: BTreeMap<String, Value>,
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use serde_json::json;
 
@@ -161,7 +161,7 @@ mod tests {
             optional: Some(Optional {
                 creator: Some("atomic 2.0.0".into()),
                 timestamp: Some(1634533638),
-                extra: HashMap::new(),
+                extra: BTreeMap::new(),
             }),
         };
 
@@ -212,7 +212,7 @@ mod tests {
         );
         assert_eq!(
             deserialized_payload.optional.as_ref().unwrap().extra,
-            HashMap::new()
+            BTreeMap::new()
         );
     }
 }

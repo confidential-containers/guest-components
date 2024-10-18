@@ -27,8 +27,14 @@ pub struct SignatureValidator {
 
     resource_provider: Arc<ResourceProvider>,
 
+    no_proxy: Option<String>,
+    https_proxy: Option<String>,
+
     #[cfg(feature = "signature-simple")]
     simple_signing_sigstore_config: Option<policy::SigstoreConfig>,
+
+    #[cfg(feature = "signature-cosign")]
+    certificates: Vec<sigstore::registry::Certificate>,
 }
 
 impl SignatureValidator {
@@ -106,6 +112,9 @@ impl SignatureValidator {
         policy: &[u8],
         _simple_signing_sigstore_config: Option<Vec<u8>>,
         workdir: &Path,
+        no_proxy: Option<String>,
+        https_proxy: Option<String>,
+        certificates: Vec<String>,
         resource_provider: Arc<ResourceProvider>,
     ) -> Result<Self> {
         let policy: Policy = serde_json::from_slice(policy).context("parse image policy")?;
@@ -128,10 +137,22 @@ impl SignatureValidator {
             None => None,
         };
 
+        #[cfg(feature = "signature-cosign")]
+        let certificates = certificates
+            .into_iter()
+            .map(|pem| pem.into_bytes())
+            .map(|data| sigstore::registry::Certificate {
+                encoding: sigstore::registry::CertificateEncoding::Pem,
+                data,
+            })
+            .collect();
+
         Ok(Self {
             policy,
             resource_provider,
-
+            no_proxy,
+            https_proxy,
+            certificates,
             #[cfg(feature = "signature-simple")]
             simple_signing_sigstore_config,
         })
