@@ -51,7 +51,7 @@ serde = { workspace = true, features = ["serde_derive", "rc"] }
 serde_json.workspace = true
 serde_yaml = { version = "0.9", optional = true }
 sha2.workspace = true
-sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "1b6ccf0f64d173350ec5515bd69ab48a26a9c0a3", default-features = false, optional = true }
+sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "037b7be86a68bc63e1d2ee7f16ea8f843ddcc7d8", default-features = false, optional = true }
 strum.workspace = true
 strum_macros = "0.26"
 krata-tokio-tar = "0.4.2"
@@ -89,6 +89,7 @@ default = [
     "signature-cosign-rustls",
     "keywrap-grpc",
     "oci-client-rustls",
+    "signature-simple-xrss"
 ]
 
 # This will be based on `ring` dependency

@@ -8,6 +8,7 @@
 use anyhow::{anyhow, bail, Result};
 use oci_client::secrets::RegistryAuth;
 
+use sigstore::registry::{Certificate, ClientConfig};
 #[cfg(feature = "signature-cosign")]
 use sigstore::{
     cosign::{
@@ -36,7 +37,14 @@ impl SignatureValidator {
         auth: &RegistryAuth,
     ) -> Result<()> {
         parameter
-            .check_image_signature(self.resource_provider.clone(), image, auth)
+            .check_image_signature(
+                self.resource_provider.clone(),
+                image,
+                auth,
+                self.certificates.iter().collect(),
+                self.no_proxy.as_ref(),
+                self.https_proxy.as_ref(),
+            )
             .await
     }
 }
@@ -47,6 +55,9 @@ impl CosignParameters {
         resource_provider: Arc<ResourceProvider>,
         image: &Image,
         auth: &RegistryAuth,
+        certificates: Vec<&Certificate>,
+        no_proxy: Option<&String>,
+        https_proxy: Option<&String>,
     ) -> Result<()> {
         // Check before we access the network
         self.check_reference_rule_types()?;
@@ -61,7 +72,7 @@ impl CosignParameters {
 
         // Verification, will access the network
         let payloads = self
-            .verify_signature_and_get_payload(image, auth, key)
+            .verify_signature_and_get_payload(image, auth, key, certificates, no_proxy, https_proxy)
             .await?;
 
         // check the reference rules (signed identity)
@@ -106,6 +117,9 @@ impl CosignParameters {
         image: &Image,
         auth: &RegistryAuth,
         key: Vec<u8>,
+        certificates: Vec<&Certificate>,
+        no_proxy: Option<&String>,
+        https_proxy: Option<&String>,
     ) -> Result<Vec<SigPayload>> {
         let image_ref = OciReference::from_str(&image.reference.whole())?;
         let auth = match auth {
@@ -113,9 +127,15 @@ impl CosignParameters {
             RegistryAuth::Basic(username, pass) => Auth::Basic(username.clone(), pass.clone()),
         };
 
-        // TODO: Add proxy and extra_trusted_root_certificates for client
-        // Wait for https://github.com/sigstore/sigstore-rs/pull/392 to get merged.
-        let mut client = ClientBuilder::default().build()?;
+        let config = ClientConfig {
+            no_proxy: no_proxy.cloned(),
+            https_proxy: https_proxy.cloned(),
+            extra_root_certificates: certificates.into_iter().cloned().collect(),
+            ..Default::default()
+        };
+        let mut client = ClientBuilder::default()
+            .with_oci_client_config(config)
+            .build()?;
 
         // Get the cosign signature "image"'s uri and the signed image's digest
         let (cosign_image, source_image_digest) = client.triangulate(&image_ref, &auth).await?;
@@ -221,6 +241,9 @@ mod tests {
                 &image,
                 &oci_client::secrets::RegistryAuth::Anonymous,
                 key,
+                vec![],
+                None,
+                None,
             )
             .await;
         assert!(
@@ -347,6 +370,9 @@ mod tests {
                     Arc::new(resource_provider),
                     &image,
                     &oci_client::secrets::RegistryAuth::Anonymous,
+                    vec![],
+                    None,
+                    None,
                 )
                 .await;
             assert_eq!(
