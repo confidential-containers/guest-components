@@ -3362,7 +3362,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c2a198fb6b0eada2a8df47933734e6d35d350665a33a3593d7164fa52c75c19"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -3933,9 +3933,9 @@ dependencies = [
 
 [[package]]
 name = "oci-client"
-version = "0.12.1"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f5098b86f972ac3484f7c9011bbbbd64aaa7e21d10d2c1a91fefb4ad0ba2ad9"
+checksum = "53e050f8bab3f561aa5ab537e1a6ed24006d58b4ee93cd6bb2c0cb822726f306"
 dependencies = [
  "bytes",
  "chrono",
@@ -3944,6 +3944,7 @@ dependencies = [
  "http-auth",
  "jwt",
  "lazy_static",
+ "oci-spec",
  "olpc-cjson",
  "regex",
  "reqwest 0.12.5",
