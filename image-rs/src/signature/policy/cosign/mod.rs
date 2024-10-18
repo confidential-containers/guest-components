@@ -6,10 +6,9 @@
 //! Cosign verification
 
 use anyhow::{anyhow, bail, Result};
-use async_trait::async_trait;
 use oci_client::secrets::RegistryAuth;
-use serde::{Deserialize, Serialize};
 
+use sigstore::registry::{Certificate, ClientConfig};
 #[cfg(feature = "signature-cosign")]
 use sigstore::{
     cosign::{
@@ -20,63 +19,61 @@ use sigstore::{
     errors::SigstoreVerifyConstraintsError,
     registry::{Auth, OciReference},
 };
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
-use super::SignScheme;
-use crate::resource;
 use crate::signature::{
-    image::Image, mechanism::Paths, payload::simple_signing::SigPayload,
-    policy::ref_match::PolicyReqMatchType,
+    image::Image, payload::simple_signing::SigPayload, policy::ref_match::PolicyReqMatchType,
 };
+use crate::{resource::ResourceProvider, signature::SignatureValidator};
 
-/// The name of resource to request cosign verification key from kbs
-pub const COSIGN_KEY_KBS: &str = "Cosign Key";
+use super::CosignParameters;
 
-#[derive(Deserialize, Debug, Eq, PartialEq, Serialize, Default)]
-pub struct CosignParameters {
-    // KeyPath is a pathname to a local file containing the trusted key(s).
-    // Exactly one of KeyPath and KeyData can be specified.
-    //
-    // This field is optional.
-    #[serde(rename = "keyPath")]
-    pub key_path: Option<String>,
-    // KeyData contains the trusted key(s), base64-encoded.
-    // Exactly one of KeyPath and KeyData can be specified.
-    //
-    // This field is optional.
-    #[serde(rename = "keyData")]
-    pub key_data: Option<String>,
-
-    // SignedIdentity specifies what image identity the signature must be claiming about the image.
-    // Defaults to "match-exact" if not specified.
-    //
-    // This field is optional.
-    #[serde(default, rename = "signedIdentity")]
-    pub signed_identity: Option<PolicyReqMatchType>,
+impl SignatureValidator {
+    /// Judge whether an image is allowed by this SignScheme.
+    pub(crate) async fn cosign_allows_image(
+        &self,
+        parameter: &CosignParameters,
+        image: &Image,
+        auth: &RegistryAuth,
+    ) -> Result<()> {
+        parameter
+            .check_image_signature(
+                self.resource_provider.clone(),
+                image,
+                auth,
+                self.certificates.iter().collect(),
+                self.no_proxy.as_ref(),
+                self.https_proxy.as_ref(),
+            )
+            .await
+    }
 }
 
-#[async_trait]
-impl SignScheme for CosignParameters {
-    /// This initialization will:
-    /// * Create [`COSIGN_KEY_DIR`] if not exist.
-    #[cfg(feature = "signature-cosign")]
-    async fn init(&mut self, _config: &Paths) -> Result<()> {
-        Ok(())
-    }
-
-    #[cfg(not(feature = "signature-cosign"))]
-    async fn init(&mut self, _config: &Paths) -> Result<()> {
-        Ok(())
-    }
-
-    /// Judge whether an image is allowed by this SignScheme.
-    #[cfg(feature = "signature-cosign")]
-    async fn allows_image(&self, image: &mut Image, auth: &RegistryAuth) -> Result<()> {
+impl CosignParameters {
+    async fn check_image_signature(
+        &self,
+        resource_provider: Arc<ResourceProvider>,
+        image: &Image,
+        auth: &RegistryAuth,
+        certificates: Vec<&Certificate>,
+        no_proxy: Option<&String>,
+        https_proxy: Option<&String>,
+    ) -> Result<()> {
         // Check before we access the network
         self.check_reference_rule_types()?;
 
+        // Get the public key
+        let key = match (&self.key_data, &self.key_path) {
+            (None, None) => bail!("Neither keyPath nor keyData is specified."),
+            (None, Some(key_path)) => resource_provider.get_resource(key_path).await?,
+            (Some(key_data), None) => key_data.as_bytes().to_vec(),
+            (Some(_), Some(_)) => bail!("Both keyPath and keyData are specified."),
+        };
+
         // Verification, will access the network
-        let payloads = self.verify_signature_and_get_payload(image, auth).await?;
+        let payloads = self
+            .verify_signature_and_get_payload(image, auth, key, certificates, no_proxy, https_proxy)
+            .await?;
 
         // check the reference rules (signed identity)
         for payload in payloads {
@@ -90,14 +87,6 @@ impl SignScheme for CosignParameters {
         Ok(())
     }
 
-    #[cfg(not(feature = "signature-cosign"))]
-    async fn allows_image(&self, image: &mut Image, auth: &RegistryAuth) -> Result<()> {
-        bail!("feature \"signature-cosign\" not enabled.")
-    }
-}
-
-#[cfg(feature = "signature-cosign")]
-impl CosignParameters {
     /// Check whether this Policy Request Match Type (i.e., signed identity
     /// check type) for the reference is MatchRepository or ExactRepository.
     /// Because cosign-created signatures only contain a repository,
@@ -127,22 +116,26 @@ impl CosignParameters {
         &self,
         image: &Image,
         auth: &RegistryAuth,
+        key: Vec<u8>,
+        certificates: Vec<&Certificate>,
+        no_proxy: Option<&String>,
+        https_proxy: Option<&String>,
     ) -> Result<Vec<SigPayload>> {
-        // Get the pubkey
-        let key = match (&self.key_data, &self.key_path) {
-            (None, None) => bail!("Neither keyPath nor keyData is specified."),
-            (None, Some(key_path)) => resource::get_resource(key_path).await?,
-            (Some(key_data), None) => key_data.as_bytes().to_vec(),
-            (Some(_), Some(_)) => bail!("Both keyPath and keyData are specified."),
-        };
-
         let image_ref = OciReference::from_str(&image.reference.whole())?;
         let auth = match auth {
             RegistryAuth::Anonymous => Auth::Anonymous,
             RegistryAuth::Basic(username, pass) => Auth::Basic(username.clone(), pass.clone()),
         };
 
-        let mut client = ClientBuilder::default().build()?;
+        let config = ClientConfig {
+            no_proxy: no_proxy.cloned(),
+            https_proxy: https_proxy.cloned(),
+            extra_root_certificates: certificates.into_iter().cloned().collect(),
+            ..Default::default()
+        };
+        let mut client = ClientBuilder::default()
+            .with_oci_client_config(config)
+            .build()?;
 
         // Get the cosign signature "image"'s uri and the signed image's digest
         let (cosign_image, source_image_digest) = client.triangulate(&image_ref, &auth).await?;
@@ -237,8 +230,21 @@ mod tests {
         image
             .set_manifest_digest(IMAGE_DIGEST)
             .expect("Set manifest digest failed.");
+        let resource_provider = ResourceProvider::default();
+
+        let key = resource_provider
+            .get_resource(parameter.key_path.as_ref().unwrap())
+            .await
+            .unwrap();
         let res = parameter
-            .verify_signature_and_get_payload(&image, &oci_client::secrets::RegistryAuth::Anonymous)
+            .verify_signature_and_get_payload(
+                &image,
+                &oci_client::secrets::RegistryAuth::Anonymous,
+                key,
+                vec![],
+                None,
+                None,
+            )
             .await;
         assert!(
             res.is_ok(),
@@ -358,8 +364,16 @@ mod tests {
             .expect("Set manifest digest failed.");
 
         if let PolicyReqType::Cosign(scheme) = policy_requirement {
+            let resource_provider = ResourceProvider::default();
             let res = scheme
-                .allows_image(&mut image, &oci_client::secrets::RegistryAuth::Anonymous)
+                .check_image_signature(
+                    Arc::new(resource_provider),
+                    &image,
+                    &oci_client::secrets::RegistryAuth::Anonymous,
+                    vec![],
+                    None,
+                    None,
+                )
                 .await;
             assert_eq!(
                 res.is_ok(),

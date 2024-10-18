@@ -22,7 +22,7 @@ This section shows how to sign an image, and enable signature verification of sp
 
 Both encrypted and unencrypted image can be signed.
 
-We need to install `cosign` to sign images. Detailed work process behind `cosign` can be found in [this doc](../../src/signature/mechanism/cosign).
+We need to install `cosign` to sign images. Detailed work process behind `cosign` can be found in [this doc](../../src/signature/policy/cosign/README.md).
 Follow [the guide here](https://github.com/sigstore/cosign#installation) to install `cosign`:
 
 After installing `cosign`, we need to generate a key pair to sign images and verify related signatures.
