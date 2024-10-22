@@ -27,7 +27,7 @@ tonic.workspace = true
 uuid = { workspace = true, features = ["fast-rng", "v4"] }
 
 [build-dependencies]
-shadow-rs = "0.33.0"
+shadow-rs = "0.35.1"
 tonic-build.workspace = true
 
 [dev-dependencies]
