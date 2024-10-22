@@ -10,7 +10,9 @@ anyhow.workspace = true
 async-trait.workspace = true
 attester = { path = "../attester", default-features = false }
 base64.workspace = true
+clap = { workspace = true, features = ["derive"], optional = true }
 crypto = { path = "../deps/crypto", default-features = false }
+env_logger = { workspace = true, optional = true }
 jwt-simple.workspace = true
 kbs-types.workspace = true
 log.workspace = true
@@ -36,6 +38,10 @@ tokio = { workspace = true, features = [ "rt", "macros", "fs", "process" ]}
 [build-dependencies]
 ttrpc-codegen = { workspace = true, optional = true }
 
+[[bin]]
+name = "trustee-attester"
+required-features = ["bin"]
+
 [features]
 default = ["background_check", "passport", "rust-crypto", "all-attesters"]
 
@@ -56,3 +62,5 @@ se-attester  = ["attester/se-attester"]
 
 rust-crypto = ["reqwest/rustls-tls", "crypto/rust-crypto"]
 openssl = ["reqwest/native-tls-vendored", "crypto/openssl"]
+
+bin = ["tokio/rt", "tokio/macros", "clap", "env_logger"]
