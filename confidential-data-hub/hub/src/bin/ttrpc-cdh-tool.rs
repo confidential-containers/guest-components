@@ -11,7 +11,10 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use clap::{Args, Parser, Subcommand};
 use protos::{
     api::*,
-    api_ttrpc::{GetResourceServiceClient, SealedSecretServiceClient, SecureMountServiceClient},
+    api_ttrpc::{
+        EncryptedMeshServiceClient, GetResourceServiceClient, SealedSecretServiceClient,
+        SecureMountServiceClient,
+    },
     keyprovider::*,
     keyprovider_ttrpc::KeyProviderServiceClient,
 };
@@ -53,6 +56,9 @@ enum Operation {
 
     /// Secure mount
     SecureMount(SecureMountArgs),
+
+    /// Set up an encrypted mesh
+    SetUpEncryptedMesh(SetUpEncryptedMeshArgs),
 }
 
 #[derive(Args)]
@@ -85,6 +91,16 @@ struct SecureMountArgs {
     /// path to the file which contains the Storage object.
     #[arg(short, long)]
     storage_path: String,
+}
+
+#[derive(Debug, Args)]
+#[command(author, version, about, long_about = None)]
+struct SetUpEncryptedMeshArgs {
+    /// FIXME some arg to set up the encrypted mesh
+    #[arg(short, long)]
+    pod_name: String,
+    #[arg(short, long)]
+    lighthouse_pub_ip: String,
 }
 
 #[tokio::main]
@@ -153,6 +169,17 @@ async fn main() {
                 .await
                 .expect("request to CDH");
             println!("mount path: {}", res.mount_path);
+        }
+        Operation::SetUpEncryptedMesh(arg) => {
+            let client = EncryptedMeshServiceClient::new(inner);
+            let req = SetUpEncryptedMeshRequest {
+                arg.pod_name,
+                arg.lighthouse_pub_ip,
+            };
+            let res = client
+                .set_up_encrypted_mesh(context::with_timeout(args.timeout * NANO_PER_SECOND), &req)
+                .await
+                .expect("request to CDH");
         }
     }
 }

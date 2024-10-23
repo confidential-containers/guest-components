@@ -32,4 +32,7 @@ pub enum Error {
 
     #[error("secure mount failed")]
     SecureMount(#[from] storage::Error),
+
+    #[error("set up encrypted mesh failed")]
+    EncMeshSetup(#[from] enc_mesh::EncMeshError),
 }

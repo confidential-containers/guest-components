@@ -7,3 +7,4 @@ confidential-data-hub/kms/src/plugins/aliyun/example_credential/
 confidential-data-hub/secret/tests/envelope_secret_aliyun_config/
 confidential-data-hub/secret/tests/envelope_secret_ehsm_config/
 shell.nix
+*.swp

@@ -10,7 +10,8 @@ use clap::Parser;
 use log::info;
 use protos::{
     api_ttrpc::{
-        create_get_resource_service, create_sealed_secret_service, create_secure_mount_service,
+        create_encrypted_mesh_service, create_get_resource_service, create_sealed_secret_service,
+        create_secure_mount_service,
     },
     keyprovider_ttrpc::create_key_provider_service,
 };
@@ -76,6 +77,7 @@ async fn main() -> Result<()> {
     let get_resource_service = ttrpc_service!(create_get_resource_service, &credentials);
     let key_provider_service = ttrpc_service!(create_key_provider_service, &credentials);
     let secure_mount_service = ttrpc_service!(create_secure_mount_service, &credentials);
+    let encrypted_mesh_service = ttrpc_service!(create_encrypted_mesh_service, &credentials);
 
     let mut server = TtrpcServer::new()
         .bind(&config.socket)
@@ -83,7 +85,8 @@ async fn main() -> Result<()> {
         .register_service(sealed_secret_service)
         .register_service(get_resource_service)
         .register_service(secure_mount_service)
-        .register_service(key_provider_service);
+        .register_service(key_provider_service)
+        .register_service(encrypted_mesh_service);
 
     info!(
         "[ttRPC] Confidential Data Hub starts to listen to request: {}",

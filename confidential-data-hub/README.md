@@ -94,7 +94,7 @@ run the following to build
 ```shell
 git clone https://github.com/confidential-containers/guest-components
 cd guest-components/confidential-data-hub/hub
-cargo build --bin ttrpc-cdh-tool --features bin,ttrpc
+cargo build --bin ttrpc-cdh-tool --no-default-features --features bin,ttrpc
 ```
 
 Install
@@ -108,7 +108,7 @@ run the following to build
 ```shell
 git clone https://github.com/confidential-containers/guest-components
 cd guest-components/confidential-data-hub/hub
-cargo build --bin grpc-cdh-tool --features bin,grpc
+cargo build --bin grpc-cdh-tool --no-default-features --features bin,grpc
 ```
 
 Install

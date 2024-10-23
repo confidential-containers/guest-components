@@ -20,9 +20,12 @@ use crate::{
     protos::{
         api::{
             GetResourceRequest, GetResourceResponse, SecureMountRequest, SecureMountResponse,
-            UnsealSecretInput, UnsealSecretOutput,
+            SetUpEncryptedMeshRequest, SetUpEncryptedMeshResponse, UnsealSecretInput,
+            UnsealSecretOutput,
         },
-        api_ttrpc::{GetResourceService, SealedSecretService, SecureMountService},
+        api_ttrpc::{
+            EncryptedMeshService, GetResourceService, SealedSecretService, SecureMountService,
+        },
         keyprovider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput},
         keyprovider_ttrpc::KeyProviderService,
     },
@@ -191,6 +194,34 @@ impl SecureMountService for Server {
         let mut reply = SecureMountResponse::new();
         reply.mount_path = resource;
         debug!("[ttRPC CDH] secure mount succeeded.");
+        Ok(reply)
+    }
+}
+
+#[async_trait]
+impl EncryptedMeshService for Server {
+    async fn set_up_encrypted_mesh(
+        &self,
+        _ctx: &TtrpcContext,
+        req: SetUpEncryptedMeshRequest,
+    ) -> ::ttrpc::Result<SetUpEncryptedMeshResponse> {
+        debug!("[ttRPC CDH] Set up encrypted mesh request");
+        let reader = HUB.read().await;
+        let reader = reader.as_ref().expect("must be initialized");
+        let _resource = reader
+            .set_up_encrypted_mesh(req.pod_name, req.lighthouse_pub_ip)
+            .await
+            .map_err(|e| {
+                let detailed_error = format_error!(e);
+                error!("[ttRPC CDH] Set Up Encrypted Mesh:\n{detailed_error}");
+                let mut status = Status::new();
+                status.set_code(Code::INTERNAL);
+                status.set_message("[CDH] [ERROR]: set up encryptd mesh failed".to_string());
+                Error::RpcStatus(status)
+            })?;
+
+        let reply = SetUpEncryptedMeshResponse::new();
+        debug!("[ttRPC CDH] setup encrypted mesh succeeded.");
         Ok(reply)
     }
 }

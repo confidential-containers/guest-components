@@ -18,7 +18,7 @@ SOURCE_ARCH := $(shell uname -m)
 RPC ?= ttrpc
 ARCH ?= $(shell uname -m)
 DEBUG ?=
-LIBC ?= gnu
+LIBC ?= musl
 RESOURCE_PROVIDER ?= kbs,sev
 KMS_PROVIDER ?= aliyun,ehsm
 DESTDIR ?= $(PREFIX)/bin
@@ -97,8 +97,9 @@ ifneq ($(RUSTFLAGS_ARGS),)
 endif
 
 build:
-	cd hub && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features)" $(binary) $(LIBC_FLAG)
-	mv $(TARGET_DIR)/$(binary_name) $(TARGET)
+	#cd hub && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features)" $(binary) $(LIBC_FLAG)
+	cd hub && $(RUST_FLAGS) CARGO_LOG=cargo::core::compiler::fingerprint=info cargo build $(release) --no-default-features --features "$(features)" $(binary) $(LIBC_FLAG)
+	mv $(TARGET_DIR)/$(binary_name) $(TARGET) || true
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)
 

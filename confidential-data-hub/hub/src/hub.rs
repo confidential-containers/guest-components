@@ -62,4 +62,16 @@ impl DataHub for Hub {
         let res = storage.mount().await?;
         Ok(res)
     }
+
+    async fn set_up_encrypted_mesh(
+        &self,
+        pod_name: String,
+        lighthouse_pub_ip: String,
+    ) -> Result<Vec<u8>> {
+        info!("set up encrypted mesh called");
+        enc_mesh::set_up(pod_name, lighthouse_pub_ip).await?;
+        // FIXME remove return value for this interface if we don't need
+        // anything here.
+        Ok(Vec::<u8>::new())
+    }
 }

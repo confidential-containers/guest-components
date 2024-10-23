@@ -163,3 +163,51 @@ pub fn create_secure_mount_service(service: Arc<Box<dyn SecureMountService + Sen
     ret.insert("api.SecureMountService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
     ret
 }
+
+#[derive(Clone)]
+pub struct EncryptedMeshServiceClient {
+    client: ::ttrpc::r#async::Client,
+}
+
+impl EncryptedMeshServiceClient {
+    pub fn new(client: ::ttrpc::r#async::Client) -> Self {
+        EncryptedMeshServiceClient {
+            client,
+        }
+    }
+
+    pub async fn set_up_encrypted_mesh(&self, ctx: ttrpc::context::Context, req: &super::api::SetUpEncryptedMeshRequest) -> ::ttrpc::Result<super::api::SetUpEncryptedMeshResponse> {
+        let mut cres = super::api::SetUpEncryptedMeshResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "api.EncryptedMeshService", "SetUpEncryptedMesh", cres);
+    }
+}
+
+struct SetUpEncryptedMeshMethod {
+    service: Arc<Box<dyn EncryptedMeshService + Send + Sync>>,
+}
+
+#[async_trait]
+impl ::ttrpc::r#async::MethodHandler for SetUpEncryptedMeshMethod {
+    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
+        ::ttrpc::async_request_handler!(self, ctx, req, api, SetUpEncryptedMeshRequest, set_up_encrypted_mesh);
+    }
+}
+
+#[async_trait]
+pub trait EncryptedMeshService: Sync {
+    async fn set_up_encrypted_mesh(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::api::SetUpEncryptedMeshRequest) -> ::ttrpc::Result<super::api::SetUpEncryptedMeshResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/api.EncryptedMeshService/SetUpEncryptedMesh is not supported".to_string())))
+    }
+}
+
+pub fn create_encrypted_mesh_service(service: Arc<Box<dyn EncryptedMeshService + Send + Sync>>) -> HashMap<String, ::ttrpc::r#async::Service> {
+    let mut ret = HashMap::new();
+    let mut methods = HashMap::new();
+    let streams = HashMap::new();
+
+    methods.insert("SetUpEncryptedMesh".to_string(),
+                    Box::new(SetUpEncryptedMeshMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
+
+    ret.insert("api.EncryptedMeshService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
+    ret
+}

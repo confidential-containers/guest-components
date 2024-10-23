@@ -18,6 +18,7 @@ use std::{env, sync::Arc};
 use async_trait::async_trait;
 use attestation_agent::config::aa_kbc_params::AaKbcParams;
 use lazy_static::lazy_static;
+use log::info;
 pub use resource_uri::ResourceUri;
 use tokio::sync::Mutex;
 

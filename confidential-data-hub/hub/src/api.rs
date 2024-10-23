@@ -29,4 +29,10 @@ pub trait DataHub {
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>>;
 
     async fn secure_mount(&self, storage: Storage) -> Result<String>;
+
+    async fn set_up_encrypted_mesh(
+        &self,
+        pod_name: String,
+        lighthouse_pub_ip: String,
+    ) -> Result<Vec<u8>>;
 }
