@@ -115,7 +115,7 @@ else
 endif
 
 build:
-	cd attestation-agent && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features)" $(binary) $(LIBC_FLAG)
+	cd attestation-agent && RUST_LOG=debug $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features)" $(binary) $(LIBC_FLAG)
 	mv $(TARGET_DIR)/$(binary_name) $(TARGET)
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)
