@@ -50,7 +50,7 @@ impl Default for EventlogConfig {
         Self {
             eventlog_algorithm: HashAlgorithm::Sha384,
             init_pcr: DEFAULT_PCR_INDEX,
-            enable_eventlog: false,
+            enable_eventlog: true,
         }
     }
 }
@@ -94,7 +94,7 @@ impl TryFrom<&str> for Config {
             .add_source(config::File::with_name(config_path))
             .set_default("eventlog_config.eventlog_algorithm", DEFAULT_EVENTLOG_HASH)?
             .set_default("eventlog_config.init_pcr", DEFAULT_PCR_INDEX)?
-            .set_default("eventlog_config.enable_eventlog", "false")?
+            .set_default("eventlog_config.enable_eventlog", "true")?
             .build()?;
 
         let cfg = c.try_deserialize()?;

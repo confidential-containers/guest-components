@@ -85,3 +85,11 @@ openssl = ["kbs_protocol?/openssl"]
 bin = ["clap", "env_logger", "tokio/rt-multi-thread"]
 grpc = ["prost", "tonic", "tonic-build", "tokio/signal"]
 ttrpc = ["dep:ttrpc", "ttrpc-codegen", "protobuf", "tokio/signal"]
+
+[profile.dev]
+opt-level = 0  # No optimization
+debug = true   # This should be true for debug builds
+
+[profile.release]
+opt-level = 3  # Optimization level
+debug = true   # This should be true for release builds
