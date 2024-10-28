@@ -54,7 +54,7 @@ impl AttestationAgent {
         info!("Initializing AttestationAgent...");
 
         let config = self.config.read().await;
-        debug!("Configuration loaded: {:?}", config);
+        info!("Configuration loaded: {:?}", config);
 
         if config.eventlog_config.enable_eventlog {
             info!("Event log is enabled, initializing...");
@@ -72,7 +72,7 @@ impl AttestationAgent {
                 .context("Failed to extend runtime measurement with INIT entry")?;
 
             self.eventlog = Some(Mutex::new(eventlog));
-            debug!("Event log initialized successfully.");
+            info!("Event log initialized successfully.");
         } else {
             warn!("Event log is disabled.");
         }
@@ -186,7 +186,7 @@ impl AttestationAPIs for AttestationAgent {
 
             let pcr = register_index.unwrap_or_else(|| {
                 let pcr = config.eventlog_config.init_pcr;
-                debug!("No PCR index provided, using default: {}", pcr);
+                info!("No PCR index provided, using default: {}", pcr);
                 pcr
             });
 

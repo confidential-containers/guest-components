@@ -35,7 +35,7 @@ impl AttestationAgentService for AA {
         _ctx: &::ttrpc::r#async::TtrpcContext,
         req: GetTokenRequest,
     ) -> ::ttrpc::Result<GetTokenResponse> {
-        debug!("AA (ttrpc): Received get_token request with TokenType: {}", req.TokenType);
+        info!("AA (ttrpc): Received get_token request with TokenType: {}", req.TokenType);
 
         let token = self.inner.get_token(&req.TokenType).await.map_err(|e| {
             error!("AA (ttrpc): get token failed: {e:?}");
@@ -45,7 +45,7 @@ impl AttestationAgentService for AA {
             ::ttrpc::Error::RpcStatus(error_status)
         })?;
 
-        debug!("AA (ttrpc): Successfully retrieved token");
+        info!("AA (ttrpc): Successfully retrieved token");
 
         let mut reply = GetTokenResponse::new();
         reply.Token = token;
@@ -58,7 +58,7 @@ impl AttestationAgentService for AA {
         _ctx: &::ttrpc::r#async::TtrpcContext,
         req: GetEvidenceRequest,
     ) -> ::ttrpc::Result<GetEvidenceResponse> {
-        debug!("AA (ttrpc): Received get_evidence request with RuntimeData size: {}", req.RuntimeData.len());
+        info!("AA (ttrpc): Received get_evidence request with RuntimeData size: {}", req.RuntimeData.len());
 
         let evidence = self
             .inner
@@ -72,7 +72,7 @@ impl AttestationAgentService for AA {
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
-        debug!("AA (ttrpc): Successfully retrieved evidence");
+        info!("AA (ttrpc): Successfully retrieved evidence");
 
         let mut reply = GetEvidenceResponse::new();
         reply.Evidence = evidence;
@@ -85,7 +85,7 @@ impl AttestationAgentService for AA {
         _ctx: &::ttrpc::r#async::TtrpcContext,
         req: ExtendRuntimeMeasurementRequest,
     ) -> ::ttrpc::Result<ExtendRuntimeMeasurementResponse> {
-        debug!("AA (ttrpc): Received extend_runtime_measurement request with Domain: {}, Operation: {}, Content: {}", req.Domain, req.Operation, req.Content);
+        info!("AA (ttrpc): Received extend_runtime_measurement request with Domain: {}, Operation: {}, Content: {}", req.Domain, req.Operation, req.Content);
 
         self.inner
             .extend_runtime_measurement(
@@ -105,7 +105,7 @@ impl AttestationAgentService for AA {
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
-        debug!("AA (ttrpc): Successfully extended runtime measurement");
+        info!("AA (ttrpc): Successfully extended runtime measurement");
         let reply = ExtendRuntimeMeasurementResponse::new();
         ::ttrpc::Result::Ok(reply)
     }
@@ -130,7 +130,7 @@ impl AttestationAgentService for AA {
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
-        debug!("AA (ttrpc): Successfully updated configuration");
+        info!("AA (ttrpc): Successfully updated configuration");
         let reply = UpdateConfigurationResponse::new();
         ::ttrpc::Result::Ok(reply)
     }
@@ -156,7 +156,7 @@ impl AttestationAgentService for AA {
             .trim_start_matches('"')
             .to_string();
         
-        debug!("AA (ttrpc): Successfully retrieved tee type: {}", res);
+        info!("AA (ttrpc): Successfully retrieved tee type: {}", res);
         
         let mut reply = GetTeeTypeResponse::new();
         reply.tee = res;
