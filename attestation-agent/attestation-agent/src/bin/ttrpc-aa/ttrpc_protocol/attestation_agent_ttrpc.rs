@@ -46,9 +46,9 @@ impl AttestationAgentServiceClient {
         ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "ExtendRuntimeMeasurement", cres);
     }
 
-    pub async fn check_init_data(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::CheckInitDataRequest) -> ::ttrpc::Result<super::attestation_agent::CheckInitDataResponse> {
-        let mut cres = super::attestation_agent::CheckInitDataResponse::new();
-        ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "CheckInitData", cres);
+    pub async fn bind_init_data(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::BindInitDataRequest) -> ::ttrpc::Result<super::attestation_agent::BindInitDataResponse> {
+        let mut cres = super::attestation_agent::BindInitDataResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "BindInitData", cres);
     }
 
     pub async fn update_configuration(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::UpdateConfigurationRequest) -> ::ttrpc::Result<super::attestation_agent::UpdateConfigurationResponse> {
@@ -95,14 +95,14 @@ impl ::ttrpc::r#async::MethodHandler for ExtendRuntimeMeasurementMethod {
     }
 }
 
-struct CheckInitDataMethod {
+struct BindInitDataMethod {
     service: Arc<dyn AttestationAgentService + Send + Sync>,
 }
 
 #[async_trait]
-impl ::ttrpc::r#async::MethodHandler for CheckInitDataMethod {
+impl ::ttrpc::r#async::MethodHandler for BindInitDataMethod {
     async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
-        ::ttrpc::async_request_handler!(self, ctx, req, attestation_agent, CheckInitDataRequest, check_init_data);
+        ::ttrpc::async_request_handler!(self, ctx, req, attestation_agent, BindInitDataRequest, bind_init_data);
     }
 }
 
@@ -139,8 +139,8 @@ pub trait AttestationAgentService: Sync {
     async fn extend_runtime_measurement(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::ExtendRuntimeMeasurementRequest) -> ::ttrpc::Result<super::attestation_agent::ExtendRuntimeMeasurementResponse> {
         Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/ExtendRuntimeMeasurement is not supported".to_string())))
     }
-    async fn check_init_data(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::CheckInitDataRequest) -> ::ttrpc::Result<super::attestation_agent::CheckInitDataResponse> {
-        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/CheckInitData is not supported".to_string())))
+    async fn bind_init_data(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::BindInitDataRequest) -> ::ttrpc::Result<super::attestation_agent::BindInitDataResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/BindInitData is not supported".to_string())))
     }
     async fn update_configuration(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::UpdateConfigurationRequest) -> ::ttrpc::Result<super::attestation_agent::UpdateConfigurationResponse> {
         Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/UpdateConfiguration is not supported".to_string())))
@@ -164,8 +164,8 @@ pub fn create_attestation_agent_service(service: Arc<dyn AttestationAgentService
     methods.insert("ExtendRuntimeMeasurement".to_string(),
                     Box::new(ExtendRuntimeMeasurementMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
 
-    methods.insert("CheckInitData".to_string(),
-                    Box::new(CheckInitDataMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
+    methods.insert("BindInitData".to_string(),
+                    Box::new(BindInitDataMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
 
     methods.insert("UpdateConfiguration".to_string(),
                     Box::new(UpdateConfigurationMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);

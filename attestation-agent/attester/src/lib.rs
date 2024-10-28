@@ -67,7 +67,7 @@ impl TryFrom<Tee> for BoxedAttester {
     }
 }
 
-pub enum InitdataResult {
+pub enum InitDataResult {
     Ok,
     Unsupported,
 }
@@ -89,8 +89,8 @@ pub trait Attester {
         bail!("Unimplemented")
     }
 
-    async fn check_init_data(&self, _init_data: &[u8]) -> Result<InitdataResult> {
-        Ok(InitdataResult::Unsupported)
+    async fn bind_init_data(&self, _init_data_digest: &[u8]) -> Result<InitDataResult> {
+        Ok(InitDataResult::Unsupported)
     }
 }
 

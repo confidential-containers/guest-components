@@ -10,7 +10,7 @@ use kbs_types::Tee;
 use std::{io::Write, str::FromStr};
 use tokio::sync::{Mutex, RwLock};
 
-pub use attester::InitdataResult;
+pub use attester::InitDataResult;
 
 pub mod config;
 mod eventlog;
@@ -32,8 +32,9 @@ use crate::config::Config;
 /// current hardware runtime measurement register (if any) or PCR for (v)TPM (under
 /// development) platforms
 /// with a runtime event.
-/// - `check_init_data`: check if the given data slice matches the current confidential
-/// computing environment's host data field, e.g. MRCONFIGID for TDX, HOSTDATA for SNP.
+/// - `bind_init_data`: bind the given data slice to the current confidential
+/// computing environment. This can be a verify operation or an extension of the TEE
+/// evidence
 ///
 /// # Example
 ///
@@ -69,8 +70,8 @@ pub trait AttestationAPIs {
         register_index: Option<u64>,
     ) -> Result<()>;
 
-    /// Check the initdata binding
-    async fn check_init_data(&self, init_data: &[u8]) -> Result<InitdataResult>;
+    /// Bind initdata
+    async fn bind_init_data(&self, init_data: &[u8]) -> Result<InitDataResult>;
 
     fn get_tee_type(&self) -> Tee;
 }
@@ -233,10 +234,10 @@ impl AttestationAPIs for AttestationAgent {
         Ok(())
     }
 
-    /// Check the initdata binding. If current platform does not support initdata
-    /// injection, return `InitdataResult::Unsupported`.
-    async fn check_init_data(&self, init_data: &[u8]) -> Result<InitdataResult> {
-        self.attester.check_init_data(init_data).await
+    /// Perform the initdata binding. If current platform does not support initdata
+    /// binding, return `InitdataResult::Unsupported`.
+    async fn bind_init_data(&self, init_data: &[u8]) -> Result<InitDataResult> {
+        self.attester.bind_init_data(init_data).await
     }
 
     /// Get the tee type of current platform. If no platform is detected,

@@ -3,11 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::Attester;
+use super::{Attester, InitDataResult};
+use crate::az_snp_vtpm::utils;
 use anyhow::*;
 use az_tdx_vtpm::vtpm::Quote as TpmQuote;
 use az_tdx_vtpm::{hcl, imds, is_tdx_cvm, vtpm};
-use log::{debug, info};
+use log::debug;
 use serde::{Deserialize, Serialize};
 use std::result::Result::Ok;
 
@@ -49,22 +50,17 @@ impl Attester for AzTdxVtpmAttester {
         Ok(serde_json::to_string(&evidence)?)
     }
 
+    async fn bind_init_data(&self, init_data_digest: &[u8]) -> anyhow::Result<InitDataResult> {
+        utils::extend_pcr(init_data_digest, utils::INIT_DATA_PCR)?;
+        Ok(InitDataResult::Ok)
+    }
+
     async fn extend_runtime_measurement(
         &self,
         event_digest: Vec<u8>,
         register_index: u64,
     ) -> Result<()> {
-        let sha256_digest: [u8; 32] = event_digest
-            .as_slice()
-            .try_into()
-            .context("expected sha256 digest")?;
-        if register_index > 23 {
-            bail!("Invalid PCR index: {}", register_index);
-        }
-        let pcr: u8 = register_index as u8;
-        info!("Extending PCR {} with {}", pcr, hex::encode(sha256_digest));
-        vtpm::extend_pcr(pcr, &sha256_digest)?;
-
+        utils::extend_pcr(&event_digest, register_index as u8)?;
         Ok(())
     }
 }
