@@ -8,7 +8,7 @@ use ::ttrpc::proto::Code;
 use anyhow::*;
 use async_trait::async_trait;
 use attestation_agent::{AttestationAPIs, AttestationAgent};
-use log::{debug, error};
+use log::{debug, error, info};
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -35,17 +35,17 @@ impl AttestationAgentService for AA {
         _ctx: &::ttrpc::r#async::TtrpcContext,
         req: GetTokenRequest,
     ) -> ::ttrpc::Result<GetTokenResponse> {
-        debug!("AA (ttrpc): get token ...");
+        info!("AA (ttrpc): Received get_token request with TokenType: {}", req.TokenType);
 
         let token = self.inner.get_token(&req.TokenType).await.map_err(|e| {
-            error!("AA (ttrpc): get token failed\n {e:?}");
+            error!("AA (ttrpc): get token failed: {e:?}");
             let mut error_status = ::ttrpc::proto::Status::new();
             error_status.set_code(Code::INTERNAL);
             error_status.set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get token failed"));
             ::ttrpc::Error::RpcStatus(error_status)
         })?;
 
-        debug!("AA (ttrpc): Get token successfully!");
+        info!("AA (ttrpc): Successfully retrieved token");
 
         let mut reply = GetTokenResponse::new();
         reply.Token = token;
@@ -58,22 +58,21 @@ impl AttestationAgentService for AA {
         _ctx: &::ttrpc::r#async::TtrpcContext,
         req: GetEvidenceRequest,
     ) -> ::ttrpc::Result<GetEvidenceResponse> {
-        debug!("AA (ttrpc): get evidence ...");
+        info!("AA (ttrpc): Received get_evidence request with RuntimeData size: {}", req.RuntimeData.len());
 
         let evidence = self
             .inner
             .get_evidence(&req.RuntimeData)
             .await
             .map_err(|e| {
-                error!("AA (ttrpc): get evidence failed:\n {e:?}");
+                error!("AA (ttrpc): get evidence failed: {e:?}");
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
-                error_status
-                    .set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get evidence failed"));
+                error_status.set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get evidence failed"));
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
-        debug!("AA (ttrpc): Get evidence successfully!");
+        info!("AA (ttrpc): Successfully retrieved evidence");
 
         let mut reply = GetEvidenceResponse::new();
         reply.Evidence = evidence;
@@ -86,7 +85,7 @@ impl AttestationAgentService for AA {
         _ctx: &::ttrpc::r#async::TtrpcContext,
         req: ExtendRuntimeMeasurementRequest,
     ) -> ::ttrpc::Result<ExtendRuntimeMeasurementResponse> {
-        debug!("AA (ttrpc): extend runtime measurement ...");
+        info!("AA (ttrpc): Received extend_runtime_measurement request with Domain: {}, Operation: {}, Content: {}", req.Domain, req.Operation, req.Content);
 
         self.inner
             .extend_runtime_measurement(
@@ -97,7 +96,7 @@ impl AttestationAgentService for AA {
             )
             .await
             .map_err(|e| {
-                error!("AA (ttrpc): extend runtime measurement failed:\n {e:?}");
+                error!("AA (ttrpc): extend runtime measurement failed: {e:?}");
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
                 error_status.set_message(format!(
@@ -106,7 +105,7 @@ impl AttestationAgentService for AA {
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
-        debug!("AA (ttrpc): extend runtime measurement succeeded.");
+        info!("AA (ttrpc): Successfully extended runtime measurement");
         let reply = ExtendRuntimeMeasurementResponse::new();
         ::ttrpc::Result::Ok(reply)
     }
@@ -116,13 +115,13 @@ impl AttestationAgentService for AA {
         _ctx: &::ttrpc::r#async::TtrpcContext,
         req: UpdateConfigurationRequest,
     ) -> ::ttrpc::Result<UpdateConfigurationResponse> {
-        debug!("AA (ttrpc): update configuration ...");
+        debug!("AA (ttrpc): Received update_configuration request with config: {}", req.config);
 
         self.inner
             .update_configuration(&req.config)
             .await
             .map_err(|e| {
-                error!("AA (ttrpc): update configuration failed:\n {e:?}");
+                error!("AA (ttrpc): update configuration failed: {e:?}");
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
                 error_status.set_message(format!(
@@ -131,7 +130,7 @@ impl AttestationAgentService for AA {
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
-        debug!("AA (ttrpc): update configuration succeeded.");
+        info!("AA (ttrpc): Successfully updated configuration");
         let reply = UpdateConfigurationResponse::new();
         ::ttrpc::Result::Ok(reply)
     }
@@ -141,23 +140,24 @@ impl AttestationAgentService for AA {
         _ctx: &::ttrpc::r#async::TtrpcContext,
         _req: GetTeeTypeRequest,
     ) -> ::ttrpc::Result<GetTeeTypeResponse> {
-        debug!("AA (ttrpc): get tee type ...");
+        debug!("AA (ttrpc): Received get_tee_type request");
 
         let tee = self.inner.get_tee_type();
 
         let res = serde_json::to_string(&tee)
             .map_err(|e| {
-                error!("AA (ttrpc): get tee type failed:\n {e:?}");
+                error!("AA (ttrpc): get tee type failed: {e:?}");
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
-                error_status
-                    .set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get tee type failed"));
+                error_status.set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get tee type failed"));
                 ::ttrpc::Error::RpcStatus(error_status)
             })?
             .trim_end_matches('"')
             .trim_start_matches('"')
             .to_string();
-        debug!("AA (ttrpc): get tee type succeeded.");
+        
+        info!("AA (ttrpc): Successfully retrieved tee type: {}", res);
+        
         let mut reply = GetTeeTypeResponse::new();
         reply.tee = res;
         ::ttrpc::Result::Ok(reply)
@@ -165,8 +165,11 @@ impl AttestationAgentService for AA {
 }
 
 pub fn start_ttrpc_service(aa: AttestationAgent) -> Result<HashMap<String, Service>> {
+    info!("Starting TTRPC service for Attestation Agent");
     let service = AA { inner: aa };
     let service = Arc::new(service);
     let get_resource_service = create_attestation_agent_service(service);
+    info!("TTRPC service for Attestation Agent started successfully");
     Ok(get_resource_service)
 }
+
