@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::Attester;
+use super::{Attester, InitDataResult};
 use anyhow::{bail, Context, Result};
 use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
 use log::{debug, info};
@@ -46,19 +46,31 @@ impl Attester for AzSnpVtpmAttester {
         Ok(serde_json::to_string(&evidence)?)
     }
 
+    async fn bind_init_data(&self, init_data_digest: &[u8]) -> anyhow::Result<InitDataResult> {
+        utils::extend_pcr(init_data_digest, utils::INIT_DATA_PCR)?;
+        Ok(InitDataResult::Ok)
+    }
+
     async fn extend_runtime_measurement(
         &self,
         event_digest: Vec<u8>,
         register_index: u64,
     ) -> Result<()> {
-        let sha256_digest: [u8; 32] = event_digest
-            .as_slice()
-            .try_into()
-            .context("expected sha256 digest")?;
-        if register_index > 23 {
-            bail!("Invalid PCR index: {}", register_index);
+        utils::extend_pcr(&event_digest, register_index as u8)?;
+        Ok(())
+    }
+}
+
+pub(crate) mod utils {
+    use super::*;
+
+    pub const INIT_DATA_PCR: u8 = 8;
+
+    pub fn extend_pcr(digest: &[u8], pcr: u8) -> Result<()> {
+        let sha256_digest: [u8; 32] = digest.try_into().context("expected sha256 digest")?;
+        if pcr > 23 {
+            bail!("Invalid PCR index: {pcr}");
         }
-        let pcr: u8 = register_index as u8;
         info!("Extending PCR {} with {}", pcr, hex::encode(sha256_digest));
         vtpm::extend_pcr(pcr, &sha256_digest)?;
 

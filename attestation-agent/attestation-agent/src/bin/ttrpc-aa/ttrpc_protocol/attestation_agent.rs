@@ -931,25 +931,25 @@ impl ::protobuf::reflect::ProtobufValue for InitDataPlaintext {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
-// @@protoc_insertion_point(message:attestation_agent.CheckInitDataRequest)
+// @@protoc_insertion_point(message:attestation_agent.BindInitDataRequest)
 #[derive(PartialEq,Clone,Default,Debug)]
-pub struct CheckInitDataRequest {
+pub struct BindInitDataRequest {
     // message fields
-    // @@protoc_insertion_point(field:attestation_agent.CheckInitDataRequest.Digest)
+    // @@protoc_insertion_point(field:attestation_agent.BindInitDataRequest.Digest)
     pub Digest: ::std::vec::Vec<u8>,
     // special fields
-    // @@protoc_insertion_point(special_field:attestation_agent.CheckInitDataRequest.special_fields)
+    // @@protoc_insertion_point(special_field:attestation_agent.BindInitDataRequest.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
 }
 
-impl<'a> ::std::default::Default for &'a CheckInitDataRequest {
-    fn default() -> &'a CheckInitDataRequest {
-        <CheckInitDataRequest as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a BindInitDataRequest {
+    fn default() -> &'a BindInitDataRequest {
+        <BindInitDataRequest as ::protobuf::Message>::default_instance()
     }
 }
 
-impl CheckInitDataRequest {
-    pub fn new() -> CheckInitDataRequest {
+impl BindInitDataRequest {
+    pub fn new() -> BindInitDataRequest {
         ::std::default::Default::default()
     }
 
@@ -958,19 +958,19 @@ impl CheckInitDataRequest {
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
         fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
             "Digest",
-            |m: &CheckInitDataRequest| { &m.Digest },
-            |m: &mut CheckInitDataRequest| { &mut m.Digest },
+            |m: &BindInitDataRequest| { &m.Digest },
+            |m: &mut BindInitDataRequest| { &mut m.Digest },
         ));
-        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<CheckInitDataRequest>(
-            "CheckInitDataRequest",
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<BindInitDataRequest>(
+            "BindInitDataRequest",
             fields,
             oneofs,
         )
     }
 }
 
-impl ::protobuf::Message for CheckInitDataRequest {
-    const NAME: &'static str = "CheckInitDataRequest";
+impl ::protobuf::Message for BindInitDataRequest {
+    const NAME: &'static str = "BindInitDataRequest";
 
     fn is_initialized(&self) -> bool {
         true
@@ -1018,8 +1018,8 @@ impl ::protobuf::Message for CheckInitDataRequest {
         &mut self.special_fields
     }
 
-    fn new() -> CheckInitDataRequest {
-        CheckInitDataRequest::new()
+    fn new() -> BindInitDataRequest {
+        BindInitDataRequest::new()
     }
 
     fn clear(&mut self) {
@@ -1027,8 +1027,8 @@ impl ::protobuf::Message for CheckInitDataRequest {
         self.special_fields.clear();
     }
 
-    fn default_instance() -> &'static CheckInitDataRequest {
-        static instance: CheckInitDataRequest = CheckInitDataRequest {
+    fn default_instance() -> &'static BindInitDataRequest {
+        static instance: BindInitDataRequest = BindInitDataRequest {
             Digest: ::std::vec::Vec::new(),
             special_fields: ::protobuf::SpecialFields::new(),
         };
@@ -1036,55 +1036,55 @@ impl ::protobuf::Message for CheckInitDataRequest {
     }
 }
 
-impl ::protobuf::MessageFull for CheckInitDataRequest {
+impl ::protobuf::MessageFull for BindInitDataRequest {
     fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
         static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
-        descriptor.get(|| file_descriptor().message_by_package_relative_name("CheckInitDataRequest").unwrap()).clone()
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("BindInitDataRequest").unwrap()).clone()
     }
 }
 
-impl ::std::fmt::Display for CheckInitDataRequest {
+impl ::std::fmt::Display for BindInitDataRequest {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for CheckInitDataRequest {
+impl ::protobuf::reflect::ProtobufValue for BindInitDataRequest {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
-// @@protoc_insertion_point(message:attestation_agent.CheckInitDataResponse)
+// @@protoc_insertion_point(message:attestation_agent.BindInitDataResponse)
 #[derive(PartialEq,Clone,Default,Debug)]
-pub struct CheckInitDataResponse {
+pub struct BindInitDataResponse {
     // special fields
-    // @@protoc_insertion_point(special_field:attestation_agent.CheckInitDataResponse.special_fields)
+    // @@protoc_insertion_point(special_field:attestation_agent.BindInitDataResponse.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
 }
 
-impl<'a> ::std::default::Default for &'a CheckInitDataResponse {
-    fn default() -> &'a CheckInitDataResponse {
-        <CheckInitDataResponse as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a BindInitDataResponse {
+    fn default() -> &'a BindInitDataResponse {
+        <BindInitDataResponse as ::protobuf::Message>::default_instance()
     }
 }
 
-impl CheckInitDataResponse {
-    pub fn new() -> CheckInitDataResponse {
+impl BindInitDataResponse {
+    pub fn new() -> BindInitDataResponse {
         ::std::default::Default::default()
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
         let mut fields = ::std::vec::Vec::with_capacity(0);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
-        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<CheckInitDataResponse>(
-            "CheckInitDataResponse",
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<BindInitDataResponse>(
+            "BindInitDataResponse",
             fields,
             oneofs,
         )
     }
 }
 
-impl ::protobuf::Message for CheckInitDataResponse {
-    const NAME: &'static str = "CheckInitDataResponse";
+impl ::protobuf::Message for BindInitDataResponse {
+    const NAME: &'static str = "BindInitDataResponse";
 
     fn is_initialized(&self) -> bool {
         true
@@ -1123,36 +1123,36 @@ impl ::protobuf::Message for CheckInitDataResponse {
         &mut self.special_fields
     }
 
-    fn new() -> CheckInitDataResponse {
-        CheckInitDataResponse::new()
+    fn new() -> BindInitDataResponse {
+        BindInitDataResponse::new()
     }
 
     fn clear(&mut self) {
         self.special_fields.clear();
     }
 
-    fn default_instance() -> &'static CheckInitDataResponse {
-        static instance: CheckInitDataResponse = CheckInitDataResponse {
+    fn default_instance() -> &'static BindInitDataResponse {
+        static instance: BindInitDataResponse = BindInitDataResponse {
             special_fields: ::protobuf::SpecialFields::new(),
         };
         &instance
     }
 }
 
-impl ::protobuf::MessageFull for CheckInitDataResponse {
+impl ::protobuf::MessageFull for BindInitDataResponse {
     fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
         static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
-        descriptor.get(|| file_descriptor().message_by_package_relative_name("CheckInitDataResponse").unwrap()).clone()
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("BindInitDataResponse").unwrap()).clone()
     }
 }
 
-impl ::std::fmt::Display for CheckInitDataResponse {
+impl ::std::fmt::Display for BindInitDataResponse {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for CheckInitDataResponse {
+impl ::protobuf::reflect::ProtobufValue for BindInitDataResponse {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
@@ -1618,23 +1618,23 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x07Content\x12)\n\rRegisterIndex\x18\x04\x20\x01(\x04H\0R\rRegisterInde\
     x\x88\x01\x01B\x10\n\x0e_RegisterIndex\"\"\n\x20ExtendRuntimeMeasurement\
     Response\"K\n\x11InitDataPlaintext\x12\x18\n\x07Content\x18\x01\x20\x01(\
-    \x0cR\x07Content\x12\x1c\n\tAlgorithm\x18\x02\x20\x01(\tR\tAlgorithm\".\
-    \n\x14CheckInitDataRequest\x12\x16\n\x06Digest\x18\x01\x20\x01(\x0cR\x06\
-    Digest\"\x17\n\x15CheckInitDataResponse\"4\n\x1aUpdateConfigurationReque\
-    st\x12\x16\n\x06config\x18\x01\x20\x01(\tR\x06config\"\x1d\n\x1bUpdateCo\
-    nfigurationResponse\"\x13\n\x11GetTeeTypeRequest\"&\n\x12GetTeeTypeRespo\
-    nse\x12\x10\n\x03tee\x18\x01\x20\x01(\tR\x03tee2\x87\x05\n\x17Attestatio\
-    nAgentService\x12\\\n\x0bGetEvidence\x12%.attestation_agent.GetEvidenceR\
-    equest\x1a&.attestation_agent.GetEvidenceResponse\x12S\n\x08GetToken\x12\
-    \".attestation_agent.GetTokenRequest\x1a#.attestation_agent.GetTokenResp\
-    onse\x12\x83\x01\n\x18ExtendRuntimeMeasurement\x122.attestation_agent.Ex\
-    tendRuntimeMeasurementRequest\x1a3.attestation_agent.ExtendRuntimeMeasur\
-    ementResponse\x12b\n\rCheckInitData\x12'.attestation_agent.CheckInitData\
-    Request\x1a(.attestation_agent.CheckInitDataResponse\x12t\n\x13UpdateCon\
-    figuration\x12-.attestation_agent.UpdateConfigurationRequest\x1a..attest\
-    ation_agent.UpdateConfigurationResponse\x12Y\n\nGetTeeType\x12$.attestat\
-    ion_agent.GetTeeTypeRequest\x1a%.attestation_agent.GetTeeTypeResponseb\
-    \x06proto3\
+    \x0cR\x07Content\x12\x1c\n\tAlgorithm\x18\x02\x20\x01(\tR\tAlgorithm\"-\
+    \n\x13BindInitDataRequest\x12\x16\n\x06Digest\x18\x01\x20\x01(\x0cR\x06D\
+    igest\"\x16\n\x14BindInitDataResponse\"4\n\x1aUpdateConfigurationRequest\
+    \x12\x16\n\x06config\x18\x01\x20\x01(\tR\x06config\"\x1d\n\x1bUpdateConf\
+    igurationResponse\"\x13\n\x11GetTeeTypeRequest\"&\n\x12GetTeeTypeRespons\
+    e\x12\x10\n\x03tee\x18\x01\x20\x01(\tR\x03tee2\x84\x05\n\x17AttestationA\
+    gentService\x12\\\n\x0bGetEvidence\x12%.attestation_agent.GetEvidenceReq\
+    uest\x1a&.attestation_agent.GetEvidenceResponse\x12S\n\x08GetToken\x12\"\
+    .attestation_agent.GetTokenRequest\x1a#.attestation_agent.GetTokenRespon\
+    se\x12\x83\x01\n\x18ExtendRuntimeMeasurement\x122.attestation_agent.Exte\
+    ndRuntimeMeasurementRequest\x1a3.attestation_agent.ExtendRuntimeMeasurem\
+    entResponse\x12_\n\x0cBindInitData\x12&.attestation_agent.BindInitDataRe\
+    quest\x1a'.attestation_agent.BindInitDataResponse\x12t\n\x13UpdateConfig\
+    uration\x12-.attestation_agent.UpdateConfigurationRequest\x1a..attestati\
+    on_agent.UpdateConfigurationResponse\x12Y\n\nGetTeeType\x12$.attestation\
+    _agent.GetTeeTypeRequest\x1a%.attestation_agent.GetTeeTypeResponseb\x06p\
+    roto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
@@ -1660,8 +1660,8 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
             messages.push(ExtendRuntimeMeasurementRequest::generated_message_descriptor_data());
             messages.push(ExtendRuntimeMeasurementResponse::generated_message_descriptor_data());
             messages.push(InitDataPlaintext::generated_message_descriptor_data());
-            messages.push(CheckInitDataRequest::generated_message_descriptor_data());
-            messages.push(CheckInitDataResponse::generated_message_descriptor_data());
+            messages.push(BindInitDataRequest::generated_message_descriptor_data());
+            messages.push(BindInitDataResponse::generated_message_descriptor_data());
             messages.push(UpdateConfigurationRequest::generated_message_descriptor_data());
             messages.push(UpdateConfigurationResponse::generated_message_descriptor_data());
             messages.push(GetTeeTypeRequest::generated_message_descriptor_data());

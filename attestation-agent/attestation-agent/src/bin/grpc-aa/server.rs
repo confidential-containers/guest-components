@@ -8,7 +8,7 @@ use attestation::attestation_agent_service_server::{
     AttestationAgentService, AttestationAgentServiceServer,
 };
 use attestation::{
-    CheckInitDataRequest, CheckInitDataResponse, ExtendRuntimeMeasurementRequest,
+    BindInitDataRequest, BindInitDataResponse, ExtendRuntimeMeasurementRequest,
     ExtendRuntimeMeasurementResponse, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
     GetTeeTypeResponse, GetTokenRequest, GetTokenResponse, UpdateConfigurationRequest,
     UpdateConfigurationResponse,
@@ -108,25 +108,25 @@ impl AttestationAgentService for AA {
         Result::Ok(Response::new(reply))
     }
 
-    async fn check_init_data(
+    async fn bind_init_data(
         &self,
-        request: Request<CheckInitDataRequest>,
-    ) -> Result<Response<CheckInitDataResponse>, Status> {
+        request: Request<BindInitDataRequest>,
+    ) -> Result<Response<BindInitDataResponse>, Status> {
         let request = request.into_inner();
 
-        debug!("AA (grpc): check init data ...");
+        debug!("AA (grpc): bind init data ...");
 
         self.inner
-            .check_init_data(&request.digest)
+            .bind_init_data(&request.digest)
             .await
             .map_err(|e| {
-                error!("AA (grpc): check init data failed:\n{e:?}");
-                Status::internal(format!("[ERROR:{AGENT_NAME}] AA check init data failed"))
+                error!("AA (grpc): binding init data failed:\n{e:?}");
+                Status::internal(format!("[ERROR:{AGENT_NAME}] AA binding init data failed"))
             })?;
 
-        debug!("AA (grpc): Check init data successfully!");
+        debug!("AA (grpc): init data binding successfully!");
 
-        let reply = CheckInitDataResponse {};
+        let reply = BindInitDataResponse {};
 
         Result::Ok(Response::new(reply))
     }

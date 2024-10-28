@@ -8,7 +8,7 @@ use self::rtmr::TdxRtmrEvent;
 use super::tsm_report::*;
 use super::Attester;
 use crate::utils::pad;
-use crate::InitdataResult;
+use crate::InitDataResult;
 use anyhow::*;
 use base64::Engine;
 use scroll::Pread;
@@ -157,7 +157,7 @@ impl Attester for TdxAttester {
         Ok(())
     }
 
-    async fn check_init_data(&self, init_data: &[u8]) -> Result<InitdataResult> {
+    async fn bind_init_data(&self, init_data_digest: &[u8]) -> Result<InitDataResult> {
         let mut report = tdx_report_t { d: [0; 1024] };
         match tdx_attest_rs::tdx_att_get_report(None, &mut report) {
             tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
@@ -176,12 +176,12 @@ impl Attester for TdxAttester {
             .pread::<report::TdReport>(0)
             .context("Parse TD report failed")?;
 
-        let init_data: [u8; 48] = pad(init_data);
+        let init_data: [u8; 48] = pad(init_data_digest);
         if init_data != td_report.tdinfo.mrconfigid {
             bail!("Init data does not match!");
         }
 
-        Ok(InitdataResult::Ok)
+        Ok(InitDataResult::Ok)
     }
 }
 
