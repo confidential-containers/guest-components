@@ -324,7 +324,7 @@ dependencies = [
  "kbs-types",
  "kbs_protocol",
  "log",
- "prost 0.13.2",
+ "prost 0.13.3",
  "protobuf 3.5.1",
  "reqwest 0.12.8",
  "rstest",
@@ -615,7 +615,7 @@ dependencies = [
  "bitflags 2.6.0",
  "cexpr",
  "clang-sys",
- "itertools 0.11.0",
+ "itertools 0.10.5",
  "lazy_static",
  "lazycell",
  "proc-macro2",
@@ -1044,7 +1044,7 @@ dependencies = [
  "futures",
  "jwt-simple",
  "log",
- "prost 0.13.2",
+ "prost 0.13.3",
  "rand",
  "reqwest 0.12.8",
  "rstest",
@@ -1099,7 +1099,7 @@ dependencies = [
  "lazy_static",
  "log",
  "nix 0.29.0",
- "prost 0.13.2",
+ "prost 0.13.3",
  "protobuf 3.5.1",
  "rstest",
  "secret",
@@ -2786,7 +2786,7 @@ dependencies = [
  "oci-client",
  "oci-spec",
  "ocicrypt-rs",
- "prost 0.13.2",
+ "prost 0.13.3",
  "protobuf 3.5.1",
  "reqwest 0.12.8",
  "resource_uri",
@@ -3108,7 +3108,7 @@ dependencies = [
  "crypto",
  "kbs_protocol",
  "log",
- "prost 0.13.2",
+ "prost 0.13.3",
  "resource_uri",
  "rstest",
  "serde",
@@ -3181,7 +3181,7 @@ dependencies = [
  "lazy_static",
  "log",
  "p12",
- "prost 0.13.2",
+ "prost 0.13.3",
  "rand",
  "reqwest 0.12.8",
  "resource_uri",
@@ -3993,7 +3993,7 @@ dependencies = [
  "lazy_static",
  "openssl",
  "pin-project-lite",
- "prost 0.13.2",
+ "prost 0.13.3",
  "protobuf 3.5.1",
  "resource_uri",
  "ring",
@@ -4569,12 +4569,12 @@ dependencies = [
 
 [[package]]
 name = "prost"
-version = "0.13.2"
+version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b2ecbe40f08db5c006b5764a2645f7f3f141ce756412ac9e1dd6087e6d32995"
+checksum = "7b0487d90e047de87f984913713b85c601c05609aad5b0df4b4573fbf69aa13f"
 dependencies = [
  "bytes",
- "prost-derive 0.13.2",
+ "prost-derive 0.13.3",
 ]
 
 [[package]]
@@ -4603,13 +4603,13 @@ checksum = "f8650aabb6c35b860610e9cff5dc1af886c9e25073b7b1712a68972af4281302"
 dependencies = [
  "bytes",
  "heck 0.5.0",
- "itertools 0.11.0",
+ "itertools 0.10.5",
  "log",
  "multimap",
  "once_cell",
  "petgraph 0.6.4",
  "prettyplease",
- "prost 0.13.2",
+ "prost 0.13.3",
  "prost-types 0.13.2",
  "regex",
  "syn 2.0.58",
@@ -4631,12 +4631,12 @@ dependencies = [
 
 [[package]]
 name = "prost-derive"
-version = "0.13.2"
+version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acf0c195eebb4af52c752bec4f52f645da98b6e92077a04110c7f349477ae5ac"
+checksum = "e9552f850d5f0964a4e4d0bf306459ac29323ddfbae05e35a7c0d35cb0803cc5"
 dependencies = [
  "anyhow",
- "itertools 0.11.0",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 2.0.58",
@@ -4658,7 +4658,7 @@ version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60caa6738c7369b940c3d49246a8d1749323674c65cb13010134f5c9bad5b519"
 dependencies = [
- "prost 0.13.2",
+ "prost 0.13.3",
 ]
 
 [[package]]
@@ -6478,7 +6478,7 @@ dependencies = [
  "hyper-util",
  "percent-encoding",
  "pin-project",
- "prost 0.13.2",
+ "prost 0.13.3",
  "socket2 0.5.5",
  "tokio",
  "tokio-stream",
