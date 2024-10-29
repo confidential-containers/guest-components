@@ -615,7 +615,7 @@ dependencies = [
  "bitflags 2.6.0",
  "cexpr",
  "clang-sys",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "lazy_static",
  "lazycell",
  "proc-macro2",
@@ -2783,7 +2783,7 @@ dependencies = [
  "nix 0.29.0",
  "nydus-api",
  "nydus-service",
- "oci-client",
+ "oci-client 0.14.0",
  "oci-spec",
  "ocicrypt-rs",
  "prost 0.13.3",
@@ -3958,6 +3958,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "oci-client"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "474675fdc023fbcc9dcf4782e938a3a1ae5fd469c728d8db40599bd25c77e1ba"
+dependencies = [
+ "bytes",
+ "chrono",
+ "futures-util",
+ "http 1.1.0",
+ "http-auth",
+ "jwt",
+ "lazy_static",
+ "oci-spec",
+ "olpc-cjson",
+ "regex",
+ "reqwest 0.12.8",
+ "serde",
+ "serde_json",
+ "sha2 0.10.8",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "unicase",
+]
+
+[[package]]
 name = "oci-spec"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4603,7 +4629,7 @@ checksum = "f8650aabb6c35b860610e9cff5dc1af886c9e25073b7b1712a68972af4281302"
 dependencies = [
  "bytes",
  "heck 0.5.0",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "log",
  "multimap",
  "once_cell",
@@ -4636,7 +4662,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9552f850d5f0964a4e4d0bf306459ac29323ddfbae05e35a7c0d35cb0803cc5"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote",
  "syn 2.0.58",
@@ -5826,7 +5852,7 @@ dependencies = [
  "hex",
  "json-syntax",
  "lazy_static",
- "oci-client",
+ "oci-client 0.13.0",
  "olpc-cjson",
  "p256",
  "p384",
