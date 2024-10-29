@@ -21,7 +21,7 @@ Besides, registries like `dockerhub` can limit an image to (~100 IIRC) requests 
 
 The total goal is to support pulling images using authentication information, s.t. credentials of specific registries.
 Below this, the sub-goals are
-- Support [`registry authentication file`](https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md) mechinism when pulling images.
+- Support [`registry authentication file`](https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md) mechanism when pulling images.
 - Support to getting [`registry authentication file`](https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md) from the KBS when it is enabled and not found in the specific filesystem path.
 
 ## Work Process
