@@ -18,4 +18,4 @@ ttrpc = { workspace = true, features = ["async"] }
 [build-dependencies]
 serde_json = { workspace = true }
 ttrpc-codegen = { workspace = true }
-utoipa = "3"
+utoipa = "5"
