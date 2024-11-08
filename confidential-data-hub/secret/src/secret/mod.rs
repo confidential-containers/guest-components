@@ -5,7 +5,7 @@
 
 pub mod layout;
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD as b64, Engine};
 use serde::{Deserialize, Serialize};
 
 use self::layout::{envelope::EnvelopeSecret, vault::VaultSecret};
@@ -49,7 +49,7 @@ impl Secret {
             return Err(SecretError::ParseFailed("malformed input sealed secret"));
         }
 
-        let secret_json = STANDARD
+        let secret_json = b64
             .decode(sections[2])
             .map_err(|_| SecretError::ParseFailed("base64 decode Secret body"))?;
 
@@ -67,7 +67,7 @@ impl Secret {
         let secret_json = serde_json::to_string(&self)
             .map_err(|_| SecretError::ParseFailed("JSON serialization failed"))?;
 
-        let secret_base64 = STANDARD.encode(secret_json);
+        let secret_base64 = b64.encode(secret_json);
 
         let secret_string = format!("sealed.fakejwsheader.{}.fakesignature", secret_base64);
 
@@ -111,6 +111,15 @@ mod tests {
             name: "xxx".into(),
         }),
     })]
+    #[case(include_str!("../../tests/vault-2.json"), Secret {
+        version: "0.1.0".into(),
+        r#type: SecretContent::Vault(VaultSecret {
+            provider: "kbs".into(),
+            provider_settings: ProviderSettings::default(),
+            annotations: Annotations::default(),
+            name: "kbs:///one/2/trois".into(),
+        }),
+    })]
     fn serialize_deserialize(#[case] secret_json: &str, #[case] secret_object: Secret) {
         let serialized = serde_json::to_string_pretty(&secret_object).expect("serialize failed");
         assert_json_eq!(secret_json, serialized);
@@ -126,5 +135,24 @@ mod tests {
             Secret::from_signed_base64_string(secret_string).expect("deserialiation failed");
 
         assert_eq!(secret_from_string, secret_object);
+    }
+
+    #[rstest]
+    fn test_no_padding(#[values(0, 1, 2, 3)] name_size: usize) {
+        let name = "0".repeat(name_size);
+
+        let secret = Secret {
+            version: "0.1.0".into(),
+            r#type: SecretContent::Vault(VaultSecret {
+                provider: "kbs".into(),
+                provider_settings: ProviderSettings::default(),
+                annotations: Annotations::default(),
+                name,
+            }),
+        };
+
+        let serialized = serde_json::to_string_pretty(&secret).unwrap();
+
+        assert!(!serialized.contains("="));
     }
 }
