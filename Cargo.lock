@@ -326,7 +326,7 @@ dependencies = [
  "log",
  "prost 0.13.3",
  "protobuf 3.5.1",
- "reqwest 0.12.8",
+ "reqwest 0.12.9",
  "rstest",
  "serde",
  "serde_json",
@@ -1046,7 +1046,7 @@ dependencies = [
  "log",
  "prost 0.13.3",
  "rand",
- "reqwest 0.12.8",
+ "reqwest 0.12.9",
  "rstest",
  "serde",
  "serde_json",
@@ -1870,7 +1870,7 @@ dependencies = [
  "base64 0.13.1",
  "hmac 0.9.0",
  "openssl",
- "reqwest 0.12.8",
+ "reqwest 0.12.9",
  "ring",
  "serde",
  "serde_derive",
@@ -2576,7 +2576,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.5.5",
+ "socket2 0.4.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -2788,7 +2788,7 @@ dependencies = [
  "ocicrypt-rs",
  "prost 0.13.3",
  "protobuf 3.5.1",
- "reqwest 0.12.8",
+ "reqwest 0.12.9",
  "resource_uri",
  "ring",
  "rstest",
@@ -3146,7 +3146,7 @@ dependencies = [
  "kbs-types",
  "log",
  "protobuf 3.5.1",
- "reqwest 0.12.8",
+ "reqwest 0.12.9",
  "resource_uri",
  "rstest",
  "serde",
@@ -3183,7 +3183,7 @@ dependencies = [
  "p12",
  "prost 0.13.3",
  "rand",
- "reqwest 0.12.8",
+ "reqwest 0.12.9",
  "resource_uri",
  "ring",
  "rstest",
@@ -3947,7 +3947,7 @@ dependencies = [
  "oci-spec",
  "olpc-cjson",
  "regex",
- "reqwest 0.12.8",
+ "reqwest 0.12.9",
  "serde",
  "serde_json",
  "sha2 0.10.8",
@@ -3973,7 +3973,7 @@ dependencies = [
  "oci-spec",
  "olpc-cjson",
  "regex",
- "reqwest 0.12.8",
+ "reqwest 0.12.9",
  "serde",
  "serde_json",
  "sha2 0.10.8",
@@ -5003,9 +5003,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.12.8"
+version = "0.12.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f713147fbe92361e52392c73b8c9e48c04c6625bce969ef54dc901e58e042a7b"
+checksum = "a77c62af46e79de0a562e1a9849205ffcb7fc1238876e9bd743357570e04046f"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -5492,7 +5492,7 @@ dependencies = [
  "aes",
  "aes-gcm",
  "anyhow",
- "base64 0.22.1",
+ "base64 0.21.7",
  "block-padding",
  "blowfish",
  "buffered-reader",
