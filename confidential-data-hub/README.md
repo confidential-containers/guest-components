@@ -57,7 +57,7 @@ KMS_PROVIDER plugins (flag `KMS_PROVIDER`)
 | Feature name        |           Note                                                     |
 | ------------------- | -----------------------------------------------------------------  |
 | aliyun              | Use aliyun KMS_PROVIDER suites to unseal secrets, etc.                      |
-| ehsm                | Use Intel eHSM KMS_PROVIDER suites to unseal secrets, etc.                  |
+| ehsm(no longer maintained) | Use Intel eHSM KMS_PROVIDER suites to unseal secrets, etc.                  |
 
 Note:
 - If no `KMS_PROVIDER` flag is given, then all the KMS providers will be enabled by default.

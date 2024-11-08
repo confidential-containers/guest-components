@@ -1,4 +1,4 @@
-# eHSM-KMS
+# eHSM-KMS (No longer maintained)
 
 eHSM-KMS is a SGX-based Key Managment Service (KMS) that provides the near-equivalent hardware protection level of cryptographic functionalities including key generation, management inside the SGX enclave. More information about eHSM-KMS can be found [here](https://github.com/intel/ehsm).
 

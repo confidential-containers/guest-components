@@ -48,7 +48,7 @@ anyhow.workspace = true
 tonic-build.workspace = true
 
 [features]
-default = ["aliyun", "kbs", "ehsm"]
+default = ["aliyun", "kbs"]
 
 aliyun = ["chrono", "hex", "p12", "prost", "rand", "reqwest/rustls-tls", "sha2", "tonic", "url", "yasna"]
 kbs = ["kbs_protocol"]
