@@ -333,7 +333,7 @@ dependencies = [
  "sha2 0.10.8",
  "strum",
  "tempfile",
- "thiserror 1.0.68",
+ "thiserror 2.0.3",
  "tokio",
  "toml 0.8.19",
  "tonic",
@@ -371,7 +371,7 @@ dependencies = [
  "strum",
  "tdx-attest-rs",
  "tempfile",
- "thiserror 1.0.68",
+ "thiserror 2.0.3",
  "tokio",
 ]
 
@@ -454,7 +454,7 @@ dependencies = [
  "serde_json",
  "sev 4.0.0",
  "sha2 0.10.8",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "tss-esapi",
  "zerocopy",
 ]
@@ -470,7 +470,7 @@ dependencies = [
  "clap 4.2.7",
  "serde",
  "sev 4.0.0",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "ureq",
 ]
 
@@ -485,7 +485,7 @@ dependencies = [
  "bincode",
  "serde",
  "serde_json",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "ureq",
  "zerocopy",
 ]
@@ -837,7 +837,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "190baaad529bcfbde9e1a19022c42781bdb6ff9de25721abdb8fd98c0807730b"
 dependencies = [
  "libc",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -1108,7 +1108,7 @@ dependencies = [
  "serial_test",
  "storage",
  "tempfile",
- "thiserror 1.0.68",
+ "thiserror 2.0.3",
  "tokio",
  "tonic",
  "tonic-build",
@@ -2755,7 +2755,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
- "thiserror 1.0.68",
+ "thiserror 2.0.3",
 ]
 
 [[package]]
@@ -2926,7 +2926,7 @@ dependencies = [
  "combine",
  "jni-sys",
  "log",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "walkdir",
  "windows-sys 0.45.0",
 ]
@@ -2960,7 +2960,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "time",
 ]
 
@@ -3027,7 +3027,7 @@ dependencies = [
  "num-bigint",
  "serde",
  "serde_json",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "yasna 0.4.0",
  "zeroize",
 ]
@@ -3079,7 +3079,7 @@ dependencies = [
  "serde",
  "serde_json",
  "superboring",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "zeroize",
 ]
 
@@ -3155,7 +3155,7 @@ dependencies = [
  "sha2 0.10.8",
  "tempfile",
  "testcontainers",
- "thiserror 1.0.68",
+ "thiserror 2.0.3",
  "tokio",
  "ttrpc",
  "ttrpc-codegen",
@@ -3192,7 +3192,7 @@ dependencies = [
  "sev 0.1.0",
  "sha2 0.10.8",
  "strum",
- "thiserror 1.0.68",
+ "thiserror 2.0.3",
  "tokio",
  "toml 0.8.19",
  "tonic",
@@ -3821,7 +3821,7 @@ dependencies = [
  "rust-fsm",
  "serde",
  "serde_json",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "time",
  "tokio",
  "tokio-uring",
@@ -3951,7 +3951,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.8",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "tokio",
  "tracing",
  "unicase",
@@ -3977,7 +3977,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.8",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "tokio",
  "tracing",
  "unicase",
@@ -4279,7 +4279,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd53dff83f26735fdc1ca837098ccf133605d794cdae66acfc2bfac3ec809d95"
 dependencies = [
  "memchr",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "ucd-trie",
 ]
 
@@ -4701,7 +4701,7 @@ checksum = "0bcc343da15609eaecd65f8aa76df8dc4209d325131d8219358c0aaaebab0bf6"
 dependencies = [
  "once_cell",
  "protobuf-support",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -4725,7 +4725,7 @@ dependencies = [
  "protobuf-parse",
  "regex",
  "tempfile",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -4740,7 +4740,7 @@ dependencies = [
  "protobuf 3.5.1",
  "protobuf-support",
  "tempfile",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "which",
 ]
 
@@ -4750,7 +4750,7 @@ version = "3.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0766e3675a627c327e4b3964582594b0e8741305d628a98a5de75a1d15f99b9"
 dependencies = [
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -4782,7 +4782,7 @@ dependencies = [
  "rustc-hash 2.0.0",
  "rustls",
  "socket2 0.5.5",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "tokio",
  "tracing",
 ]
@@ -4799,7 +4799,7 @@ dependencies = [
  "rustc-hash 2.0.0",
  "rustls",
  "slab",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "tinyvec",
  "tracing",
 ]
@@ -4929,7 +4929,7 @@ checksum = "a18479200779601e498ada4e8c1e1f50e3ee19deb0259c25825a98b5603b2cb4"
 dependencies = [
  "getrandom",
  "libredox 0.0.1",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -5313,7 +5313,7 @@ dependencies = [
  "openssl-sys",
  "s390_pv_core",
  "serde",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "zerocopy",
 ]
 
@@ -5327,7 +5327,7 @@ dependencies = [
  "libc",
  "log",
  "serde",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "zerocopy",
 ]
 
@@ -5449,7 +5449,7 @@ dependencies = [
  "serde_json",
  "strum",
  "tempfile",
- "thiserror 1.0.68",
+ "thiserror 2.0.3",
  "tokio",
  "zeroize",
 ]
@@ -5534,7 +5534,7 @@ dependencies = [
  "rsa",
  "sha1collisiondetection",
  "sha2 0.10.8",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "twofish",
  "typenum",
  "x25519-dalek",
@@ -5870,7 +5870,7 @@ dependencies = [
  "serde_repr",
  "sha2 0.10.8",
  "signature",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "tls_codec",
  "tokio",
  "tokio-util",
@@ -5985,7 +5985,7 @@ dependencies = [
  "serde_json",
  "strum",
  "tempfile",
- "thiserror 1.0.68",
+ "thiserror 2.0.3",
  "tokio",
 ]
 
@@ -6244,11 +6244,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.68"
+version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02dd99dc800bbb97186339685293e1cc5d9df1f8fae2d0aecd9ff1c77efea892"
+checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
 dependencies = [
- "thiserror-impl 1.0.68",
+ "thiserror-impl 1.0.69",
 ]
 
 [[package]]
@@ -6262,9 +6262,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.68"
+version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7c61ec9a6f64d2793d8a45faba21efbe3ced62a886d44c36a009b2b519b4c7e"
+checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6666,7 +6666,7 @@ dependencies = [
  "nix 0.26.4",
  "protobuf 3.5.1",
  "protobuf-codegen 3.5.1",
- "thiserror 1.0.68",
+ "thiserror 1.0.69",
  "tokio",
  "tokio-vsock",
  "windows-sys 0.48.0",
