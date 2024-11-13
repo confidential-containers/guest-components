@@ -24,8 +24,9 @@ impl GetToken for CoCoASTokenGetter {
         let evidence = attester.get_evidence(vec![]).await?;
 
         let request_body = serde_json::json!({
-            "tee": serde_json::to_string(&tee_type)?,
+            "tee": tee_type,
             "evidence": URL_SAFE_NO_PAD.encode(evidence.as_bytes()),
+            "policy_ids": [],
         });
 
         let client = reqwest::Client::new();
