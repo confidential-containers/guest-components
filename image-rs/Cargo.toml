@@ -59,7 +59,7 @@ tokio.workspace = true
 tokio-util = "0.7.12"
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
-url = "2.5.2"
+url = "2.5.3"
 walkdir = "2"
 xattr = "1"
 zstd = "0.13"
