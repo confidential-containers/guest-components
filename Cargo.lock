@@ -345,6 +345,7 @@ dependencies = [
  "const_format",
  "crypto",
  "env_logger 0.11.5",
+ "hex",
  "kbs-types",
  "kbs_protocol",
  "log",

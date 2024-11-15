@@ -97,3 +97,40 @@ pub struct TdReport {
     /// Measurements and configuration data of size 512 bytes.
     pub tdinfo: TdInfo,
 }
+
+impl TdReport {
+    pub fn get_rtmr(&self, rtmr_index: usize) -> Vec<u8> {
+        let mut rtmr_u8 = Vec::new();
+        let rtmr = &self.tdinfo.rtmr[rtmr_index * 6..(rtmr_index + 1) * 6];
+        for i in rtmr {
+            rtmr_u8.extend_from_slice(&i.to_le_bytes());
+        }
+
+        rtmr_u8
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use rstest::rstest;
+    use scroll::Pread;
+
+    use crate::tdx::{report::TdReport, TdxAttester};
+
+    /// This test uses a fixture of tdx-report to check if the get_runtime_measurement function works correctly.
+    /// The following test PCRs are mapping to TDX RTMR 0, 1, 2 and 3
+    #[rstest]
+    #[case(1, "f4ec1a04670fe7926cd5de4aef9aaa7689ab4ceaa132d7c5242b47f67dfaaea64c372a17ad68fef9a6ac99aabbddabdc")]
+    #[case(2, "4e5f8826653198ab4bc5156fbe4bc99db054c0b8239a16c4b59249fb427f4acc50eed1b46a85c7d526c4e1e47621b14c")]
+    #[case(8, "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")]
+    #[case(16, "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")]
+    fn get_runtime_measurement(#[case] pcr_index: u64, #[case] expected: &str) {
+        let report_bin = include_bytes!("../../test/tdx_report_1.bin");
+        let rtmr_index = TdxAttester::pcr_to_rtmr(pcr_index) as usize;
+
+        let expected = hex::decode(expected).unwrap();
+        let td_report = report_bin.pread::<TdReport>(0).unwrap();
+
+        assert_eq!(td_report.get_rtmr(rtmr_index), expected);
+    }
+}

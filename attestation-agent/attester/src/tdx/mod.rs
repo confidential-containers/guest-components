@@ -11,6 +11,7 @@ use crate::utils::pad;
 use crate::InitDataResult;
 use anyhow::*;
 use base64::Engine;
+use report::TdReport;
 use scroll::Pread;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -71,6 +72,40 @@ struct TdxEvidence {
 #[derive(Debug, Default)]
 pub struct TdxAttester {}
 
+impl TdxAttester {
+    fn get_report() -> Result<TdReport> {
+        let mut report = tdx_report_t { d: [0; 1024] };
+        match tdx_attest_rs::tdx_att_get_report(None, &mut report) {
+            tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
+                log::debug!("Successfully got report")
+            }
+            error_code => {
+                bail!(
+                    "TDX Attester: Failed to get TD report. Error code: {:?}",
+                    error_code
+                );
+            }
+        };
+
+        let td_report = report
+            .d
+            .pread::<report::TdReport>(0)
+            .context("Parse TD report failed")?;
+
+        Ok(td_report)
+    }
+
+    fn pcr_to_rtmr(register_index: u64) -> u64 {
+        // The match follows https://github.com/confidential-containers/td-shim/blob/main/doc/tdshim_spec.md#td-event-log
+        match register_index {
+            1 | 7 => 0,
+            2..=6 => 1,
+            8..=15 => 2,
+            _ => 3,
+        }
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for TdxAttester {
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
@@ -128,13 +163,7 @@ impl Attester for TdxAttester {
             bail!("TDX Attester: Cannot extend runtime measurement on this system");
         }
 
-        // The match follows https://github.com/confidential-containers/td-shim/blob/main/doc/tdshim_spec.md#td-event-log
-        let rtmr_index = match register_index {
-            1 | 7 => 0,
-            2..=6 => 1,
-            8..=15 => 2,
-            _ => 3,
-        };
+        let rtmr_index = Self::pcr_to_rtmr(register_index);
 
         let extend_data: [u8; 48] = pad(&event_digest);
         let event: Vec<u8> = TdxRtmrEvent::default()
@@ -158,30 +187,20 @@ impl Attester for TdxAttester {
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> Result<InitDataResult> {
-        let mut report = tdx_report_t { d: [0; 1024] };
-        match tdx_attest_rs::tdx_att_get_report(None, &mut report) {
-            tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
-                log::debug!("Successfully get report")
-            }
-            error_code => {
-                bail!(
-                    "TDX Attester: Failed to get TD report. Error code: {:?}",
-                    error_code
-                );
-            }
-        };
-
-        let td_report = report
-            .d
-            .pread::<report::TdReport>(0)
-            .context("Parse TD report failed")?;
-
+        let td_report = Self::get_report()?;
         let init_data: [u8; 48] = pad(init_data_digest);
         if init_data != td_report.tdinfo.mrconfigid {
             bail!("Init data does not match!");
         }
 
         Ok(InitDataResult::Ok)
+    }
+
+    async fn get_runtime_measurement(&self, pcr_index: u64) -> Result<Vec<u8>> {
+        let td_report = Self::get_report()?;
+        let rtmr_index = Self::pcr_to_rtmr(pcr_index) as usize;
+
+        Ok(td_report.get_rtmr(rtmr_index))
     }
 }
 
