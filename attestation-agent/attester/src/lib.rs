@@ -92,6 +92,13 @@ pub trait Attester {
     async fn bind_init_data(&self, _init_data_digest: &[u8]) -> Result<InitDataResult> {
         Ok(InitDataResult::Unsupported)
     }
+
+    /// This function is used to get the runtime measurement registry value of
+    /// the given PCR register index. Different platforms have different mapping
+    /// relationship between PCR and platform RTMR.
+    async fn get_runtime_measurement(&self, _pcr_index: u64) -> Result<Vec<u8>> {
+        bail!("Unimplemented")
+    }
 }
 
 // Detect which TEE platform the KBC running environment is.

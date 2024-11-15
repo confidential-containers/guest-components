@@ -7,7 +7,7 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use attester::{detect_tee_type, BoxedAttester};
 use kbs_types::Tee;
-use std::{io::Write, str::FromStr};
+use std::{io::Write, str::FromStr, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
 
 pub use attester::InitDataResult;
@@ -78,7 +78,7 @@ pub trait AttestationAPIs {
 /// Attestation agent to provide attestation service.
 pub struct AttestationAgent {
     config: RwLock<Config>,
-    attester: BoxedAttester,
+    attester: Arc<BoxedAttester>,
     eventlog: Option<Mutex<EventLog>>,
     tee: Tee,
 }
@@ -87,18 +87,12 @@ impl AttestationAgent {
     pub async fn init(&mut self) -> Result<()> {
         let config = self.config.read().await;
         if config.eventlog_config.enable_eventlog {
-            let alg = config.eventlog_config.eventlog_algorithm;
-            let pcr = config.eventlog_config.init_pcr;
-
-            let init_entry = LogEntry::Init(alg);
-            let digest = init_entry.digest_with(alg);
-            let mut eventlog = EventLog::new()?;
-            eventlog.write_log(&init_entry).context("write INIT log")?;
-
-            self.attester
-                .extend_runtime_measurement(digest, pcr)
-                .await
-                .context("write INIT entry")?;
+            let eventlog = EventLog::new(
+                self.attester.clone(),
+                config.eventlog_config.eventlog_algorithm,
+                config.eventlog_config.init_pcr,
+            )
+            .await?;
 
             self.eventlog = Some(Mutex::new(eventlog));
         }
@@ -122,6 +116,7 @@ impl AttestationAgent {
 
         let tee = detect_tee_type();
         let attester: BoxedAttester = tee.try_into()?;
+        let attester = Arc::new(attester);
 
         Ok(AttestationAgent {
             config,
@@ -199,7 +194,7 @@ impl AttestationAPIs for AttestationAgent {
             bail!("Extend eventlog not enabled when launching!");
         };
 
-        let (pcr, log_entry, alg) = {
+        let (pcr, log_entry) = {
             let config = self.config.read().await;
 
             let pcr = register_index.unwrap_or_else(|| {
@@ -215,21 +210,12 @@ impl AttestationAPIs for AttestationAgent {
                 operation,
                 content,
             };
-            let alg = config.eventlog_config.eventlog_algorithm;
 
-            (pcr, log_entry, alg)
+            (pcr, log_entry)
         };
 
-        let digest = log_entry.digest_with(alg);
-        {
-            // perform atomicly in this block
-            let mut eventlog = eventlog.lock().await;
-            self.attester
-                .extend_runtime_measurement(digest, pcr)
-                .await?;
+        eventlog.lock().await.extend_entry(log_entry, pcr).await?;
 
-            eventlog.write_log(&log_entry)?;
-        }
         Ok(())
     }
 

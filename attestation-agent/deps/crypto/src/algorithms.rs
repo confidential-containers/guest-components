@@ -10,11 +10,16 @@ use std::fmt;
 use std::str::FromStr;
 
 /// Hash algorithms used to calculate runtime/init data binding
-#[derive(Serialize, Deserialize, Clone, Debug, Display, Copy, PartialEq)]
+#[derive(AsRefStr, Serialize, Deserialize, Clone, Debug, Display, Copy, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum HashAlgorithm {
+    #[strum(serialize = "sha256")]
     Sha256,
+
+    #[strum(serialize = "sha384")]
     Sha384,
+
+    #[strum(serialize = "sha512")]
     Sha512,
 }
 
@@ -29,6 +34,15 @@ fn hash_reportdata<D: Digest>(material: &[u8]) -> Vec<u8> {
 }
 
 impl HashAlgorithm {
+    /// Return the hash value length in bytes
+    pub fn digest_len(&self) -> usize {
+        match self {
+            HashAlgorithm::Sha256 => 32,
+            HashAlgorithm::Sha384 => 48,
+            HashAlgorithm::Sha512 => 64,
+        }
+    }
+
     pub fn digest(&self, material: &[u8]) -> Vec<u8> {
         match self {
             HashAlgorithm::Sha256 => hash_reportdata::<Sha256>(material),
@@ -56,6 +70,8 @@ impl fmt::Display for ParseHashAlgorithmError {
         write!(f, "ParseHashAlgorithmError")
     }
 }
+
+impl std::error::Error for ParseHashAlgorithmError {}
 
 impl FromStr for HashAlgorithm {
     type Err = ParseHashAlgorithmError;
