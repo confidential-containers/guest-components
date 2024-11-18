@@ -12,7 +12,7 @@ use clap::{Args, Parser, Subcommand};
 use protos::{
     api::*,
     api_ttrpc::{
-        GetResourceServiceClient, ImagePullServiceClient, SealedSecretServiceClient,
+        OverlayNetworkServiceClient, GetResourceServiceClient, ImagePullServiceClient, SealedSecretServiceClient,
         SecureMountServiceClient,
     },
     keyprovider::*,
@@ -59,6 +59,9 @@ enum Operation {
 
     /// Pull image
     PullImage(PullImageArgs),
+
+    /// Initialize up an overlay network
+    InitOverlayNetwork(InitOverlayNetworkArgs),
 }
 
 #[derive(Args)]
@@ -103,6 +106,15 @@ struct PullImageArgs {
     /// Path to store the image bundle
     #[arg(short, long)]
     bundle_path: String,
+}
+
+#[derive(Debug, Args)]
+#[command(author, version, about, long_about = None)]
+struct InitOverlayNetworkArgs {
+    #[arg(short, long)]
+    pod_name: String,
+    #[arg(short, long)]
+    lighthouse_pub_ip: String,
 }
 
 #[tokio::main]
@@ -184,6 +196,19 @@ async fn main() {
                 .await
                 .expect("request to CDH");
             println!("Image pulled: {manifest_digest}")
+        }
+        Operation::InitOverlayNetwork(arg) => {
+            let client = OverlayNetworkServiceClient::new(inner);
+            let req = InitOverlayNetworkRequest {
+                pod_name: arg.pod_name,
+                lighthouse_pub_ip: arg.lighthouse_pub_ip,
+                ..Default::default()
+            };
+            let res = client
+                .init_overlay_network(context::with_timeout(args.timeout * NANO_PER_SECOND), &req)
+                .await
+                .expect("request to CDH");
+            println!("{res}");
         }
     }
 }

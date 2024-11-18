@@ -40,10 +40,12 @@ image-rs = { path = "../../image-rs", default-features = false, features = ["kat
 kms = { path = "../kms", default-features = false }
 lazy_static.workspace = true
 log.workspace = true
+nix = { workspace = true, features = ["net"] }
 prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
 secret.path = "../secret"
 storage.path = "../storage"
+overlay_network.path = "../overlay-network"
 serde = { workspace = true, optional = true }
 serde_json.workspace = true
 thiserror.workspace = true
@@ -81,3 +83,6 @@ ehsm = ["image/ehsm", "secret/ehsm"]
 bin = [ "anyhow", "attestation-agent", "cfg-if", "clap", "config", "env_logger", "serde" ]
 ttrpc = ["dep:ttrpc", "protobuf", "ttrpc-codegen", "tokio/signal"]
 grpc = ["prost", "tonic", "tonic-build", "tokio/signal"]
+
+# support overlay network
+overlay-network = []
