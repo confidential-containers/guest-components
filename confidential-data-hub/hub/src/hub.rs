@@ -93,6 +93,18 @@ impl DataHub for Hub {
             .map_err(|e| Error::ImagePull { source: e })?;
         Ok(manifest_digest)
     }
+
+    async fn init_overlay_network(
+        &self,
+        pod_name: String,
+        lighthouse_pub_ip: String,
+    ) -> Result<Vec<u8>> {
+        info!("init overlay network called");
+        overlay_network::init(pod_name, lighthouse_pub_ip).await?;
+        // FIXME remove return value for this interface if we don't need
+        // anything here.
+        Ok(Vec::<u8>::new())
+    }
 }
 
 async fn initialize_image_client(config: ImageConfig) -> Result<Mutex<ImageClient>> {
