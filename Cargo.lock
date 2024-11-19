@@ -441,9 +441,9 @@ dependencies = [
 
 [[package]]
 name = "az-cvm-vtpm"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f500c98db61d29b592d51d1cf56a1d996c34f9346b8b89b28008b5403e65450a"
+checksum = "3f7ef43d012a8cf77739366d7ccdb895fb284e03bb1579d8d1792644ef3e6148"
 dependencies = [
  "bincode",
  "jsonwebkey",
@@ -454,23 +454,23 @@ dependencies = [
  "serde_json",
  "sev 4.0.0",
  "sha2 0.10.8",
- "thiserror 1.0.69",
+ "thiserror 2.0.3",
  "tss-esapi",
  "zerocopy",
 ]
 
 [[package]]
 name = "az-snp-vtpm"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49473355e76f066300f14aa56c6df23b1a037bea179dbb1b582ecefc8f6fd37c"
+checksum = "7c16506502dc64f7111f7241ca400f3ee0f54e69dfd1f4be5cef29b96332f22e"
 dependencies = [
  "az-cvm-vtpm",
  "bincode",
  "clap 4.2.7",
  "serde",
  "sev 4.0.0",
- "thiserror 1.0.69",
+ "thiserror 2.0.3",
  "ureq",
 ]
 
