@@ -12,7 +12,6 @@ members = [
     "attestation-agent/coco_keyprovider",
     "confidential-data-hub/hub",
     "confidential-data-hub/kms",
-    "confidential-data-hub/image",
     "confidential-data-hub/secret",
     "confidential-data-hub/storage",
     "image-rs",

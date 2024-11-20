@@ -6,6 +6,8 @@
 use resource_uri::ResourceUri;
 use serde::{Deserialize, Serialize};
 
+use crate::image::{Error, Result};
+
 /// `AnnotationPacket` is what a encrypted image layer's
 /// `org.opencontainers.image.enc.keys.provider.attestation-agent`
 /// annotation should contain when it is encrypted by CoCo's
@@ -24,12 +26,10 @@ pub struct AnnotationPacket {
 }
 
 impl AnnotationPacket {
-    pub(crate) async fn unwrap_key(&self) -> crate::Result<Vec<u8>> {
+    pub(crate) async fn unwrap_key(&self) -> Result<Vec<u8>> {
         use base64::{engine::general_purpose::STANDARD, Engine};
         use crypto::WrapType;
         use kms::{plugins::VaultProvider, Annotations, ProviderSettings};
-
-        use crate::Error;
 
         let wrap_type = WrapType::try_from(&self.wrap_type[..])
             .map_err(|_| Error::UnknownWrapType(self.wrap_type.to_string()))?;

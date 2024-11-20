@@ -1092,8 +1092,8 @@ dependencies = [
  "cfg-if",
  "clap 4.2.7",
  "config",
+ "crypto",
  "env_logger 0.11.5",
- "image",
  "image-rs",
  "kms",
  "lazy_static",
@@ -1101,6 +1101,7 @@ dependencies = [
  "nix 0.29.0",
  "prost 0.13.3",
  "protobuf 3.5.1",
+ "resource_uri",
  "rstest",
  "secret",
  "serde",
@@ -2893,22 +2894,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "image"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert-json-diff",
- "base64 0.22.1",
- "crypto",
- "kms",
- "resource_uri",
- "rstest",
- "serde",
- "serde_json",
- "thiserror 2.0.3",
-]
-
-[[package]]
 name = "image-rs"
 version = "0.1.0"
 dependencies = [
@@ -3291,7 +3276,9 @@ dependencies = [
  "async-trait",
  "attester",
  "base64 0.22.1",
+ "clap 4.2.7",
  "crypto",
+ "env_logger 0.11.5",
  "jwt-simple",
  "kbs-types",
  "log",

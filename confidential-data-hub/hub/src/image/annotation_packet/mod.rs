@@ -14,7 +14,7 @@ mod tests {
 
     #[test]
     fn compatiblity_with_old_packets() {
-        let v1_raw = include_str!("../../test/v1.json");
+        let v1_raw = include_str!("../test/v1.json");
         let _: AnnotationPacket = serde_json::from_str(v1_raw).expect("unable to parse V1 with V2");
     }
 }

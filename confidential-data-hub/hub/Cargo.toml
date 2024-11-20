@@ -34,14 +34,15 @@ base64.workspace = true
 cfg-if = { workspace = true, optional = true }
 clap = { workspace = true, features = [ "derive" ], optional = true }
 config = { workspace = true, optional = true }
+crypto.path = "../../attestation-agent/deps/crypto"
 env_logger = { workspace = true, optional = true }
-image = { path = "../image", default-features = false }
 image-rs = { path = "../../image-rs", default-features = false, features = ["kata-cc-rustls-tls"] }
 kms = { path = "../kms", default-features = false }
 lazy_static.workspace = true
 log.workspace = true
 prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
+resource_uri.path = "../../attestation-agent/deps/resource_uri"
 secret.path = "../secret"
 storage.path = "../storage"
 serde = { workspace = true, optional = true }
@@ -66,16 +67,16 @@ tempfile.workspace = true
 default = ["kbs", "bin", "ttrpc", "grpc"]
 
 # support aliyun stacks (KMS, ..)
-aliyun = ["image/aliyun", "secret/aliyun"]
+aliyun = ["secret/aliyun"]
 
 # support coco-KBS to provide confidential resources
-kbs = ["image/kbs", "kms/kbs", "secret/kbs"]
+kbs = ["kms/kbs", "secret/kbs"]
 
 # support sev to provide confidential resources
-sev = ["image/sev", "kms/sev", "secret/sev"]
+sev = ["kms/sev", "secret/sev"]
 
 # support eHSM stacks (KMS, ...)
-ehsm = ["image/ehsm", "secret/ehsm"]
+ehsm = ["secret/ehsm"]
 
 # Binary RPC type
 bin = [ "anyhow", "attestation-agent", "cfg-if", "clap", "config", "env_logger", "serde" ]

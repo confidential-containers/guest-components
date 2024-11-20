@@ -12,7 +12,7 @@ use log::{debug, info};
 use storage::volume_type::Storage;
 use tokio::sync::{Mutex, OnceCell};
 
-use crate::{CdhConfig, DataHub, Error, Result};
+use crate::{image, CdhConfig, DataHub, Error, Result};
 
 pub struct Hub {
     pub(crate) credentials: HashMap<String, String>,

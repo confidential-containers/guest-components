@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use crate::image;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
