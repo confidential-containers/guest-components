@@ -5,6 +5,8 @@
 
 use thiserror::Error;
 
+use crate::kms;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]

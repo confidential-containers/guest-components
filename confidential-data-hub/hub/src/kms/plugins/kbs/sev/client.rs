@@ -17,7 +17,7 @@ use tonic::transport::Uri;
 use uuid::Uuid;
 use zeroize::Zeroizing;
 
-use crate::{plugins::kbs::Kbc, Error, Result};
+use crate::kms::{plugins::kbs::Kbc, Error, Result};
 
 use super::keybroker::{
     key_broker_service_client::KeyBrokerServiceClient, OnlineSecretRequest, RequestDetails,

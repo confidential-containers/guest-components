@@ -7,16 +7,17 @@ use std::{env, path::Path};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use clap::{command, Args, Parser, Subcommand};
+#[cfg(feature = "aliyun")]
+use confidential_data_hub::kms::plugins::aliyun::AliyunKmsClient;
+#[cfg(feature = "ehsm")]
+use confidential_data_hub::kms::plugins::ehsm::EhsmKmsClient;
+use confidential_data_hub::kms::{Encrypter, ProviderSettings};
 use confidential_data_hub::secret::{
     layout::{envelope::EnvelopeSecret, vault::VaultSecret},
     Secret, SecretContent, VERSION,
 };
+
 use crypto::WrapType;
-#[cfg(feature = "aliyun")]
-use kms::plugins::aliyun::AliyunKmsClient;
-#[cfg(feature = "ehsm")]
-use kms::plugins::ehsm::EhsmKmsClient;
-use kms::{Encrypter, ProviderSettings};
 use rand::Rng;
 #[cfg(feature = "ehsm")]
 use serde_json::Value;

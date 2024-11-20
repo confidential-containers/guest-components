@@ -17,5 +17,6 @@ pub mod config;
 pub use config::*;
 
 pub mod image;
+pub mod kms;
 pub mod secret;
 pub mod storage;

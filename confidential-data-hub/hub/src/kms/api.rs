@@ -29,7 +29,7 @@
 //! - `Decrypter` and `Getter` are used in-guest, while `Encrypter` and `Setter`
 //!   are used userside. They do not need to be implemented by a same object.
 
-use crate::Result;
+use crate::kms::Result;
 
 use async_trait::async_trait;
 use serde_json::{Map, Value};

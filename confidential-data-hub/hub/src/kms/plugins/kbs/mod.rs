@@ -21,7 +21,7 @@ use lazy_static::lazy_static;
 pub use resource_uri::ResourceUri;
 use tokio::sync::Mutex;
 
-use crate::{Annotations, Error, Getter, Result};
+use crate::kms::{Annotations, Error, Getter, Result};
 
 enum RealClient {
     #[cfg(feature = "kbs")]

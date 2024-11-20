@@ -8,11 +8,12 @@
 
 use anyhow::anyhow;
 use base64::{engine::general_purpose::STANDARD, Engine};
-use kms::{plugins::VaultProvider, Annotations, ProviderSettings};
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
 use crate::image::{Error, Result};
+use crate::kms;
+use crate::kms::{plugins::VaultProvider, Annotations, ProviderSettings};
 
 pub const DEFAULT_VERSION: &str = "0.1.0";
 

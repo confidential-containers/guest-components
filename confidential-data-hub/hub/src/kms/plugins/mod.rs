@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use strum::{AsRefStr, EnumString};
 
-use crate::{Decrypter, Error, Getter, ProviderSettings, Result};
+use super::{Decrypter, Error, Getter, ProviderSettings, Result};
 
 const _IN_GUEST_DEFAULT_KEY_PATH: &str = "/run/confidential-containers/cdh/kms-credential";
 
