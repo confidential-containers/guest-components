@@ -45,11 +45,11 @@ jobs:
           fetch-depth: 1
 
       - name: Install Rust toolchain (${{ matrix.rust }})
-        run: |
-          rustup update --no-self-update ${{ matrix.rust }}
-          rustup component add --toolchain ${{ matrix.rust }} rustfmt rustc clippy
-          rustup target add x86_64-unknown-linux-gnu
-          rustup default ${{ matrix.rust }}
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt, clippy
 
       - name: Install protoc
         run: |
