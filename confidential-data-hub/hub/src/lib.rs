@@ -15,3 +15,5 @@ pub mod auth;
 
 pub mod config;
 pub use config::*;
+
+pub mod image;

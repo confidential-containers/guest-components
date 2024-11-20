@@ -12,7 +12,7 @@ use kms::{plugins::VaultProvider, Annotations, ProviderSettings};
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
-use crate::{Error, Result};
+use crate::image::{Error, Result};
 
 pub const DEFAULT_VERSION: &str = "0.1.0";
 

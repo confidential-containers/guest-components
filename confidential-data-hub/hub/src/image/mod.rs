@@ -8,7 +8,7 @@ pub mod error;
 
 pub use annotation_packet::AnnotationPacket;
 use anyhow::anyhow;
-pub use error::*;
+pub use error::{Error, Result};
 
 pub async fn unwrap_key(annotation_packet: &[u8]) -> Result<Vec<u8>> {
     let annotation_packet: AnnotationPacket =
