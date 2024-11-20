@@ -30,7 +30,7 @@ Follow the instructions in the [CDH README](../../README.md#confidential-data-hu
 
 2. Install `luks-encrypt-storage`
 
-Install [luks-encrypt-storage](../../storage/scripts/luks-encrypt-storage) into `/usr/local/bin`
+Install [luks-encrypt-storage](../../hub/src/storage/scripts/luks-encrypt-storage) into `/usr/local/bin`
 
 3. Run CDH
 ```shell

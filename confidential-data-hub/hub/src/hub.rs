@@ -9,12 +9,13 @@ use async_trait::async_trait;
 use image_rs::{builder::ClientBuilder, config::ImageConfig, image::ImageClient};
 use kms::{Annotations, ProviderSettings};
 use log::{debug, info};
-use storage::volume_type::Storage;
 use tokio::sync::{Mutex, OnceCell};
 
-use crate::{image, CdhConfig, DataHub, Error, Result};
+use crate::storage::volume_type::Storage;
+use crate::{image, secret, CdhConfig, DataHub, Error, Result};
 
 pub struct Hub {
+    #[allow(dead_code)]
     pub(crate) credentials: HashMap<String, String>,
     image_client: OnceCell<Mutex<ImageClient>>,
     config: CdhConfig,

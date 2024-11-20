@@ -1,5 +1,5 @@
 {
-  "openapi": "3.0.3",
+  "openapi": "3.1.0",
   "info": {
     "title": "CoCo Restful API",
     "description": "HTTP based API for CoCo containers to get resource/evidence/token from confidential-data-hub and attestation-agent.",
@@ -20,9 +20,7 @@
   "paths": {
     "/aa/evidence": {
       "get": {
-        "tags": [
-          "crate"
-        ],
+        "tags": [],
         "operationId": "_evidence",
         "parameters": [
           {
@@ -67,9 +65,7 @@
     },
     "/aa/token": {
       "get": {
-        "tags": [
-          "crate"
-        ],
+        "tags": [],
         "operationId": "_token",
         "parameters": [
           {
@@ -114,9 +110,7 @@
     },
     "/cdh/resource/{repository}/{type}/{tag}": {
       "get": {
-        "tags": [
-          "crate"
-        ],
+        "tags": [],
         "operationId": "_resource",
         "responses": {
           "200": {
@@ -144,5 +138,6 @@
         }
       }
     }
-  }
+  },
+  "components": {}
 }

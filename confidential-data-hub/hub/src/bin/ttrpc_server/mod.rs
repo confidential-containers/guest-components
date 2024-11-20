@@ -7,9 +7,11 @@ use std::error::Error as _;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use confidential_data_hub::{hub::Hub, CdhConfig, DataHub};
+use confidential_data_hub::{
+    storage::volume_type::Storage,
+    {hub::Hub, CdhConfig, DataHub},
+};
 use log::{debug, error};
-use storage::volume_type::Storage;
 use ttrpc::{asynchronous::TtrpcContext, Code, Error, Status};
 
 use crate::{

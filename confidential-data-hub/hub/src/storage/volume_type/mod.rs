@@ -8,7 +8,7 @@ pub mod aliyun;
 pub mod blockdevice;
 use std::{collections::HashMap, str::FromStr};
 
-use crate::Result;
+use super::error::Result;
 
 use async_trait::async_trait;
 

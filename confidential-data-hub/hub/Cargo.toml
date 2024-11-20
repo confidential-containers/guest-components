@@ -26,6 +26,11 @@ required-features = ["bin", "grpc"]
 name = "cdh-oneshot"
 required-features = ["bin"]
 
+[[bin]]
+name = "secret"
+path = "src/bin/secret_cli.rs"
+required-features = ["cli"]
+
 [dependencies]
 anyhow = { workspace = true, optional = true }
 async-trait.workspace = true
@@ -42,43 +47,51 @@ lazy_static.workspace = true
 log.workspace = true
 prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
+rand.workspace = true
 resource_uri.path = "../../attestation-agent/deps/resource_uri"
-secret.path = "../secret"
-storage.path = "../storage"
 serde = { workspace = true, optional = true }
 serde_json.workspace = true
+strum = { workspace = true, features = ["derive"] }
+tempfile = { workspace = true, optional = true }
 thiserror.workspace = true
-tokio = { workspace = true, features = [ "rt-multi-thread", "macros", "sync" ] }
+tokio = { workspace = true, features = [ "fs", "macros", "io-util", "process", "rt-multi-thread", "sync" ] }
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
+zeroize.workspace = true
 
 [build-dependencies]
+anyhow.workspace = true
 tonic-build = { workspace = true, optional = true }
 ttrpc-codegen = { workspace = true, optional = true }
 
 [dev-dependencies]
 assert_cmd.workspace = true
+assert-json-diff.workspace = true
 nix.workspace = true
 rstest.workspace = true
 serial_test.workspace = true
 tempfile.workspace = true
+tokio = { workspace = true, features = ["rt", "macros" ] }
 
 [features]
-default = ["kbs", "bin", "ttrpc", "grpc"]
+default = ["aliyun", "kbs", "bin", "ttrpc", "grpc", "cli"]
 
 # support aliyun stacks (KMS, ..)
-aliyun = ["secret/aliyun"]
+aliyun = ["tempfile"]
 
 # support coco-KBS to provide confidential resources
-kbs = ["kms/kbs", "secret/kbs"]
+kbs = ["kms/kbs"]
 
 # support sev to provide confidential resources
-sev = ["kms/sev", "secret/sev"]
+sev = ["kms/sev"]
 
 # support eHSM stacks (KMS, ...)
-ehsm = ["secret/ehsm"]
+ehsm = []
 
 # Binary RPC type
 bin = [ "anyhow", "attestation-agent", "cfg-if", "clap", "config", "env_logger", "serde" ]
 ttrpc = ["dep:ttrpc", "protobuf", "ttrpc-codegen", "tokio/signal"]
 grpc = ["prost", "tonic", "tonic-build", "tokio/signal"]
+
+# for secret_cli
+cli = ["clap/derive", "tokio/rt-multi-thread", "tokio/sync", "tokio/macros"]

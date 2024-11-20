@@ -4,6 +4,5 @@
 //
 
 pub mod error;
-pub mod volume_type;
-
 pub use error::*;
+pub mod volume_type;

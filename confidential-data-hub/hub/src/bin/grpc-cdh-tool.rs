@@ -16,7 +16,7 @@ use api::{
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
 use clap::{Args, Parser, Subcommand};
-use storage::volume_type::Storage;
+use confidential_data_hub::storage::volume_type::Storage;
 
 mod api {
     tonic::include_proto!("api");

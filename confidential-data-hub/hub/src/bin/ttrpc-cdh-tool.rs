@@ -9,6 +9,7 @@
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use clap::{Args, Parser, Subcommand};
+use confidential_data_hub::storage::volume_type::Storage;
 use protos::{
     api::*,
     api_ttrpc::{
@@ -18,7 +19,6 @@ use protos::{
     keyprovider::*,
     keyprovider_ttrpc::KeyProviderServiceClient,
 };
-use storage::volume_type::Storage;
 use ttrpc::context;
 
 mod protos;

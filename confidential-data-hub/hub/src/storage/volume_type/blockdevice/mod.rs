@@ -6,6 +6,7 @@ pub mod error;
 pub mod luks;
 
 use super::SecureMount;
+use crate::secret;
 use async_trait::async_trait;
 use error::{BlockDeviceError, Result};
 use kms::{Annotations, ProviderSettings};

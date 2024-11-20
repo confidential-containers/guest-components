@@ -5,7 +5,7 @@
 
 use thiserror::Error;
 
-use crate::volume_type;
+use super::volume_type;
 
 pub type Result<T> = std::result::Result<T, Error>;
 

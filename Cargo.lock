@@ -1085,6 +1085,7 @@ name = "confidential-data-hub"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assert-json-diff",
  "assert_cmd",
  "async-trait",
  "attestation-agent",
@@ -1101,13 +1102,13 @@ dependencies = [
  "nix 0.29.0",
  "prost 0.13.3",
  "protobuf 3.5.1",
+ "rand",
  "resource_uri",
  "rstest",
- "secret",
  "serde",
  "serde_json",
  "serial_test",
- "storage",
+ "strum",
  "tempfile",
  "thiserror 2.0.3",
  "tokio",
@@ -1115,6 +1116,7 @@ dependencies = [
  "tonic-build",
  "ttrpc",
  "ttrpc-codegen",
+ "zeroize",
 ]
 
 [[package]]
@@ -5575,29 +5577,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "secret"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert-json-diff",
- "assert_cmd",
- "async-trait",
- "base64 0.22.1",
- "clap 4.2.7",
- "crypto",
- "kms",
- "rand",
- "rstest",
- "serde",
- "serde_json",
- "strum",
- "tempfile",
- "thiserror 2.0.3",
- "tokio",
- "zeroize",
-]
-
-[[package]]
 name = "security-framework"
 version = "2.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6111,26 +6090,6 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
-name = "storage"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "base64 0.22.1",
- "kms",
- "log",
- "rand",
- "rstest",
- "secret",
- "serde",
- "serde_json",
- "strum",
- "tempfile",
- "thiserror 2.0.3",
- "tokio",
-]
 
 [[package]]
 name = "string_cache"
