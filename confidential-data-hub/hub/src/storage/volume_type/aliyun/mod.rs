@@ -19,6 +19,7 @@ use tokio::{
     process::Command,
 };
 
+use crate::secret;
 use error::{AliyunError, Result};
 
 use super::SecureMount;

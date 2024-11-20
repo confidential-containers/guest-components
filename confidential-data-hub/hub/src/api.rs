@@ -5,8 +5,8 @@
 
 use async_trait::async_trait;
 
+use crate::storage::volume_type::Storage;
 use crate::Result;
-use storage::volume_type::Storage;
 
 /// The APIs of the DataHub. See
 /// <https://github.com/confidential-containers/documentation/issues/131> for

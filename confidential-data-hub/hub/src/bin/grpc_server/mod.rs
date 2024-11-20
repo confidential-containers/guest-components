@@ -5,10 +5,12 @@
 
 use anyhow::*;
 
-use confidential_data_hub::{hub::Hub, DataHub};
+use confidential_data_hub::{
+    storage::volume_type::Storage,
+    {hub::Hub, DataHub},
+};
 use log::{debug, error};
 use std::{error::Error as _, net::SocketAddr, sync::Arc};
-use storage::volume_type::Storage;
 use tonic::{transport::Server, Request, Response, Status};
 
 use crate::{

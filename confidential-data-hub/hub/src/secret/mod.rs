@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+pub mod error;
 pub mod layout;
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD as b64, Engine};
@@ -10,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use self::layout::{envelope::EnvelopeSecret, vault::VaultSecret};
 
-use crate::{Result, SecretError};
+pub use error::{Result, SecretError};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(tag = "type", rename_all = "lowercase")]
@@ -28,6 +29,14 @@ pub struct Secret {
 }
 
 pub const VERSION: &str = "0.1.0";
+
+pub async fn unseal_secret(secret: &[u8]) -> Result<Vec<u8>> {
+    let secret_string = String::from_utf8(secret.to_vec())
+        .map_err(|_| SecretError::ParseFailed("Secret string must be UTF-8"))?;
+
+    let secret = Secret::from_signed_base64_string(secret_string)?;
+    secret.unseal().await
+}
 
 impl Secret {
     pub async fn unseal(&self) -> Result<Vec<u8>> {
@@ -81,15 +90,15 @@ mod tests {
     use crypto::WrapType;
     use rstest::rstest;
 
-    use crate::{
-        secret::layout::{envelope::EnvelopeSecret, vault::VaultSecret},
-        Annotations, ProviderSettings,
+    use crate::secret::layout::{
+        envelope::EnvelopeSecret,
+        vault::{Annotations, ProviderSettings, VaultSecret},
     };
 
     use super::{Secret, SecretContent};
 
     #[rstest]
-    #[case(include_str!("../../tests/envelope-1.json"), Secret {
+    #[case(include_str!("./tests/envelope-1.json"), Secret {
         version: "0.1.0".into(),
         r#type: SecretContent::Envelope(EnvelopeSecret {
             provider: "aliyun".into(),
@@ -102,7 +111,7 @@ mod tests {
             annotations: Annotations::default(),
         }),
     })]
-    #[case(include_str!("../../tests/vault-1.json"), Secret {
+    #[case(include_str!("./tests/vault-1.json"), Secret {
         version: "0.1.0".into(),
         r#type: SecretContent::Vault(VaultSecret {
             provider: "aliyun".into(),
@@ -111,7 +120,7 @@ mod tests {
             name: "xxx".into(),
         }),
     })]
-    #[case(include_str!("../../tests/vault-2.json"), Secret {
+    #[case(include_str!("./tests/vault-2.json"), Secret {
         version: "0.1.0".into(),
         r#type: SecretContent::Vault(VaultSecret {
             provider: "kbs".into(),

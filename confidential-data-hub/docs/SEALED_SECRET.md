@@ -10,8 +10,11 @@ in conjunction with an attestation.
 The Confidential Data Hub provides an API for unsealing secrets inside
 of a confidential guest.
 
-There is also a [secret cli](../secret/src/bin) tool that can be used to generate sealed
-secrets.
+You can also use the secret cli tool to generate a sealed secret:
+
+```bash
+cargo run -p confidential-data-hub --bin secret
+```
 
 ## Kubernetes Secrets
 
@@ -173,7 +176,6 @@ Start with a sealed secret such as
 	}
 }
 ```
-You can use the [secret cli](../secret/src/bin) tool to generate a sealed secret.
 
 Encode the payload in BASE64URL
 ```

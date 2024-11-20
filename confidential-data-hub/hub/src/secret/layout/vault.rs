@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use kms::ProviderSettings;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub use kms::Annotations;
+pub use kms::ProviderSettings;
 
 pub type Result<T> = std::result::Result<T, VaultError>;
 

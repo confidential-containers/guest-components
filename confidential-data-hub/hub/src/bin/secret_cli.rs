@@ -7,6 +7,10 @@ use std::{env, path::Path};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use clap::{command, Args, Parser, Subcommand};
+use confidential_data_hub::secret::{
+    layout::{envelope::EnvelopeSecret, vault::VaultSecret},
+    Secret, SecretContent, VERSION,
+};
 use crypto::WrapType;
 #[cfg(feature = "aliyun")]
 use kms::plugins::aliyun::AliyunKmsClient;
@@ -14,8 +18,6 @@ use kms::plugins::aliyun::AliyunKmsClient;
 use kms::plugins::ehsm::EhsmKmsClient;
 use kms::{Encrypter, ProviderSettings};
 use rand::Rng;
-use secret::secret::layout::{envelope::EnvelopeSecret, vault::VaultSecret};
-use secret::secret::{Secret, SecretContent, VERSION};
 #[cfg(feature = "ehsm")]
 use serde_json::Value;
 use tokio::{fs, io::AsyncWriteExt};

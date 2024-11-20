@@ -17,7 +17,7 @@ We reuse [direct block device assigned volume feature](https://github.com/kata-c
 
 [Aliyun OSS](https://www.alibabacloud.com/product/object-storage-service) is an object storage service provided by Alibaba Cloud (Aliyun).
 
-The [plugin](../storage/src/volume_type/aliyun) provides two different modes for secure mount.
+The [plugin](../hub/src/storage/volume_type/aliyun) provides two different modes for secure mount.
 
 Confidential Data Hub's `secure_mount()` [API](../hub/protos/api.proto) will help to instrument this.
 
@@ -65,7 +65,7 @@ For more details, please refer to [the guide](use-cases/secure-mount-with-aliyun
 
 ### Block Device
 
-The [plugin](../storage/src/volume_type/blockdevice) provides ways to encrypt a block device and mount it to a specific mount point. Currently only support LUKS in [cryptsetup](https://gitlab.com/cryptsetup/cryptsetup/) for block device encryption.
+The [plugin](../hub/src/storage/volume_type/blockdevice) provides ways to encrypt a block device and mount it to a specific mount point. Currently only support LUKS in [cryptsetup](https://gitlab.com/cryptsetup/cryptsetup/) for block device encryption.
 
 #### LUKS Encryption
 
