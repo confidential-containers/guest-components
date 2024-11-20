@@ -57,6 +57,7 @@ jobs:
     - name: Install tpm dependencies
       if: matrix.platform.tee == 'az-cvm-vtpm'
       run: |
+        sudo apt-get update
         sudo apt-get install -y --no-install-recommends libtss2-dev
 
     - uses: ./.github/actions/install-intel-dcap
