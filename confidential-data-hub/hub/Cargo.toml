@@ -34,34 +34,48 @@ required-features = ["cli"]
 [dependencies]
 anyhow = { workspace = true, optional = true }
 async-trait.workspace = true
-attestation-agent = { path = "../../attestation-agent/attestation-agent", default-features = false, optional = true }
+attestation-agent = { path = "../../attestation-agent/attestation-agent", default-features = false }
 base64.workspace = true
+bincode = { workspace = true, optional = true }
 cfg-if = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
 clap = { workspace = true, features = [ "derive" ], optional = true }
 config = { workspace = true, optional = true }
+const_format.workspace = true
 crypto.path = "../../attestation-agent/deps/crypto"
+ehsm_client = {git = "https://github.com/intel/ehsm", rev = "3454cac66b968a593c3edc43410c0b52416bbd3e", optional = true }
 env_logger = { workspace = true, optional = true }
+hex = { workspace = true, optional = true }
 image-rs = { path = "../../image-rs", default-features = false, features = ["kata-cc-rustls-tls"] }
-kms = { path = "../kms", default-features = false }
+kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = ["passport", "aa_token", "openssl"], optional = true }
 lazy_static.workspace = true
 log.workspace = true
+p12 = { version = "0.6.3", optional = true }
 prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
 rand.workspace = true
+reqwest = { workspace = true, optional = true }
 resource_uri.path = "../../attestation-agent/deps/resource_uri"
+ring = "0.17"
 serde = { workspace = true, optional = true }
 serde_json.workspace = true
+sev = { path = "../../attestation-agent/deps/sev", optional = true }
+sha2 = { workspace = true, optional = true }
 strum = { workspace = true, features = ["derive"] }
 tempfile = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = [ "fs", "macros", "io-util", "process", "rt-multi-thread", "sync" ] }
+toml.workspace = true
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
+url = { workspace = true, optional = true }
+uuid = { workspace = true, features = ["serde", "v4"], optional = true }
+yasna = { version = "0.5.2", optional = true }
 zeroize.workspace = true
 
 [build-dependencies]
 anyhow.workspace = true
-tonic-build = { workspace = true, optional = true }
+tonic-build.workspace = true
 ttrpc-codegen = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -77,21 +91,21 @@ tokio = { workspace = true, features = ["rt", "macros" ] }
 default = ["aliyun", "kbs", "bin", "ttrpc", "grpc", "cli"]
 
 # support aliyun stacks (KMS, ..)
-aliyun = ["tempfile"]
+aliyun = ["chrono", "hex", "p12", "prost", "reqwest/rustls-tls", "sha2", "tempfile", "tonic", "url", "yasna"]
 
 # support coco-KBS to provide confidential resources
-kbs = ["kms/kbs"]
+kbs = ["kbs_protocol"]
 
 # support sev to provide confidential resources
-sev = ["kms/sev"]
+sev = ["bincode", "dep:sev", "prost", "tonic", "uuid"]
 
 # support eHSM stacks (KMS, ...)
-ehsm = []
+ehsm = ["ehsm_client"]
 
 # Binary RPC type
-bin = [ "anyhow", "attestation-agent", "cfg-if", "clap", "config", "env_logger", "serde" ]
+bin = [ "anyhow", "cfg-if", "clap", "config", "env_logger", "serde" ]
 ttrpc = ["dep:ttrpc", "protobuf", "ttrpc-codegen", "tokio/signal"]
-grpc = ["prost", "tonic", "tonic-build", "tokio/signal"]
+grpc = ["prost", "tonic", "tokio/signal"]
 
 # for secret_cli
 cli = ["clap/derive", "tokio/rt-multi-thread", "tokio/sync", "tokio/macros"]

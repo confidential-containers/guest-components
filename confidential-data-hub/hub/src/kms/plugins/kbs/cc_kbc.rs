@@ -13,7 +13,7 @@ use kbs_protocol::{
 };
 use log::{info, warn};
 
-use crate::{Error, Result};
+use super::{Error, Result};
 
 use super::Kbc;
 

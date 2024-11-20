@@ -8,10 +8,10 @@
 
 use std::path::PathBuf;
 
-use kms::{plugins::kbs::KbcClient, Annotations, Getter};
 use log::debug;
 use tokio::fs;
 
+use crate::kms::{plugins::kbs::KbcClient, Annotations, Getter};
 use crate::{hub::Hub, Error, Result};
 
 /// This directory is used to store all the kbs resources get by CDH's init

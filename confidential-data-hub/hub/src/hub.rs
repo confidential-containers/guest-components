@@ -7,10 +7,11 @@ use std::{collections::HashMap, path::Path};
 
 use async_trait::async_trait;
 use image_rs::{builder::ClientBuilder, config::ImageConfig, image::ImageClient};
-use kms::{Annotations, ProviderSettings};
 use log::{debug, info};
 use tokio::sync::{Mutex, OnceCell};
 
+use crate::kms;
+use crate::kms::{Annotations, ProviderSettings};
 use crate::storage::volume_type::Storage;
 use crate::{image, secret, CdhConfig, DataHub, Error, Result};
 
