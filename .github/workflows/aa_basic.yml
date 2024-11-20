@@ -52,9 +52,8 @@ jobs:
           fetch-depth: 1
 
       - name: Install Rust toolchain (${{ matrix.rust }})
-        uses: actions-rs/toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
           components: rustfmt, clippy
