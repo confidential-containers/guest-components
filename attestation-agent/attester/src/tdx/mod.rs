@@ -87,6 +87,7 @@ impl Attester for TdxAttester {
             },
             |tsm| {
                 tsm.attestation_report(TsmReportData::Tdx(report_data.clone()))
+                    .inspect(|outblob| {if outblob.is_empty() {log::error!("TSM provider returned an empty quote without an error")}})
                     .context("TDX Attester: quote generation using TSM reports failed")
             },
         )?;
