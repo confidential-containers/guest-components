@@ -447,9 +447,11 @@ mod test {
             Err(e) => {
                 // Skip the test if the kbs server returned ProtocolVersion error. Any other
                 // error is treated as a failure.
-                assert!(e
-                    .to_string()
-                    .contains("KBS Client Protocol Version Mismatch"));
+                assert!(
+                    e.to_string()
+                        .contains("KBS Client Protocol Version Mismatch"),
+                    "Actual error: {e:#?}"
+                );
                 println!("NOTE: the test is skipped due to KBS protocol incompatibility.");
                 return ();
             }
