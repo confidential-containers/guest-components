@@ -46,7 +46,7 @@ rand = "0.8.5"
 reqwest = { version = "0.12", default-features = false }
 resource_uri = { path = "attestation-agent/deps/resource_uri" }
 ring = "0.17"
-rsa = "0.9.2"
+rsa = "0.9.7"
 rstest = "0.17"
 serde = { version = "1.0", features = ["derive"] }
 serde_with = { version = "1.11.0", features = ["base64"] }
