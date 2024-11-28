@@ -11,15 +11,14 @@ policy_path = "/opa/confidential-containers/kbs/policy.rego"
 [attestation_service]
 type = "coco_as_builtin"
 work_dir = "/opt/confidential-containers/attestation-service"
-policy_engine = "opa"
-attestation_token_broker = "Simple"
 
-    [attestation_service.attestation_token_config]
-    duration_min = 5
+[attestation_service.attestation_token_config]
+type = "Ear"
+duration_min = 5
 
-    [attestation_service.rvps_config]
-    type = "BuiltIn"
-    store_type = "LocalFs"
+[attestation_service.rvps_config]
+type = "BuiltIn"
+store_type = "LocalFs"
 
 [admin]
 insecure_api = true
