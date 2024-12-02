@@ -47,7 +47,6 @@ use crate::config::Config;
 ///
 /// let _quote = aa.get_evidence(&[0;64]);
 /// ```
-
 /// `AttestationAPIs` defines the service APIs of attestation agent that need to make requests
 ///  to the Relying Party (Key Broker Service) in Confidential Containers.
 ///
