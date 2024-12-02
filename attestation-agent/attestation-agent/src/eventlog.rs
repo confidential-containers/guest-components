@@ -73,7 +73,7 @@ pub enum LogEntry<'a> {
     Init(HashAlgorithm),
 }
 
-impl<'a> LogEntry<'a> {
+impl LogEntry<'_> {
     /// Calculate the LogEntry's digest with the given [`HashAlgorithm`]
     pub fn digest_with(&self, hash_alg: HashAlgorithm) -> Vec<u8> {
         let log_entry = self.to_string();
@@ -81,7 +81,7 @@ impl<'a> LogEntry<'a> {
     }
 }
 
-impl<'a> Display for LogEntry<'a> {
+impl Display for LogEntry<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LogEntry::Event {
