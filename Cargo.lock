@@ -3348,9 +3348,9 @@ dependencies = [
 
 [[package]]
 name = "kbs-types"
-version = "0.7.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b6441ed73b0faa50707d4de41c6b45c76654b661b96aaf7b26a41331eedc0a5"
+checksum = "fdbe8d94404c84323fda787c81975895740aeffb5cf9376ffacec4b1fd75b3e2"
 dependencies = [
  "serde",
  "serde_json",

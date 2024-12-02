@@ -10,6 +10,19 @@ use openssl::symm::Cipher;
 
 const TAG_LENGTH: usize = 16;
 
+pub fn decrypt_with_aad(
+    encrypted_data: &[u8],
+    key: &[u8],
+    iv: &[u8],
+    aad: &[u8],
+    tag: &[u8],
+) -> Result<Vec<u8>> {
+    let cipher = Cipher::aes_256_gcm();
+
+    openssl::symm::decrypt_aead(cipher, key, Some(iv), aad, encrypted_data, tag)
+        .map_err(|e| anyhow!("{e:?}"))
+}
+
 pub fn decrypt(encrypted_data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     let cipher = Cipher::aes_256_gcm();
     if encrypted_data.len() < TAG_LENGTH {

@@ -6,12 +6,8 @@
 use anyhow::{Context, Result};
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use crypto::{
-    rsa::{PaddingMode, RSAKeyPair},
-    WrapType,
-};
+use crypto::rsa::{PaddingMode, RSAKeyPair};
 use kbs_types::{Response, TeePubKey};
-use serde::Deserialize;
 use zeroize::Zeroizing;
 
 #[derive(Clone, Debug)]
@@ -55,9 +51,7 @@ impl TeeKeyPair {
     }
 
     pub fn decrypt_response(&self, response: Response) -> Result<Vec<u8>> {
-        // deserialize the jose header and check that the key type matches
-        let protected: ProtectedHeader = serde_json::from_str(&response.protected)?;
-        let padding_mode = PaddingMode::try_from(&protected.alg[..])
+        let padding_mode = PaddingMode::try_from(&response.protected.alg[..])
             .context("Unsupported padding mode for wrapped key")?;
 
         // unwrap the wrapped key
@@ -66,17 +60,18 @@ impl TeeKeyPair {
 
         let iv = URL_SAFE_NO_PAD.decode(&response.iv)?;
         let ciphertext = URL_SAFE_NO_PAD.decode(&response.ciphertext)?;
-
-        let plaintext = crypto::decrypt(Zeroizing::new(symkey), ciphertext, iv, protected.enc)?;
+        let tag = URL_SAFE_NO_PAD.decode(&response.tag)?;
+        let protected_utf8 = serde_json::to_string(&response.protected)
+            .context("serialize protected header failed")?;
+        let aad = URL_SAFE_NO_PAD.encode(protected_utf8);
+        let plaintext = crypto::aes256gcm_decrypt(
+            Zeroizing::new(symkey),
+            ciphertext,
+            iv,
+            aad.into_bytes(),
+            tag,
+        )?;
 
         Ok(plaintext)
     }
-}
-
-#[derive(Deserialize)]
-struct ProtectedHeader {
-    /// enryption algorithm for encrypted key
-    alg: String,
-    /// encryption algorithm for payload
-    enc: WrapType,
 }
