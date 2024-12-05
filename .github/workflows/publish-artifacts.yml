@@ -18,13 +18,15 @@ jobs:
     strategy:
       matrix:
         platform: [
-          { tee: none,        arch: x86_64, libc: musl },
-          { tee: none,        arch: s390x,  libc: gnu  },
-          { tee: amd,         arch: x86_64, libc: musl },
-          { tee: az-cvm-vtpm, arch: x86_64, libc: gnu  },
-          { tee: tdx,         arch: x86_64, libc: gnu  },
-          { tee: cca,         arch: x86_64, libc: musl },
-          { tee: se,          arch: s390x,  libc: gnu  },
+          { tee: none,        arch: x86_64,  libc: musl },
+          { tee: none,        arch: s390x,   libc: gnu  },
+          { tee: none,        arch: aarch64, libc: gnu  },
+          { tee: amd,         arch: x86_64,  libc: musl },
+          { tee: az-cvm-vtpm, arch: x86_64,  libc: gnu  },
+          { tee: tdx,         arch: x86_64,  libc: gnu  },
+          { tee: cca,         arch: x86_64,  libc: musl },
+          { tee: cca,         arch: aarch64, libc: gnu  },
+          { tee: se,          arch: s390x,   libc: gnu  },
         ]
     runs-on: ${{ matrix.platform.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
     env:
@@ -68,12 +70,14 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Build
+      env:
+        ARCH: ${{ matrix.platform.arch }}
       run: make ./target/${{ env.RUST_TARGET }}/release/attestation-agent
 
     - name: Publish with ORAS
       id: publish
       env:
-        OCI_ARCH: ${{ matrix.platform.arch == 'x86_64' && 'amd64' || matrix.platform.arch }}
+        OCI_ARCH: ${{ matrix.platform.arch == 'x86_64' && 'amd64' || matrix.platform.arch == 'aarch64' && 'arm64' || matrix.platform.arch }}
       run: |
         mkdir oras
         cd oras
@@ -110,10 +114,13 @@ jobs:
         arch:
         - x86_64
         - s390x
+        - aarch64
         include:
         - arch: x86_64
           libc: musl
         - arch: s390x
+          libc: gnu
+        - arch: aarch64
           libc: gnu
     runs-on: ${{ matrix.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
     env:
@@ -150,9 +157,13 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Build CDH
+      env:
+        ARCH: ${{ matrix.arch }}
       run: make ./target/${{ env.RUST_TARGET }}/release/confidential-data-hub
 
     - name: Build ASR
+      env:
+        ARCH: ${{ matrix.arch }}
       run: make ./target/${{ env.RUST_TARGET }}/release/api-server-rest
 
     - name: Publish CDH + ASR with ORAS
