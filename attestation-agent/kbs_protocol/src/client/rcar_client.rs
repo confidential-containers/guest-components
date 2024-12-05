@@ -450,7 +450,7 @@ mod test {
                 assert!(
                     e.to_string()
                         .contains("KBS Client Protocol Version Mismatch"),
-                    "Actual error: {e:#?}"
+                    "{e:#?}"
                 );
                 println!("NOTE: the test is skipped due to KBS protocol incompatibility.");
                 return ();

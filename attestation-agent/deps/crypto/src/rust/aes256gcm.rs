@@ -4,9 +4,26 @@
 //
 
 //! This mod implements aes-256-gcm encryption & decryption.
-
-use aes_gcm::{aead::Aead, Aes256Gcm, Key, KeyInit, Nonce};
+use aes_gcm::{aead::Aead, AeadInPlace, Aes256Gcm, Key, KeyInit, Nonce};
 use anyhow::*;
+
+pub fn decrypt_with_aad(
+    encrypted_data: &[u8],
+    key: &[u8],
+    iv: &[u8],
+    aad: &[u8],
+    tag: &[u8],
+) -> Result<Vec<u8>> {
+    let decrypting_key = Key::<Aes256Gcm>::from_slice(key);
+    let cipher = Aes256Gcm::new(decrypting_key);
+    let nonce = Nonce::from_slice(iv);
+    let mut plaintext = encrypted_data.to_vec();
+    cipher
+        .decrypt_in_place_detached(nonce, aad, &mut plaintext, tag.into())
+        .map_err(|e| anyhow!("aes-256-gcm decrypt failed: {:?}", e))?;
+
+    Ok(plaintext)
+}
 
 pub fn decrypt(encrypted_data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     let decrypting_key = Key::<Aes256Gcm>::from_slice(key);
