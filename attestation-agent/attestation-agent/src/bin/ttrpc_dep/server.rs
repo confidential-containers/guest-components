@@ -3,29 +3,24 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use ::ttrpc::asynchronous::Service;
 use ::ttrpc::proto::Code;
-use anyhow::*;
 use async_trait::async_trait;
 use attestation_agent::{AttestationAPIs, AttestationAgent};
 use log::{debug, error};
 
-use std::collections::HashMap;
-use std::sync::Arc;
-
-use crate::ttrpc_protocol::attestation_agent::{
-    ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse, GetEvidenceRequest,
-    GetEvidenceResponse, GetTeeTypeRequest, GetTeeTypeResponse, GetTokenRequest, GetTokenResponse,
-    UpdateConfigurationRequest, UpdateConfigurationResponse,
-};
-use crate::ttrpc_protocol::attestation_agent_ttrpc::{
-    create_attestation_agent_service, AttestationAgentService,
+use crate::ttrpc_dep::ttrpc_protocol::{
+    attestation_agent::{
+        ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse, GetEvidenceRequest,
+        GetEvidenceResponse, GetTeeTypeRequest, GetTeeTypeResponse, GetTokenRequest,
+        GetTokenResponse, UpdateConfigurationRequest, UpdateConfigurationResponse,
+    },
+    attestation_agent_ttrpc::AttestationAgentService,
 };
 
 pub const AGENT_NAME: &str = "attestation-agent";
 
 pub struct AA {
-    inner: AttestationAgent,
+    pub(crate) inner: AttestationAgent,
 }
 
 #[async_trait]
@@ -162,11 +157,4 @@ impl AttestationAgentService for AA {
         reply.tee = res;
         ::ttrpc::Result::Ok(reply)
     }
-}
-
-pub fn start_ttrpc_service(aa: AttestationAgent) -> Result<HashMap<String, Service>> {
-    let service = AA { inner: aa };
-    let service = Arc::new(service);
-    let get_resource_service = create_attestation_agent_service(service);
-    Ok(get_resource_service)
 }
