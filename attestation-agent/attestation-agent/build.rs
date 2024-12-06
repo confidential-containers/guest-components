@@ -21,7 +21,7 @@ fn main() -> std::io::Result<()> {
         let protobuf_customized = ProtobufCustomize::default().gen_mod_rs(false);
 
         Codegen::new()
-            .out_dir("src/bin/ttrpc-aa/ttrpc_protocol")
+            .out_dir("src/bin/ttrpc_dep/ttrpc_protocol")
             .inputs(&protos)
             .include("../protos")
             .rust_protobuf()

@@ -3,17 +3,19 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use ::ttrpc::asynchronous::Server;
 use anyhow::*;
 use attestation_agent::AttestationAgent;
 use clap::{arg, command, Parser};
 use const_format::concatcp;
 use log::{debug, info};
-use std::path::Path;
+use std::{collections::HashMap, path::Path, sync::Arc};
 use tokio::signal::unix::{signal, SignalKind};
+use ttrpc::asynchronous::{Server, Service};
+use ttrpc_dep::server::AA;
 
-mod server;
-mod ttrpc_protocol;
+use crate::ttrpc_dep::ttrpc_protocol::attestation_agent_ttrpc::create_attestation_agent_service;
+
+mod ttrpc_dep;
 
 const DEFAULT_UNIX_SOCKET_DIR: &str = "/run/confidential-containers/attestation-agent/";
 const UNIX_SOCKET_PREFIX: &str = "unix://";
@@ -45,6 +47,13 @@ struct Cli {
     config_file: Option<String>,
 }
 
+pub fn start_ttrpc_service(aa: AttestationAgent) -> Result<HashMap<String, Service>> {
+    let service = AA { inner: aa };
+    let service = Arc::new(service);
+    let get_resource_service = create_attestation_agent_service(service);
+    Ok(get_resource_service)
+}
+
 #[tokio::main]
 pub async fn main() -> Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
@@ -59,7 +68,7 @@ pub async fn main() -> Result<()> {
 
     let mut aa = AttestationAgent::new(cli.config_file.as_deref()).context("start AA")?;
     aa.init().await.context("init AA")?;
-    let att = server::start_ttrpc_service(aa)?;
+    let att = start_ttrpc_service(aa)?;
 
     let mut atts = Server::new()
         .bind(&cli.attestation_sock)

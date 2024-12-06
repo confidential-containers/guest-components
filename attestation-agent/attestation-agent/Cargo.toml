@@ -13,6 +13,10 @@ required-features = ["bin", "grpc"]
 name = "ttrpc-aa"
 required-features = ["bin", "ttrpc"]
 
+[[bin]]
+name = "ttrpc-aa-client"
+required-features = ["bin", "ttrpc"]
+
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
@@ -72,8 +76,14 @@ all-attesters = [
 ]
 tdx-attester = ["kbs_protocol?/tdx-attester", "attester/tdx-attester"]
 sgx-attester = ["kbs_protocol?/sgx-attester", "attester/sgx-attester"]
-az-snp-vtpm-attester = ["kbs_protocol?/az-snp-vtpm-attester", "attester/az-snp-vtpm-attester"]
-az-tdx-vtpm-attester = ["kbs_protocol?/az-tdx-vtpm-attester", "attester/az-tdx-vtpm-attester"]
+az-snp-vtpm-attester = [
+    "kbs_protocol?/az-snp-vtpm-attester",
+    "attester/az-snp-vtpm-attester",
+]
+az-tdx-vtpm-attester = [
+    "kbs_protocol?/az-tdx-vtpm-attester",
+    "attester/az-tdx-vtpm-attester",
+]
 snp-attester = ["kbs_protocol?/snp-attester", "attester/snp-attester"]
 se-attester = ["kbs_protocol?/se-attester", "attester/se-attester"]
 cca-attester = ["kbs_protocol?/cca-attester", "attester/cca-attester"]
