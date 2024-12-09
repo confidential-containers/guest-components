@@ -93,7 +93,7 @@ jobs:
         digest="$(oras manifest fetch "${image}:${arch_tag}" --descriptor | jq -r .digest)"
         echo "digest=${digest}" >> "$GITHUB_OUTPUT"
 
-    - uses: actions/attest-build-provenance@v1
+    - uses: actions/attest-build-provenance@v2
       with:
         subject-name: ${{ steps.publish.outputs.image }}
         subject-digest: ${{ steps.publish.outputs.digest }}
@@ -177,13 +177,13 @@ jobs:
         digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
         echo "asr-digest=${digest}" >> "$GITHUB_OUTPUT"
 
-    - uses: actions/attest-build-provenance@v1
+    - uses: actions/attest-build-provenance@v2
       with:
         subject-name: ${{ steps.publish.outputs.cdh-image }}
         subject-digest: ${{ steps.publish.outputs.cdh-digest }}
         push-to-registry: true
 
-    - uses: actions/attest-build-provenance@v1
+    - uses: actions/attest-build-provenance@v2
       with:
         subject-name: ${{ steps.publish.outputs.asr-image }}
         subject-digest: ${{ steps.publish.outputs.asr-digest }}
