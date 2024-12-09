@@ -349,7 +349,7 @@ dependencies = [
  "kbs-types",
  "kbs_protocol",
  "log",
- "prost 0.13.3",
+ "prost 0.13.4",
  "protobuf 3.5.1",
  "reqwest 0.12.9",
  "rstest",
@@ -640,7 +640,7 @@ dependencies = [
  "bitflags 2.6.0",
  "cexpr",
  "clang-sys",
- "itertools 0.11.0",
+ "itertools 0.10.5",
  "lazy_static",
  "lazycell",
  "proc-macro2",
@@ -1072,7 +1072,7 @@ dependencies = [
  "futures",
  "jwt-simple",
  "log",
- "prost 0.13.3",
+ "prost 0.13.4",
  "rand",
  "reqwest 0.12.9",
  "rstest",
@@ -1134,7 +1134,7 @@ dependencies = [
  "log",
  "nix 0.29.0",
  "p12",
- "prost 0.13.3",
+ "prost 0.13.4",
  "protobuf 3.5.1",
  "rand",
  "reqwest 0.12.9",
@@ -3010,7 +3010,7 @@ dependencies = [
  "oci-client 0.14.0",
  "oci-spec",
  "ocicrypt-rs",
- "prost 0.13.3",
+ "prost 0.13.4",
  "protobuf 3.5.1",
  "reqwest 0.12.9",
  "resource_uri",
@@ -3332,7 +3332,7 @@ dependencies = [
  "crypto",
  "kbs_protocol",
  "log",
- "prost 0.13.3",
+ "prost 0.13.4",
  "resource_uri",
  "rstest",
  "serde",
@@ -4205,7 +4205,7 @@ dependencies = [
  "lazy_static",
  "openssl",
  "pin-project-lite",
- "prost 0.13.3",
+ "prost 0.13.4",
  "protobuf 3.5.1",
  "resource_uri",
  "ring",
@@ -4781,12 +4781,12 @@ dependencies = [
 
 [[package]]
 name = "prost"
-version = "0.13.3"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b0487d90e047de87f984913713b85c601c05609aad5b0df4b4573fbf69aa13f"
+checksum = "2c0fef6c4230e4ccf618a35c59d7ede15dea37de8427500f50aff708806e42ec"
 dependencies = [
  "bytes",
- "prost-derive 0.13.3",
+ "prost-derive 0.13.4",
 ]
 
 [[package]]
@@ -4815,13 +4815,13 @@ checksum = "f8650aabb6c35b860610e9cff5dc1af886c9e25073b7b1712a68972af4281302"
 dependencies = [
  "bytes",
  "heck 0.5.0",
- "itertools 0.11.0",
+ "itertools 0.10.5",
  "log",
  "multimap",
  "once_cell",
  "petgraph 0.6.4",
  "prettyplease",
- "prost 0.13.3",
+ "prost 0.13.4",
  "prost-types 0.13.2",
  "regex",
  "syn 2.0.87",
@@ -4843,12 +4843,12 @@ dependencies = [
 
 [[package]]
 name = "prost-derive"
-version = "0.13.3"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9552f850d5f0964a4e4d0bf306459ac29323ddfbae05e35a7c0d35cb0803cc5"
+checksum = "157c5a9d7ea5c2ed2d9fb8f495b64759f7816c7eaea54ba3978f0d63000162e3"
 dependencies = [
  "anyhow",
- "itertools 0.11.0",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 2.0.87",
@@ -4870,7 +4870,7 @@ version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60caa6738c7369b940c3d49246a8d1749323674c65cb13010134f5c9bad5b519"
 dependencies = [
- "prost 0.13.3",
+ "prost 0.13.4",
 ]
 
 [[package]]
@@ -6665,7 +6665,7 @@ dependencies = [
  "hyper-util",
  "percent-encoding",
  "pin-project",
- "prost 0.13.3",
+ "prost 0.13.4",
  "socket2 0.5.5",
  "tokio",
  "tokio-stream",
