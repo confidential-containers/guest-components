@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["The Attestation Agent Authors"]
 publish = false
 edition = "2021"
+license = "Apache-2.0"
 
 [[bin]]
 name = "grpc-aa"
