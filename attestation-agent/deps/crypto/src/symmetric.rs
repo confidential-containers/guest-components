@@ -43,9 +43,20 @@ pub fn decrypt(
     wrap_type: WrapType,
 ) -> Result<Vec<u8>> {
     match wrap_type {
-        WrapType::Aes256Gcm => aes256gcm::decrypt(&ciphertext, &key, &iv),
-        WrapType::Aes256Ctr => aes256ctr::decrypt(&ciphertext, &key, &iv),
+        WrapType::Aes256Gcm => aes256gcm::decrypt(&key, &ciphertext, &iv),
+        WrapType::Aes256Ctr => aes256ctr::decrypt(&key, &ciphertext, &iv),
     }
+}
+
+/// Decrypt the given `ciphertext` with AES256-GCM algorithm.
+pub fn aes256gcm_decrypt(
+    key: Zeroizing<Vec<u8>>,
+    ciphertext: Vec<u8>,
+    iv: Vec<u8>,
+    aad: Vec<u8>,
+    tag: Vec<u8>,
+) -> Result<Vec<u8>> {
+    aes256gcm::decrypt_with_aad(&ciphertext, &key, &iv, &aad, &tag)
 }
 
 /// Encrypt the given `plaintext`.
