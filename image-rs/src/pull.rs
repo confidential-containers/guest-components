@@ -162,6 +162,10 @@ impl<'a> PullClient<'a> {
         };
 
         let decryptor = Decryptor::from_media_type(&layer.media_type);
+
+        // There are two types of layers:
+        // 1. Compressed layer = Compress(Layer Data)
+        // 2. Encrypted+Compressed layer = Compress(Encrypt(Layer Data))
         if decryptor.is_encrypted() {
             let decrypt_key = tokio::task::spawn_blocking({
                 let decryptor = decryptor.clone();
@@ -210,6 +214,8 @@ impl<'a> PullClient<'a> {
         Ok(layer_meta)
     }
 
+    /// Decompress and unpack layer data. The returned value is the
+    /// digest of the uncompressed layer.
     async fn async_decompress_unpack_layer(
         &self,
         input_reader: (impl tokio::io::AsyncRead + Unpin + Send),
