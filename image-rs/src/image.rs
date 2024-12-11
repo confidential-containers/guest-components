@@ -422,7 +422,7 @@ fn create_image_meta(
         id: id.to_string(),
         digest: image_digest.to_string(),
         reference: image_url.to_string(),
-        image_config: ImageConfiguration::from_reader(image_config.to_string().as_bytes())?,
+        image_config: ImageConfiguration::from_reader(image_config.as_bytes())?,
         ..Default::default()
     };
 
@@ -431,26 +431,28 @@ fn create_image_meta(
         bail!("Pulled number of layers mismatch with image config diff_ids");
     }
 
+    // Note that an image's `diff_ids` may always refer to plaintext layer
+    // digests. For two encryption layers encrypted from a same plaintext
+    // layer, the `LayersData.Digest` of the image manifest might be different
+    // because the symmetric key to encrypt is different, thus the cipher text
+    // is different. Interestingly in such case the `diff_ids` of the both
+    // layers are the same in the config.json.
+    // Another note is that the order of layers in the image config and the
+    // image manifest will always be the same, so it is safe to use a same
+    // index to lookup or mark a layer.
     let mut unique_layers = Vec::new();
-    let mut digests = BTreeSet::new();
-    for l in &image_manifest.layers {
-        if digests.contains(&l.digest) {
-            continue;
-        }
-
-        digests.insert(&l.digest);
-        unique_layers.push(l.clone());
-    }
-
     let mut unique_diff_ids = Vec::new();
-    let mut id_tree = BTreeSet::new();
-    for id in diff_ids {
-        if id_tree.contains(id.as_str()) {
+
+    let mut digests = BTreeSet::new();
+
+    for (i, diff_id) in diff_ids.iter().enumerate() {
+        if digests.contains(&image_manifest.layers[i].digest) {
             continue;
         }
 
-        id_tree.insert(id.as_str());
-        unique_diff_ids.push(id.clone());
+        digests.insert(&image_manifest.layers[i].digest);
+        unique_layers.push(image_manifest.layers[i].clone());
+        unique_diff_ids.push(diff_id.to_string());
     }
 
     Ok((image_data, unique_layers, unique_diff_ids))
