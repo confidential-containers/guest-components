@@ -9,19 +9,20 @@ use std::path::{Path, PathBuf};
 
 use crate::snapshots::SnapshotType;
 
+/// By default use a work dir in `/run` because for confidential guests `/run`
+/// is typically in a `tmpfs` which is backed by encrypted memory.
 pub const DEFAULT_WORK_DIR: &str = "/run/image-rs/";
 
-/// Default policy file path.
+/// Default path to policy file in KBS or locally
 pub const POLICY_FILE_PATH: &str = "kbs:///default/security-policy/test";
 
+/// Default path to sig store config in KBS or locally
 pub const SIG_STORE_CONFIG_DEFAULT_FILE: &str = "kbs:///default/sigstore-config/test";
 
-/// The reason for using the `/run` directory here is that in general HW-TEE,
-/// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
-/// [`AUTH_FILE_PATH`] shows the path to the `auth.json` file.
+/// Default path to auth.json in KBS or locally
 pub const AUTH_FILE_PATH: &str = "kbs:///default/credential/test";
 
-/// Default max concurrent download.
+/// Default max concurrent downloads
 pub const DEFAULT_MAX_CONCURRENT_DOWNLOAD: usize = 3;
 
 /// Path to the configuration file to generate ImageConfiguration
@@ -38,51 +39,45 @@ pub struct ImageConfig {
     #[serde(default = "SnapshotType::default")]
     pub default_snapshot: SnapshotType,
 
-    /// If any image security policy would be used to control the image pulling
-    /// like signature verification, this field is used to set the URI of the
-    /// policy file.
+    /// An image security policy regulates which images can be pulled by image-rs
+    /// and if/how images are validated when they are pulled.
+    /// For example, a policy can require that images from a particular registry
+    /// are signed with a particular scheme.
     ///
-    /// Now it supports two different forms:
-    /// - `KBS URI`: the iamge security policy will be fetched from KBS.
-    ///     e.g. [`POLICY_FILE_PATH`]
-    /// - `Local Path`: the security policy will be fetched from somewhere locally.
-    ///     e.g. `file:///etc/image-policy.json`.
+    /// The security policy follows a standard format described here:
+    /// <https://github.com/containers/image/blob/main/docs/containers-policy.json.5.md>
+    /// Some CoCo enhancements have been added.
+    /// For instance the `keypath` field can be set to a resource URI such as
+    /// `kbs:///default/key/1`.
     ///
-    /// The policy follows the format of
-    /// <https://github.com/containers/image/blob/main/docs/containers-policy.json.5.md>.
+    /// This field points to an image security policy.
+    /// The policy can either be stored in a KBS and referenced via a resource URI
+    /// or it can be stored locally (somewhere in the rootfs).
     ///
-    /// At the same time, some enhencements based on CoCo is used, that is the
-    /// `keyPath` field can be filled with a KBS URI like `kbs:///default/key/1`
+    /// For example, `file:///etc/image-policy.json` for a local policy file
+    /// or `kbs:///default/policies/image-security-policy.json` for a policy
+    /// file that has been provisioned to a KBS.
     ///
-    /// This value defaults to `None`.
+    /// If this field is not set (which is the default) no image security policy
+    /// will be used. Images will not be validated when they are pulled.
     #[serde(default = "Option::default")]
     pub image_security_policy_uri: Option<String>,
 
     /// Sigstore config file URI for simple signing scheme.
     ///
     /// When `image_security_policy_uri` is set and `SimpleSigning` (signedBy) is
-    /// used in the policy, the signatures of the images would be used for image
-    /// signature validation. This policy will record where the signatures is.
+    /// used in the policy, an additional sigstore configuration file is needed.
     ///
-    /// Now it supports two different forms:
-    /// - `KBS URI`: the sigstore config file will be fetched from KBS,
-    ///     e.g. [`SIG_STORE_CONFIG_DEFAULT_FILE`].
-    /// - `Local Path`: the sigstore config file will be fetched from somewhere locally,
-    ///     e.g. `file:///etc/simple-signing.yaml`.
+    /// Like the above, the sigstore config can be stored locally in the rootfs
+    /// or retrieved from the KBS.
     ///
     /// This value defaults to `None`.
     #[serde(default = "Option::default")]
     pub sigstore_config_uri: Option<String>,
 
-    /// If any credential auth (Base) would be used to connect to download
-    /// image from private registry, this field is used to set the URI of the
-    /// credential file.
-    ///
-    /// Now it supports two different forms:
-    /// - `KBS URI`: the registry auth will be fetched from KBS,
-    ///     e.g. [`AUTH_FILE_PATH`].
-    /// - `Local Path`: the registry auth will be fetched from somewhere locally,
-    ///     e.g. `file:///etc/image-registry-auth.json`.
+    /// To pull an image from an authenticated/private registry, credentials
+    /// must be provided to image-rs. This field points to a credential file,
+    /// which can either be stored locally in the rootfs or retrieved from the KBS.
     ///
     /// This value defaults to `None`.
     #[serde(default = "Option::default")]
@@ -97,22 +92,25 @@ pub struct ImageConfig {
 
     /// Proxy that will be used to pull image
     ///
+    /// If a registry is not accessible to the guest, you can try
+    /// pulling an image through a proxy specified here.
+    ///
     /// This value defaults to `None`.
     pub image_pull_proxy: Option<String>,
 
-    /// No proxy env that will be used to pull image.
+    /// If the above proxy is enabled, this field can be used to list IPs
+    /// that will bypass the proxy.
     ///
-    /// This will ensure that when we access the image registry with specified
-    /// IPs, the `image_pull_proxy` will not be used.
+    /// In other words all requests, except those made to these IPs,
+    /// will go through the proxy.
     ///
     /// If `image_pull_proxy` is not set, this field will do nothing.
     ///
     /// This value defaults to `None`.
     pub skip_proxy_ips: Option<String>,
 
-    /// To support registries with self signed certs. This config item
-    /// is used to add extra trusted root certifications. The certificates
-    /// must be encoded by PEM.
+    /// To pull an image from a registry with a self-signed ceritifcate,
+    /// supply the corresponding trusted root cert (in PEM format) here.
     #[serde(default = "Vec::default")]
     pub extra_root_certificates: Vec<String>,
 
