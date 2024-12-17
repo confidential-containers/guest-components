@@ -59,7 +59,7 @@ impl TokenProvider for AATokenProvider {
         })?;
         let token = Token::new(message.token)
             .map_err(|e| Error::AATokenProvider(format!("deserialize token failed: {e:?}")))?;
-        let tee_keypair = TeeKeyPair::from_pkcs1_pem(&message.tee_keypair).map_err(|e| {
+        let tee_keypair = TeeKeyPair::from_pem(&message.tee_keypair).map_err(|e| {
             Error::AATokenProvider(format!("deserialize tee keypair failed: {e:?}"))
         })?;
         Ok((token, tee_keypair))

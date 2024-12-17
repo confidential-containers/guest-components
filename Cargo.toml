@@ -37,7 +37,7 @@ hmac = "0.12.1"
 jwt-simple = { version = "0.12", default-features = false, features = [
     "pure-rust",
 ] }
-kbs-types = "0.7.0"
+kbs-types = "0.10.0"
 log = "0.4.25"
 nix = "0.29"
 openssl = "0.10"
