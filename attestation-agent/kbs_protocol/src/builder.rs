@@ -91,7 +91,7 @@ impl<T> KbsClientBuilder<T> {
         }
 
         let tee_key = match self.tee_key {
-            Some(key) => TeeKeyPair::from_pkcs1_pem(&key[..]).context("read tee public key")?,
+            Some(key) => TeeKeyPair::from_pem(&key[..]).context("read tee public key")?,
             None => TeeKeyPair::new()?,
         };
 
