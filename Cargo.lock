@@ -60,6 +60,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aes-kw"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69fa2b352dcefb5f7f3a5fb840e02665d311d878955380515e4fd50095dd3d8c"
+dependencies = [
+ "aes",
+]
+
+[[package]]
 name = "ahash"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1127,6 +1136,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "concat-kdf"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d72c1252426a83be2092dd5884a5f6e3b8e7180f6891b6263d2c21b92ec8816"
+dependencies = [
+ "digest 0.10.7",
+]
+
+[[package]]
 name = "confidential-data-hub"
 version = "0.1.0"
 dependencies = [
@@ -1393,11 +1411,15 @@ name = "crypto"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
+ "aes-kw",
  "anyhow",
  "base64 0.22.1",
+ "concat-kdf",
  "ctr",
  "kbs-types",
  "openssl",
+ "p256",
+ "rand 0.8.5",
  "rand 0.9.0",
  "rsa",
  "rstest",
