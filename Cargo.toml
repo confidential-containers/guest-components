@@ -34,8 +34,10 @@ ctr = "0.9.2"
 env_logger = "0.11.6"
 hex = "0.4.3"
 hmac = "0.12.1"
-jwt-simple = { version = "0.12", default-features = false, features = ["pure-rust"] }
-kbs-types = "0.7.0"
+jwt-simple = { version = "0.12", default-features = false, features = [
+    "pure-rust",
+] }
+kbs-types = { git = "https://github.com/virtee/kbs-types.git", rev = "4cc3e46" }
 log = "0.4.22"
 nix = "0.29"
 openssl = "0.10"
