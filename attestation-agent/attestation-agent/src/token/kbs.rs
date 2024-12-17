@@ -40,7 +40,7 @@ impl GetToken for KbsTokenGetter {
         let (token, tee_keypair) = client.get_token().await?;
         let message = Message {
             token: token.content,
-            tee_keypair: tee_keypair.to_pkcs1_pem()?.to_string(),
+            tee_keypair: tee_keypair.to_pem()?.to_string(),
         };
 
         let res = serde_json::to_vec(&message)?;
