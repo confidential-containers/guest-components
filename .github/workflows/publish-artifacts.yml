@@ -6,7 +6,7 @@ on:
     - main
 
 env:
-  RUST_TOOLCHAIN: 1.76.0
+  RUST_TOOLCHAIN: 1.83.0
 
 jobs:
   publish-aa:
