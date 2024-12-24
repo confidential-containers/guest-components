@@ -7,7 +7,8 @@
       "name": "The Confidential Container Authors"
     },
     "license": {
-      "name": "Apache-2.0"
+      "name": "Apache-2.0",
+      "identifier": "Apache-2.0"
     },
     "version": "0.1.0"
   },
