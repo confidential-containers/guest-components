@@ -344,7 +344,7 @@ dependencies = [
  "config",
  "const_format",
  "crypto",
- "env_logger 0.11.5",
+ "env_logger 0.11.6",
  "hex",
  "kbs-types",
  "kbs_protocol",
@@ -1068,7 +1068,7 @@ dependencies = [
  "clap 4.2.7",
  "ctr",
  "daemonize",
- "env_logger 0.11.5",
+ "env_logger 0.11.6",
  "futures",
  "jwt-simple",
  "log",
@@ -1126,7 +1126,7 @@ dependencies = [
  "const_format",
  "crypto",
  "ehsm_client",
- "env_logger 0.11.5",
+ "env_logger 0.11.6",
  "hex",
  "image-rs",
  "kbs_protocol",
@@ -1730,7 +1730,7 @@ checksum = "cfc1218171f91b60cfeb178048f076a79930acf1fe7c295e9304bd871da1bd35"
 dependencies = [
  "bitflags 2.6.0",
  "devicemapper-sys",
- "env_logger 0.11.5",
+ "env_logger 0.11.6",
  "log",
  "nix 0.29.0",
  "once_cell",
@@ -2059,9 +2059,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.11.5"
+version = "0.11.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e13fa619b91fb2381732789fc5de83b45675e882f66623b7d8cb4f643017018d"
+checksum = "dcaee3d8e3cfc3fd92428d477bc97fc29ec8716d180c0d74c643bb26166660e0"
 dependencies = [
  "anstream 0.6.15",
  "anstyle",
@@ -3366,7 +3366,7 @@ dependencies = [
  "base64 0.22.1",
  "clap 4.2.7",
  "crypto",
- "env_logger 0.11.5",
+ "env_logger 0.11.6",
  "jwt-simple",
  "kbs-types",
  "log",
