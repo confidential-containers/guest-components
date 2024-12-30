@@ -22,7 +22,6 @@ mod report;
 mod rtmr;
 
 const TDX_REPORT_DATA_SIZE: usize = 64;
-const CCEL_PATH: &str = "/sys/firmware/acpi/tables/data/CCEL";
 
 pub fn detect_platform() -> bool {
     TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || Path::new("/dev/tdx_guest").exists()
@@ -129,7 +128,7 @@ impl Attester for TdxAttester {
         let engine = base64::engine::general_purpose::STANDARD;
         let quote = engine.encode(quote_bytes);
 
-        let cc_eventlog = match std::fs::read(CCEL_PATH) {
+        let cc_eventlog = match eventlog_rs::read::read_ccel() {
             Result::Ok(el) => Some(engine.encode(el)),
             Result::Err(e) => {
                 log::warn!("Read CC Eventlog failed: {:?}", e);

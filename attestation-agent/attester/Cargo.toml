@@ -12,6 +12,7 @@ az-snp-vtpm = { version = "0.7.1", default-features = false, features = ["attest
 az-tdx-vtpm = { version = "0.7.0", default-features = false, features = ["attester"], optional = true }
 base64.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
+eventlog-rs = { version = "0.1.6", optional = true }
 hex.workspace = true
 kbs-types.workspace = true
 log.workspace = true
@@ -59,7 +60,7 @@ all-attesters = [
 # quotes. It's an unconditional dependency for tdx-attester since that is the only way to
 # generate TDX quotes with upstream kernels.
 tsm-report = ["tempfile"]
-tdx-attester = ["scroll", "tsm-report", "tdx-attest-rs"]
+tdx-attester = ["scroll", "tsm-report", "tdx-attest-rs", "eventlog-rs"]
 sgx-attester = ["occlum_dcap"]
 az-snp-vtpm-attester = ["az-snp-vtpm"]
 az-tdx-vtpm-attester = ["az-snp-vtpm-attester", "az-tdx-vtpm"]

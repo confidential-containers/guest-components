@@ -379,6 +379,7 @@ dependencies = [
  "clap 4.2.7",
  "codicon",
  "csv-rs",
+ "eventlog-rs",
  "hex",
  "hyper 0.14.28",
  "hyper-tls 0.5.0",
@@ -2046,6 +2047,19 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a19187fea3ac7e84da7dacf48de0c45d63c6a76f9490dae389aead16c243fce3"
+dependencies = [
+ "atty",
+ "humantime",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
+name = "env_logger"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a12e6657c4c97ebab115a42dcee77225f7f482cdd841cf7088c657a42e9e00e7"
@@ -2105,6 +2119,21 @@ checksum = "aa68f1b12764fab894d2755d2518754e71b4fd80ecfb822714a1206c2aab39bf"
 dependencies = [
  "cc",
  "libc",
+]
+
+[[package]]
+name = "eventlog-rs"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "606e113813a3db3f1f42b273d4fb89ca8ef1e2bd5b97befd08b260ae5708be8d"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "env_logger 0.8.4",
+ "hex",
+ "lazy_static",
+ "log",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -3547,7 +3576,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c2a198fb6b0eada2a8df47933734e6d35d350665a33a3593d7164fa52c75c19"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
