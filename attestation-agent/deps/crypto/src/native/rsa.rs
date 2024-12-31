@@ -30,6 +30,7 @@ impl RSAKeyPair {
                 .private_key
                 .private_decrypt(&cipher_text, &mut plaintext, Padding::PKCS1_OAEP)
                 .map_err(|e| anyhow!("RSA key decrypt OAEP failed: {:?}", e))?,
+            #[allow(deprecated)]
             PaddingMode::PKCS1v15 => self
                 .private_key
                 .private_decrypt(&cipher_text, &mut plaintext, Padding::PKCS1)
