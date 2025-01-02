@@ -3,6 +3,7 @@
 
 use std::collections::BTreeMap;
 use std::io::Read;
+use std::sync::LazyLock;
 
 use anyhow::{anyhow, Result};
 use base64::Engine;
@@ -15,9 +16,7 @@ use crate::config::{DecryptConfig, EncryptConfig};
 use crate::keywrap::KeyWrapper;
 use crate::{get_key_wrapper, KEY_WRAPPERS_ANNOTATIONS};
 
-lazy_static! {
-    static ref DEFAULT_ANNOTATION_MAP: BTreeMap<String, String> = BTreeMap::new();
-}
+static DEFAULT_ANNOTATION_MAP: LazyLock<BTreeMap<String, String>> = LazyLock::new(BTreeMap::new);
 
 // EncryptLayerFinalizer can get the annotations to set for the encrypted layer
 #[derive(Debug, Default, Clone)]
