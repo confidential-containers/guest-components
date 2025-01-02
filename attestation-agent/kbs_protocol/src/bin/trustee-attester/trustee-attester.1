@@ -1,0 +1,52 @@
+.TH trustee-attester 1
+.LO 1
+
+.SH NAME
+trustee-attester \- attest and fetch secrets from Trustee
+
+.SH SYNOPSIS
+.B trustee-attester
+.RB    OPTIONS
+.RB    get-resource  \-\-path  <RESOURCE_PATH>
+
+.SH DESCRIPTION
+trustee-attester is a simple client to easily attest and fetch secrets
+(a.k.a confidential resources) from Trustee.
+
+.IR get-resource
+Do attestation and get a secret from Trustee.
+RESOURCE_PATH is a of format <repo>/<type>/<name>
+
+It is assumed that the secret was uploaded to Trustee, with the
+exact same RESOURCE_PATH, before trustee-attester runs.
+
+For more information look at
+https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md
+
+.SH OPTIONS
+.RB    \-\-url  <URL-of-Trustee>   [\-\-cert-file  <path-to-certificate>]
+
+.RB    \-\-url  <URL-of-Trustee>
+Format of <URL-of-Trustee> is <protocol>://<host>:<port>
+where <protocol> is
+.B http
+or
+.B https
+
+.RB    \-\-cert-file  <path-to-certificate>
+Optional. When <protocol> is https, add a certificate to verify the Trustee server.
+
+.SH EXAMPLES
+trustee-attester --url http://10.0.0.4:50000 get-resource --path default/secrets/secret1
+
+trustee-attester --url https://10.0.0.4:50000 --cert-file /etc/trustee-attester/server_cert.pem
+get-resource --path myrepo/keys/mykey1
+
+.SH NOTES
+.B trustee-attester
+is a part of https://github.com/confidential-containers/guest-components.
+
+User must have privileges to request an attestation-report from the hardware.
+
+.B Trustee
+can be found here https://github.com/confidential-containers/trustee
