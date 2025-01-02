@@ -4200,7 +4200,6 @@ dependencies = [
  "hmac 0.12.1",
  "josekit",
  "kbc",
- "lazy_static",
  "openssl",
  "pin-project-lite",
  "prost 0.13.4",

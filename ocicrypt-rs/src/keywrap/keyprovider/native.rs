@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use anyhow::*;
 use kbc::{cc_kbc::Kbc as CcKbc, sample_kbc::SampleKbc, AnnotationPacket, KbcInterface};
@@ -14,9 +14,8 @@ pub enum Kbc {
     Cc(CcKbc),
 }
 
-lazy_static! {
-    pub static ref CHANNEL: Arc<RwLock<Option<Kbc>>> = Arc::new(RwLock::new(None));
-}
+pub static CHANNEL: LazyLock<Arc<RwLock<Option<Kbc>>>> =
+    LazyLock::new(|| Arc::new(RwLock::new(None)));
 
 async fn initialize_channel(kbs_addr: &str, kbc: &str) -> Result<()> {
     let channel = match kbc {
