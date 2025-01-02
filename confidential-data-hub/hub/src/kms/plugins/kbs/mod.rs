@@ -13,11 +13,10 @@ mod sev;
 
 mod offline_fs;
 
-use std::{env, sync::Arc};
+use std::{env, sync::Arc, sync::LazyLock};
 
 use async_trait::async_trait;
 use attestation_agent::config::aa_kbc_params::AaKbcParams;
-use lazy_static::lazy_static;
 pub use resource_uri::ResourceUri;
 use tokio::sync::Mutex;
 
@@ -50,9 +49,8 @@ impl RealClient {
     }
 }
 
-lazy_static! {
-    static ref KBS_CLIENT: Arc<Mutex<Option<RealClient>>> = Arc::new(Mutex::new(None));
-}
+static KBS_CLIENT: LazyLock<Arc<Mutex<Option<RealClient>>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(None)));
 
 #[async_trait]
 pub trait Kbc: Send + Sync {
