@@ -5,11 +5,11 @@
 //
 
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use crypto::WrapType;
-use lazy_static::lazy_static;
 use resource_uri::ResourceUri;
 use serde::Deserialize;
 use tokio::{fs, sync::RwLock};
@@ -25,9 +25,7 @@ use super::keybroker::{
 
 const KEYS_PATH: &str = "/sys/kernel/security/secrets/coco/1ee27366-0c87-43a6-af48-28543eaf7cb0";
 
-lazy_static! {
-    static ref ONLINE_SEV_KBC: RwLock<Option<RealKbc>> = RwLock::new(None);
-}
+static ONLINE_SEV_KBC: LazyLock<RwLock<Option<RealKbc>>> = LazyLock::new(|| RwLock::new(None));
 
 #[derive(Deserialize, Clone)]
 struct Connection {

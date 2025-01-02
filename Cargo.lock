@@ -1130,7 +1130,6 @@ dependencies = [
  "hex",
  "image-rs",
  "kbs_protocol",
- "lazy_static",
  "log",
  "nix 0.29.0",
  "p12",

@@ -48,7 +48,6 @@ env_logger = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
 image-rs = { path = "../../image-rs", default-features = false, features = ["kata-cc-rustls-tls"] }
 kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = ["passport", "aa_token", "openssl"], optional = true }
-lazy_static.workspace = true
 log.workspace = true
 p12 = { version = "0.6.3", optional = true }
 prost = { workspace = true, optional = true }
