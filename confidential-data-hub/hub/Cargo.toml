@@ -39,15 +39,21 @@ base64.workspace = true
 bincode = { workspace = true, optional = true }
 cfg-if = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
-clap = { workspace = true, features = [ "derive" ], optional = true }
+clap = { workspace = true, features = ["derive"], optional = true }
 config = { workspace = true, optional = true }
 const_format.workspace = true
 crypto.path = "../../attestation-agent/deps/crypto"
-ehsm_client = {git = "https://github.com/intel/ehsm", rev = "3454cac66b968a593c3edc43410c0b52416bbd3e", optional = true }
+ehsm_client = { git = "https://github.com/intel/ehsm", rev = "3454cac66b968a593c3edc43410c0b52416bbd3e", optional = true }
 env_logger = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
-image-rs = { path = "../../image-rs", default-features = false, features = ["kata-cc-rustls-tls"] }
-kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = ["passport", "aa_token", "openssl"], optional = true }
+image-rs = { path = "../../image-rs", default-features = false, features = [
+    "kata-cc-rustls-tls",
+] }
+kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = [
+    "passport",
+    "aa_token",
+    "openssl",
+], optional = true }
 log.workspace = true
 p12 = { version = "0.6.3", optional = true }
 prost = { workspace = true, optional = true }
@@ -63,7 +69,14 @@ sha2 = { workspace = true, optional = true }
 strum = { workspace = true, features = ["derive"] }
 tempfile = { workspace = true, optional = true }
 thiserror.workspace = true
-tokio = { workspace = true, features = [ "fs", "macros", "io-util", "process", "rt-multi-thread", "sync" ] }
+tokio = { workspace = true, features = [
+    "fs",
+    "macros",
+    "io-util",
+    "process",
+    "rt-multi-thread",
+    "sync",
+] }
 toml.workspace = true
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
@@ -84,13 +97,24 @@ nix.workspace = true
 rstest.workspace = true
 serial_test.workspace = true
 tempfile.workspace = true
-tokio = { workspace = true, features = ["rt", "macros" ] }
+tokio = { workspace = true, features = ["rt", "macros"] }
 
 [features]
 default = ["aliyun", "kbs", "bin", "ttrpc", "grpc", "cli"]
 
 # support aliyun stacks (KMS, ..)
-aliyun = ["chrono", "hex", "p12", "prost", "reqwest/rustls-tls", "sha2", "tempfile", "tonic", "url", "yasna"]
+aliyun = [
+    "chrono",
+    "hex",
+    "p12",
+    "prost",
+    "reqwest/rustls-tls",
+    "sha2",
+    "tempfile",
+    "tonic",
+    "url",
+    "yasna",
+]
 
 # support coco-KBS to provide confidential resources
 kbs = ["kbs_protocol"]
@@ -102,7 +126,7 @@ sev = ["bincode", "dep:sev", "prost", "tonic", "uuid"]
 ehsm = ["ehsm_client"]
 
 # Binary RPC type
-bin = [ "anyhow", "cfg-if", "clap", "config", "env_logger", "serde" ]
+bin = ["anyhow", "cfg-if", "clap", "config", "env_logger", "serde"]
 ttrpc = ["dep:ttrpc", "protobuf", "ttrpc-codegen", "tokio/signal"]
 grpc = ["prost", "tonic", "tokio/signal"]
 
