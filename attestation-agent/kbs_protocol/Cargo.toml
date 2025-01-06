@@ -16,7 +16,7 @@ env_logger = { workspace = true, optional = true }
 jwt-simple.workspace = true
 kbs-types.workspace = true
 log.workspace = true
-protobuf = { workspace = true, optional = true}
+protobuf = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["cookies", "json"], optional = true }
 resource_uri.path = "../deps/resource_uri"
 serde.workspace = true
@@ -24,7 +24,7 @@ serde_json.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-ttrpc = { workspace = true, optional = true}
+ttrpc = { workspace = true, optional = true }
 url.workspace = true
 zeroize.workspace = true
 
@@ -33,7 +33,7 @@ rstest.workspace = true
 serial_test.workspace = true
 tempfile.workspace = true
 testcontainers.workspace = true
-tokio = { workspace = true, features = [ "rt", "macros", "fs", "process" ]}
+tokio = { workspace = true, features = ["rt", "macros", "fs", "process"] }
 
 [build-dependencies]
 ttrpc-codegen = { workspace = true, optional = true }
@@ -58,7 +58,7 @@ az-tdx-vtpm-attester = ["attester/az-tdx-vtpm-attester"]
 snp-attester = ["attester/snp-attester"]
 csv-attester = ["attester/csv-attester"]
 cca-attester = ["attester/cca-attester"]
-se-attester  = ["attester/se-attester"]
+se-attester = ["attester/se-attester"]
 
 rust-crypto = ["reqwest/rustls-tls", "crypto/rust-crypto"]
 openssl = ["reqwest/native-tls-vendored", "crypto/openssl"]
