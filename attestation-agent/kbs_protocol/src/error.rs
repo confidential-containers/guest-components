@@ -9,6 +9,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("Attestation Agent evidence provider error: {0}")]
+    AAEvidenceProvider(String),
+
     #[error("Attestation Agent token provider error: {0}")]
     AATokenProvider(String),
 

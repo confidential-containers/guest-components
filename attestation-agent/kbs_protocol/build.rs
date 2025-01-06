@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         ttrpc_codegen::Codegen::new()
-            .out_dir("src/token_provider/aa")
+            .out_dir("src/ttrpc_protos")
             .include("../protos")
             .inputs(["../protos/attestation-agent.proto"])
             .rust_protobuf()
@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Fix clippy warnings of code generated from ttrpc_codegen
         replace_text_in_file(
-            "src/token_provider/aa/attestation_agent_ttrpc.rs",
+            "src/ttrpc_protos/attestation_agent_ttrpc.rs",
             "client: client",
             "client",
         )?;

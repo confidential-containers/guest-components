@@ -77,6 +77,8 @@ pub mod error;
 pub mod evidence_provider;
 pub mod keypair;
 pub mod token_provider;
+#[cfg(feature = "aa_ttrpc")]
+pub mod ttrpc_protos;
 
 pub use api::*;
 pub use builder::KbsClientBuilder;
