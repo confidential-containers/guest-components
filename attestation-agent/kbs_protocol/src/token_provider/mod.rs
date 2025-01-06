@@ -6,9 +6,9 @@
 pub mod test;
 pub use test::*;
 
-#[cfg(feature = "aa_token")]
+#[cfg(feature = "aa_ttrpc")]
 pub mod aa;
-#[cfg(feature = "aa_token")]
+#[cfg(feature = "aa_ttrpc")]
 pub use aa::*;
 
 use anyhow::*;

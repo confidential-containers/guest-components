@@ -51,7 +51,7 @@ image-rs = { path = "../../image-rs", default-features = false, features = [
 ] }
 kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = [
     "passport",
-    "aa_token",
+    "aa_ttrpc",
     "openssl",
 ], optional = true }
 log.workspace = true

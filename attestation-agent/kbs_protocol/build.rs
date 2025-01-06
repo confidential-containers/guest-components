@@ -4,7 +4,7 @@
 //
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    #[cfg(feature = "aa_token")]
+    #[cfg(feature = "aa_ttrpc")]
     {
         use std::fs::File;
         use std::io::{Read, Write};

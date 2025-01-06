@@ -46,8 +46,8 @@ required-features = ["bin"]
 default = ["background_check", "passport", "rust-crypto", "all-attesters"]
 
 passport = []
-# use a client of attestation-agent to get token for kbs
-aa_token = ["ttrpc-codegen", "passport", "ttrpc/async", "protobuf"]
+# Allow to connect Attestation-Agent with TTRPC to get evidence, token, etc.
+aa_ttrpc = ["ttrpc-codegen", "passport", "ttrpc/async", "protobuf"]
 
 background_check = ["tokio/time"]
 all-attesters = ["attester/all-attesters"]
