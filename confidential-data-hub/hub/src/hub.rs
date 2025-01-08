@@ -93,6 +93,16 @@ impl DataHub for Hub {
             .map_err(|e| Error::ImagePull { source: e })?;
         Ok(manifest_digest)
     }
+
+    async fn init_overlay_network(
+        &self,
+        pod_name: String,
+        lighthouse_pub_ip: String,
+    ) -> Result<()> {
+        info!("init overlay network called");
+        overlay_network::init(pod_name, lighthouse_pub_ip).await?;
+        Ok(())
+    }
 }
 
 async fn initialize_image_client(config: ImageConfig) -> Result<Mutex<ImageClient>> {
