@@ -17,7 +17,7 @@ The following guide will help make an encrypted image using [skopeo](https://git
 A docker image provides prebuilt CoCo keyprovider and skopeo to simplify image encryption:
 
 ```bash
-$ docker run ghcr.io/confidential-containers/coco-keyprovider /encrypt.sh -h
+$ docker run ghcr.io/confidential-containers/staged-images/coco-keyprovider /encrypt.sh -h
 usage: /encrypt.sh [-k <b64-encoded key>] [-i <key id>] [-s <source>] [-d <destination>]
 ```
 
