@@ -60,6 +60,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aes-kw"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69fa2b352dcefb5f7f3a5fb840e02665d311d878955380515e4fd50095dd3d8c"
+dependencies = [
+ "aes",
+]
+
+[[package]]
 name = "ahash"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1109,6 +1118,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "concat-kdf"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d72c1252426a83be2092dd5884a5f6e3b8e7180f6891b6263d2c21b92ec8816"
+dependencies = [
+ "digest 0.10.7",
+]
+
+[[package]]
 name = "confidential-data-hub"
 version = "0.1.0"
 dependencies = [
@@ -1375,11 +1393,14 @@ name = "crypto"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
+ "aes-kw",
  "anyhow",
  "base64 0.22.1",
+ "concat-kdf",
  "ctr",
  "kbs-types",
  "openssl",
+ "p256",
  "rand",
  "rsa",
  "rstest",
@@ -3346,12 +3367,13 @@ dependencies = [
 
 [[package]]
 name = "kbs-types"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b6441ed73b0faa50707d4de41c6b45c76654b661b96aaf7b26a41331eedc0a5"
+version = "0.9.3"
+source = "git+https://github.com/virtee/kbs-types.git?rev=4cc3e46#4cc3e46819b122499eac1012fce6a18c9e75a868"
 dependencies = [
+ "base64 0.22.1",
  "serde",
  "serde_json",
+ "thiserror 2.0.9",
 ]
 
 [[package]]
@@ -6160,9 +6182,9 @@ dependencies = [
 
 [[package]]
 name = "subtle"
-version = "2.5.0"
+version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
+checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "superboring"
