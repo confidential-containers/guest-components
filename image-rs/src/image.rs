@@ -336,7 +336,7 @@ impl ImageClient {
     }
 
     #[cfg(feature = "nydus")]
-    async fn do_pull_image_with_nydus<'a>(
+    async fn do_pull_image_with_nydus(
         &mut self,
         client: &mut PullClient<'_>,
         image_data: &mut ImageMeta,
