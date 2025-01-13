@@ -56,7 +56,7 @@ strum = { version = "0.26", features = ["derive"] }
 tempfile = "3.14"
 testcontainers = "0.14"
 thiserror = "2.0"
-tokio = "1.42"
+tokio = "1.43"
 toml = "0.8.19"
 tonic = "0.12"
 tonic-build = "0.12"
