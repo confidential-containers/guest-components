@@ -44,7 +44,7 @@ impl Attester for SnpAttester {
         let data = report_data.as_slice().try_into()?;
 
         let (report, certs) = firmware
-            .get_ext_report(None, Some(report_data), Some(0))
+            .get_ext_report(None, Some(data), Some(0))
             .context("Failed to get attestation report")?;
 
         let evidence = SnpEvidence {
