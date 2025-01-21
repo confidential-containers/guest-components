@@ -61,6 +61,20 @@ fn _evidence() {}
 )]
 fn _resource() {}
 
+#[utoipa::path(
+    post,
+    path = "/aa/derived-key",
+    request_body = Vec<u8>,
+    responses(
+        (status = 200, description = "success response",
+                content_type = "application/octet-stream",
+                body = Vec<u8>),
+        (status = 400, description = "invalid user data"),
+        (status = 500, description = "internal server error")
+    )
+)]
+fn _derived_key() {}
+
 fn generate_openapi_document() -> std::io::Result<()> {
     #[derive(OpenApi)]
     #[openapi(
@@ -72,7 +86,7 @@ fn generate_openapi_document() -> std::io::Result<()> {
         (url = "http://127.0.0.1:8006", description = "CoCo Restful API")
      ),
 
-    paths(_token, _evidence, _resource)
+    paths(_token, _evidence, _resource, _derived_key)
  )]
     struct ApiDoc;
     let mut file = File::create("openapi/api.json")?;

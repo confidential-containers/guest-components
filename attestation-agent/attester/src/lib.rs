@@ -99,6 +99,13 @@ pub trait Attester {
     async fn get_runtime_measurement(&self, _pcr_index: u64) -> Result<Vec<u8>> {
         bail!("Unimplemented")
     }
+
+    /// Get a derived key using the hardware-specific key derivation function.
+    /// The parameter `root_key_hinit` is the root key used for derivation,
+    /// and `context` is additional data used in the derivation process.
+    async fn get_derived_key(&self, _root_key_hinit: &[u8], _context: Vec<u8>) -> Result<Vec<u8>> {
+        bail!("Unimplemented")
+    }
 }
 
 // Detect which TEE platform the KBC running environment is.

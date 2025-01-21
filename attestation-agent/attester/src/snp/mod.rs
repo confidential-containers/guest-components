@@ -10,6 +10,7 @@ use super::Attester;
 use anyhow::*;
 use serde::{Deserialize, Serialize};
 use sev::firmware::guest::AttestationReport;
+use sev::firmware::guest::DerivedKey;
 use sev::firmware::guest::Firmware;
 use sev::firmware::host::CertTableEntry;
 use std::path::Path;
@@ -39,8 +40,6 @@ impl Attester for SnpAttester {
         report_data.resize(64, 0);
 
         let mut firmware = Firmware::open()?;
-        let data = report_data.as_slice().try_into()?;
-
         let (report, certs) = firmware
             .get_ext_report(None, Some(data), Some(0))
             .context("Failed to get attestation report")?;
@@ -61,5 +60,28 @@ impl Attester for SnpAttester {
         }
 
         Ok(InitDataResult::Ok)
+    }
+
+    async fn get_derived_key(
+        &self,
+        root_key_hinit: &[u8],
+        mut context: Vec<u8>,
+    ) -> Result<Vec<u8>> {
+        if context.len() > 64 {
+            bail!("SNP Attester: Context must be no more than 64 bytes");
+        }
+
+        context.resize(64, 0);
+        let root_key: [u8; 32] = root_key_hinit
+            .try_into()
+            .context("Invalid root key length")?;
+        let context_data = context.as_slice().try_into()?;
+
+        let mut firmware = Firmware::open()?;
+        let derived_key = firmware
+            .get_derived_key(root_key, context_data)
+            .context("Failed to get derived key")?;
+
+        Ok(derived_key.as_bytes().to_vec())
     }
 }
