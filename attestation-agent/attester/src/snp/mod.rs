@@ -10,7 +10,7 @@ use super::Attester;
 use anyhow::*;
 use serde::{Deserialize, Serialize};
 use sev::firmware::guest::AttestationReport;
-use sev::firmware::guest::DerivedKey;
+//use sev::firmware::guest::DerivedKey;
 use sev::firmware::guest::Firmware;
 use sev::firmware::guest::GuestFieldSelect;
 use sev::firmware::host::CertTableEntry;
@@ -44,7 +44,7 @@ impl Attester for SnpAttester {
         let data = report_data.as_slice().try_into()?;
 
         let (report, certs) = firmware
-            .get_ext_report(None, Some(data), Some(0))
+            .get_ext_report(None, Some(report_data), Some(0))
             .context("Failed to get attestation report")?;
 
         let evidence = SnpEvidence {
@@ -97,6 +97,6 @@ impl Attester for SnpAttester {
             .get_derived_key(None, request)
             .context("Failed to get derived key")?;
 
-        Ok(derived_key.to_vec())
+        Ok(derived_key.bytes().to_vec())
     }
 }
