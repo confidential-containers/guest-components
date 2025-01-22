@@ -84,7 +84,7 @@ impl Attester for SnpAttester {
 
         let mut firmware = Firmware::open()?;
         let derived_key = firmware
-            .get_derived_key(Some(root_key), Some(context_arr))
+            .get_derived_key(root_key, context_arr)
             .context("Failed to get derived key")?;
 
         Ok(derived_key.to_vec())
