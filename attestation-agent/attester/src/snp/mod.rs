@@ -71,6 +71,13 @@ impl Attester for SnpAttester {
         }
 
         context.resize(64, 0);
+        let root_key: [u8; 32] = root_key_hinit
+            .try_into()
+            .context("Invalid root key length")?;
+
+        // Convert context to [u8; 64] since that's what the API expects
+        let mut context_arr = [0u8; 64];
+        context_arr.copy_from_slice(&context);
 
         let mut firmware: Firmware = Firmware::open()?;
 
@@ -94,9 +101,9 @@ impl Attester for SnpAttester {
         );
 
         let derived_key = firmware
-            .get_derived_key(None, request)
+            .get_derived_key(Some(root_key), Some(context_arr))
             .context("Failed to get derived key")?;
 
-        Ok(derived_key.bytes().to_vec())
+        Ok(derived_key.to_vec())
     }
 }
