@@ -9,7 +9,6 @@ use crate::InitDataResult;
 use super::Attester;
 use anyhow::*;
 use serde::{Deserialize, Serialize};
-use sev::firmware::guest::types::snp::GuestFieldSelect;
 use sev::firmware::guest::AttestationReport;
 use sev::firmware::guest::DerivedKey;
 use sev::firmware::guest::Firmware;
@@ -80,10 +79,10 @@ impl Attester for SnpAttester {
         context_arr.copy_from_slice(&context);
 
         let mut firmware = Firmware::open()?;
-        let derived_key = firmware
-            .get_derived_key(root_key, context_arr)
+        let derived_key: [u8; 32] = firmware
+            .get_derived_key(Some(0), root_key)
             .context("Failed to get derived key")?;
 
-        Ok(derived_key)
+        Ok(derived_key.to_vec())
     }
 }
