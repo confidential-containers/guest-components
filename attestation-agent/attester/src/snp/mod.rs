@@ -72,8 +72,9 @@ impl Attester for SnpAttester {
 
         context.resize(64, 0);
         let root_key: u8 = root_key_hinit
-            .try_into()
-            .context("Invalid root key length")?;
+            .first()
+            .copied()
+            .context("Invalid key or empty key specified")?;
 
         let mut firmware = Firmware::open()?;
 
