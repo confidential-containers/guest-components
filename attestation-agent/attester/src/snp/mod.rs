@@ -71,7 +71,7 @@ impl Attester for SnpAttester {
         }
 
         context.resize(64, 0);
-        let root_key: [u8; 32] = root_key_hinit
+        let root_key: u8 = root_key_hinit
             .try_into()
             .context("Invalid root key length")?;
 
