@@ -37,6 +37,7 @@ jobs:
         instance:
           - ubuntu-24.04
           - s390x
+          - ubuntu-24.04-arm
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
@@ -142,4 +143,4 @@ jobs:
       - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe + nydus
         run: |
           sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-native-tls,keywrap-jwe,nydus
-        if: matrix.instance == 'ubuntu-24.04'
+        if: ${{ startsWith(matrix.instance, 'ubuntu-24.04') }}
