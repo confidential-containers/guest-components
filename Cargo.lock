@@ -6790,14 +6790,15 @@ dependencies = [
 
 [[package]]
 name = "ttrpc"
-version = "0.8.2"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e376927d4422245ae3e0a0d7df0e805f99652536999b5c671144de9fe4120d8c"
+checksum = "2c580c498a547b4c083ec758be543e11a0772e03013aef4cdb1fbe77c8b62cae"
 dependencies = [
  "async-trait",
  "byteorder",
  "crossbeam",
  "futures",
+ "home",
  "libc",
  "log",
  "nix 0.26.4",
