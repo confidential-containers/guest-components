@@ -10,6 +10,7 @@ use super::Attester;
 use anyhow::*;
 use serde::{Deserialize, Serialize};
 use sev::firmware::guest::AttestationReport;
+use sev::firmware::guest::DerivedKey;
 use sev::firmware::guest::Firmware;
 use sev::firmware::guest::GuestFieldSelect;
 use sev::firmware::host::CertTableEntry;
