@@ -25,13 +25,16 @@ jobs:
     defaults:
       run:
         working-directory: ./attestation-agent
-    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
         suites:
           - rust-crypto
           - openssl
+    runs-on: ${{ matrix.instance }}
 
     steps:
       - name: Code checkout

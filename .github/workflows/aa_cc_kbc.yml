@@ -29,17 +29,26 @@ jobs:
     defaults:
       run:
         working-directory: ./attestation-agent
-    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         rust:
           - stable
-        attester:
-          - snp-attester
-          - tdx-attester
-          - az-snp-vtpm-attester
-          - az-tdx-vtpm-attester
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+        include:
+          - instance: ubuntu-24.04
+            attester: snp-attester
+          - instance: ubuntu-24.04
+            attester: tdx-attester
+          - instance: ubuntu-24.04
+            attester: az-snp-vtpm-attester
+          - instance: ubuntu-24.04
+            attester: az-tdx-vtpm-attester
+          - instance: ubuntu-24.04-arm
+            attester: cca-attester
+    runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
         uses: actions/checkout@v4
@@ -57,11 +66,13 @@ jobs:
       - uses: ./.github/actions/install-intel-dcap
         with:
           ubuntu-version: noble
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Install TPM dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libtss2-dev
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Install protoc
         run: |

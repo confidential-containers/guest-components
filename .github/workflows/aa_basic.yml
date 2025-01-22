@@ -37,6 +37,7 @@ jobs:
         instance:
           - ubuntu-24.04
           - s390x
+          - ubuntu-24.04-arm
         include:
           - instance: ubuntu-24.04
             make_args: ""
@@ -44,6 +45,9 @@ jobs:
           - instance: s390x
             make_args: "ATTESTER=se-attester TEE_PLATFORM=se"
             cargo_test_opts: "--no-default-features --features openssl,passport,se-attester,kbs,coco_as"
+          - instance: ubuntu-24.04-arm
+            make_args: "ATTESTER=cca-attester TEE_PLATFORM=cca"
+            cargo_test_opts: "--no-default-features --features openssl,rust-crypto,passport,cca-attester,kbs,coco_as,ttrpc,grpc"
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
