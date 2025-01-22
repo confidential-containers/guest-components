@@ -19,7 +19,7 @@ message GetTokenResponse {
 }
 
 message GetDerivedKeyRequest {
-    bytes UserData = 1;
+    bytes KeyId = 1;
 }
 
 message GetDerivedKeyResponse {
