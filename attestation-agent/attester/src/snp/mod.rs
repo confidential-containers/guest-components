@@ -10,7 +10,6 @@ use super::Attester;
 use anyhow::*;
 use serde::{Deserialize, Serialize};
 use sev::firmware::guest::AttestationReport;
-use sev::firmware::guest::DerivedKey;
 use sev::firmware::guest::Firmware;
 use sev::firmware::guest::GuestFieldSelect;
 use sev::firmware::host::CertTableEntry;
@@ -75,12 +74,19 @@ impl Attester for SnpAttester {
             .try_into()
             .context("Invalid root key length")?;
 
-        let mut context_arr = [0u8; 64];
-        context_arr.copy_from_slice(&context);
-
         let mut firmware = Firmware::open()?;
-        let derived_key: [u8; 32] = firmware
-            .get_derived_key(Some(0), root_key)
+
+        // Create DerivedKey request with the documented parameters
+        let request = DerivedKey::new(
+            false,               // mixed_svn
+            GuestFieldSelect(1), // fields
+            0,                   // tcb_version
+            0,                   // platform_info
+            0,                   // author_key_en
+        );
+
+        let derived_key = firmware
+            .get_derived_key(Some(0), request)
             .context("Failed to get derived key")?;
 
         Ok(derived_key.to_vec())
