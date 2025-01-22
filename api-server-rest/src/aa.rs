@@ -20,7 +20,6 @@ pub const AA_ROOT: &str = "/aa";
 /// URL for querying CDH get resource API
 const AA_TOKEN_URL: &str = "/token";
 const AA_EVIDENCE_URL: &str = "/evidence";
-const AA_DERIVED_KEY_URL: &str = "/derived-key";
 
 pub struct AAClient {
     client: AttestationAgentServiceClient,
