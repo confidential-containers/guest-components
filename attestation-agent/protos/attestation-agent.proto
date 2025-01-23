@@ -18,7 +18,9 @@ message GetTokenResponse {
     bytes Token = 1;
 }
 
-message GetDerivedKeyRequest {}
+message GetDerivedKeyRequest {
+    bytes KeyId = 1;
+}
 
 message GetDerivedKeyResponse {
     bytes DerivedKey = 1;
