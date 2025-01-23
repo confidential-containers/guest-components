@@ -18,6 +18,14 @@ message GetTokenResponse {
     bytes Token = 1;
 }
 
+message GetDerivedKeyRequest {
+    bytes KeyId = 1;
+}
+
+message GetDerivedKeyResponse {
+    bytes DerivedKey = 1;
+}
+
 // Extend the dynamic/runtime measurement with given materials. This would change the state
 // of current TEE's status, e.g. TDX's RTMR, (v)TPM's PCR, by adding a record in eventlog.
 message ExtendRuntimeMeasurementRequest {
@@ -60,6 +68,7 @@ message GetTeeTypeResponse {
 }
 
 service AttestationAgentService {
+    rpc GetDerivedKey(GetDerivedKeyRequest) returns (GetDerivedKeyResponse) {};
     rpc GetEvidence(GetEvidenceRequest) returns (GetEvidenceResponse) {};
     rpc GetToken(GetTokenRequest) returns (GetTokenResponse) {};
     rpc ExtendRuntimeMeasurement(ExtendRuntimeMeasurementRequest) returns (ExtendRuntimeMeasurementResponse) {};
