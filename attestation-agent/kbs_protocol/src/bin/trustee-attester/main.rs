@@ -80,6 +80,7 @@ async fn main() -> Result<()> {
                 true => path,
             };
             let resource = ResourceUri::new("", &resource_path)?;
+            let (_token, _key) = client.get_token().await?; // attest first
             let resource_bytes = client.get_resource(resource).await?;
 
             println!("{}", STANDARD.encode(resource_bytes));
