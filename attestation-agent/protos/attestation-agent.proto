@@ -67,14 +67,6 @@ message GetTeeTypeResponse {
     string tee = 1;
 }
 
-message GetDerivedKeyRequest {
-    bytes KeyId = 1;
-}
-
-message GetDerivedKeyResponse {
-    bytes DerivedKey = 1;
-}
-
 service AttestationAgentService {
     rpc GetDerivedKey(GetDerivedKeyRequest) returns (GetDerivedKeyResponse) {};
     rpc GetEvidence(GetEvidenceRequest) returns (GetEvidenceResponse) {};
