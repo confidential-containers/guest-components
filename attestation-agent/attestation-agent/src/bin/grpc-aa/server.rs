@@ -164,10 +164,14 @@ impl AttestationAgentService for AA {
 
         debug!("AA (grpc): get derived key ...");
 
-        let derived_key = self.inner.get_derived_key().await.map_err(|e| {
-            error!("AA (grpc): get derived key failed:\n{e:?}");
-            Status::internal(format!("[ERROR:{AGENT_NAME}] AA get derived key failed"))
-        })?;
+        let derived_key = self
+            .inner
+            .get_derived_key(&request.key_id)
+            .await
+            .map_err(|e| {
+                error!("AA (grpc): get derived key failed:\n{e:?}");
+                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get derived key failed"))
+            })?;
 
         debug!("AA (grpc): Get derived key successfully!");
 
