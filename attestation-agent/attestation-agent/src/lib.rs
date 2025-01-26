@@ -180,7 +180,7 @@ impl AttestationAPIs for AttestationAgent {
         Ok(evidence.into_bytes())
     }
 
-    async fn get_derived_key(&self, key_id: &[u8]) -> Result<Vec<u8>> {
+    async fn get_derived_key(&self, key_id: &[u8], context: Vec<u8>) -> Result<Vec<u8>> {
         let context = Vec::new(); // Empty context vector as per SNP implementation
         self.attester.get_derived_key(key_id, context).await
     }
