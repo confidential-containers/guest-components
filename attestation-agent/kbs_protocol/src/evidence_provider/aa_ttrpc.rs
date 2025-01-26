@@ -42,7 +42,7 @@ impl EvidenceProvider for AAEvidenceProvider {
     /// Get derived key using the provided key ID
     async fn get_derived_key(&self, key_id: &[u8]) -> Result<Vec<u8>> {
         let req = GetDerivedKeyRequest {
-            key_id: key_id.to_vec(),
+            KeyId: key_id.to_vec(),
             ..Default::default()
         };
         let res = self
@@ -53,7 +53,7 @@ impl EvidenceProvider for AAEvidenceProvider {
             )
             .await
             .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e}")))?;
-        Ok(res.derived_key)
+        Ok(res.DerivedKey)
     }
 
     /// Get evidence with as runtime data (report data, challege)
