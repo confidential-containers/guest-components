@@ -6,7 +6,6 @@
 use ::ttrpc::proto::Code;
 use async_trait::async_trait;
 use attestation_agent::{AttestationAPIs, AttestationAgent};
-use kbs_protocol::ttrpc_protos::attestation_agent::{GetDerivedKeyRequest, GetDerivedKeyResponse};
 use log::{debug, error};
 
 use crate::ttrpc_dep::ttrpc_protocol::{
