@@ -19,7 +19,7 @@
     }
   ],
   "paths": {
-    "/aa/derived-key": {
+    "/aa/derived_key": {
       "post": {
         "tags": [],
         "operationId": "_derived_key",

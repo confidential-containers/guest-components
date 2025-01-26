@@ -6,13 +6,15 @@
 use ::ttrpc::proto::Code;
 use async_trait::async_trait;
 use attestation_agent::{AttestationAPIs, AttestationAgent};
+use kbs_protocol::ttrpc_protos::attestation_agent::{GetDerivedKeyRequest, GetDerivedKeyResponse};
 use log::{debug, error};
 
 use crate::ttrpc_dep::ttrpc_protocol::{
     attestation_agent::{
-        ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse, GetEvidenceRequest,
-        GetEvidenceResponse, GetTeeTypeRequest, GetTeeTypeResponse, GetTokenRequest,
-        GetTokenResponse, UpdateConfigurationRequest, UpdateConfigurationResponse,
+        ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse, GetDerivedKeyRequest,
+        GetDerivedKeyResponse, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
+        GetTeeTypeResponse, GetTokenRequest, GetTokenResponse, UpdateConfigurationRequest,
+        UpdateConfigurationResponse,
     },
     attestation_agent_ttrpc::AttestationAgentService,
 };
@@ -72,6 +74,31 @@ impl AttestationAgentService for AA {
 
         let mut reply = GetEvidenceResponse::new();
         reply.Evidence = evidence;
+
+        ::ttrpc::Result::Ok(reply)
+    }
+
+    async fn get_derived_key(
+        &self,
+        _ctx: &::ttrpc::r#async::TtrpcContext,
+        req: GetDerivedKeyRequest,
+    ) -> ::ttrpc::Result<GetDerivedKeyResponse> {
+        debug!("AA (ttrpc): get derived key ...");
+
+        let derived_key = self.inner.get_derived_key(&req.KeyId).await.map_err(|e| {
+            error!("AA (ttrpc): get derived key failed:\n {e:?}");
+            let mut error_status = ::ttrpc::proto::Status::new();
+            error_status.set_code(Code::INTERNAL);
+            error_status.set_message(format!(
+                "[ERROR:{AGENT_NAME}] AA-KBC get derived key failed"
+            ));
+            ::ttrpc::Error::RpcStatus(error_status)
+        })?;
+
+        debug!("AA (ttrpc): Get derived key successfully!");
+
+        let mut reply = GetDerivedKeyResponse::new();
+        reply.DerivedKey = derived_key;
 
         ::ttrpc::Result::Ok(reply)
     }

@@ -63,7 +63,7 @@ fn _resource() {}
 
 #[utoipa::path(
     post,
-    path = "/aa/derived-key",
+    path = "/aa/derived_key",
     request_body = Vec<u8>,
     responses(
         (status = 200, description = "success response",
