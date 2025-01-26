@@ -90,7 +90,7 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!(
-                    "AA (ttrpc): get derived key failed:\n {e:?}\n key_id:\n {}",
+                    "AA (ttrpc): get derived key failed:\n {e:?}\n key_id:\n {:#?}",
                     &req.KeyId
                 );
                 let mut error_status = ::ttrpc::proto::Status::new();
