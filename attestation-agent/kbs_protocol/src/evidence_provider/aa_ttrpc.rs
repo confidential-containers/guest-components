@@ -10,7 +10,7 @@ use ttrpc::context;
 
 use crate::{
     ttrpc_protos::{
-        attestation_agent::{GetEvidenceRequest, GetTeeTypeRequest},
+        attestation_agent::{GetDerivedKeyRequest, GetEvidenceRequest, GetTeeTypeRequest},
         attestation_agent_ttrpc::AttestationAgentServiceClient,
     },
     Error, Result,
