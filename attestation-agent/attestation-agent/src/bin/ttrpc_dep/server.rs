@@ -86,7 +86,7 @@ impl AttestationAgentService for AA {
 
         let derived_key = self
             .inner
-            .get_derived_key(&req.KeyId, Vec.new())
+            .get_derived_key(&req.KeyId, Vec::new())
             .await
             .map_err(|e| {
                 error!("AA (ttrpc): get derived key failed:\n {e:?}");
