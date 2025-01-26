@@ -61,7 +61,7 @@ pub trait AttestationAPIs {
     async fn get_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>>;
 
     /// Get a derived key using the provided key ID
-    async fn get_derived_key(&self, key_id: &[u8]) -> Result<Vec<u8>>;
+    async fn get_derived_key(&self, key_id: &[u8], context: Vec<u8>) -> Result<Vec<u8>>;
 
     /// Extend runtime measurement register
     async fn extend_runtime_measurement(
@@ -181,7 +181,6 @@ impl AttestationAPIs for AttestationAgent {
     }
 
     async fn get_derived_key(&self, key_id: &[u8], context: Vec<u8>) -> Result<Vec<u8>> {
-        let context = Vec::new(); // Empty context vector as per SNP implementation
         self.attester.get_derived_key(key_id, context).await
     }
 
