@@ -6,6 +6,7 @@
 use ::ttrpc::proto::Code;
 use async_trait::async_trait;
 use attestation_agent::{AttestationAPIs, AttestationAgent};
+use kbs_protocol::ttrpc_protos::attestation_agent::{GetDerivedKeyRequest, GetDerivedKeyResponse};
 use log::{debug, error};
 
 use crate::ttrpc_dep::ttrpc_protocol::{
@@ -84,19 +85,15 @@ impl AttestationAgentService for AA {
     ) -> ::ttrpc::Result<GetDerivedKeyResponse> {
         debug!("AA (ttrpc): get derived key ...");
 
-        let empty_context = Vec::new();
-        let derived_key = self
-            .inner
-            .get_derived_key(empty_context)
-            .await
-            .map_err(|e| {
-                error!("AA (ttrpc): get derived key failed:\n {e:?}");
-                let mut error_status = ::ttrpc::proto::Status::new();
-                error_status.set_code(Code::INTERNAL);
-                error_status
-                    .set_message("[ERROR:{AGENT_NAME}] AA-KBC get derived key failed.".to_string());
-                ::ttrpc::Error::RpcStatus(error_status)
-            })?;
+        let derived_key = self.inner.get_derived_key(&req.KeyId).await.map_err(|e| {
+            error!("AA (ttrpc): get derived key failed:\n {e:?}");
+            let mut error_status = ::ttrpc::proto::Status::new();
+            error_status.set_code(Code::INTERNAL);
+            error_status.set_message(format!(
+                "[ERROR:{AGENT_NAME}] AA-KBC get derived key failed"
+            ));
+            ::ttrpc::Error::RpcStatus(error_status)
+        })?;
 
         debug!("AA (ttrpc): Get derived key successfully!");
 
