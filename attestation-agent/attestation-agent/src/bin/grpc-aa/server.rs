@@ -14,7 +14,7 @@ use attestation::{
     GetTokenRequest, GetTokenResponse, UpdateConfigurationRequest, UpdateConfigurationResponse,
 };
 use attestation_agent::{AttestationAPIs, AttestationAgent};
-use log::{debug, error, info};
+use log::{debug, error};
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
 
@@ -163,14 +163,13 @@ impl AttestationAgentService for AA {
         let request = request.into_inner();
 
         debug!("AA (grpc): get derived key ...");
-        info!("AA (grpc): get derived key ... {&request.key_id}");
 
         let derived_key = self
             .inner
             .get_derived_key(&request.key_id)
             .await
             .map_err(|e| {
-                error!("AA (grpc): get derived key failed:\n{e:?}");
+                error!("AA (grpc): get derived key failed:\n{e:?}\nkey_id:\n{&request.key_id}");
                 Status::internal(format!("[ERROR:{AGENT_NAME}] AA get derived key failed"))
             })?;
 
