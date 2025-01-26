@@ -29,5 +29,5 @@ pub trait EvidenceProvider: Send + Sync {
     /// Get a derived key using the hardware-specific key derivation function.
     /// The parameter `root_key_hint` is the root key used for derivation,
     /// and `context` is additional data used in the derivation process.
-    async fn get_derived_key(&self, key_id: &[u8]) -> Result<Vec<u8>>;
+    async fn get_derived_key(&self, key_id: &[u8], context: Vec<u8>) -> Result<Vec<u8>>;
 }

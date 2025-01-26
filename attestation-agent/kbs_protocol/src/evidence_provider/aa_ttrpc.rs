@@ -40,9 +40,10 @@ impl AAEvidenceProvider {
 #[async_trait]
 impl EvidenceProvider for AAEvidenceProvider {
     /// Get derived key using the provided key ID
-    async fn get_derived_key(&self, key_id: &[u8]) -> Result<Vec<u8>> {
+    async fn get_derived_key(&self, key_id: &[u8], context: Vec<u8>) -> Result<Vec<u8>> {
         let req = GetDerivedKeyRequest {
             KeyId: key_id.to_vec(),
+            special_fields: context,
             ..Default::default()
         };
         let res = self
