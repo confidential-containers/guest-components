@@ -74,31 +74,28 @@ impl Attester for SnpAttester {
             bail!("SNP Attester: Context must be no more than 64 bytes");
         }
 
-        Ok(vec![0; 32])
-
-        /*
         context.resize(64, 0);
-        let root_key: u8 = root_key_hinit
+        let _root_key: u8 = root_key_hinit
             .first()
             .copied()
             .context("Invalid key or empty key specified")?;
 
-        let mut firmware = Firmware::open()?;
+        let mut firmware: Firmware = Firmware::open()?.unwrap();
 
         // Create DerivedKey request with the documented parameters
         let request = DerivedKey::new(
             false,               // mixed_svn
-            GuestFieldSelect(1), // fields
+            GuestFieldSelect(1), // fields to include in the derived_key
             0,                   // tcb_version
             0,                   // platform_info
             0,                   // author_key_en
         );
 
         let derived_key = firmware
-            .get_derived_key(Some(root_key), request)
+            .get_derived_key(None, request)
+            .unwrap();
             .context("Failed to get derived key")?;
 
         Ok(derived_key.to_vec())
-        */
     }
 }
