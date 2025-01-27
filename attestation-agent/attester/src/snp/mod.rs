@@ -87,7 +87,7 @@ impl Attester for SnpAttester {
         //
         let request = DerivedKey::new(
             false,               // mixed_svn
-            GuestFieldSelect(0), // fields to include in the derived_key
+            GuestFieldSelect(3), // fields to include in the derived_key
             0,                   // tcb_version
             0,                   // platform_info
             0,                   // author_key_en
