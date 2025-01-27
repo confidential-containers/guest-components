@@ -79,9 +79,19 @@ impl Attester for SnpAttester {
         let mut firmware: Firmware = Firmware::open()?;
 
         // Create DerivedKey request with the documented parameters
+        //
+        // GuestFieldSelect values below can be:
+        // 0 > GUEST_POLICY > Indicates that the guest policy will be mixed into the key.
+        // 1 > IMAGE_ID     > Indicates that the image ID of the guest will be mixed into the key.
+        // 2 > FAMILY_ID    > Indicates the family ID of the guest will be mixed into the key.
+        // 3 > MEASUREMENT  > Indicates the measurement of the guest during launch will be mixed into the key.
+        // 4 > GUEST_SVN    > Indicates that the guest-provided SVN will be mixed into the key.
+        // 5 > TCB_VERSION  > Indicates that the guest-provided TCB_VERSION will be mixed into the key.
+        // https://docs.rs/sev/4.0.0/sev/firmware/guest/struct.GuestFieldSelect.html
+        //
         let request = DerivedKey::new(
             false,               // mixed_svn
-            GuestFieldSelect(1), // fields to include in the derived_key
+            GuestFieldSelect(0), // fields to include in the derived_key
             0,                   // tcb_version
             0,                   // platform_info
             0,                   // author_key_en
