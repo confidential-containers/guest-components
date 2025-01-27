@@ -76,6 +76,7 @@ impl Attester for SnpAttester {
 
         Ok(vec![0]);
 
+        /*
         context.resize(64, 0);
         let root_key: u8 = root_key_hinit
             .first()
@@ -98,5 +99,6 @@ impl Attester for SnpAttester {
             .context("Failed to get derived key")?;
 
         Ok(derived_key.to_vec())
+        */
     }
 }
