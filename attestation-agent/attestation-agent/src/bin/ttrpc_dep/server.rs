@@ -7,7 +7,6 @@ use ::ttrpc::proto::Code;
 use async_trait::async_trait;
 use attestation_agent::{AttestationAPIs, AttestationAgent};
 use log::{debug, error};
-use sha2::digest::typenum::Integer;
 
 use crate::ttrpc_dep::ttrpc_protocol::{
     attestation_agent::{
@@ -85,16 +84,7 @@ impl AttestationAgentService for AA {
     ) -> ::ttrpc::Result<GetDerivedKeyResponse> {
         debug!("AA (ttrpc): get derived key ...");
 
-        let key_id = req.KeyId.parse::<u32>().map_err(|e| {
-            error!("AA (ttrpc): failed to parse key_id as integer: {e}");
-            let mut error_status = ::ttrpc::proto::Status::new();
-            error_status.set_code(Code::INVALID_ARGUMENT);
-            error_status.set_message(format!(
-                "[ERROR:{AGENT_NAME}] Invalid key_id format: must be a valid integer"
-            ));
-            ::ttrpc::Error::RpcStatus(error_status)
-        })?;
-
+        let key_id = 0;
         let derived_key = self
             .inner
             .get_derived_key(key_id, Vec::new())
