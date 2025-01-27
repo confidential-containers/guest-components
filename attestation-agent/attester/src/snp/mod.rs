@@ -80,7 +80,7 @@ impl Attester for SnpAttester {
             .copied()
             .context("Invalid key or empty key specified")?;
 
-        let mut firmware: Firmware = Firmware::open()?.unwrap();
+        let mut firmware: Firmware = Firmware::open()?;
 
         // Create DerivedKey request with the documented parameters
         let request = DerivedKey::new(
