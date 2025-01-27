@@ -93,7 +93,8 @@ impl AttestationAgentService for AA {
                 error!("AA (ttrpc): get derived key failed:\n {e:?}");
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
-                error_status.set_message("[ERROR:{AGENT_NAME}] AA-KBC get derived key failed.");
+                error_status
+                    .set_message("[ERROR:{AGENT_NAME}] AA-KBC get derived key failed.".to_string());
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
