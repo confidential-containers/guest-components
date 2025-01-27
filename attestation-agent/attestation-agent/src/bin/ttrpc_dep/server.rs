@@ -84,7 +84,7 @@ impl AttestationAgentService for AA {
     ) -> ::ttrpc::Result<GetDerivedKeyResponse> {
         debug!("AA (ttrpc): get derived key ...");
 
-        let key_id: [u8] = [0];
+        let key_id: [u8; 1] = [0];
         let derived_key = self
             .inner
             .get_derived_key(&key_id, Vec::new())
