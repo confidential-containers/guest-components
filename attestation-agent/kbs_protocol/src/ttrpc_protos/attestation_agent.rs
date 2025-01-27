@@ -515,9 +515,6 @@ impl ::protobuf::reflect::ProtobufValue for GetTokenResponse {
 // @@protoc_insertion_point(message:attestation_agent.GetDerivedKeyRequest)
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct GetDerivedKeyRequest {
-    // message fields
-    // @@protoc_insertion_point(field:attestation_agent.GetDerivedKeyRequest.KeyId)
-    pub KeyId: ::std::vec::Vec<u8>,
     // special fields
     // @@protoc_insertion_point(special_field:attestation_agent.GetDerivedKeyRequest.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
@@ -535,13 +532,8 @@ impl GetDerivedKeyRequest {
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(1);
+        let mut fields = ::std::vec::Vec::with_capacity(0);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
-        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
-            "KeyId",
-            |m: &GetDerivedKeyRequest| { &m.KeyId },
-            |m: &mut GetDerivedKeyRequest| { &mut m.KeyId },
-        ));
         ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<GetDerivedKeyRequest>(
             "GetDerivedKeyRequest",
             fields,
@@ -560,9 +552,6 @@ impl ::protobuf::Message for GetDerivedKeyRequest {
     fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
         while let Some(tag) = is.read_raw_tag_or_eof()? {
             match tag {
-                10 => {
-                    self.KeyId = is.read_bytes()?;
-                },
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
                 },
@@ -575,18 +564,12 @@ impl ::protobuf::Message for GetDerivedKeyRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u64 {
         let mut my_size = 0;
-        if !self.KeyId.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.KeyId);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
         my_size
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
-        if !self.KeyId.is_empty() {
-            os.write_bytes(1, &self.KeyId)?;
-        }
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -604,13 +587,11 @@ impl ::protobuf::Message for GetDerivedKeyRequest {
     }
 
     fn clear(&mut self) {
-        self.KeyId.clear();
         self.special_fields.clear();
     }
 
     fn default_instance() -> &'static GetDerivedKeyRequest {
         static instance: GetDerivedKeyRequest = GetDerivedKeyRequest {
-            KeyId: ::std::vec::Vec::new(),
             special_fields: ::protobuf::SpecialFields::new(),
         };
         &instance
@@ -1856,33 +1837,32 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \"1\n\x13GetEvidenceResponse\x12\x1a\n\x08Evidence\x18\x01\x20\x01(\x0cR\
     \x08Evidence\"/\n\x0fGetTokenRequest\x12\x1c\n\tTokenType\x18\x01\x20\
     \x01(\tR\tTokenType\"(\n\x10GetTokenResponse\x12\x14\n\x05Token\x18\x01\
-    \x20\x01(\x0cR\x05Token\",\n\x14GetDerivedKeyRequest\x12\x14\n\x05KeyId\
-    \x18\x01\x20\x01(\x0cR\x05KeyId\"7\n\x15GetDerivedKeyResponse\x12\x1e\n\
-    \nDerivedKey\x18\x01\x20\x01(\x0cR\nDerivedKey\"\xae\x01\n\x1fExtendRunt\
-    imeMeasurementRequest\x12\x16\n\x06Domain\x18\x01\x20\x01(\tR\x06Domain\
-    \x12\x1c\n\tOperation\x18\x02\x20\x01(\tR\tOperation\x12\x18\n\x07Conten\
-    t\x18\x03\x20\x01(\tR\x07Content\x12)\n\rRegisterIndex\x18\x04\x20\x01(\
-    \x04H\0R\rRegisterIndex\x88\x01\x01B\x10\n\x0e_RegisterIndex\"\"\n\x20Ex\
-    tendRuntimeMeasurementResponse\"K\n\x11InitDataPlaintext\x12\x18\n\x07Co\
-    ntent\x18\x01\x20\x01(\x0cR\x07Content\x12\x1c\n\tAlgorithm\x18\x02\x20\
-    \x01(\tR\tAlgorithm\"-\n\x13BindInitDataRequest\x12\x16\n\x06Digest\x18\
-    \x01\x20\x01(\x0cR\x06Digest\"\x16\n\x14BindInitDataResponse\"4\n\x1aUpd\
-    ateConfigurationRequest\x12\x16\n\x06config\x18\x01\x20\x01(\tR\x06confi\
-    g\"\x1d\n\x1bUpdateConfigurationResponse\"\x13\n\x11GetTeeTypeRequest\"&\
-    \n\x12GetTeeTypeResponse\x12\x10\n\x03tee\x18\x01\x20\x01(\tR\x03tee2\
-    \xe8\x05\n\x17AttestationAgentService\x12b\n\rGetDerivedKey\x12'.attesta\
-    tion_agent.GetDerivedKeyRequest\x1a(.attestation_agent.GetDerivedKeyResp\
-    onse\x12\\\n\x0bGetEvidence\x12%.attestation_agent.GetEvidenceRequest\
-    \x1a&.attestation_agent.GetEvidenceResponse\x12S\n\x08GetToken\x12\".att\
-    estation_agent.GetTokenRequest\x1a#.attestation_agent.GetTokenResponse\
-    \x12\x83\x01\n\x18ExtendRuntimeMeasurement\x122.attestation_agent.Extend\
-    RuntimeMeasurementRequest\x1a3.attestation_agent.ExtendRuntimeMeasuremen\
-    tResponse\x12_\n\x0cBindInitData\x12&.attestation_agent.BindInitDataRequ\
-    est\x1a'.attestation_agent.BindInitDataResponse\x12t\n\x13UpdateConfigur\
-    ation\x12-.attestation_agent.UpdateConfigurationRequest\x1a..attestation\
-    _agent.UpdateConfigurationResponse\x12Y\n\nGetTeeType\x12$.attestation_a\
-    gent.GetTeeTypeRequest\x1a%.attestation_agent.GetTeeTypeResponseb\x06pro\
-    to3\
+    \x20\x01(\x0cR\x05Token\"\x16\n\x14GetDerivedKeyRequest\"7\n\x15GetDeriv\
+    edKeyResponse\x12\x1e\n\nDerivedKey\x18\x01\x20\x01(\x0cR\nDerivedKey\"\
+    \xae\x01\n\x1fExtendRuntimeMeasurementRequest\x12\x16\n\x06Domain\x18\
+    \x01\x20\x01(\tR\x06Domain\x12\x1c\n\tOperation\x18\x02\x20\x01(\tR\tOpe\
+    ration\x12\x18\n\x07Content\x18\x03\x20\x01(\tR\x07Content\x12)\n\rRegis\
+    terIndex\x18\x04\x20\x01(\x04H\0R\rRegisterIndex\x88\x01\x01B\x10\n\x0e_\
+    RegisterIndex\"\"\n\x20ExtendRuntimeMeasurementResponse\"K\n\x11InitData\
+    Plaintext\x12\x18\n\x07Content\x18\x01\x20\x01(\x0cR\x07Content\x12\x1c\
+    \n\tAlgorithm\x18\x02\x20\x01(\tR\tAlgorithm\"-\n\x13BindInitDataRequest\
+    \x12\x16\n\x06Digest\x18\x01\x20\x01(\x0cR\x06Digest\"\x16\n\x14BindInit\
+    DataResponse\"4\n\x1aUpdateConfigurationRequest\x12\x16\n\x06config\x18\
+    \x01\x20\x01(\tR\x06config\"\x1d\n\x1bUpdateConfigurationResponse\"\x13\
+    \n\x11GetTeeTypeRequest\"&\n\x12GetTeeTypeResponse\x12\x10\n\x03tee\x18\
+    \x01\x20\x01(\tR\x03tee2\xe8\x05\n\x17AttestationAgentService\x12b\n\rGe\
+    tDerivedKey\x12'.attestation_agent.GetDerivedKeyRequest\x1a(.attestation\
+    _agent.GetDerivedKeyResponse\x12\\\n\x0bGetEvidence\x12%.attestation_age\
+    nt.GetEvidenceRequest\x1a&.attestation_agent.GetEvidenceResponse\x12S\n\
+    \x08GetToken\x12\".attestation_agent.GetTokenRequest\x1a#.attestation_ag\
+    ent.GetTokenResponse\x12\x83\x01\n\x18ExtendRuntimeMeasurement\x122.atte\
+    station_agent.ExtendRuntimeMeasurementRequest\x1a3.attestation_agent.Ext\
+    endRuntimeMeasurementResponse\x12_\n\x0cBindInitData\x12&.attestation_ag\
+    ent.BindInitDataRequest\x1a'.attestation_agent.BindInitDataResponse\x12t\
+    \n\x13UpdateConfiguration\x12-.attestation_agent.UpdateConfigurationRequ\
+    est\x1a..attestation_agent.UpdateConfigurationResponse\x12Y\n\nGetTeeTyp\
+    e\x12$.attestation_agent.GetTeeTypeRequest\x1a%.attestation_agent.GetTee\
+    TypeResponseb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file

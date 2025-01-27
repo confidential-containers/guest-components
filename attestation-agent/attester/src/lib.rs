@@ -101,9 +101,8 @@ pub trait Attester {
     }
 
     /// Get a derived key using the hardware-specific key derivation function.
-    /// The parameter `root_key_hinit` is the root key used for derivation,
-    /// and `context` is additional data used in the derivation process.
-    async fn get_derived_key(&self, _root_key_hinit: &[u8], _context: Vec<u8>) -> Result<Vec<u8>> {
+    /// The parameter `root_key_hinit` `context` is data potentially used in the derivation process.
+    async fn get_derived_key(&self, _context: Vec<u8>) -> Result<Vec<u8>> {
         bail!("Unimplemented")
     }
 }

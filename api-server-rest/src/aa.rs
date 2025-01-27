@@ -76,8 +76,8 @@ impl ApiHandler for AAClient {
                 }
                 None => return self.bad_request(),
             },
-            AA_DERIVED_KEY_URL => match params.get("key_id") {
-                Some(key_id) => match self.get_derived_key(&key_id.clone().into_bytes()).await {
+            AA_DERIVED_KEY_URL => match params.get() {
+                Some(key) => match self.get_derived_key().await {
                     std::result::Result::Ok(results) => return self.octet_stream_response(results),
                     Err(e) => return self.internal_error(e.to_string()),
                 },
@@ -127,9 +127,8 @@ impl AAClient {
         Ok(res.Evidence)
     }
 
-    pub async fn get_derived_key(&self, key_id: &[u8]) -> Result<Vec<u8>> {
+    pub async fn get_derived_key(&self) -> Result<Vec<u8>> {
         let req = GetDerivedKeyRequest {
-            KeyId: key_id.to_vec(),
             ..Default::default()
         };
         let res = self

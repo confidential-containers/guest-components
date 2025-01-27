@@ -80,11 +80,7 @@ struct GetTokenArgs {
 
 #[derive(Args)]
 #[command(author, version, about, long_about = None)]
-struct GetDerivedKeyArgs {
-    /// base64 encodede runtime data
-    #[arg(short, long)]
-    key_id: String,
-}
+struct GetDerivedKeyArgs {}
 
 #[derive(Args)]
 #[command(author, version, about, long_about = None)]
@@ -152,15 +148,14 @@ pub async fn main() {
         }
         Operation::GetDerivedKey(get_derived_key_args) => {
             let req = GetDerivedKeyRequest {
-                KeyId: get_derived_key_args.key_id,
                 ..Default::default()
             };
             let res = client
                 .get_derived_key(context::with_timeout(TIMEOUT), &req)
                 .await
                 .expect("request to AA");
-            let key_id = String::from_utf8(res.KeyId).unwrap();
-            println!("{key_id}");
+            let key = String::from_utf8(res.Key).unwrap();
+            println!("{key}");
         }
         Operation::ExtendRuntimeMeasurement(extend_runtime_measurement_args) => {
             let req = ExtendRuntimeMeasurementRequest {

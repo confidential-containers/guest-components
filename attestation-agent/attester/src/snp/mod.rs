@@ -65,20 +65,12 @@ impl Attester for SnpAttester {
         Ok(InitDataResult::Ok)
     }
 
-    async fn get_derived_key(
-        &self,
-        root_key_hinit: &[u8],
-        mut context: Vec<u8>,
-    ) -> Result<Vec<u8>> {
+    async fn get_derived_key(&self, mut context: Vec<u8>) -> Result<Vec<u8>> {
         if context.len() > 64 {
             bail!("SNP Attester: Context must be no more than 64 bytes");
         }
 
         context.resize(64, 0);
-        let _root_key: u8 = root_key_hinit
-            .first()
-            .copied()
-            .context("Invalid key or empty key specified")?;
 
         let mut firmware: Firmware = Firmware::open()?;
 
