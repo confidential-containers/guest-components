@@ -71,7 +71,7 @@ impl ApiHandler for AAClient {
             },
             AA_DERIVED_KEY_URL => {
                 let res = self.get_derived_key();
-                match res {
+                match res.await {
                     std::result::Result::Ok(results) => return self.octet_stream_response(results),
                     Err(e) => return self.internal_error(e.to_string()),
                 };
