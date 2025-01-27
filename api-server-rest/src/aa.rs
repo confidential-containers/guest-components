@@ -74,11 +74,12 @@ impl ApiHandler for AAClient {
                 None => return self.bad_request(),
             },
             AA_DERIVED_KEY_URL => {
-                return self.get_derived_key().await {
+                let res = self.get_derived_key();
+                match res {
                     std::result::Result::Ok(results) => return self.octet_stream_response(results),
                     Err(e) => return self.internal_error(e.to_string()),
                 };
-            },
+            }
 
             _ => {
                 return self.not_found();
