@@ -67,6 +67,18 @@ impl ApiHandler for AAClient {
                 _ => {
                     return self.not_found();
                 }
+                None => return self.bad_request(),
+            },
+            AA_DERIVED_KEY_URL => match params.get() {
+                Some(key) => match self.get_derived_key().await {
+                    std::result::Result::Ok(results) => return self.octet_stream_response(results),
+                    Err(e) => return self.internal_error(e.to_string()),
+                },
+                None => return self.bad_request(),
+            },
+
+            _ => {
+                return self.not_found();
             }
         }
 

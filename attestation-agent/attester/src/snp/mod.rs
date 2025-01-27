@@ -71,10 +71,6 @@ impl Attester for SnpAttester {
         }
 
         context.resize(64, 0);
-        let _root_key: u8 = root_key_hinit
-            .first()
-            .copied()
-            .context("Invalid key or empty key specified")?;
 
         let mut firmware: Firmware = Firmware::open()?;
 
