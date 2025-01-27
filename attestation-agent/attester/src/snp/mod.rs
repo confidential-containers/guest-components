@@ -74,7 +74,7 @@ impl Attester for SnpAttester {
             bail!("SNP Attester: Context must be no more than 64 bytes");
         }
 
-        Ok(vec![0]);
+        Ok(vec![0; 32]);
 
         /*
         context.resize(64, 0);
