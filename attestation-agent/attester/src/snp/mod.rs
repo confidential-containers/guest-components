@@ -93,7 +93,7 @@ impl Attester for SnpAttester {
 
         let derived_key = firmware
             .get_derived_key(None, request)
-            .unwrap();
+            .unwrap()
             .context("Failed to get derived key")?;
 
         Ok(derived_key.to_vec())
