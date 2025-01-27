@@ -3,16 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::router::ApiHandler;
 use crate::ttrpc_proto::attestation_agent::{
     GetDerivedKeyRequest, GetEvidenceRequest, GetTokenRequest,
 };
 use crate::ttrpc_proto::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use anyhow::*;
 use async_trait::async_trait;
-use hyper::{Body, Method, Request, Response};
-use std::collections::HashMap;
-use std::net::SocketAddr;
+use hyper::Method;
 
 use crate::TTRPC_TIMEOUT;
 
@@ -70,11 +67,10 @@ impl ApiHandler for AAClient {
                 None => return self.bad_request(),
             },
             AA_DERIVED_KEY_URL => {
-                Some(key) => match self.get_derived_key().await {
+                return self.get_derived_key().await {
                     std::result::Result::Ok(results) => return self.octet_stream_response(results),
                     Err(e) => return self.internal_error(e.to_string()),
-                },
-                None => return self.bad_request(),
+                };
             },
 
             _ => {
