@@ -53,41 +53,52 @@ impl ApiHandler for AAClient {
             .map(|v| form_urlencoded::parse(v.as_bytes()).into_owned().collect())
             .unwrap_or_default();
 
-        if params.len() != 1 {
-            return self.not_allowed();
-        }
-
-        match url_path {
-            AA_TOKEN_URL => match params.get("token_type") {
-                Some(token_type) => match self.get_token(token_type).await {
-                    std::result::Result::Ok(results) => return self.octet_stream_response(results),
-                    Err(e) => return self.internal_error(e.to_string()),
-                },
-                None => return self.bad_request(),
-            },
-            AA_EVIDENCE_URL => match params.get("runtime_data") {
-                Some(runtime_data) => {
-                    match self.get_evidence(&runtime_data.clone().into_bytes()).await {
+        if params.len() == 0 {
+            match url_path {
+                AA_DERIVED_KEY_URL => {
+                    let res = self.get_derived_key();
+                    match res.await {
                         std::result::Result::Ok(results) => {
                             return self.octet_stream_response(results)
                         }
                         Err(e) => return self.internal_error(e.to_string()),
-                    }
+                    };
                 }
-                None => return self.bad_request(),
-            },
-            AA_DERIVED_KEY_URL => {
-                let res = self.get_derived_key();
-                match res.await {
-                    std::result::Result::Ok(results) => return self.octet_stream_response(results),
-                    Err(e) => return self.internal_error(e.to_string()),
-                };
-            }
-
-            _ => {
-                return self.not_found();
+                _ => {
+                    return self.not_found();
+                }
             }
         }
+
+        if params.len() == 1 {
+            match url_path {
+                AA_TOKEN_URL => match params.get("token_type") {
+                    Some(token_type) => match self.get_token(token_type).await {
+                        std::result::Result::Ok(results) => {
+                            return self.octet_stream_response(results)
+                        }
+                        Err(e) => return self.internal_error(e.to_string()),
+                    },
+                    None => return self.bad_request(),
+                },
+                AA_EVIDENCE_URL => match params.get("runtime_data") {
+                    Some(runtime_data) => {
+                        match self.get_evidence(&runtime_data.clone().into_bytes()).await {
+                            std::result::Result::Ok(results) => {
+                                return self.octet_stream_response(results)
+                            }
+                            Err(e) => return self.internal_error(e.to_string()),
+                        }
+                    }
+                    None => return self.bad_request(),
+                },
+                _ => {
+                    return self.not_found();
+                }
+            }
+        }
+
+        return self.not_found();
     }
 }
 
