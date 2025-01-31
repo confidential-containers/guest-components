@@ -144,12 +144,12 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         let auth_endpoint = format!("{}/{KBS_PREFIX}/auth", self.kbs_host_url);
 
         let tee = match &self._tee {
-            ClientTee::Unitialized => {
+            ClientTee::Uninitialized => {
                 let tee = self.provider.get_tee_type().await?;
-                self._tee = ClientTee::_Initializated(tee);
+                self._tee = ClientTee::_Initialized(tee);
                 tee
             }
-            ClientTee::_Initializated(tee) => *tee,
+            ClientTee::_Initialized(tee) => *tee,
         };
 
         let request = build_request(tee).await;
