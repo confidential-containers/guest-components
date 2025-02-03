@@ -9,7 +9,7 @@ use const_format::concatcp;
 use ttrpc::context;
 use ttrpc_dep::ttrpc_protocol::{
     attestation_agent::{
-        ExtendRuntimeMeasurementRequest, GetEvidenceRequest, GetTeeTypeRequest, GetTokenRequest,
+        ExtendRuntimeMeasurementRequest, GetEvidenceRequest, GetTeeTypesRequest, GetTokenRequest,
     },
     attestation_agent_ttrpc::AttestationAgentServiceClient,
 };
@@ -46,7 +46,7 @@ struct Cli {
 #[command(author, version, about, long_about = None)]
 enum Operation {
     /// Get the tee type
-    GetTee,
+    GetTees,
 
     /// Get evidence
     GetEvidence(GetEvidenceArgs),
@@ -101,15 +101,15 @@ pub async fn main() {
         ttrpc::asynchronous::Client::connect(&args.attestation_sock).expect("connect ttrpc socket");
     let client = AttestationAgentServiceClient::new(inner);
     match args.operation {
-        Operation::GetTee => {
-            let req = GetTeeTypeRequest {
+        Operation::GetTees => {
+            let req = GetTeeTypesRequest {
                 ..Default::default()
             };
             let res = client
-                .get_tee_type(context::with_timeout(TIMEOUT), &req)
+                .get_tee_types(context::with_timeout(TIMEOUT), &req)
                 .await
                 .expect("request to AA");
-            println!("{}", res.tee);
+            println!("{}", res.tees);
         }
         Operation::GetEvidence(args) => {
             let runtime_data = base64::engine::general_purpose::STANDARD

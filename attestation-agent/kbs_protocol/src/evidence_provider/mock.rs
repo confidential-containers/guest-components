@@ -19,7 +19,7 @@ impl EvidenceProvider for MockedEvidenceProvider {
         Ok("test evidence".into())
     }
 
-    async fn get_tee_type(&self) -> Result<Tee> {
-        Ok(Tee::Sample)
+    async fn get_tee_types(&self) -> Result<Vec<Tee>> {
+        Ok(vec![Tee::Sample])
     }
 }

@@ -47,10 +47,10 @@ message BindInitDataRequest {
 
 message BindInitDataResponse {}
 
-message GetTeeTypeRequest {}
+message GetTeeTypesRequest {}
 
-message GetTeeTypeResponse {
-    string tee = 1;
+message GetTeeTypesResponse {
+    repeated string tee = 1;
 }
 
 service AttestationAgentService {
@@ -58,5 +58,5 @@ service AttestationAgentService {
     rpc GetToken(GetTokenRequest) returns (GetTokenResponse) {};
     rpc ExtendRuntimeMeasurement(ExtendRuntimeMeasurementRequest) returns (ExtendRuntimeMeasurementResponse) {};
     rpc BindInitData(BindInitDataRequest) returns (BindInitDataResponse) {};
-    rpc GetTeeType(GetTeeTypeRequest) returns (GetTeeTypeResponse) {};
+    rpc GetTeeTypes(GetTeeTypesRequest) returns (GetTeeTypesResponse) {};
 }

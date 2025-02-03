@@ -10,7 +10,7 @@ use ttrpc::context;
 
 use crate::{
     ttrpc_protos::{
-        attestation_agent::{GetEvidenceRequest, GetTeeTypeRequest},
+        attestation_agent::{GetEvidenceRequest, GetTeeTypesRequest},
         attestation_agent_ttrpc::AttestationAgentServiceClient,
     },
     Error, Result,
@@ -59,21 +59,21 @@ impl EvidenceProvider for AAEvidenceProvider {
     }
 
     /// Get the underlying Tee type
-    async fn get_tee_type(&self) -> Result<Tee> {
-        let req = GetTeeTypeRequest {
+    async fn get_tee_types(&self) -> Result<Vec<Tee>> {
+        let req = GetTeeTypesRequest {
             ..Default::default()
         };
         let res = self
             .client
-            .get_tee_type(
+            .get_tee_types(
                 context::with_timeout(AA_TTRPC_TIMEOUT_SECONDS * 1000 * 1000 * 1000),
                 &req,
             )
             .await
             .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e}")))?;
 
-        let tee = serde_json::from_value(json!(res.tee))
-            .map_err(|e| Error::AAEvidenceProvider(format!("failed to parse Tee type: {e}")))?;
-        Ok(tee)
+        let tees = serde_json::from_value(json!(res.tee))
+            .map_err(|e| Error::AAEvidenceProvider(format!("failed to parse Tee types: {e}")))?;
+        Ok(tees)
     }
 }

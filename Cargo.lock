@@ -3427,9 +3427,8 @@ dependencies = [
 
 [[package]]
 name = "kbs-types"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6db954f164e19a63a1eb7c04c46511167d68a5eb5025d4a435c1ba297f00dbf4"
+version = "0.9.3"
+source = "git+https://github.com/fitzthum/kbs-types?branch=multi-device#da3bcff60ecc25972a9f9d0fec8e225404791d2a"
 dependencies = [
  "base64 0.22.1",
  "serde",

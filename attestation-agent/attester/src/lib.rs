@@ -79,6 +79,24 @@ pub trait Attester {
     /// evidence to avoid reply attack.
     async fn get_evidence(&self, report_data: Vec<u8>) -> Result<String>;
 
+    async fn bind_init_data(&self, _init_data_digest: &[u8]) -> Result<InitDataResult> {
+        Ok(InitDataResult::Unsupported)
+    }
+
+    /// Attesters that support runtime measurement, and are able to implement
+    /// the get_runtime_measurement and extend_runtime_measurement functions
+    /// below, should return true.
+    fn supports_runtime_measurement(&self) -> bool {
+        false
+    }
+
+    /// This function is used to get the runtime measurement registry value of
+    /// the given PCR register index. Different platforms have different mapping
+    /// relationship between PCR and platform RTMR.
+    async fn get_runtime_measurement(&self, _pcr_index: u64) -> Result<Vec<u8>> {
+        bail!("Unimplemented")
+    }
+
     /// Extend TEE specific dynamic measurement register
     /// to enable dynamic measurement capabilities for input data at runtime.
     async fn extend_runtime_measurement(
@@ -88,61 +106,57 @@ pub trait Attester {
     ) -> Result<()> {
         bail!("Unimplemented")
     }
-
-    async fn bind_init_data(&self, _init_data_digest: &[u8]) -> Result<InitDataResult> {
-        Ok(InitDataResult::Unsupported)
-    }
-
-    /// This function is used to get the runtime measurement registry value of
-    /// the given PCR register index. Different platforms have different mapping
-    /// relationship between PCR and platform RTMR.
-    async fn get_runtime_measurement(&self, _pcr_index: u64) -> Result<Vec<u8>> {
-        bail!("Unimplemented")
-    }
 }
 
-// Detect which TEE platform the KBC running environment is.
-pub fn detect_tee_type() -> Tee {
+/// Detect TEE platforms active in this environment.
+/// One guest could support multiple platforms simultaneously,
+/// such as a CPU TEE and confidential devices.
+pub fn detect_tee_types() -> Vec<Tee> {
+    let mut tee_types = vec![];
     #[cfg(feature = "tdx-attester")]
     if tdx::detect_platform() {
-        return Tee::Tdx;
+        tee_types.push(Tee::Tdx);
     }
 
     #[cfg(feature = "sgx-attester")]
     if sgx_dcap::detect_platform() {
-        return Tee::Sgx;
+        tee_types.push(Tee::Sgx);
     }
 
     #[cfg(feature = "az-tdx-vtpm-attester")]
     if az_tdx_vtpm::detect_platform() {
-        return Tee::AzTdxVtpm;
+        tee_types.push(Tee::AzTdxVtpm);
     }
 
     #[cfg(feature = "az-snp-vtpm-attester")]
     if az_snp_vtpm::detect_platform() {
-        return Tee::AzSnpVtpm;
+        tee_types.push(Tee::AzSnpVtpm);
     }
 
     #[cfg(feature = "snp-attester")]
     if snp::detect_platform() {
-        return Tee::Snp;
+        tee_types.push(Tee::Snp);
     }
 
     #[cfg(feature = "csv-attester")]
     if csv::detect_platform() {
-        return Tee::Csv;
+        tee_types.push(Tee::Csv);
     }
 
     #[cfg(feature = "cca-attester")]
     if cca::detect_platform() {
-        return Tee::Cca;
+        tee_types.push(Tee::Cca);
     }
 
     #[cfg(feature = "se-attester")]
     if se::detect_platform() {
-        return Tee::Se;
+        tee_types.push(Tee::Se);
     }
 
-    log::warn!("No TEE platform detected. Sample Attester will be used.");
-    Tee::Sample
+    if tee_types.is_empty() {
+        log::warn!("No TEE platform detected. Sample Attester will be used.");
+        tee_types.push(Tee::Sample);
+    }
+
+    tee_types
 }
