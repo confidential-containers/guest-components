@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
-use attester::{detect_tee_type, BoxedAttester};
+use attester::{detect_tee_types, BoxedAttester};
 use kbs_types::Tee;
 use std::{str::FromStr, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
@@ -58,7 +58,7 @@ pub trait AttestationAPIs {
     async fn get_token(&self, token_type: &str) -> Result<Vec<u8>>;
 
     /// Get TEE hardware signed evidence that includes the runtime data.
-    async fn get_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>>;
+    async fn get_evidence(&self, runtime_data: &[u8]) -> Result<String>;
 
     /// Extend runtime measurement register
     async fn extend_runtime_measurement(
@@ -72,23 +72,40 @@ pub trait AttestationAPIs {
     /// Bind initdata
     async fn bind_init_data(&self, init_data: &[u8]) -> Result<InitDataResult>;
 
-    fn get_tee_type(&self) -> Tee;
+    fn get_tee_types(&self) -> Vec<Tee>;
 }
 
 /// Attestation agent to provide attestation service.
 pub struct AttestationAgent {
     config: RwLock<Config>,
-    attester: Arc<BoxedAttester>,
+    attesters: Vec<(Tee, Arc<BoxedAttester>)>,
     eventlog: Option<Mutex<EventLog>>,
-    tee: Tee,
+    tees: Vec<Tee>,
 }
 
 impl AttestationAgent {
     pub async fn init(&mut self) -> Result<()> {
         let config = self.config.read().await;
+
         if config.eventlog_config.enable_eventlog {
+            // Identify one attester to use with the EventLog.
+            // Only one attester is expected to support runtime measurements.
+            let runtime_attester = {
+                let mut runtime_attester = None;
+                for (tee, attester) in &self.attesters {
+                    if attester.supports_runtime_measurement() {
+                        info!("Found {:?} for runtime attestation.", tee);
+                        if let Some(_already_found_attester) = runtime_attester {
+                            bail!("Only one attester should support runtime attestation")
+                        }
+                        runtime_attester = Some(attester.clone());
+                    }
+                }
+                runtime_attester.ok_or(anyhow!("No runtime attester found."))?
+            };
+
             let eventlog = EventLog::new(
-                self.attester.clone(),
+                runtime_attester,
                 config.eventlog_config.eventlog_algorithm,
                 config.eventlog_config.init_pcr,
             )
@@ -114,15 +131,18 @@ impl AttestationAgent {
         };
         let config = RwLock::new(config);
 
-        let tee = detect_tee_type();
-        let attester: BoxedAttester = tee.try_into()?;
-        let attester = Arc::new(attester);
+        let mut attesters = vec![];
+        let tees = detect_tee_types();
+
+        for tee in &tees {
+            attesters.push((*tee, Arc::new(BoxedAttester::try_from(*tee)?)));
+        }
 
         Ok(AttestationAgent {
             config,
-            attester,
+            attesters,
             eventlog: None,
-            tee,
+            tees,
         })
     }
 }
@@ -151,9 +171,14 @@ impl AttestationAPIs for AttestationAgent {
     }
 
     /// Get TEE hardware signed evidence that includes the runtime data.
-    async fn get_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>> {
-        let evidence = self.attester.get_evidence(runtime_data.to_vec()).await?;
-        Ok(evidence.into_bytes())
+    async fn get_evidence(&self, runtime_data: &[u8]) -> Result<String> {
+        let mut evidence: Vec<(Tee, String)> = vec![];
+        for (tee, attester) in &self.attesters {
+            let ev = attester.get_evidence(runtime_data.to_vec()).await?;
+            evidence.push((*tee, ev));
+        }
+
+        Ok(serde_json::to_string(&evidence)?)
     }
 
     /// Extend runtime measurement register. Parameters
@@ -201,12 +226,20 @@ impl AttestationAPIs for AttestationAgent {
     /// Perform the initdata binding. If current platform does not support initdata
     /// binding, return `InitdataResult::Unsupported`.
     async fn bind_init_data(&self, init_data: &[u8]) -> Result<InitDataResult> {
-        self.attester.bind_init_data(init_data).await
+        let mut init_data_result = InitDataResult::Unsupported;
+
+        for (tee, attester) in &self.attesters {
+            match attester.bind_init_data(init_data).await? {
+                InitDataResult::Ok => init_data_result = InitDataResult::Ok,
+                _ => info!("Unable to bind init-data for {:?}", tee),
+            };
+        }
+        Ok(init_data_result)
     }
 
     /// Get the tee type of current platform. If no platform is detected,
     /// `Sample` will be returned.
-    fn get_tee_type(&self) -> Tee {
-        self.tee
+    fn get_tee_types(&self) -> Vec<Tee> {
+        self.tees.clone()
     }
 }

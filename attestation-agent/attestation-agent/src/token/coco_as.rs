@@ -19,7 +19,7 @@ pub struct CoCoASTokenGetter {
 #[async_trait]
 impl GetToken for CoCoASTokenGetter {
     async fn get_token(&self) -> Result<Vec<u8>> {
-        let tee_type = attester::detect_tee_type();
+        let tee_type = attester::detect_tee_types();
         let attester = attester::BoxedAttester::try_from(tee_type)?;
         let evidence = attester.get_evidence(vec![]).await?;
 
