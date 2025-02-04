@@ -38,6 +38,14 @@ jobs:
           - ubuntu-24.04-arm
         rust:
           - stable
+        # TODO: remove include and exclude when the following issue is resolved
+        # https://github.com/rust-lang/rust/issues/135867
+        include:
+          - instance: ubuntu-24.04-arm
+            rust: 1.82.0
+        exclude:
+          - instance: ubuntu-24.04-arm
+            rust: stable
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
