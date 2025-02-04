@@ -48,6 +48,12 @@ jobs:
             attester: az-tdx-vtpm-attester
           - instance: ubuntu-24.04-arm
             attester: cca-attester
+            # TODO: remove rust: 1.82.0 and exclude when the following issue is resolved
+            # https://github.com/rust-lang/rust/issues/135867
+            rust: 1.82.0
+        exclude:
+          - instance: ubuntu-24.04-arm
+            rust: stable
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
@@ -61,7 +67,7 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
-          components: rustfmt
+          components: rustfmt, clippy
 
       - uses: ./.github/actions/install-intel-dcap
         with:

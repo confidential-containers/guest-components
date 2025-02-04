@@ -36,6 +36,12 @@ jobs:
             cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,se-attester,bin"
           - instance: ubuntu-24.04-arm
             cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,cca-attester,bin"
+            # TODO: remove rust: 1.82.0 and exclude when the following issue is resolved
+            # https://github.com/rust-lang/rust/issues/135867
+            rust: 1.82.0
+        exclude:
+          - instance: ubuntu-24.04-arm
+            rust: stable
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout

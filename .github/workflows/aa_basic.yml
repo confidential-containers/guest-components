@@ -48,6 +48,12 @@ jobs:
           - instance: ubuntu-24.04-arm
             make_args: "ATTESTER=cca-attester TEE_PLATFORM=cca"
             cargo_test_opts: "--no-default-features --features openssl,rust-crypto,passport,cca-attester,kbs,coco_as,ttrpc,grpc"
+            # TODO: remove rust: 1.82.0 and exclude when the following issue is resolved
+            # https://github.com/rust-lang/rust/issues/135867
+            rust: 1.82.0
+        exclude:
+          - instance: ubuntu-24.04-arm
+            rust: stable
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
