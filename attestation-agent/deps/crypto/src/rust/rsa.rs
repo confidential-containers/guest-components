@@ -24,7 +24,7 @@ pub struct RSAKeyPair {
 
 impl RSAKeyPair {
     pub fn new() -> Result<RSAKeyPair> {
-        let mut rng = rand::rng();
+        let mut rng = rsa::rand_core::OsRng;
 
         let private_key = RsaPrivateKey::new(&mut rng, RSA_PUBKEY_LENGTH)?;
         let public_key = RsaPublicKey::from(&private_key);
