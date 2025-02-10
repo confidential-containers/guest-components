@@ -6,7 +6,7 @@ use super::Interpreter;
 use super::{get_plaintext_key, BlockDeviceError, BlockDeviceParameters, Result};
 use async_trait::async_trait;
 use log::error;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use tokio::{
     fs,
     io::{AsyncReadExt, AsyncWriteExt},
@@ -18,7 +18,7 @@ const LUKS_ENCRYPT_STORAGE_BIN: &str = "/usr/local/bin/luks-encrypt-storage";
 
 async fn random_encrypt_key() -> Vec<u8> {
     let mut buffer = vec![0u8; 4096];
-    rand::thread_rng().fill(&mut buffer[..]);
+    rand::rng().fill(&mut buffer[..]);
     buffer
 }
 
@@ -47,7 +47,7 @@ impl Interpreter for LuksInterpreter {
         parameters: BlockDeviceParameters,
         mount_point: &str,
     ) -> Result<()> {
-        let random_string: String = rand::thread_rng()
+        let random_string: String = rand::rng()
             .sample_iter(&Alphanumeric)
             .take(5)
             .map(char::from)

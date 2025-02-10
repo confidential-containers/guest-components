@@ -121,7 +121,7 @@ fn create_random_secret() -> Vec<u8> {
 
     let data_length = 10;
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     let data: Vec<u8> = (0..data_length)
         .map(|_| rng.sample(Uniform::new_inclusive(0, 255)))

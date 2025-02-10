@@ -225,9 +225,9 @@ async fn seal_secret(seal_args: &SealArgs) {
             let (mut encrypter, provider_settings, provider) =
                 handle_envelope_provider(&env.command).await;
             let mut iv = [0u8; 12];
-            rand::thread_rng().fill(&mut iv);
+            rand::rng().fill(&mut iv);
             let mut key = [0u8; 32];
-            rand::thread_rng().fill(&mut key);
+            rand::rng().fill(&mut key);
             let encrypted_data = crypto::encrypt(
                 Zeroizing::new(key.to_vec()),
                 blob,
