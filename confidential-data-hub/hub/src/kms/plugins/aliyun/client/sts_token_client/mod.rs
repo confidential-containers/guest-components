@@ -14,7 +14,7 @@ use anyhow::bail;
 use chrono::Utc;
 use credential::StsCredential;
 use log::error;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use reqwest::{header::HeaderMap, ClientBuilder};
 use serde::Deserialize;
 use serde_json::Value;
@@ -194,10 +194,7 @@ impl StsTokenClient {
             "SignatureVersion".to_string(),
             Self::SIGNATURE_VERSION.to_string(),
         );
-        let bytes: Vec<u8> = rand::thread_rng()
-            .sample_iter(&Alphanumeric)
-            .take(16)
-            .collect();
+        let bytes: Vec<u8> = rand::rng().sample_iter(&Alphanumeric).take(16).collect();
         let hex_nonce: String = bytes.iter().fold(String::new(), |mut output, b| {
             let _ = write!(output, "{b:02X}");
             output

@@ -11,7 +11,7 @@ use std::{collections::HashMap, os::unix::fs::PermissionsExt};
 use anyhow::Context;
 use async_trait::async_trait;
 use log::{debug, error};
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use tokio::{
     fs,
@@ -78,7 +78,7 @@ async fn get_plaintext_secret(secret: &str) -> anyhow::Result<String> {
 async fn create_random_dir() -> anyhow::Result<String> {
     const NAME_LENGTH: usize = 10;
 
-    let name: String = rand::thread_rng()
+    let name: String = rand::rng()
         .sample_iter(&Alphanumeric)
         .take(NAME_LENGTH)
         .map(char::from)
