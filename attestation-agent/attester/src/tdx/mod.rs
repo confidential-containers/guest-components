@@ -3,8 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use self::rtmr::TdxRtmrEvent;
-
 use super::tsm_report::*;
 use super::Attester;
 use crate::utils::pad;
@@ -28,19 +26,26 @@ pub fn detect_platform() -> bool {
     TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || Path::new(TDX_GUEST_IOCTL).exists()
 }
 
-fn get_quote_ioctl(report_data: &Vec<u8>) -> Result<Vec<u8>> {
-    let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
-        // report_data.resize() ensures copying report_data to
-        // tdx_attest_rs::tdx_report_data_t cannot panic.
-        d: report_data.as_slice().try_into().unwrap(),
-    };
+#[allow(unused_variables)]
+fn get_quote_ioctl(report_data: &[u8]) -> Result<Vec<u8>> {
+    cfg_if::cfg_if! {
+            if #[cfg(feature = "tdx-attest-dcap-ioctls")] {
+                let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
+                    // report_data.resize() ensures copying report_data to
+                    // tdx_attest_rs::tdx_report_data_t cannot panic.
+                    d: report_data.as_slice().try_into().unwrap(),
+                };
 
-    match tdx_attest_rs::tdx_att_get_quote(Some(&tdx_report_data), None, None, 0) {
-        (tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS, Some(q)) => Ok(q),
-        (error_code, _) => Err(anyhow!(
-            "TDX getquote ioctl: failed with error code: {:?}",
-            error_code
-        )),
+                match tdx_attest_rs::tdx_att_get_quote(Some(&tdx_report_data), None, None, 0) {
+                    (tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS, Some(q)) => Ok(q),
+                    (error_code, _) => Err(anyhow!(
+                        "TDX DCAP get_quote: failed with error code: {:?}",
+                        error_code
+                    )),
+                }
+            } else {
+                Err(anyhow!("TDX DCAP ioctls: support not available"))
+        }
     }
 }
 
@@ -180,11 +185,19 @@ impl Attester for TdxAttester {
         let rtmr_index = Self::pcr_to_rtmr(register_index);
 
         let extend_data: [u8; 48] = pad(&event_digest);
-        let event: Vec<u8> = TdxRtmrEvent::default()
+
+        log::debug!(
+            "TDX Attester: extend RTRM{rtmr_index}: {}",
+            hex::encode(extend_data)
+        );
+
+        #[cfg(feature = "tdx-attest-dcap-ioctls")]
+        let event: Vec<u8> = rtmr::TdxRtmrEvent::default()
             .with_extend_data(extend_data)
             .with_rtmr_index(rtmr_index)
             .into();
 
+        #[cfg(feature = "tdx-attest-dcap-ioctls")]
         match tdx_attest_rs::tdx_att_extend(&event) {
             tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
                 log::debug!("TDX extend runtime measurement succeeded.")
