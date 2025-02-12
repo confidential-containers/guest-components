@@ -69,11 +69,6 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - uses: ./.github/actions/install-intel-dcap
-        with:
-          ubuntu-version: noble
-        if: matrix.instance == 'ubuntu-24.04'
-
       - name: Install TPM dependencies
         run: |
           sudo apt-get update
