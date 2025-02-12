@@ -382,6 +382,7 @@ dependencies = [
  "hex",
  "hyper 0.14.28",
  "hyper-tls 0.5.0",
+ "iocuddle",
  "kbs-types",
  "log",
  "occlum_dcap",
