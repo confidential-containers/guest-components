@@ -76,6 +76,7 @@ all-attesters = [
     "cca-attester",
 ]
 tdx-attester = ["kbs_protocol?/tdx-attester", "attester/tdx-attester"]
+tdx-attester-libtdx = ["kbs_protocol?/tdx-attester-libtdx", "attester/tdx-attester", "attester/tdx-attest-dcap-ioctls"]
 sgx-attester = ["kbs_protocol?/sgx-attester", "attester/sgx-attester"]
 az-snp-vtpm-attester = [
     "kbs_protocol?/az-snp-vtpm-attester",
