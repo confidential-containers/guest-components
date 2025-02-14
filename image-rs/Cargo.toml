@@ -53,7 +53,7 @@ sha2.workspace = true
 sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "037b7be86a68bc63e1d2ee7f16ea8f843ddcc7d8", default-features = false, optional = true }
 strum.workspace = true
 strum_macros = "0.27"
-krata-tokio-tar = "0.4.2"
+astral-tokio-tar = "0.5.1"
 tokio.workspace = true
 tokio-util = "0.7.13"
 tonic = { workspace = true, optional = true }
@@ -88,7 +88,7 @@ default = [
     "signature-cosign-rustls",
     "keywrap-grpc",
     "oci-client-rustls",
-    "signature-simple-xrss"
+    "signature-simple-xrss",
 ]
 
 # This will be based on `ring` dependency
