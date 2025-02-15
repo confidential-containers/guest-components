@@ -27,6 +27,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(())
         }
 
+        println!("cargo::rerun-if-changed=../protos/attestation-agent.proto");
+
         ttrpc_codegen::Codegen::new()
             .out_dir("src/ttrpc_protos")
             .include("../protos")

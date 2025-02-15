@@ -14,7 +14,10 @@ fn main() {
     tonic_build::configure()
         .build_server(true)
         .out_dir("./src/kms/plugins/kbs/sev")
-        .compile_protos(&["./src/kms/plugins/kbs/sev/protos/getsecret.proto"], &[""])
+        .compile_protos(
+            &["./src/kms/plugins/kbs/sev/protos/getsecret.proto"],
+            &["./src/kms/plugins/kbs/sev/protos"],
+        )
         .expect("Generate sev protocol code failed.");
 
     #[cfg(feature = "grpc")]
