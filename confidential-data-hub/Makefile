@@ -20,7 +20,11 @@ SOURCE_ARCH := $(shell uname -m)
 RPC ?= ttrpc
 ARCH ?= $(shell uname -m)
 DEBUG ?=
-LIBC ?= gnu
+ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
+    LIBC ?= gnu
+else
+    LIBC ?= musl
+endif
 RESOURCE_PROVIDER ?= kbs,sev
 KMS_PROVIDER ?= aliyun,ehsm
 DESTDIR ?= $(PREFIX)/bin
