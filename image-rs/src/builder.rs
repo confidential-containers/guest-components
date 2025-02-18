@@ -12,6 +12,7 @@ use crate::{
     auth::Auth,
     config::{ImageConfig, NydusConfig},
     image::ImageClient,
+    layer_store::LayerStore,
     meta_store::{MetaStore, METAFILE},
     resource::ResourceProvider,
     signature::SignatureValidator,
@@ -127,12 +128,15 @@ impl ClientBuilder {
 
         let meta_store = Arc::new(RwLock::new(meta_store));
 
+        let layer_store = LayerStore::new(self.config.work_dir.clone())?;
+
         Ok(ImageClient {
             registry_auth,
             signature_validator,
             meta_store,
             snapshots,
             config: self.config,
+            layer_store,
         })
     }
 }

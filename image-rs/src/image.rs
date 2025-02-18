@@ -19,6 +19,7 @@ use crate::auth::Auth;
 use crate::bundle::{create_runtime_config, BUNDLE_ROOTFS};
 use crate::config::{ImageConfig, CONFIGURATION_FILE_NAME, DEFAULT_WORK_DIR};
 use crate::decoder::Compression;
+use crate::layer_store::LayerStore;
 use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
 use crate::signature::SignatureValidator;
@@ -93,23 +94,16 @@ pub struct ImageClient {
 
     /// The config
     pub(crate) config: ImageConfig,
+
+    /// The image layer store
+    pub(crate) layer_store: LayerStore,
 }
 
 impl Default for ImageClient {
     // construct a default instance of `ImageClient`
     fn default() -> ImageClient {
         let work_dir = Path::new(DEFAULT_WORK_DIR);
-        let config = ImageConfig::try_from(work_dir.join(CONFIGURATION_FILE_NAME).as_path())
-            .unwrap_or_default();
-        let meta_store = MetaStore::try_from(work_dir.join(METAFILE).as_path()).unwrap_or_default();
-        let snapshots = Self::init_snapshots(&config.work_dir, &meta_store);
-        ImageClient {
-            registry_auth: None,
-            meta_store: Arc::new(RwLock::new(meta_store)),
-            snapshots,
-            signature_validator: None,
-            config,
-        }
+        ImageClient::new(work_dir.to_path_buf())
     }
 }
 
@@ -153,6 +147,7 @@ impl ImageClient {
         let config = ImageConfig::try_from(work_dir.join(CONFIGURATION_FILE_NAME).as_path())
             .unwrap_or_else(|_| ImageConfig::new(work_dir.clone()));
         let meta_store = MetaStore::try_from(work_dir.join(METAFILE).as_path()).unwrap_or_default();
+        let layer_store = LayerStore::new(work_dir).unwrap_or_default();
         let snapshots = Self::init_snapshots(&config.work_dir, &meta_store);
 
         Self {
@@ -161,6 +156,7 @@ impl ImageClient {
             registry_auth: None,
             signature_validator: None,
             config,
+            layer_store,
         }
     }
 
@@ -207,7 +203,7 @@ impl ImageClient {
 
         let mut client = PullClient::new(
             reference,
-            &self.config.work_dir.join("layers"),
+            self.layer_store.clone(),
             &auth,
             self.config.max_concurrent_layer_downloads_per_image,
             self.config.skip_proxy_ips.as_deref(),
