@@ -177,7 +177,10 @@ signature-cosign = ["signature", "futures"]
 signature-cosign-rustls = ["signature-cosign", "sigstore/cosign-rustls-tls"]
 signature-cosign-native = ["signature-cosign", "sigstore/cosign-native-tls"]
 
-oci-client-rustls = ["oci-client/rustls-tls"]
+oci-client-rustls = [
+    "oci-client/rustls-tls",
+    "oci-client/rustls-tls-native-roots",
+]
 oci-client-native = ["oci-client/native-tls"]
 
 signature-simple-xrss = ["signature-simple", "dep:reqwest"]
