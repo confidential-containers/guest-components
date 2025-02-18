@@ -8,7 +8,7 @@ use oci_client::client::{Certificate, CertificateEncoding, ClientConfig};
 use oci_client::manifest::{OciDescriptor, OciImageManifest};
 use oci_client::{secrets::RegistryAuth, Client, Reference};
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio_util::io::StreamReader;
@@ -16,11 +16,12 @@ use tokio_util::io::StreamReader;
 use crate::decoder::Compression;
 use crate::decrypt::Decryptor;
 use crate::image::LayerMeta;
+use crate::layer_store::LayerStore;
 use crate::meta_store::MetaStore;
 use crate::stream::stream_processing;
 
 /// The PullClient connects to remote OCI registry, pulls the container image,
-/// and save the image layers under data_dir and return the layer meta info.
+/// and save the image layers under the layer store and return the layer meta info.
 pub struct PullClient<'a> {
     /// `oci-client` to talk with remote OCI registry.
     pub client: Client,
@@ -31,8 +32,8 @@ pub struct PullClient<'a> {
     /// OCI image reference.
     pub reference: Reference,
 
-    /// OCI image layer data store dir.
-    pub data_dir: PathBuf,
+    /// The image layer store
+    pub layer_store: LayerStore,
 
     /// Max number of concurrent downloads.
     pub max_concurrent_download: usize,
@@ -43,7 +44,7 @@ impl<'a> PullClient<'a> {
     /// data store dir and optional remote registry auth info.
     pub fn new(
         reference: Reference,
-        data_dir: &Path,
+        layer_store: LayerStore,
         auth: &'a RegistryAuth,
         max_concurrent_download: usize,
         no_proxy: Option<&str>,
@@ -73,7 +74,7 @@ impl<'a> PullClient<'a> {
             client,
             auth,
             reference,
-            data_dir: data_dir.to_path_buf(),
+            layer_store,
             max_concurrent_download,
         })
     }
@@ -153,8 +154,7 @@ impl<'a> PullClient<'a> {
             return Ok(layer_meta.clone());
         }
 
-        let blob_id = layer.digest.to_string().replace(':', "_");
-        let destination = self.data_dir.join(blob_id);
+        let destination = self.layer_store.new_layer_store_path();
         let mut layer_meta = LayerMeta {
             compressed_digest: layer.digest.clone(),
             store_path: destination.display().to_string(),
@@ -249,9 +249,11 @@ mod tests {
             "nginx@sha256:9700d098d545f9d2ee0660dfb155fe64f4447720a0a763a93f2cf08997227279";
         let tempdir = tempfile::tempdir().unwrap();
         let image = Reference::try_from(image_url.to_string()).expect("create reference failed");
+        let layer_store =
+            LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
         let mut client = PullClient::new(
             image,
-            tempdir.path(),
+            layer_store,
             &RegistryAuth::Anonymous,
             DEFAULT_MAX_CONCURRENT_DOWNLOAD,
             None,
@@ -300,9 +302,11 @@ mod tests {
             let tempdir = tempfile::tempdir().unwrap();
             let image =
                 Reference::try_from(image_url.to_string()).expect("create reference failed");
+            let layer_store =
+                LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
             let mut client = PullClient::new(
                 image,
-                tempdir.path(),
+                layer_store,
                 &RegistryAuth::Anonymous,
                 DEFAULT_MAX_CONCURRENT_DOWNLOAD,
                 None,
@@ -339,9 +343,11 @@ mod tests {
             let tempdir = tempfile::tempdir().unwrap();
             let image =
                 Reference::try_from(image_url.to_string()).expect("create reference failed");
+            let layer_store =
+                LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
             let mut client = PullClient::new(
                 image,
-                tempdir.path(),
+                layer_store,
                 &RegistryAuth::Anonymous,
                 DEFAULT_MAX_CONCURRENT_DOWNLOAD,
                 None,
@@ -407,9 +413,11 @@ mod tests {
         };
 
         let tempdir = tempfile::tempdir().unwrap();
+        let layer_store =
+            LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
         let mut client = PullClient::new(
             oci_image,
-            tempdir.path(),
+            layer_store,
             &RegistryAuth::Anonymous,
             DEFAULT_MAX_CONCURRENT_DOWNLOAD,
             None,
@@ -499,9 +507,11 @@ mod tests {
         for image_url in nydus_images.iter() {
             let tempdir = tempfile::tempdir().unwrap();
             let image = Reference::try_from(*image_url).expect("create reference failed");
+            let layer_store =
+                LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
             let mut client = PullClient::new(
                 image,
-                tempdir.path(),
+                layer_store,
                 &RegistryAuth::Anonymous,
                 DEFAULT_MAX_CONCURRENT_DOWNLOAD,
                 None,
