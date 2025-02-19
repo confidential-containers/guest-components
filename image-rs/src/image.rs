@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Context, Result};
+use log::error;
 use log::info;
 use oci_client::manifest::{OciDescriptor, OciImageManifest};
 use oci_client::secrets::RegistryAuth;
@@ -148,9 +149,9 @@ impl ImageClient {
             .unwrap_or_else(|_| ImageConfig::new(work_dir.clone()));
         let meta_store = MetaStore::try_from(work_dir.join(METAFILE).as_path()).unwrap_or_default();
         let layer_store = LayerStore::new(work_dir).unwrap_or_else(|e| {
-            error!("failed to construct layer store", e);
+            error!("failed to construct layer store: {e:?}");
             LayerStore::default()
-        };
+        });
         let snapshots = Self::init_snapshots(&config.work_dir, &meta_store);
 
         Self {
