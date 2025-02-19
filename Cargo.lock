@@ -383,7 +383,7 @@ dependencies = [
  "sha2 0.10.8",
  "strum",
  "tempfile",
- "thiserror 2.0.9",
+ "thiserror 2.0.11",
  "tokio",
  "toml 0.8.20",
  "tonic",
@@ -423,7 +423,7 @@ dependencies = [
  "strum",
  "tdx-attest-rs",
  "tempfile",
- "thiserror 2.0.9",
+ "thiserror 2.0.11",
  "tokio",
 ]
 
@@ -506,7 +506,7 @@ dependencies = [
  "serde_json",
  "sev 4.0.0",
  "sha2 0.10.8",
- "thiserror 2.0.9",
+ "thiserror 2.0.11",
  "tss-esapi",
  "zerocopy 0.7.32",
 ]
@@ -522,7 +522,7 @@ dependencies = [
  "clap 4.2.7",
  "serde",
  "sev 4.0.0",
- "thiserror 2.0.9",
+ "thiserror 2.0.11",
  "ureq",
 ]
 
@@ -1183,7 +1183,7 @@ dependencies = [
  "sha2 0.10.8",
  "strum",
  "tempfile",
- "thiserror 2.0.9",
+ "thiserror 2.0.11",
  "tokio",
  "toml 0.8.20",
  "tonic",
@@ -3358,7 +3358,7 @@ dependencies = [
  "serde",
  "serde_json",
  "superboring",
- "thiserror 2.0.9",
+ "thiserror 2.0.11",
  "zeroize",
 ]
 
@@ -3411,7 +3411,7 @@ dependencies = [
  "base64 0.22.1",
  "serde",
  "serde_json",
- "thiserror 2.0.9",
+ "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -3438,7 +3438,7 @@ dependencies = [
  "sha2 0.10.8",
  "tempfile",
  "testcontainers",
- "thiserror 2.0.9",
+ "thiserror 2.0.11",
  "tokio",
  "ttrpc",
  "ttrpc-codegen",
@@ -6459,11 +6459,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.9"
+version = "2.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f072643fd0190df67a8bab670c20ef5d8737177d6ac6b2e9a236cb096206b2cc"
+checksum = "d452f284b73e6d76dd36758a0c8684b1d5be31f92b89d07fd5822175732206fc"
 dependencies = [
- "thiserror-impl 2.0.9",
+ "thiserror-impl 2.0.11",
 ]
 
 [[package]]
@@ -6479,9 +6479,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.9"
+version = "2.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b50fa271071aae2e6ee85f842e2e28ba8cd2c5fb67f11fcb1fd70b276f9e7d4"
+checksum = "26afc1baea8a989337eeb52b6e72a039780ce45c3edfcc9c5b9d112feeb173c2"
 dependencies = [
  "proc-macro2",
  "quote",
