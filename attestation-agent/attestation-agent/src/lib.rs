@@ -172,10 +172,10 @@ impl AttestationAPIs for AttestationAgent {
 
     /// Get TEE hardware signed evidence that includes the runtime data.
     async fn get_evidence(&self, runtime_data: &[u8]) -> Result<String> {
-        let mut evidence: Vec<(Tee, String)> = vec![];
+        let mut evidence: Vec<(Tee, String, String)> = vec![];
         for (tee, attester) in &self.attesters {
             let ev = attester.get_evidence(runtime_data.to_vec()).await?;
-            evidence.push((*tee, ev));
+            evidence.push((*tee, attester.device_class(), ev));
         }
 
         Ok(serde_json::to_string(&evidence)?)

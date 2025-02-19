@@ -74,6 +74,17 @@ pub enum InitDataResult {
 
 #[async_trait::async_trait]
 pub trait Attester {
+    /// Each attester should define which category of devices it represents.
+    /// This could be something like "cpu" or "gpu" or any other scheme
+    /// used by the attester.
+    /// Ultimately this class will represent a module in the attestation token
+    /// signed by the attestation service.
+    /// This class should be more generic than the Tee Type.
+    /// There may be multiple attesters of the same type active in the same guest..
+    fn device_class(&self) -> String {
+        "cpu".to_string()
+    }
+
     /// Call the hardware driver to get the Hardware specific evidence.
     /// The parameter `report_data` will be used as the user input of the
     /// evidence to avoid reply attack.
