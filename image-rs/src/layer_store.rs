@@ -27,11 +27,13 @@ impl LayerStore {
             // these should not fail since each file name must be an index.
             // If for some reason, file name is not an index it will not
             // cause any conflicts with new and existing layers.
-            if let Some(name) = entry_path.file_name().to_str() {
-                let n = name.parse::<usize>().unwrap_or(0);
-                if n >= next {
-                    next = n + 1;
-                }
+            let n: usize = entry_path
+                .file_name()
+                .to_str()
+                .ok_or(anyhow!("entry path isn't valid utf"))?
+                .parse()?;
+            if n >= next {
+                next = n + 1;
             }
         }
         Ok(AtomicUsize::new(next))
