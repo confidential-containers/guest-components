@@ -3042,7 +3042,7 @@ dependencies = [
  "nix 0.29.0",
  "nydus-api",
  "nydus-service",
- "oci-client 0.14.0",
+ "oci-client",
  "oci-spec",
  "ocicrypt-rs",
  "prost 0.13.5",
@@ -4133,32 +4133,6 @@ dependencies = [
  "cfg-if",
  "libc",
  "sgx_types",
-]
-
-[[package]]
-name = "oci-client"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53e050f8bab3f561aa5ab537e1a6ed24006d58b4ee93cd6bb2c0cb822726f306"
-dependencies = [
- "bytes",
- "chrono",
- "futures-util",
- "http 1.1.0",
- "http-auth",
- "jwt",
- "lazy_static",
- "oci-spec",
- "olpc-cjson",
- "regex",
- "reqwest 0.12.9",
- "serde",
- "serde_json",
- "sha2 0.10.8",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
- "unicase",
 ]
 
 [[package]]
@@ -6038,8 +6012,8 @@ dependencies = [
 
 [[package]]
 name = "sigstore"
-version = "0.10.0"
-source = "git+https://github.com/sigstore/sigstore-rs.git?rev=037b7be86a68bc63e1d2ee7f16ea8f843ddcc7d8#037b7be86a68bc63e1d2ee7f16ea8f843ddcc7d8"
+version = "0.11.0"
+source = "git+https://github.com/sigstore/sigstore-rs.git?rev=c39c519#c39c519dd99be23f18e6143dd233b46bf2096e4d"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -6057,7 +6031,7 @@ dependencies = [
  "hex",
  "json-syntax",
  "lazy_static",
- "oci-client 0.13.0",
+ "oci-client",
  "olpc-cjson",
  "p256",
  "p384",
@@ -6075,7 +6049,7 @@ dependencies = [
  "serde_repr",
  "sha2 0.10.8",
  "signature",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "tls_codec",
  "tokio",
  "tokio-util",

@@ -50,7 +50,7 @@ serde = { workspace = true, features = ["serde_derive", "rc"] }
 serde_json.workspace = true
 serde_yaml = { version = "0.9", optional = true }
 sha2.workspace = true
-sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "037b7be86a68bc63e1d2ee7f16ea8f843ddcc7d8", default-features = false, optional = true }
+sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "c39c519", default-features = false, optional = true }
 strum.workspace = true
 strum_macros = "0.27"
 astral-tokio-tar = "0.5.1"
@@ -174,7 +174,11 @@ keywrap-jwe = ["ocicrypt-rs/keywrap-jwe"]
 
 signature = ["hex"]
 signature-cosign = ["signature", "futures"]
-signature-cosign-rustls = ["signature-cosign", "sigstore/cosign-rustls-tls"]
+signature-cosign-rustls = [
+    "signature-cosign",
+    "sigstore/cosign-rustls-tls",
+    "sigstore/rustls-tls-native-roots",
+]
 signature-cosign-native = ["signature-cosign", "sigstore/cosign-native-tls"]
 
 oci-client-rustls = [
