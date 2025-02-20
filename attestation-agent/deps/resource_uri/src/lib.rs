@@ -57,17 +57,21 @@ impl TryFrom<url::Url> for ResourceUri {
 
         let path = &value.path()[1..];
         let values: Vec<&str> = path.split('/').collect();
-        if values.len() == 3 {
-            Ok(Self {
-                kbs_addr: addr,
-                repository: values[0].into(),
-                r#type: values[1].into(),
-                tag: values[2].into(),
-                query: value.query().map(|s| s.to_string()),
-            })
+        let (repository, r#type, tag) = if values.len() == 3 {
+            (values[0].into(), values[1].into(), values[2].into())
+        } else if values.len() == 2 {
+            println!("two-part resource path, filling in \"default\" for repository");
+            ("default".into(), values[0].into(), values[1].into())
         } else {
-            Err(RESOURCE_ID_ERROR_INFO)
-        }
+            return Err(RESOURCE_ID_ERROR_INFO);
+        };
+        Ok(Self {
+            kbs_addr: addr,
+            repository,
+            r#type,
+            tag,
+            query: value.query().map(|s| s.to_string()),
+        })
     }
 }
 
