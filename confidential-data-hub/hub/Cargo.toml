@@ -105,12 +105,14 @@ default = ["aliyun", "kbs", "bin", "ttrpc", "grpc", "cli"]
 
 # support aliyun stacks (KMS, ..)
 aliyun = [
+    "anyhow",
     "chrono",
     "hex",
     "p12",
     "prost",
     "reqwest/rustls-tls",
     "sha2",
+    "serde",
     "tempfile",
     "tonic",
     "url",
