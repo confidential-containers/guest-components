@@ -5,12 +5,14 @@ on:
     branches:
       - "main"
     paths:
+      - 'image-rs/**'
       - 'confidential-data-hub/**'
       - '.github/workflows/cdh_basic.yml'
       - 'Cargo.toml'
       - 'Cargo.lock'
   pull_request:
     paths:
+      - 'image-rs/**'
       - 'confidential-data-hub/**'
       - '.github/workflows/cdh_basic.yml'
       - 'Cargo.toml'
