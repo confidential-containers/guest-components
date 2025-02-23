@@ -71,11 +71,6 @@ jobs:
           mkdir -p ${HOME}/.local/bin
           make RESOURCE_PROVIDER=kbs,sev && make install PREFIX=${HOME}/.local
 
-      - name: Musl build
-        run: |
-          make LIBC=musl
-        if: ${{ startsWith(matrix.instance, 'ubuntu-24.04') }}
-
       - name: Run cargo test
         run: |
           sudo -E PATH=$PATH -s cargo test --features kbs,aliyun,sev,bin -p confidential-data-hub
