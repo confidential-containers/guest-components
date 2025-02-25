@@ -4,22 +4,6 @@
 //
 
 fn main() {
-    #[cfg(feature = "aliyun")]
-    tonic_build::compile_protos(
-        "./src/kms/plugins/aliyun/client/client_key_client/protobuf/dkms_api.proto",
-    )
-    .expect("Generate aliyun protocol code failed.");
-
-    #[cfg(feature = "sev")]
-    tonic_build::configure()
-        .build_server(true)
-        .out_dir("./src/kms/plugins/kbs/sev")
-        .compile_protos(
-            &["./src/kms/plugins/kbs/sev/protos/getsecret.proto"],
-            &["./src/kms/plugins/kbs/sev/protos"],
-        )
-        .expect("Generate sev protocol code failed.");
-
     #[cfg(feature = "grpc")]
     {
         tonic_build::configure()
