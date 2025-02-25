@@ -20,7 +20,7 @@ use attestation_agent::config::aa_kbc_params::AaKbcParams;
 pub use resource_uri::ResourceUri;
 use tokio::sync::Mutex;
 
-use crate::kms::{Annotations, Error, Getter, Result};
+use crate::{Annotations, Error, Getter, Result};
 
 enum RealClient {
     #[cfg(feature = "kbs")]

@@ -11,7 +11,8 @@ use serde::Deserialize;
 use serde_json::Value;
 use tokio::fs;
 
-use crate::kms::{Annotations, Error, ProviderSettings, Result};
+use crate::{Annotations, ProviderSettings};
+use crate::{Error, Result};
 
 use super::sts_token_client::credential::StsCredential;
 use super::{sts_token_client::StsTokenClient, ALIYUN_IN_GUEST_DEFAULT_KEY_PATH};

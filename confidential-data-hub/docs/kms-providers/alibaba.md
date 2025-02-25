@@ -56,17 +56,17 @@ Else if `client_type` is set to 'sts_token', provider_settings shall be as follo
 ### Credential files
 
 To connect to a KMS instance with `client_type` set to 'client_key', a client key is needed. A client key is actually
-[an json with encrypted inside](../../hub/src/kms/plugins/aliyun/client/client_key_client/example_credential/clientKey_KAAP.f4c8____.json)
+[an json with encrypted inside](../../kms/src/plugins/aliyun/client/client_key_client/example_credential/clientKey_KAAP.f4c8____.json)
 private key. The name of the client key is always derived from the client key id. Suppose the
 client key ID is `xxx`, then the client key file has name `clientKey_xxx.json`. The key to encrypt
-the private key is derived from a password that is also saved in [a file](../../hub/src/kms/plugins/aliyun/client/client_key_client/example_credential/password_KAAP.f4c8____.json).
+the private key is derived from a password that is also saved in [a file](../../kms/src/plugins/aliyun/client/client_key_client/example_credential/password_KAAP.f4c8____.json).
 Suppose the client key ID is `xxx`, then the password file has name `password_xxx.json`.
-Besides, [a cert of the KMS server](../../hub/src/kms/plugins/aliyun/client/client_key_client/example_credential/PrivateKmsCA_kst-shh64702cf2jvc_____.pem)
+Besides, [a cert of the KMS server](../../kms/src/plugins/aliyun/client/client_key_client/example_credential/PrivateKmsCA_kst-shh64702cf2jvc_____.pem)
 is also needed. Suppose the kms instance id is `xxx`, then the cert of the KMS server has name `PrivateKmsCA_xxx.pem`.
 
 For more details please see the [developer document for aliyun](https://www.alibabacloud.com/help/en/key-management-service/latest/api-overview).
 
-To connect to a KMS instance with `client_type` set to 'ecs_ram_role', a [ecsRamRole.json](../../hub/src/kms/plugins/aliyun/client/ecs_ram_role_client/example_credential/ecsRamRole.json) file is needed.
+To connect to a KMS instance with `client_type` set to 'ecs_ram_role', a [ecsRamRole.json](../../kms/src/plugins/aliyun/client/ecs_ram_role_client/example_credential/ecsRamRole.json) file is needed.
 In the json file, `ecs_ram_role_name` and `region_id` is set in order to get access to Dedicated KMS.
 Among them，`ecs_ram_role_name` refer to RAM role for ECS instances in a VPC network, where CDH runs. Can be set on Aliyun Console.
 And `region_id` refers to region id of Dedicated KMS, to which more details can be refered [here](https://www.alibabacloud.com/help/en/kms/product-overview/supported-regions).
