@@ -6,16 +6,14 @@ pub mod error;
 pub mod luks;
 
 use super::SecureMount;
+use crate::secret;
 use async_trait::async_trait;
 use error::{BlockDeviceError, Result};
+use kms::{Annotations, ProviderSettings};
 use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use strum::{Display, EnumString};
-
-use crate::kms;
-use crate::kms::{Annotations, ProviderSettings};
-use crate::secret;
 
 #[derive(EnumString, Serialize, Deserialize, Display, Debug, PartialEq, Eq)]
 pub enum BlockDeviceEncryptType {

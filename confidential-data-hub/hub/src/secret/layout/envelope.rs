@@ -3,15 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+pub use kms::Annotations;
+
 use base64::{engine::general_purpose::STANDARD, Engine};
 use crypto::WrapType;
+use kms::ProviderSettings;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use zeroize::Zeroizing;
-
-use crate::kms;
-pub use crate::kms::Annotations;
-use crate::kms::ProviderSettings;
 
 pub type Result<T> = std::result::Result<T, EnvelopeError>;
 

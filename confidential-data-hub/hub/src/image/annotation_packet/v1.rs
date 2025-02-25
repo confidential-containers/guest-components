@@ -7,7 +7,6 @@ use resource_uri::ResourceUri;
 use serde::{Deserialize, Serialize};
 
 use crate::image::{Error, Result};
-use crate::kms;
 
 /// `AnnotationPacket` is what a encrypted image layer's
 /// `org.opencontainers.image.enc.keys.provider.attestation-agent`

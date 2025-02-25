@@ -20,7 +20,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use tokio::fs;
 
-use crate::kms::{
+use crate::{
     error::{Error, Result},
     plugins::aliyun::annotations::AliSecretAnnotations,
     Annotations, ProviderSettings,
