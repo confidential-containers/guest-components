@@ -38,7 +38,7 @@ jwt-simple = { version = "0.12", default-features = false, features = [
     "pure-rust",
 ] }
 kbs-types = "0.10.0"
-log = "0.4.25"
+log = "0.4.26"
 nix = "0.29"
 openssl = "0.10"
 prost = "0.13"
