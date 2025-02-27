@@ -19,8 +19,8 @@ use tokio::fs;
 mod config;
 mod credential;
 
-use crate::kms::{Annotations, Decrypter, Encrypter, ProviderSettings};
-use crate::kms::{Error, Result};
+use crate::{Annotations, Decrypter, Encrypter, ProviderSettings};
+use crate::{Error, Result};
 
 use super::super::annotations::*;
 use super::ALIYUN_IN_GUEST_DEFAULT_KEY_PATH;
