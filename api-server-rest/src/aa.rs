@@ -4,7 +4,9 @@
 //
 
 use crate::router::ApiHandler;
-use crate::ttrpc_proto::attestation_agent::{GetEvidenceRequest, GetTokenRequest};
+use crate::ttrpc_proto::attestation_agent::{
+    GetDerivedKeyRequest, GetEvidenceRequest, GetTokenRequest,
+};
 use crate::ttrpc_proto::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use anyhow::*;
 use async_trait::async_trait;
@@ -20,6 +22,7 @@ pub const AA_ROOT: &str = "/aa";
 /// URL for querying CDH get resource API
 const AA_TOKEN_URL: &str = "/token";
 const AA_EVIDENCE_URL: &str = "/evidence";
+const AA_DERIVED_KEY_URL: &str = "/derived_key";
 
 pub struct AAClient {
     client: AttestationAgentServiceClient,
@@ -50,34 +53,52 @@ impl ApiHandler for AAClient {
             .map(|v| form_urlencoded::parse(v.as_bytes()).into_owned().collect())
             .unwrap_or_default();
 
-        if params.len() != 1 {
-            return self.not_allowed();
-        }
-
-        match url_path {
-            AA_TOKEN_URL => match params.get("token_type") {
-                Some(token_type) => match self.get_token(token_type).await {
-                    std::result::Result::Ok(results) => return self.octet_stream_response(results),
-                    Err(e) => return self.internal_error(e.to_string()),
-                },
-                None => return self.bad_request(),
-            },
-            AA_EVIDENCE_URL => match params.get("runtime_data") {
-                Some(runtime_data) => {
-                    match self.get_evidence(&runtime_data.clone().into_bytes()).await {
+        if params.len() == 0 {
+            match url_path {
+                AA_DERIVED_KEY_URL => {
+                    let res = self.get_derived_key();
+                    match res.await {
                         std::result::Result::Ok(results) => {
                             return self.octet_stream_response(results)
                         }
                         Err(e) => return self.internal_error(e.to_string()),
-                    }
+                    };
                 }
-                None => return self.bad_request(),
-            },
-
-            _ => {
-                return self.not_found();
+                _ => {
+                    return self.not_found();
+                }
             }
         }
+
+        if params.len() == 1 {
+            match url_path {
+                AA_TOKEN_URL => match params.get("token_type") {
+                    Some(token_type) => match self.get_token(token_type).await {
+                        std::result::Result::Ok(results) => {
+                            return self.octet_stream_response(results)
+                        }
+                        Err(e) => return self.internal_error(e.to_string()),
+                    },
+                    None => return self.bad_request(),
+                },
+                AA_EVIDENCE_URL => match params.get("runtime_data") {
+                    Some(runtime_data) => {
+                        match self.get_evidence(&runtime_data.clone().into_bytes()).await {
+                            std::result::Result::Ok(results) => {
+                                return self.octet_stream_response(results)
+                            }
+                            Err(e) => return self.internal_error(e.to_string()),
+                        }
+                    }
+                    None => return self.bad_request(),
+                },
+                _ => {
+                    return self.not_found();
+                }
+            }
+        }
+
+        return self.not_found();
     }
 }
 
@@ -115,5 +136,16 @@ impl AAClient {
             .get_evidence(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
             .await?;
         Ok(res.Evidence)
+    }
+
+    pub async fn get_derived_key(&self) -> Result<Vec<u8>> {
+        let req = GetDerivedKeyRequest {
+            ..Default::default()
+        };
+        let res = self
+            .client
+            .get_derived_key(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
+            .await?;
+        Ok(res.DerivedKey)
     }
 }
