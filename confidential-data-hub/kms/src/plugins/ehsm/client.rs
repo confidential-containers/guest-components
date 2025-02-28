@@ -15,10 +15,9 @@ use log::info;
 use serde_json::Value;
 use tokio::fs;
 
-use crate::kms::{
-    plugins::_IN_GUEST_DEFAULT_KEY_PATH, Annotations, Decrypter, Encrypter, Error,
-    ProviderSettings, Result,
-};
+use crate::plugins::_IN_GUEST_DEFAULT_KEY_PATH;
+use crate::{Annotations, Decrypter, Encrypter, ProviderSettings};
+use crate::{Error, Result};
 
 use super::annotations::EhsmProviderSettings;
 use super::credential::Credential;
@@ -158,7 +157,7 @@ mod tests {
     use rstest::rstest;
     use serde_json::json;
 
-    use crate::kms::{plugins::ehsm::client::EhsmKmsClient, Decrypter, Encrypter};
+    use crate::{plugins::ehsm::client::EhsmKmsClient, Decrypter, Encrypter};
 
     #[ignore]
     #[tokio::test]

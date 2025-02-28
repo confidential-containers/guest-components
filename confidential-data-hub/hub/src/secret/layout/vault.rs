@@ -6,8 +6,8 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::kms;
-pub use crate::kms::{Annotations, ProviderSettings};
+pub use kms::Annotations;
+pub use kms::ProviderSettings;
 
 pub type Result<T> = std::result::Result<T, VaultError>;
 
