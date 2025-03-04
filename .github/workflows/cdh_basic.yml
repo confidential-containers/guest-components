@@ -36,7 +36,7 @@ jobs:
       matrix:
         instance:
           - ubuntu-24.04
-          - s390x
+          - s390x-small
           - ubuntu-24.04-arm
         rust:
           - stable

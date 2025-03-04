@@ -28,7 +28,7 @@ jobs:
           { tee: cca,         arch: aarch64, libc: gnu  },
           { tee: se,          arch: s390x,   libc: gnu  },
         ]
-    runs-on: ${{ matrix.platform.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
+    runs-on: ${{ matrix.platform.arch == 's390x' && 's390x-small' || 'ubuntu-24.04' }}
     env:
       TEE_PLATFORM: ${{ matrix.platform.tee }}
       LIBC: ${{ matrix.platform.libc }}
@@ -117,7 +117,7 @@ jobs:
           libc: gnu
         - arch: aarch64
           libc: gnu
-    runs-on: ${{ matrix.arch == 's390x' && 's390x' || 'ubuntu-24.04' }}
+    runs-on: ${{ matrix.arch == 's390x' && 's390x-small' || 'ubuntu-24.04' }}
     env:
       LIBC: ${{ matrix.libc }}
       REGISTRY: ghcr.io

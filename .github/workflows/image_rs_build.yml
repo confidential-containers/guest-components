@@ -36,7 +36,7 @@ jobs:
           - stable
         instance:
           - ubuntu-24.04
-          - s390x
+          - s390x-small
           - ubuntu-24.04-arm
         # TODO: remove include and exclude when the following issue is resolved
         # https://github.com/rust-lang/rust/issues/135867
