@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::{image, kms, secret, storage};
+use crate::{image, secret, storage};
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -39,4 +39,7 @@ pub enum Error {
         #[source]
         source: anyhow::Error,
     },
+
+    #[error("initialize overlay network failed")]
+    OverlayNetworkInit(#[from] overlay_network::OverlayNetworkError),
 }
