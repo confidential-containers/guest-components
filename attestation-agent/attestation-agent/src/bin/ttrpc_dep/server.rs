@@ -17,8 +17,10 @@ use crate::ttrpc_dep::ttrpc_protocol::{
     attestation_agent_ttrpc::AttestationAgentService,
 };
 
+#[allow(dead_code)]
 pub const AGENT_NAME: &str = "attestation-agent";
 
+#[allow(dead_code)]
 pub struct AA {
     pub(crate) inner: AttestationAgent,
 }
