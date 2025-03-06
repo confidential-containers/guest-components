@@ -34,6 +34,7 @@ jobs:
       matrix:
         rust:
           - stable
+          - 1.80.0
         instance:
           - ubuntu-24.04
           - ubuntu-24.04-arm
@@ -48,9 +49,6 @@ jobs:
             attester: az-tdx-vtpm-attester
           - instance: ubuntu-24.04-arm
             attester: cca-attester
-            # TODO: remove rust: 1.82.0 and exclude when the following issue is resolved
-            # https://github.com/rust-lang/rust/issues/135867
-            rust: 1.82.0
         exclude:
           - instance: ubuntu-24.04-arm
             rust: stable
