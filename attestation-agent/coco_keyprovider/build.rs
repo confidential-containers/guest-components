@@ -3,12 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use shadow_rs::{BuildPattern, ShadowBuilder};
+use std::io;
 
-fn main() -> shadow_rs::SdResult<()> {
+fn main() -> Result<(), io::Error> {
     tonic_build::compile_protos("../protos/keyprovider.proto")?;
-    ShadowBuilder::builder()
-        .build_pattern(BuildPattern::RealTime)
-        .build()?;
     Ok(())
 }
