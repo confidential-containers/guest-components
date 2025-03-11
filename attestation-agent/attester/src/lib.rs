@@ -7,6 +7,7 @@ use anyhow::*;
 use kbs_types::Tee;
 
 pub mod sample;
+pub mod sample_device;
 pub mod utils;
 
 #[cfg(feature = "az-snp-vtpm-attester")]
@@ -44,6 +45,7 @@ impl TryFrom<Tee> for BoxedAttester {
     fn try_from(value: Tee) -> Result<Self> {
         let attester: Box<dyn Attester + Send + Sync> = match value {
             Tee::Sample => Box::<sample::SampleAttester>::default(),
+            Tee::SampleDevice => Box::<sample_device::SampleDeviceAttester>::default(),
             #[cfg(feature = "tdx-attester")]
             Tee::Tdx => Box::<tdx::TdxAttester>::default(),
             #[cfg(feature = "sgx-attester")]
@@ -164,9 +166,15 @@ pub fn detect_tee_types() -> Vec<Tee> {
         tee_types.push(Tee::Se);
     }
 
+    // The sample attester is enabled as a fallback if no other
+    // attesters (besides the sample device attester below) are enabled.
     if tee_types.is_empty() {
         log::warn!("No TEE platform detected. Sample Attester will be used.");
         tee_types.push(Tee::Sample);
+    }
+
+    if sample_device::detect_platform() {
+        tee_types.push(Tee::SampleDevice);
     }
 
     tee_types
