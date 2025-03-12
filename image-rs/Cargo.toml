@@ -56,6 +56,7 @@ strum_macros = "0.27"
 astral-tokio-tar = "0.5.1"
 tokio.workspace = true
 tokio-util = "0.7.14"
+toml.workspace = true
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 url = "2.5.4"
