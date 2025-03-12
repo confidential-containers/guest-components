@@ -4,9 +4,12 @@
 
 use anyhow::{anyhow, bail, Context, Result};
 use futures_util::stream::{self, StreamExt, TryStreamExt};
-use oci_client::client::{Certificate, CertificateEncoding, ClientConfig};
-use oci_client::manifest::{OciDescriptor, OciImageManifest};
-use oci_client::{secrets::RegistryAuth, Client, Reference};
+use oci_client::{
+    client::ClientConfig,
+    manifest::{OciDescriptor, OciImageManifest},
+    secrets::RegistryAuth,
+    Client, Reference,
+};
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -47,27 +50,8 @@ impl<'a> PullClient<'a> {
         layer_store: LayerStore,
         auth: &'a RegistryAuth,
         max_concurrent_download: usize,
-        no_proxy: Option<&str>,
-        https_proxy: Option<&str>,
-        extra_root_certificates: Vec<String>,
+        client_config: ClientConfig,
     ) -> Result<PullClient<'a>> {
-        let mut client_config = ClientConfig::default();
-        if let Some(no_proxy) = no_proxy {
-            client_config.no_proxy = Some(no_proxy.to_string())
-        }
-
-        if let Some(https_proxy) = https_proxy {
-            client_config.https_proxy = Some(https_proxy.to_string())
-        }
-
-        let certs = extra_root_certificates
-            .into_iter()
-            .map(|pem| pem.into_bytes())
-            .map(|data| Certificate {
-                encoding: CertificateEncoding::Pem,
-                data,
-            });
-        client_config.extra_root_certificates.extend(certs);
         let client = Client::try_from(client_config)?;
 
         Ok(PullClient {
@@ -251,14 +235,14 @@ mod tests {
         let image = Reference::try_from(image_url.to_string()).expect("create reference failed");
         let layer_store =
             LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
+        let client_config = ClientConfig::default();
+
         let mut client = PullClient::new(
             image,
             layer_store,
             &RegistryAuth::Anonymous,
             DEFAULT_MAX_CONCURRENT_DOWNLOAD,
-            None,
-            None,
-            vec![],
+            client_config,
         )
         .unwrap();
         let (image_manifest, _image_digest, image_config) = client.pull_manifest().await.unwrap();
@@ -304,14 +288,14 @@ mod tests {
                 Reference::try_from(image_url.to_string()).expect("create reference failed");
             let layer_store =
                 LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
+            let client_config = ClientConfig::default();
+
             let mut client = PullClient::new(
                 image,
                 layer_store,
                 &RegistryAuth::Anonymous,
                 DEFAULT_MAX_CONCURRENT_DOWNLOAD,
-                None,
-                None,
-                vec![],
+                client_config,
             )
             .unwrap();
             let (image_manifest, _image_digest, image_config) =
@@ -345,14 +329,14 @@ mod tests {
                 Reference::try_from(image_url.to_string()).expect("create reference failed");
             let layer_store =
                 LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
+            let client_config = ClientConfig::default();
+
             let mut client = PullClient::new(
                 image,
                 layer_store,
                 &RegistryAuth::Anonymous,
                 DEFAULT_MAX_CONCURRENT_DOWNLOAD,
-                None,
-                None,
-                vec![],
+                client_config,
             )
             .unwrap();
             let (image_manifest, _image_digest, image_config) =
@@ -415,14 +399,14 @@ mod tests {
         let tempdir = tempfile::tempdir().unwrap();
         let layer_store =
             LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
+        let client_config = ClientConfig::default();
+
         let mut client = PullClient::new(
             oci_image,
             layer_store,
             &RegistryAuth::Anonymous,
             DEFAULT_MAX_CONCURRENT_DOWNLOAD,
-            None,
-            None,
-            vec![],
+            client_config,
         )
         .unwrap();
 
@@ -509,14 +493,13 @@ mod tests {
             let image = Reference::try_from(*image_url).expect("create reference failed");
             let layer_store =
                 LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
+            let client_config = oci_client::client::ClientConfig::default();
             let mut client = PullClient::new(
                 image,
                 layer_store,
                 &RegistryAuth::Anonymous,
                 DEFAULT_MAX_CONCURRENT_DOWNLOAD,
-                None,
-                None,
-                vec![],
+                client_config,
             )
             .unwrap();
             let (image_manifest, _image_digest, image_config) =
