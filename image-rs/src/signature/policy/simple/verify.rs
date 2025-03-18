@@ -99,7 +99,7 @@ pub fn verify_sig_and_extract_payload(pubkey_ring: &[u8], sig: Vec<u8>) -> Resul
             if let Some(openpgp::Packet::Signature(ref mut signature)) =
                 sig_packet.path_ref_mut(&[0, 2])
             {
-                if signature.verify(pubkey).is_ok() {
+                if signature.verify_signature(pubkey).is_ok() {
                     validate_key_id.trusted_key_id = pubkey.fingerprint().as_bytes().to_vec();
                     // If the cryptography verification passes, but the key IDs are inconsistent,
                     // the verification failure is returned directly.
