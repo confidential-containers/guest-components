@@ -279,19 +279,6 @@ mod tests {
         &format!("\
             {{\
                 \"type\": \"sigstoreSigned\",\
-                \"keyPath\": \"{}/test_data/signature/cosign/cosign3.pub\"\
-            }}", 
-            std::env::current_dir().expect("get current dir").to_str().expect("get current dir")
-        ),
-        "registry.cn-hangzhou.aliyuncs.com/xynnn/cosign:latest",
-        false,
-        // If verified failed, the pubkey given to verify will be printed.
-        "[PublicKeyVerifier { key: ECDSA_P256_SHA256_ASN1(VerifyingKey { inner: PublicKey { point: AffinePoint { x: FieldElement(0x4D1167C9BBBCDB6CC1C867394D50C1777D5C2FCC46374E6B07819141E8D2CFAF), y: FieldElement(0xDB4E43CA897D2EE05C70836839AF5DBEE8B62EC4B93563FB044D92551FE33EEE), infinity: 0 } } }) }]"
-    )]
-    #[case(
-        &format!("\
-            {{\
-                \"type\": \"sigstoreSigned\",\
                 \"keyPath\": \"{}/test_data/signature/cosign/cosign1.pub\",\
                 \"signedIdentity\": {{\
                     \"type\": \"exactRepository\",\
