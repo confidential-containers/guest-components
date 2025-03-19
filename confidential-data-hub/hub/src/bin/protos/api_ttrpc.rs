@@ -210,3 +210,51 @@ pub fn create_image_pull_service(service: Arc<dyn ImagePullService + Send + Sync
     ret.insert("api.ImagePullService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
     ret
 }
+
+#[derive(Clone)]
+pub struct OverlayNetworkServiceClient {
+    client: ::ttrpc::r#async::Client,
+}
+
+impl OverlayNetworkServiceClient {
+    pub fn new(client: ::ttrpc::r#async::Client) -> Self {
+        OverlayNetworkServiceClient {
+            client,
+        }
+    }
+
+    pub async fn init_overlay_network(&self, ctx: ttrpc::context::Context, req: &super::api::InitOverlayNetworkRequest) -> ::ttrpc::Result<super::api::InitOverlayNetworkResponse> {
+        let mut cres = super::api::InitOverlayNetworkResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "api.OverlayNetworkService", "InitOverlayNetwork", cres);
+    }
+}
+
+struct InitOverlayNetworkMethod {
+    service: Arc<dyn OverlayNetworkService + Send + Sync>,
+}
+
+#[async_trait]
+impl ::ttrpc::r#async::MethodHandler for InitOverlayNetworkMethod {
+    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
+        ::ttrpc::async_request_handler!(self, ctx, req, api, InitOverlayNetworkRequest, init_overlay_network);
+    }
+}
+
+#[async_trait]
+pub trait OverlayNetworkService: Sync {
+    async fn init_overlay_network(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::api::InitOverlayNetworkRequest) -> ::ttrpc::Result<super::api::InitOverlayNetworkResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/api.OverlayNetworkService/InitOverlayNetwork is not supported".to_string())))
+    }
+}
+
+pub fn create_overlay_network_service(service: Arc<dyn OverlayNetworkService + Send + Sync>) -> HashMap<String, ::ttrpc::r#async::Service> {
+    let mut ret = HashMap::new();
+    let mut methods = HashMap::new();
+    let streams = HashMap::new();
+
+    methods.insert("InitOverlayNetwork".to_string(),
+                    Box::new(InitOverlayNetworkMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
+
+    ret.insert("api.OverlayNetworkService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
+    ret
+}
