@@ -39,4 +39,7 @@ pub enum Error {
         #[source]
         source: anyhow::Error,
     },
+
+    #[error("initialize overlay network failed")]
+    OverlayNetworkInit(#[from] overlay_network::OverlayNetworkError),
 }
