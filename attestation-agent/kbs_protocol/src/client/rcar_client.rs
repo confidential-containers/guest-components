@@ -510,10 +510,10 @@ mod test {
         let expected_extra_params = get_request_extra_params().await;
 
         for tee in tees {
-            let request = build_request(tee).await;
+            let request = build_request(vec![tee]).await;
 
             assert_eq!(request.version, expected_version);
-            assert_eq!(request.tee, tee);
+            assert_eq!(request.tees[0], tee);
             assert_eq!(request.extra_params, expected_extra_params);
         }
     }

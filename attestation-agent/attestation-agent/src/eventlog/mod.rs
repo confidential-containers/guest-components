@@ -239,7 +239,7 @@ impl Display for LogEntry<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use attester::detect_tee_type;
+    use attester::detect_tee_types;
     use rstest::rstest;
     use std::sync::{Arc, Mutex};
 
@@ -267,7 +267,7 @@ mod tests {
     async fn test_log_events() {
         let lines = Arc::new(Mutex::new(vec![]));
         let tw = TestWriter(lines.clone());
-        let tee = detect_tee_type();
+        let tee = detect_tee_types()[0];
         let rtmr_extender = Arc::new(tee.try_into().unwrap());
         let mut el = EventLog {
             writer: Box::new(tw),
