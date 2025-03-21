@@ -24,14 +24,14 @@ use kbs_types::Tee;
 use crate::{keypair::TeeKeyPair, token_provider::Token};
 
 pub(crate) enum ClientTee {
-    Unitialized,
-    _Initializated(Tee),
+    Uninitialized,
+    Initialized(Vec<Tee>),
 }
 
 /// This Client is used to connect to the remote KBS.
 pub struct KbsClient<T> {
     /// TEE Type
-    pub(crate) _tee: ClientTee,
+    pub(crate) _tees: ClientTee,
 
     /// The asymmetric key pair inside the TEE
     pub(crate) tee_key: TeeKeyPair,
@@ -48,7 +48,7 @@ pub struct KbsClient<T> {
     pub(crate) token: Option<Token>,
 }
 
-pub const KBS_PROTOCOL_VERSION: &str = "0.2.0";
+pub const KBS_PROTOCOL_VERSION: &str = "0.3.0";
 
 pub const KBS_GET_RESOURCE_MAX_ATTEMPT: u64 = 3;
 
