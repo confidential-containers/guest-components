@@ -11,7 +11,7 @@ use log::{debug, error};
 use crate::ttrpc_dep::ttrpc_protocol::{
     attestation_agent::{
         ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse, GetEvidenceRequest,
-        GetEvidenceResponse, GetTeeTypeRequest, GetTeeTypeResponse, GetTokenRequest,
+        GetEvidenceResponse, GetTeeTypesRequest, GetTeeTypesResponse, GetTokenRequest,
         GetTokenResponse,
     },
     attestation_agent_ttrpc::AttestationAgentService,
@@ -73,7 +73,7 @@ impl AttestationAgentService for AA {
         debug!("AA (ttrpc): Get evidence successfully!");
 
         let mut reply = GetEvidenceResponse::new();
-        reply.Evidence = evidence;
+        reply.Evidence = evidence.into();
 
         ::ttrpc::Result::Ok(reply)
     }
@@ -108,30 +108,35 @@ impl AttestationAgentService for AA {
         ::ttrpc::Result::Ok(reply)
     }
 
-    async fn get_tee_type(
+    async fn get_tee_types(
         &self,
         _ctx: &::ttrpc::r#async::TtrpcContext,
-        _req: GetTeeTypeRequest,
-    ) -> ::ttrpc::Result<GetTeeTypeResponse> {
+        _req: GetTeeTypesRequest,
+    ) -> ::ttrpc::Result<GetTeeTypesResponse> {
         debug!("AA (ttrpc): get tee type ...");
 
-        let tee = self.inner.get_tee_type();
+        let tees = self.inner.get_tee_types();
 
-        let res = serde_json::to_string(&tee)
-            .map_err(|e| {
-                error!("AA (ttrpc): get tee type failed:\n {e:?}");
-                let mut error_status = ::ttrpc::proto::Status::new();
-                error_status.set_code(Code::INTERNAL);
-                error_status
-                    .set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get tee type failed"));
-                ::ttrpc::Error::RpcStatus(error_status)
-            })?
-            .trim_end_matches('"')
-            .trim_start_matches('"')
-            .to_string();
+        let mut tee_strings = vec![];
+        for tee in tees {
+            let tee_string = serde_json::to_string(&tee)
+                .map_err(|e| {
+                    error!("AA (ttrpc): get tee type failed:\n {e:?}");
+                    let mut error_status = ::ttrpc::proto::Status::new();
+                    error_status.set_code(Code::INTERNAL);
+                    error_status
+                        .set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get tee type failed"));
+                    ::ttrpc::Error::RpcStatus(error_status)
+                })?
+                .trim_end_matches('"')
+                .trim_start_matches('"')
+                .to_string();
+
+            tee_strings.push(tee_string);
+        }
         debug!("AA (ttrpc): get tee type succeeded.");
-        let mut reply = GetTeeTypeResponse::new();
-        reply.tee = res;
+        let mut reply = GetTeeTypesResponse::new();
+        reply.tee = tee_strings;
         ::ttrpc::Result::Ok(reply)
     }
 }
