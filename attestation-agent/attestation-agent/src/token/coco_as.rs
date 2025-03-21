@@ -10,6 +10,8 @@ use anyhow::*;
 use async_trait::async_trait;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
+use kbs_types::Tee;
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct CoCoASTokenGetter {
@@ -19,13 +21,18 @@ pub struct CoCoASTokenGetter {
 #[async_trait]
 impl GetToken for CoCoASTokenGetter {
     async fn get_token(&self) -> Result<Vec<u8>> {
-        let tee_type = attester::detect_tee_types();
-        let attester = attester::BoxedAttester::try_from(tee_type)?;
-        let evidence = attester.get_evidence(vec![]).await?;
+        let tee_types = attester::detect_tee_types();
+
+        let mut evidence: HashMap<Tee, (String, String)> = HashMap::new();
+        for tee in &tee_types {
+            let attester = attester::BoxedAttester::try_from(*tee)?;
+            let ev = attester.get_evidence(vec![]).await?;
+            evidence.insert(*tee, (attester.device_class(), ev));
+        }
 
         let request_body = serde_json::json!({
-            "tee": tee_type,
-            "evidence": URL_SAFE_NO_PAD.encode(evidence.as_bytes()),
+            "tees": tee_types,
+            "evidence": URL_SAFE_NO_PAD.encode(serde_json::to_string(&evidence)?.as_bytes()),
             "policy_ids": [],
         });
 
