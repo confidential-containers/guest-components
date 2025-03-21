@@ -1,0 +1,26 @@
+# handle short name
+unqualified-search-registries = ["docker.io", "example1.com"]
+
+# block registries
+[[registry]]
+prefix = "example.com/banned"
+blocked = true
+
+# registry mirror
+[[registry]]
+prefix = "mirror-test.com"
+
+[[registry.mirror]]
+location = "127.0.0.1:5000"
+insecure = true
+
+# registry remapping
+[[registry]]
+prefix = "remapping-test.com"
+location = "127.0.0.1:5000"
+insecure = true
+
+# allow insecure registry
+[[registry]]
+location = "127.0.0.1:5000"
+insecure = true
