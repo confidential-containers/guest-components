@@ -109,7 +109,7 @@ pub async fn main() {
                 .get_tee_types(context::with_timeout(TIMEOUT), &req)
                 .await
                 .expect("request to AA");
-            println!("{}", res.tees);
+            println!("{:?}", res.tee);
         }
         Operation::GetEvidence(args) => {
             let runtime_data = base64::engine::general_purpose::STANDARD
