@@ -11,8 +11,8 @@ use confidential_data_hub::CdhConfig;
 use log::info;
 use protos::{
     api_ttrpc::{
-        create_get_resource_service, create_image_pull_service, create_sealed_secret_service,
-        create_secure_mount_service,
+        create_get_resource_service, create_image_pull_service, create_overlay_network_service,
+        create_sealed_secret_service, create_secure_mount_service,
     },
     keyprovider_ttrpc::create_key_provider_service,
 };
@@ -66,7 +66,8 @@ async fn main() -> Result<()> {
         .register_service(create_get_resource_service(server.clone() as _))
         .register_service(create_key_provider_service(server.clone() as _))
         .register_service(create_secure_mount_service(server.clone() as _))
-        .register_service(create_image_pull_service(server.clone() as _));
+        .register_service(create_image_pull_service(server.clone() as _))
+        .register_service(create_overlay_network_service(server.clone() as _));
 
     info!(
         "[ttRPC] Confidential Data Hub starts to listen to request: {}",
