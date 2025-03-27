@@ -361,7 +361,11 @@ mod test {
     use rstest::rstest;
     use serde_json::{json, Value};
     use std::{env, path::PathBuf, time::Duration};
-    use testcontainers::{clients, images::generic::GenericImage};
+    use testcontainers::{
+        core::{IntoContainerPort, Mount},
+        runners::AsyncRunner,
+        GenericImage, ImageExt,
+    };
     use tokio::fs;
 
     use crate::{
@@ -395,7 +399,6 @@ mod test {
             .expect("write content");
 
         // launch kbs
-        let docker = clients::Cli::default();
 
         // we should change the entrypoint of the kbs image by using
         // a start script
@@ -406,32 +409,34 @@ mod test {
         kbs_config.push("test/kbs-config.toml");
         policy.push("test/policy.rego");
 
-        let image = GenericImage::new(
+        let kbs = GenericImage::new(
             "ghcr.io/confidential-containers/staged-images/kbs",
             "latest",
         )
-        .with_exposed_port(8085)
-        .with_volume(
+        .with_exposed_port(8085.tcp())
+        .with_mount(Mount::bind_mount(
             tmp.path().as_os_str().to_string_lossy(),
             "/opt/confidential-containers/kbs/repository",
-        )
-        .with_volume(
+        ))
+        .with_mount(Mount::bind_mount(
             start_kbs_script.into_os_string().to_string_lossy(),
             "/usr/local/bin/start_kbs.sh",
-        )
-        .with_volume(
+        ))
+        .with_mount(Mount::bind_mount(
             kbs_config.into_os_string().to_string_lossy(),
             "/etc/kbs-config.toml",
-        )
-        .with_volume(
+        ))
+        .with_mount(Mount::bind_mount(
             policy.into_os_string().to_string_lossy(),
             "/opa/confidential-containers/kbs/policy.rego",
-        )
-        .with_entrypoint("/usr/local/bin/start_kbs.sh");
-        let kbs = docker.run(image);
+        ))
+        .with_cmd(vec!["/usr/local/bin/start_kbs.sh"])
+        .start()
+        .await
+        .expect("run kbs failed");
 
         tokio::time::sleep(Duration::from_secs(10)).await;
-        let port = kbs.get_host_port_ipv4(8085);
+        let port = kbs.get_host_port_ipv4(8085).await.expect("get port");
         let kbs_host_url = format!("http://127.0.0.1:{port}");
 
         let evidence_provider = Box::new(NativeEvidenceProvider::new().unwrap());

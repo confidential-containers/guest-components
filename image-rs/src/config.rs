@@ -83,6 +83,14 @@ pub struct ImageConfig {
     #[serde(default = "Option::default")]
     pub authenticated_registry_credentials_uri: Option<String>,
 
+    /// Registry configuration supports define registry blocking, mirroring,
+    /// and remapping rules. This field points to a registry configuration file,
+    /// which can either be stored locally in the rootfs or retrieved from the KBS.
+    ///
+    /// This value defaults to `None`.
+    #[serde(default = "Option::default")]
+    pub registry_configuration_uri: Option<String>,
+
     /// The maximum number of layers downloaded concurrently when
     /// pulling one specific image.
     ///
@@ -166,6 +174,7 @@ impl Default for ImageConfig {
             image_security_policy_uri: None,
             sigstore_config_uri: None,
             authenticated_registry_credentials_uri: None,
+            registry_configuration_uri: None,
             image_pull_proxy: None,
             skip_proxy_ips: None,
             extra_root_certificates: Vec::new(),
