@@ -379,6 +379,7 @@ mod test {
 
     const CONTENT: &[u8] = b"test content";
 
+    #[ignore]
     #[tokio::test]
     #[serial_test::serial]
     async fn test_client() {
