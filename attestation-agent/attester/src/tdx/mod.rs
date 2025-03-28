@@ -229,6 +229,10 @@ impl Attester for TdxAttester {
 
         Ok(td_report.get_rtmr(rtmr_index))
     }
+
+    fn supports_runtime_measurement(&self) -> bool {
+        true
+    }
 }
 
 #[cfg(test)]

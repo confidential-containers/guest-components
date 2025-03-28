@@ -9,8 +9,8 @@ use attestation::attestation_agent_service_server::{
 };
 use attestation::{
     BindInitDataRequest, BindInitDataResponse, ExtendRuntimeMeasurementRequest,
-    ExtendRuntimeMeasurementResponse, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
-    GetTeeTypeResponse, GetTokenRequest, GetTokenResponse,
+    ExtendRuntimeMeasurementResponse, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypesRequest,
+    GetTeeTypesResponse, GetTokenRequest, GetTokenResponse,
 };
 use attestation_agent::{AttestationAPIs, AttestationAgent};
 use log::{debug, error};
@@ -72,7 +72,9 @@ impl AttestationAgentService for AA {
 
         debug!("AA (grpc): Get evidence successfully!");
 
-        let reply = GetEvidenceResponse { evidence };
+        let reply = GetEvidenceResponse {
+            evidence: evidence.into(),
+        };
 
         Result::Ok(Response::new(reply))
     }
@@ -130,25 +132,30 @@ impl AttestationAgentService for AA {
         Result::Ok(Response::new(reply))
     }
 
-    async fn get_tee_type(
+    async fn get_tee_types(
         &self,
-        _request: Request<GetTeeTypeRequest>,
-    ) -> Result<Response<GetTeeTypeResponse>, Status> {
+        _request: Request<GetTeeTypesRequest>,
+    ) -> Result<Response<GetTeeTypesResponse>, Status> {
         debug!("AA (grpc): get tee type ...");
 
-        let tee = self.inner.get_tee_type();
+        let tees = self.inner.get_tee_types();
 
-        let tee = serde_json::to_string(&tee)
-            .map_err(|e| {
-                error!("AA (ttrpc): get tee type failed:\n {e:?}");
-                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get tee type failed"))
-            })?
-            .trim_end_matches('"')
-            .trim_start_matches('"')
-            .to_string();
-        debug!("AA (ttrpc): get tee type succeeded.");
+        let mut tee_strings = vec![];
+        for tee in tees {
+            let tee_string = serde_json::to_string(&tee)
+                .map_err(|e| {
+                    error!("AA (grpc): get tee type failed:\n {e:?}");
+                    Status::internal(format!("[ERROR:{AGENT_NAME}] AA get tee type failed"))
+                })?
+                .trim_end_matches('"')
+                .trim_start_matches('"')
+                .to_string();
 
-        let reply = GetTeeTypeResponse { tee };
+            tee_strings.push(tee_string);
+        }
+        debug!("AA (grpc): get tee types succeeded.");
+
+        let reply = GetTeeTypesResponse { tee: tee_strings };
 
         Result::Ok(Response::new(reply))
     }
