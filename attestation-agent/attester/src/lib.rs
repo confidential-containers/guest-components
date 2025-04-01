@@ -143,6 +143,17 @@ pub fn detect_tee_type() -> Tee {
         return Tee::Se;
     }
 
-    log::warn!("No TEE platform detected. Sample Attester will be used.");
+    log::warn!(
+        "No TEE platform detected. Sample Attester will be used.
+         If you are expecting to collect evidence from inside a confidential guest,
+         either your guest is not configured correctly, or your attestation client
+         was not built with support for the platform.
+
+         Verify that your guest is a confidential guest and that your client
+         (such as kbs-client or attestation-agent) was built with the feature
+         corresponding to your platform.
+
+         Attestation will continue using the fallback sample attester."
+    );
     Tee::Sample
 }
