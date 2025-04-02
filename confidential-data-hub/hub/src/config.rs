@@ -10,6 +10,7 @@ use attestation_agent::config::aa_kbc_params::AaKbcParams;
 use config::{Config, File};
 use image_rs::config::ImageConfig;
 use log::{debug, info};
+use overlay_network::config::OverlayNetworkConfig;
 use serde::Deserialize;
 
 cfg_if::cfg_if! {
@@ -58,6 +59,9 @@ pub struct CdhConfig {
     #[serde(default)]
     pub image: ImageConfig,
 
+    #[serde(default)]
+    pub overlay_network: OverlayNetworkConfig,
+
     pub socket: String,
 }
 
@@ -87,6 +91,7 @@ impl CdhConfig {
                     credentials: Vec::new(),
                     socket: DEFAULT_CDH_SOCKET_ADDR.into(),
                     image: ImageConfig::default(),
+                    overlay_network: OverlayNetworkConfig::default(),
                 }
             }
         };
@@ -104,7 +109,8 @@ impl CdhConfig {
             .add_source(File::with_name(config_path))
             .build()?;
 
-        let res = c.try_deserialize().context("invalid config")?;
+        let res: CdhConfig = c.try_deserialize().context("invalid config")?;
+        res.overlay_network.validate()?;
         Ok(res)
     }
 
@@ -168,6 +174,8 @@ mod tests {
     use rstest::rstest;
 
     use crate::{config::DEFAULT_CDH_SOCKET_ADDR, CdhConfig, KbsConfig};
+    use overlay_network::config::OverlayNetworkConfig;
+    use overlay_network::nebula::NebulaConfig;
 
     #[rstest]
     #[case(
@@ -203,6 +211,10 @@ image_pull_proxy = "http://127.0.0.1:8080"
                 skip_proxy_ips: None,
                 extra_root_certificates: vec!["cert1".into(), "cert2".into()],
                 ..Default::default()
+            },
+            overlay_network: OverlayNetworkConfig {
+                enable: false,
+                nebula: None,
             },
             socket: "unix:///run/confidential-containers/cdh.sock".to_string(),
         })
@@ -240,6 +252,10 @@ name = "offline_fs_kbc"
                 skip_proxy_ips: None,
                 ..Default::default()
         },
+        overlay_network: OverlayNetworkConfig {
+            enable: false,
+            nebula: None,
+        },
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
     })
     )]
@@ -266,8 +282,130 @@ some_undefined_field = "unknown value"
                 skip_proxy_ips: None,
                 ..Default::default()
         },
+        overlay_network: OverlayNetworkConfig {
+            enable: false,
+            nebula: None,
+        },
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
     })
+    )]
+    #[case(
+        r#"
+[kbc]
+name = "offline_fs_kbc"
+
+[image]
+some_undefined_field = "unknown value"
+
+[overlay_network]
+enable = "false"
+"#,
+    Some(CdhConfig {
+        kbc: KbsConfig {
+            name: "offline_fs_kbc".to_string(),
+            url: "".to_string(),
+            kbs_cert: None,
+        },
+        credentials: vec![],
+        image: ImageConfig {
+                sigstore_config_uri: None,
+                image_security_policy_uri: None,
+                authenticated_registry_credentials_uri: None,
+                image_pull_proxy: None,
+                skip_proxy_ips: None,
+                ..Default::default()
+        },
+        overlay_network: OverlayNetworkConfig {
+            enable: false,
+            nebula: None,
+        },
+        socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
+    })
+    )]
+    #[case(
+        r#"
+[kbc]
+name = "offline_fs_kbc"
+
+[image]
+some_undefined_field = "unknown value"
+
+[overlay_network]
+enable = "true"
+[overlay_network.nebula]
+lighthouse_pub_ip = "127.0.0.1"
+lighthouse_overlay_ip = "192.168.100.100"
+overlay_netmask = "255.255.255.0"
+"#,
+    Some(CdhConfig {
+        kbc: KbsConfig {
+            name: "offline_fs_kbc".to_string(),
+            url: "".to_string(),
+            kbs_cert: None,
+        },
+        credentials: vec![],
+        image: ImageConfig {
+                sigstore_config_uri: None,
+                image_security_policy_uri: None,
+                authenticated_registry_credentials_uri: None,
+                image_pull_proxy: None,
+                skip_proxy_ips: None,
+                ..Default::default()
+        },
+        overlay_network: OverlayNetworkConfig {
+            enable: true,
+            nebula: Some(NebulaConfig {
+                lighthouse_pub_ip: "127.0.0.1".to_string(),
+                lighthouse_overlay_ip: "192.168.100.100".to_string(),
+                overlay_netmask: "255.255.255.0".to_string()
+            })
+        },
+        socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
+    })
+    )]
+    #[case(
+        r#"
+[kbc]
+name = "offline_fs_kbc"
+
+[image]
+some_undefined_field = "unknown value"
+
+[overlay_network]
+enable = "false"
+[overlay_network.nebula]
+lighthouse_ip = "192.168.100.100"
+overlay_netmask = "255.255.255.0"
+"#,
+        None
+    )]
+    #[case(
+        r#"
+[kbc]
+name = "offline_fs_kbc"
+
+[image]
+some_undefined_field = "unknown value"
+
+[overlay_network]
+enable = "true"
+"#,
+        None
+    )]
+    #[case(
+        r#"
+[kbc]
+name = "offline_fs_kbc"
+
+[image]
+some_undefined_field = "unknown value"
+
+[overlay_network]
+enable = "true"
+[overlay_network.nebula]
+lighthouse_ip = "192.168.100.100"
+"#,
+        None
     )]
     fn read_config(#[case] config: &str, #[case] expected: Option<CdhConfig>) {
         let mut file = tempfile::Builder::new()
@@ -298,6 +436,7 @@ some_undefined_field = "unknown value"
             credentials: Vec::new(),
             socket: DEFAULT_CDH_SOCKET_ADDR.into(),
             image: ImageConfig::default(),
+            overlay_network: OverlayNetworkConfig::default(),
         };
         assert_eq!(config, expected);
 
