@@ -15,6 +15,7 @@ TARGET_DIR := ../target
 BIN_NAME := confidential-data-hub
 
 ONE_SHOT ?= false
+OVERLAY_NETWORK ?= false
 
 SOURCE_ARCH := $(shell uname -m)
 RPC ?= ttrpc
@@ -57,6 +58,10 @@ endif
 
 ifneq ($(KMS_PROVIDER), none)
     features += $(KMS_PROVIDER)
+endif
+
+ifeq ($(OVERLAY_NETWORK), true)
+    features += overlay-network
 endif
 
 ifeq ($(LIBC), musl)
