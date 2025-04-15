@@ -276,7 +276,7 @@ impl ImageClient {
             if task.task_type != TaskType::Origininal && !task.use_http {
                 warn!(
                     "The image pull try from {} will use the configured https proxy",
-                    task.image_reference.to_string()
+                    task.image_reference
                 );
             }
         }
