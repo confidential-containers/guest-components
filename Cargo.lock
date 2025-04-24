@@ -388,7 +388,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.8",
- "strum",
+ "strum 0.26.3",
  "tempfile",
  "thiserror 2.0.12",
  "tokio",
@@ -427,7 +427,7 @@ dependencies = [
  "serde_with",
  "sev 4.0.0",
  "sha2 0.10.8",
- "strum",
+ "strum 0.26.3",
  "tdx-attest-rs",
  "tempfile",
  "thiserror 2.0.12",
@@ -1157,7 +1157,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
- "strum",
+ "strum 0.26.3",
  "tokio",
  "tonic",
  "tonic-build",
@@ -1222,7 +1222,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
- "strum",
+ "strum 0.26.3",
  "tempfile",
  "thiserror 2.0.12",
  "tokio",
@@ -1468,7 +1468,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.8",
- "strum",
+ "strum 0.26.3",
  "zeroize",
 ]
 
@@ -3095,7 +3095,7 @@ dependencies = [
  "nydus-api",
  "nydus-service",
  "oci-client",
- "oci-spec",
+ "oci-spec 0.8.0",
  "ocicrypt-rs",
  "prost 0.13.5",
  "protobuf 3.7.1",
@@ -3110,7 +3110,7 @@ dependencies = [
  "serial_test",
  "sha2 0.10.8",
  "sigstore",
- "strum",
+ "strum 0.26.3",
  "strum_macros 0.27.1",
  "tempfile",
  "test-utils",
@@ -3464,7 +3464,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sev 0.1.0",
- "strum",
+ "strum 0.26.3",
  "tokio",
  "tonic",
  "tonic-build",
@@ -3553,7 +3553,7 @@ dependencies = [
  "serde_json",
  "sev 0.1.0",
  "sha2 0.10.8",
- "strum",
+ "strum 0.26.3",
  "thiserror 2.0.12",
  "tokio",
  "toml 0.8.20",
@@ -4275,7 +4275,7 @@ dependencies = [
  "http-auth",
  "jwt",
  "lazy_static",
- "oci-spec",
+ "oci-spec 0.7.1",
  "olpc-cjson",
  "regex",
  "reqwest 0.12.15",
@@ -4299,8 +4299,25 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "strum",
+ "strum 0.26.3",
  "strum_macros 0.26.4",
+ "thiserror 2.0.12",
+]
+
+[[package]]
+name = "oci-spec"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d3572ed72a4db9a68db064d90886d72471fb147ec1ae047d6291c6fa99728b4"
+dependencies = [
+ "const_format",
+ "derive_builder",
+ "getset",
+ "regex",
+ "serde",
+ "serde_json",
+ "strum 0.27.1",
+ "strum_macros 0.27.1",
  "thiserror 2.0.12",
 ]
 
@@ -6431,6 +6448,12 @@ checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
 dependencies = [
  "strum_macros 0.26.4",
 ]
+
+[[package]]
+name = "strum"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f64def088c51c9510a8579e3c5d67c65349dcf755e5479ad3d010aa6454e2c32"
 
 [[package]]
 name = "strum_macros"
