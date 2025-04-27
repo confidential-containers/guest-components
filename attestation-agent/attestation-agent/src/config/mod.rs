@@ -95,6 +95,8 @@ impl TryFrom<&str> for Config {
             .set_default("eventlog_config.eventlog_algorithm", DEFAULT_EVENTLOG_HASH)?
             .set_default("eventlog_config.init_pcr", DEFAULT_PCR_INDEX)?
             .set_default("eventlog_config.enable_eventlog", "false")?
+            .set_default("token_configs.coco_as.url", "")?
+            .set_default("token_configs.kbs.url", "")?
             .build()?;
 
         let cfg = c.try_deserialize()?;
