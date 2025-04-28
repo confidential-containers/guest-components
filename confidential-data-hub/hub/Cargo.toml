@@ -84,7 +84,7 @@ tokio = { workspace = true, features = ["rt", "macros"] }
 default = ["aliyun", "kbs", "bin", "ttrpc", "grpc", "cli"]
 
 # support aliyun stacks (KMS, ..)
-aliyun = ["tempfile"]
+aliyun = ["tempfile", "kms/aliyun"]
 
 # support coco-KBS to provide confidential resources
 kbs = ["kms/kbs"]
