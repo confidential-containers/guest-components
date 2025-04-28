@@ -1,0 +1,4 @@
+[token_configs]
+
+[eventlog_config]
+eventlog_algorithm = "sha384"
