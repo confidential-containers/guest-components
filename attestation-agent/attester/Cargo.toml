@@ -14,6 +14,7 @@ az-tdx-vtpm = { version = "0.7.0", default-features = false, features = ["attest
 base64.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
 cfg-if.workspace = true
+crypto.path = "../deps/crypto"
 hex.workspace = true
 iocuddle = { version = "0.1.1", optional = true }
 kbs-types.workspace = true
