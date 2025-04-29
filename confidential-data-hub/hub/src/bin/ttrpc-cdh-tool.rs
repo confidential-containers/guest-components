@@ -7,6 +7,7 @@
 
 #![allow(non_snake_case)]
 
+use anyhow::Result;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use clap::{Args, Parser, Subcommand};
 use confidential_data_hub::storage::volume_type::Storage;
@@ -104,12 +105,64 @@ struct PullImageArgs {
     #[arg(short, long)]
     bundle_path: String,
 }
+pub struct ImagePullService {
+    client_image_pull: ImagePullServiceClient,
+    client_unwrap_key: KeyProviderServiceClient,
+    timeout_image_pull: i64,
+}
+impl ImagePullService {
+    fn new(cdh_addr: &str, timeout: i64) -> Self {
+        let inner = ttrpc::asynchronous::Client::connect(cdh_addr).expect("connect ttrpc socket");
+        let client_image_pull = ImagePullServiceClient::new(inner.clone());
+        let client_unwrap_key = KeyProviderServiceClient::new(inner.clone());
+        let timeout_image_pull = timeout * NANO_PER_SECOND;
+        ImagePullService {
+            client_image_pull,
+            client_unwrap_key,
+            timeout_image_pull,
+        }
+    }
+    async fn pull_image(&self, image_path: &str, bundle_path: &str) -> Result<String> {
+        let req = ImagePullRequest {
+            image_url: image_path.to_string(),
+            bundle_path: bundle_path.to_string(),
+            ..Default::default()
+        };
+        print!("seding pull image request to CDH: {:?}\n", req);
+        let res = self
+            .client_image_pull
+            .pull_image(ttrpc::context::with_timeout(self.timeout_image_pull), &req)
+            .await?;
+        println!("CDH pull image response: {:?}\n", res.manifest_digest);
+        Ok(res.manifest_digest)
+    }
+    async fn unwrap_key(&self, annotation_path: &str) -> Result<String> {
+        let KeyProviderKeyWrapProtocolInput =
+            tokio::fs::read(annotation_path).await.expect("read file");
+        let req = KeyProviderKeyWrapProtocolInput {
+            KeyProviderKeyWrapProtocolInput,
+            ..Default::default()
+        };
+        let res = self
+            .client_unwrap_key
+            .un_wrap_key(context::with_timeout(self.timeout_image_pull), &req)
+            .await
+            .expect("request to CDH");
+        let res = STANDARD.encode(res.KeyProviderKeyWrapProtocolOutput);
+        println!("{res}");
+        Ok(res)
+    }
+}
 
 #[tokio::main]
 async fn main() {
     let args = Cli::parse();
-    let inner = ttrpc::asynchronous::Client::connect(&args.socket).expect("connect ttrpc socket");
-
+    let cdh_addr = &args.socket;
+    let image_pull_timeout = &args.timeout * NANO_PER_SECOND;
+    let image_pull_service = ImagePullService::new(cdh_addr, image_pull_timeout);
+    //use another inner for other services just use once
+    let inner = ttrpc::asynchronous::Client::connect(cdh_addr).expect("connect ttrpc socket");
+    //finish cli operation
     match args.operation {
         Operation::UnsealSecret(arg) => {
             let client = SealedSecretServiceClient::new(inner);
@@ -126,19 +179,10 @@ async fn main() {
             println!("{res}");
         }
         Operation::UnwrapKey(arg) => {
-            let client = KeyProviderServiceClient::new(inner);
-            let KeyProviderKeyWrapProtocolInput = tokio::fs::read(arg.annotation_path)
+            let res = image_pull_service
+                .unwrap_key(&arg.annotation_path)
                 .await
-                .expect("read file");
-            let req = KeyProviderKeyWrapProtocolInput {
-                KeyProviderKeyWrapProtocolInput,
-                ..Default::default()
-            };
-            let res = client
-                .un_wrap_key(context::with_timeout(args.timeout * NANO_PER_SECOND), &req)
-                .await
-                .expect("request to CDH");
-            let res = STANDARD.encode(res.KeyProviderKeyWrapProtocolOutput);
+                .expect("unwrap key");
             println!("{res}");
         }
         Operation::GetResource(arg) => {
@@ -156,7 +200,8 @@ async fn main() {
         }
         Operation::SecureMount(arg) => {
             let client = SecureMountServiceClient::new(inner);
-            let storage_manifest = tokio::fs::read(arg.storage_path).await.expect("read file");
+            let storage_manifest: Vec<u8> =
+                tokio::fs::read(arg.storage_path).await.expect("read file");
             let storage: Storage =
                 serde_json::from_slice(&storage_manifest).expect("deserialize Storage");
             let req = SecureMountRequest {
@@ -173,17 +218,12 @@ async fn main() {
             println!("mount path: {}", res.mount_path);
         }
         Operation::PullImage(arg) => {
-            let client = ImagePullServiceClient::new(inner);
-            let req = ImagePullRequest {
-                image_url: arg.image_url,
-                bundle_path: arg.bundle_path,
-                ..Default::default()
-            };
-            let manifest_digest = client
-                .pull_image(context::with_timeout(args.timeout * NANO_PER_SECOND), &req)
+            let res = image_pull_service
+                .pull_image(&arg.image_url, &arg.bundle_path)
                 .await
-                .expect("request to CDH");
-            println!("Image pulled: {manifest_digest}")
+                .expect("pull image");
+            println!("image pull success{}", res);
         }
     }
+    //TODO: start a server and wait for guest cvm to do image_pull and memory map//
 }

@@ -215,7 +215,7 @@ impl ImageClient {
             self.config.extra_root_certificates.clone(),
         )?;
         let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
-
+        info!("Image manifest: {:?}\n", image_manifest);
         let id = image_manifest.config.digest.clone();
 
         let snapshot = match self.snapshots.get_mut(&self.config.default_snapshot) {
@@ -287,7 +287,7 @@ impl ImageClient {
             &image_digest,
             &image_config,
         )?;
-
+        info!("create_image_meta!\n");
         let unique_layers_len = unique_layers.len();
         let layer_metas = client
             .async_pull_layers(
@@ -297,7 +297,7 @@ impl ImageClient {
                 self.meta_store.clone(),
             )
             .await?;
-
+        info!("async_pull_layers!\n");
         image_data.layer_metas = layer_metas;
         let layer_db: HashMap<String, LayerMeta> = image_data
             .layer_metas
@@ -314,7 +314,7 @@ impl ImageClient {
         }
 
         let image_id = create_bundle(&image_data, bundle_dir, snapshot)?;
-
+        info!("create_bundle!\n");
         self.meta_store
             .write()
             .await

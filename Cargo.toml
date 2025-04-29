@@ -13,7 +13,7 @@ members = [
     "confidential-data-hub/hub",
     "confidential-data-hub/kms",
     "image-rs",
-    "ocicrypt-rs",
+    "ocicrypt-rs", "image-server",
 ]
 
 [workspace.dependencies]

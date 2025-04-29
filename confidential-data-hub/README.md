@@ -100,6 +100,7 @@ run the following to build
 git clone https://github.com/confidential-containers/guest-components
 cd guest-components/confidential-data-hub/hub
 cargo build --bin ttrpc-cdh-tool --features bin,ttrpc
+cargo build --release --no-default-features --bin ttrpc-cdh-tool --features bin,ttrpc --target aarch64-unknown-linux-musl
 ```
 
 Install
