@@ -78,9 +78,21 @@ pub enum InitDataResult {
 }
 
 pub(crate) type TeeEvidence = serde_json::Value;
+pub(crate) type TeeClass = String;
 
 #[async_trait::async_trait]
 pub(crate) trait Attester {
+    /// Each attester should define which category of tee it represents.
+    /// This could be something like "cpu" or "gpu" or any other scheme
+    /// used by the attester.
+    /// Ultimately this class will represent a module in the attestation token
+    /// signed by the attestation service.
+    /// This class should be more generic than the Tee Type.
+    /// There may be multiple attesters of the same type active in the same guest.
+    fn tee_class(&self) -> TeeClass {
+        "cpu".to_string()
+    }
+
     /// Call the hardware driver to get the Hardware specific evidence.
     /// The parameter `report_data` will be used as the user input of the
     /// evidence to avoid reply attack.
@@ -185,7 +197,8 @@ pub struct CompositeAttester {
 #[derive(Serialize, Deserialize)]
 pub struct CompositeEvidence {
     primary_evidence: TeeEvidence,
-    // The additional evidence is a map of Tee -> evidence,
+    primary_tee_class: TeeClass,
+    // The additional evidence is a map of Tee -> (TeeClass, TeeEvidence),
     // but we convert it to a string to avoid any inconsistencies
     // with serialization. The string in this struct is exactly
     // what is used to calculate the runtime data.
@@ -270,6 +283,7 @@ impl CompositeAttester {
 
         let guest_evidence = CompositeEvidence {
             primary_evidence,
+            primary_tee_class: self.primary_attester.tee_class(),
             additional_evidence,
         };
         Ok(serde_json::to_string(&guest_evidence)?)
@@ -286,11 +300,17 @@ impl CompositeAttester {
     pub async fn additional_evidence(
         &self,
         report_data: Vec<u8>,
-    ) -> Result<HashMap<Tee, TeeEvidence>> {
+    ) -> Result<HashMap<Tee, (TeeClass, TeeEvidence)>> {
         let mut evidence = HashMap::new();
 
         for (tee, attester) in &self.additional_attesters {
-            evidence.insert(*tee, attester.get_evidence(report_data.clone()).await?);
+            evidence.insert(
+                *tee,
+                (
+                    attester.tee_class(),
+                    attester.get_evidence(report_data.clone()).await?,
+                ),
+            );
         }
 
         Ok(evidence)
