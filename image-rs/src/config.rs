@@ -13,7 +13,7 @@ use crate::snapshots::SnapshotType;
 
 /// By default use a work dir in `/run` because for confidential guests `/run`
 /// is typically in a `tmpfs` which is backed by encrypted memory.
-pub const DEFAULT_WORK_DIR: &str = "/run/image-rs/";
+pub const DEFAULT_WORK_DIR: &str = "/run/kata-containers/image/";
 
 /// Default path to policy file in KBS or locally
 pub const POLICY_FILE_PATH: &str = "kbs:///default/security-policy/test";
@@ -550,7 +550,7 @@ mod tests {
     #[test]
     fn test_image_config_from_file() {
         let data = r#"{
-            "work_dir": "/run/image-rs/",
+            "work_dir": "/run/kata-containers/image/",
             "default_snapshot": "overlay",
             "image_security_policy_uri": "file:///etc/image-policy.json",
             "authenticated_registry_credentials_uri": "file:///etc/image-auth.json",
@@ -590,7 +590,7 @@ mod tests {
     #[test]
     fn test_nydus_config_from_file() {
         let data = r#"{
-            "work_dir": "/run/image-rs/",
+            "work_dir": "/run/kata-containers/image/",
             "default_snapshot": "overlay",
             "nydus": {
                 "type": "fuse",
