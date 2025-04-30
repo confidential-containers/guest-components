@@ -4,7 +4,8 @@
 //
 
 use async_trait::async_trait;
-use kbs_types::Tee;
+use crypto::HashAlgorithm;
+use kbs_types::{Tee, TeePubKey};
 
 use super::EvidenceProvider;
 
@@ -15,7 +16,12 @@ pub struct MockedEvidenceProvider {}
 
 #[async_trait]
 impl EvidenceProvider for MockedEvidenceProvider {
-    async fn get_evidence(&self, _runtime_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(
+        &self,
+        _tee_pubkey: TeePubKey,
+        _nonce: String,
+        _hash_algorithm: HashAlgorithm,
+    ) -> Result<String> {
         Ok("test evidence".into())
     }
 

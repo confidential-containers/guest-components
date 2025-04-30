@@ -5,7 +5,7 @@
 
 use std::time::Duration;
 
-use anyhow::{bail, Context};
+use anyhow::bail;
 use async_trait::async_trait;
 use crypto::HashAlgorithm;
 use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response, Tee};
@@ -191,14 +191,10 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         let algorithm = get_hash_algorithm(extra_params)?;
 
         let tee_pubkey = self.tee_key.export_pubkey()?;
-        let runtime_data = json!({
-            "tee-pubkey": tee_pubkey,
-            "nonce": challenge.nonce,
-        });
-        let runtime_data =
-            serde_json::to_string(&runtime_data).context("serialize runtime data failed")?;
+
         let evidence = self
-            .generate_evidence(tee, runtime_data, challenge.nonce, algorithm)
+            .provider
+            .get_evidence(tee_pubkey.clone(), challenge.nonce, algorithm)
             .await?;
         debug!("get evidence with challenge: {evidence}");
 
@@ -236,49 +232,6 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         }
 
         Ok(())
-    }
-
-    /// Convert the runtime data and the nonce into a hashed representation using the
-    /// specified hash algorithm.
-    async fn hash_runtime_data(
-        &self,
-        runtime_data: String,
-        nonce: String,
-        tee: Tee,
-        algorithm: HashAlgorithm,
-    ) -> Result<Vec<u8>> {
-        debug!("Hashing {tee:?} runtime data using nonce {nonce} and algorithm {algorithm:?}");
-
-        let hashed_data = match tee {
-            // IBM SE uses nonce as runtime_data to pass attestation_request
-            Tee::Se => nonce.into_bytes(),
-            _ => algorithm.digest(runtime_data.as_bytes()),
-        };
-
-        Ok(hashed_data)
-    }
-
-    async fn generate_evidence(
-        &self,
-        tee: Tee,
-        runtime_data: String,
-        nonce: String,
-        algorithm: HashAlgorithm,
-    ) -> Result<String> {
-        debug!("Challenge nonce: {nonce}, algorithm: {algorithm:?}");
-
-        let hashed_data = self
-            .hash_runtime_data(runtime_data, nonce, tee, algorithm)
-            .await?;
-
-        let tee_evidence = self
-            .provider
-            .get_evidence(hashed_data)
-            .await
-            .context("Get TEE evidence failed")
-            .map_err(|e| Error::GetEvidence(e.to_string()))?;
-
-        Ok(tee_evidence)
     }
 }
 
