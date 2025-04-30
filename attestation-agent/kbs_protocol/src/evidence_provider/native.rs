@@ -4,34 +4,39 @@
 //
 
 use async_trait::async_trait;
-use attester::{detect_tee_type, BoxedAttester};
-use kbs_types::Tee;
+use attester::CompositeAttester;
+use crypto::HashAlgorithm;
+use kbs_types::{Tee, TeePubKey};
 
 use super::EvidenceProvider;
 
 use crate::{Error, Result};
 
-pub struct NativeEvidenceProvider(BoxedAttester);
+pub struct NativeEvidenceProvider(CompositeAttester);
 
 impl NativeEvidenceProvider {
     pub fn new() -> Result<Self> {
-        let tee = detect_tee_type().try_into().map_err(|e| {
-            Error::NativeEvidenceProvider(format!("failed to initialize tee driver: {e:?}"))
-        })?;
-        Ok(Self(tee))
+        Ok(Self(
+            CompositeAttester::new().map_err(|e| Error::GetEvidence(e.to_string()))?,
+        ))
     }
 }
 
 #[async_trait]
 impl EvidenceProvider for NativeEvidenceProvider {
-    async fn get_evidence(&self, runtime_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(
+        &self,
+        tee_pubkey: TeePubKey,
+        nonce: String,
+        hash_algorithm: HashAlgorithm,
+    ) -> Result<String> {
         self.0
-            .get_evidence(runtime_data)
+            .evidence(tee_pubkey, nonce, hash_algorithm)
             .await
             .map_err(|e| Error::GetEvidence(e.to_string()))
     }
 
     async fn get_tee_type(&self) -> Result<Tee> {
-        Ok(detect_tee_type())
+        Ok(self.0.tee_type())
     }
 }
