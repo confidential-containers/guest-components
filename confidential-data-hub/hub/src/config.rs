@@ -55,7 +55,10 @@ pub struct CdhConfig {
     #[serde(default)]
     pub credentials: Vec<Credential>,
 
-    #[serde(default)]
+    /// Image pull configuration. Note that if `[image]` section is not given,
+    /// the image pull configuration will be read from kernel commandline together
+    /// with default values.
+    #[serde(default = "ImageConfig::from_kernel_cmdline")]
     pub image: ImageConfig,
 
     pub socket: String,
@@ -81,12 +84,12 @@ impl CdhConfig {
                 Self::from_file(&path)?
             }
             None => {
-                info!("No config path specified, use a default config.");
+                info!("No config path specified, use a default config (some parts will read from kernel cmdline).");
                 Self {
                     kbc: KbsConfig::new()?,
                     credentials: Vec::new(),
                     socket: DEFAULT_CDH_SOCKET_ADDR.into(),
-                    image: ImageConfig::default(),
+                    image: ImageConfig::from_kernel_cmdline(),
                 }
             }
         };
@@ -297,7 +300,7 @@ some_undefined_field = "unknown value"
             },
             credentials: Vec::new(),
             socket: DEFAULT_CDH_SOCKET_ADDR.into(),
-            image: ImageConfig::default(),
+            image: ImageConfig::from_kernel_cmdline(),
         };
         assert_eq!(config, expected);
 
