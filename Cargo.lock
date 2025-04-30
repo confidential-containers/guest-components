@@ -686,7 +686,7 @@ dependencies = [
  "bitflags 2.9.0",
  "cexpr",
  "clang-sys",
- "itertools 0.10.5",
+ "itertools 0.12.1",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -3405,8 +3405,9 @@ dependencies = [
 
 [[package]]
 name = "kbs-types"
-version = "0.10.0"
-source = "git+https://github.com/fitzthum/kbs-types?branch=multi-device-composite#4eee602253c80e5eea1679aeded5927bb8f315db"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2be9fa1f64b3c8da5043cdc634007c6f7444b3ef1f3668f66b34180bdb398ec7"
 dependencies = [
  "base64 0.22.1",
  "serde",
@@ -7457,7 +7458,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

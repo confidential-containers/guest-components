@@ -16,12 +16,18 @@ pub use aa_ttrpc::*;
 
 use crate::Result;
 use async_trait::async_trait;
-use kbs_types::Tee;
+use crypto::HashAlgorithm;
+use kbs_types::{Tee, TeePubKey};
 
 #[async_trait]
 pub trait EvidenceProvider: Send + Sync {
     /// Get evidence with as runtime data (report data, challege)
-    async fn get_evidence(&self, runtime_data: Vec<u8>) -> Result<String>;
+    async fn get_evidence(
+        &self,
+        tee_pubkey: TeePubKey,
+        nonce: String,
+        hash_algorithm: HashAlgorithm,
+    ) -> Result<String>;
 
     /// Get the underlying Tee type
     async fn get_tee_type(&self) -> Result<Tee>;
