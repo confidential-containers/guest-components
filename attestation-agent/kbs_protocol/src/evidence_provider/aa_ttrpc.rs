@@ -4,7 +4,8 @@
 //
 
 use async_trait::async_trait;
-use kbs_types::Tee;
+use crypto::HashAlgorithm;
+use kbs_types::{Tee, TeePubKey};
 use serde_json::json;
 use ttrpc::context;
 
@@ -40,9 +41,19 @@ impl AAEvidenceProvider {
 #[async_trait]
 impl EvidenceProvider for AAEvidenceProvider {
     /// Get evidence with as runtime data (report data, challege)
-    async fn get_evidence(&self, runtime_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(
+        &self,
+        tee_pubkey: TeePubKey,
+        nonce: String,
+        hash_algorithm: HashAlgorithm,
+    ) -> Result<String> {
+        let pubkey_string = serde_json::to_string(&tee_pubkey).map_err(|e| {
+            Error::AAEvidenceProvider(format!("Failed to serialize Tee Pub Key: {e}"))
+        })?;
         let req = GetEvidenceRequest {
-            RuntimeData: runtime_data,
+            TeePubKey: pubkey_string,
+            Nonce: nonce,
+            HashAlgorithm: hash_algorithm.to_string(),
             ..Default::default()
         };
         let res = self

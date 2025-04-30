@@ -3,7 +3,9 @@ syntax = "proto3";
 package attestation_agent;
 
 message GetEvidenceRequest {
-    bytes RuntimeData = 1;
+    string TeePubKey = 1;
+    string Nonce = 2;
+    string HashAlgorithm = 3;
 }
 
 message GetEvidenceResponse {

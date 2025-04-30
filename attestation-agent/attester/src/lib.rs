@@ -41,7 +41,7 @@ pub mod tsm_report;
 #[cfg(feature = "se-attester")]
 pub mod se;
 
-pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
+pub(crate) type BoxedAttester = Box<dyn Attester + Send + Sync>;
 
 impl TryFrom<Tee> for BoxedAttester {
     type Error = anyhow::Error;
@@ -78,7 +78,7 @@ pub enum InitDataResult {
 }
 
 #[async_trait::async_trait]
-pub trait Attester {
+pub(crate) trait Attester {
     /// Call the hardware driver to get the Hardware specific evidence.
     /// The parameter `report_data` will be used as the user input of the
     /// evidence to avoid reply attack.
