@@ -5,7 +5,7 @@
 
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
-use attester::{detect_tee_type, BoxedAttester};
+use attester::CompositeAttester;
 use kbs_types::Tee;
 use std::{str::FromStr, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
@@ -78,9 +78,8 @@ pub trait AttestationAPIs {
 /// Attestation agent to provide attestation service.
 pub struct AttestationAgent {
     config: RwLock<Config>,
-    attester: Arc<BoxedAttester>,
+    attester: Arc<CompositeAttester>,
     eventlog: Option<Mutex<EventLog>>,
-    tee: Tee,
 }
 
 impl AttestationAgent {
@@ -115,15 +114,12 @@ impl AttestationAgent {
         debug!("Using config: {config:#?}");
         let config = RwLock::new(config);
 
-        let tee = detect_tee_type();
-        let attester: BoxedAttester = tee.try_into()?;
-        let attester = Arc::new(attester);
+        let attester = Arc::new(CompositeAttester::new()?);
 
         Ok(AttestationAgent {
             config,
             attester,
             eventlog: None,
-            tee,
         })
     }
 }
@@ -171,7 +167,10 @@ impl AttestationAPIs for AttestationAgent {
 
     /// Get TEE hardware signed evidence that includes the runtime data.
     async fn get_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>> {
-        let evidence = self.attester.get_evidence(runtime_data.to_vec()).await?;
+        let evidence = self
+            .attester
+            .primary_evidence(runtime_data.to_vec())
+            .await?;
         Ok(evidence.into_bytes())
     }
 
@@ -226,6 +225,6 @@ impl AttestationAPIs for AttestationAgent {
     /// Get the tee type of current platform. If no platform is detected,
     /// `Sample` will be returned.
     fn get_tee_type(&self) -> Tee {
-        self.tee
+        self.attester.tee_type()
     }
 }

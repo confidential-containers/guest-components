@@ -15,7 +15,7 @@ use std::{
 };
 
 use anyhow::{bail, Context, Result};
-use attester::BoxedAttester;
+use attester::CompositeAttester;
 use const_format::concatcp;
 
 use crypto::HashAlgorithm;
@@ -30,7 +30,7 @@ pub const EVENTLOG_PATH: &str = concatcp!(EVENTLOG_PARENT_DIR_PATH, "/eventlog")
 
 pub struct EventLog {
     writer: Box<dyn Writer>,
-    rtmr_extender: Arc<BoxedAttester>,
+    rtmr_extender: Arc<CompositeAttester>,
     alg: HashAlgorithm,
     pcr: u64,
 }
@@ -55,7 +55,7 @@ impl Writer for FileWriter {
 
 impl EventLog {
     pub async fn new(
-        rtmr_extender: Arc<BoxedAttester>,
+        rtmr_extender: Arc<CompositeAttester>,
         alg: HashAlgorithm,
         pcr: u64,
     ) -> Result<Self> {
@@ -243,7 +243,7 @@ impl Display for LogEntry<'_> {
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use attester::{detect_tee_type, Attester};
+    use attester::{Attester, CompositeAttester};
     use rstest::rstest;
     use std::sync::{Arc, Mutex};
 
@@ -271,8 +271,7 @@ mod tests {
     async fn test_log_events() {
         let lines = Arc::new(Mutex::new(vec![]));
         let tw = TestWriter(lines.clone());
-        let tee = detect_tee_type();
-        let rtmr_extender = Arc::new(tee.try_into().unwrap());
+        let rtmr_extender = Arc::new(CompositeAttester::new().unwrap());
         let mut el = EventLog {
             writer: Box::new(tw),
             pcr: 17,
