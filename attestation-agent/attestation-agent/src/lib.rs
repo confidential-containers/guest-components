@@ -108,8 +108,8 @@ impl AttestationAgent {
                 Config::try_from(config_path)?
             }
             None => {
-                warn!("No AA config file specified. Using a default configuration.");
-                Config::default()
+                warn!("No AA config file specified. Using a default configuration and the kbs address will be read from kernel cmdline.");
+                Config::default_with_kernel_cmdline()
             }
         };
         debug!("Using config: {config:#?}");

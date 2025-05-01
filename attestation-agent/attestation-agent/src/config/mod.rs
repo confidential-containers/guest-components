@@ -34,6 +34,15 @@ pub struct Config {
     pub eventlog_config: EventlogConfig,
 }
 
+impl Config {
+    pub fn default_with_kernel_cmdline() -> Self {
+        Config {
+            token_configs: TokenConfigs::from_kernel_cmdline(),
+            eventlog_config: EventlogConfig::default(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct EventlogConfig {
     /// Hash algorithm used to extend runtime measurement for eventlog.
@@ -56,7 +65,7 @@ impl Default for EventlogConfig {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Default)]
 pub struct TokenConfigs {
     /// This config item is used when `coco_as` feature is enabled.
     #[cfg(feature = "coco_as")]
@@ -67,8 +76,8 @@ pub struct TokenConfigs {
     pub kbs: Option<kbs::KbsConfig>,
 }
 
-impl Default for TokenConfigs {
-    fn default() -> Self {
+impl TokenConfigs {
+    pub fn from_kernel_cmdline() -> Self {
         #[cfg(feature = "kbs")]
         let kbs = kbs::KbsConfig::new().ok();
 
