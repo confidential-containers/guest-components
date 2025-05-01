@@ -46,7 +46,8 @@ impl Attester for SnpAttester {
             .context("Failed to get attestation report")?;
 
         let evidence = SnpEvidence {
-            attestation_report: report,
+            attestation_report: AttestationReport::from_bytes(&report)
+                .context("Failed to parse attestation report")?,
             cert_chain: certs,
         };
 
