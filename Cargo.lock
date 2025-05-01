@@ -387,7 +387,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "strum 0.27.1",
  "tempfile",
  "thiserror 2.0.12",
@@ -426,7 +426,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "sev 4.0.0",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "strum 0.27.1",
  "tdx-attest-rs",
  "tempfile",
@@ -512,7 +512,7 @@ dependencies = [
  "serde-big-array",
  "serde_json",
  "sev 4.0.0",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "thiserror 2.0.12",
  "tss-esapi",
  "zerocopy",
@@ -1467,7 +1467,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "strum 0.27.1",
  "zeroize",
 ]
@@ -1933,7 +1933,7 @@ dependencies = [
  "num-traits",
  "pkcs8",
  "rfc6979",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "signature",
  "zeroize",
 ]
@@ -2010,7 +2010,7 @@ dependencies = [
  "ed25519",
  "rand_core 0.6.4",
  "serde",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "subtle",
  "zeroize",
 ]
@@ -3108,7 +3108,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "serial_test",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "sigstore",
  "strum 0.27.1",
  "strum_macros 0.27.1",
@@ -3404,7 +3404,7 @@ dependencies = [
  "hmac 0.12.1",
  "serde",
  "serde_json",
- "sha2 0.10.8",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -3443,7 +3443,7 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "once_cell",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "signature",
 ]
 
@@ -3506,7 +3506,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "tempfile",
  "testcontainers",
  "thiserror 2.0.12",
@@ -3552,7 +3552,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sev 0.1.0",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "strum 0.27.1",
  "thiserror 2.0.12",
  "tokio",
@@ -4192,7 +4192,7 @@ dependencies = [
  "openssl",
  "serde",
  "serde_json",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "tokio",
  "zstd 0.11.2+zstd.1.5.2",
 ]
@@ -4281,7 +4281,7 @@ dependencies = [
  "reqwest 0.12.15",
  "serde",
  "serde_json",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "thiserror 1.0.69",
  "tokio",
  "tracing",
@@ -4346,7 +4346,7 @@ dependencies = [
  "ring",
  "serde",
  "serde_json",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "tokio",
  "tonic",
  "tonic-build",
@@ -4483,7 +4483,7 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "primeorder",
- "sha2 0.10.8",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -4495,7 +4495,7 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "primeorder",
- "sha2 0.10.8",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -4509,7 +4509,7 @@ dependencies = [
  "elliptic-curve",
  "primeorder",
  "rand_core 0.6.4",
- "sha2 0.10.8",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -4660,7 +4660,7 @@ checksum = "e1e58089ea25d717bfd31fb534e4f3afcc2cc569c70de3e239778991ea3b7dea"
 dependencies = [
  "once_cell",
  "pest",
- "sha2 0.10.8",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -4791,7 +4791,7 @@ dependencies = [
  "der",
  "pbkdf2",
  "scrypt",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "spki",
 ]
 
@@ -5535,7 +5535,7 @@ dependencies = [
  "pkcs1",
  "pkcs8",
  "rand_core 0.6.4",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "signature",
  "spki",
  "subtle",
@@ -5854,7 +5854,7 @@ dependencies = [
  "password-hash",
  "pbkdf2",
  "salsa20",
- "sha2 0.10.8",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -5970,7 +5970,7 @@ dependencies = [
  "ripemd",
  "rsa",
  "sha1collisiondetection",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "sha3",
  "thiserror 2.0.12",
  "twofish",
@@ -6205,9 +6205,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.8"
+version = "0.10.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "793db75ad2bcafc3ffa7c68b215fee268f537982cd901d132f89c6343f3a3dc8"
+checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -6286,7 +6286,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
- "sha2 0.10.8",
+ "sha2 0.10.9",
  "signature",
  "thiserror 2.0.12",
  "tls_codec",
