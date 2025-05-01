@@ -84,6 +84,7 @@ impl ClientBuilder {
 
         let registry_auth = match &self.config.authenticated_registry_credentials_uri {
             Some(uri) => {
+                info!("getting registry auth from {uri} ...");
                 let auth_bytes = resource_provider.get_resource(uri).await?;
                 let auth = Auth::new(&auth_bytes)?;
                 Some(auth)
@@ -101,6 +102,7 @@ impl ClientBuilder {
 
         let signature_validator = match &self.config.image_security_policy_uri {
             Some(uri) => {
+                info!("getting image security policy from {uri} ...");
                 let policy_bytes = resource_provider.get_resource(uri).await?;
                 let auth = SignatureValidator::new(
                     &policy_bytes,
@@ -122,6 +124,7 @@ impl ClientBuilder {
 
         let registry_handler = match &self.config.registry_configuration_uri {
             Some(uri) => {
+                info!("getting registry configuration from {uri} ...");
                 let registry_configuration = resource_provider.get_resource(uri).await?;
                 let registry_configuration = String::from_utf8(registry_configuration)
                     .context("illegal registry configuration")?;
@@ -143,7 +146,7 @@ impl ClientBuilder {
         };
 
         let snapshots = ImageClient::init_snapshots(&self.config.work_dir, &meta_store);
-
+        info!("Image work directory: {:?}", self.config.work_dir);
         let meta_store = Arc::new(RwLock::new(meta_store));
 
         let layer_store = LayerStore::new(self.config.work_dir.clone())?;
