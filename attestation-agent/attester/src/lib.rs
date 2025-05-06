@@ -191,12 +191,12 @@ pub struct CompositeAttester {
 /// that represent the guest.
 #[derive(Serialize, Deserialize)]
 pub struct CompositeEvidence {
-    primary_evidence: TeeEvidence,
+    pub primary_evidence: TeeEvidence,
     // The additional evidence is a map of Tee -> evidence,
     // but we convert it to a string to avoid any inconsistencies
     // with serialization. The string in this struct is exactly
     // what is used to calculate the runtime data.
-    additional_evidence: String,
+    pub additional_evidence: String,
 }
 
 impl CompositeAttester {
