@@ -203,13 +203,13 @@ pub struct CompositeAttester {
 /// that represent the guest.
 #[derive(Serialize, Deserialize)]
 pub struct CompositeEvidence {
-    primary_evidence: TeeEvidence,
-    primary_tee_class: TeeClass,
+    pub primary_evidence: TeeEvidence,
+    pub primary_tee_class: TeeClass,
     // The additional evidence is a map of Tee -> (TeeClass, TeeEvidence),
     // but we convert it to a string to avoid any inconsistencies
     // with serialization. The string in this struct is exactly
     // what is used to calculate the runtime data.
-    additional_evidence: String,
+    pub additional_evidence: String,
 }
 
 impl CompositeAttester {
@@ -351,5 +351,9 @@ impl CompositeAttester {
         self.primary_attester
             .get_runtime_measurement(pcr_index)
             .await
+    }
+
+    pub fn primary_tee_class(&self) -> TeeClass {
+        self.primary_attester.tee_class()
     }
 }
