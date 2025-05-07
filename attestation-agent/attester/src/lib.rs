@@ -226,7 +226,7 @@ impl CompositeAttester {
     /// The evidence from the additional devices will be collected first
     /// so that it can be bound to the evidence of the primary device
     /// via the report/runtime data.
-    pub async fn evidence(
+    pub async fn composite_evidence(
         &self,
         tee_pubkey: TeePubKey,
         nonce: String,
