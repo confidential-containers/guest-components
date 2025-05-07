@@ -36,6 +36,16 @@ impl AttestationAgentServiceClient {
         ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetEvidence", cres);
     }
 
+    pub async fn get_composite_evidence(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::GetCompositeEvidenceRequest) -> ::ttrpc::Result<super::attestation_agent::GetEvidenceResponse> {
+        let mut cres = super::attestation_agent::GetEvidenceResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetCompositeEvidence", cres);
+    }
+
+    pub async fn get_additional_evidence(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::GetAdditionalEvidenceRequest) -> ::ttrpc::Result<super::attestation_agent::GetEvidenceResponse> {
+        let mut cres = super::attestation_agent::GetEvidenceResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetAdditionalEvidence", cres);
+    }
+
     pub async fn get_token(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::GetTokenRequest) -> ::ttrpc::Result<super::attestation_agent::GetTokenResponse> {
         let mut cres = super::attestation_agent::GetTokenResponse::new();
         ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetToken", cres);
@@ -65,6 +75,28 @@ struct GetEvidenceMethod {
 impl ::ttrpc::r#async::MethodHandler for GetEvidenceMethod {
     async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
         ::ttrpc::async_request_handler!(self, ctx, req, attestation_agent, GetEvidenceRequest, get_evidence);
+    }
+}
+
+struct GetCompositeEvidenceMethod {
+    service: Arc<dyn AttestationAgentService + Send + Sync>,
+}
+
+#[async_trait]
+impl ::ttrpc::r#async::MethodHandler for GetCompositeEvidenceMethod {
+    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
+        ::ttrpc::async_request_handler!(self, ctx, req, attestation_agent, GetCompositeEvidenceRequest, get_composite_evidence);
+    }
+}
+
+struct GetAdditionalEvidenceMethod {
+    service: Arc<dyn AttestationAgentService + Send + Sync>,
+}
+
+#[async_trait]
+impl ::ttrpc::r#async::MethodHandler for GetAdditionalEvidenceMethod {
+    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
+        ::ttrpc::async_request_handler!(self, ctx, req, attestation_agent, GetAdditionalEvidenceRequest, get_additional_evidence);
     }
 }
 
@@ -117,6 +149,12 @@ pub trait AttestationAgentService: Sync {
     async fn get_evidence(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetEvidenceRequest) -> ::ttrpc::Result<super::attestation_agent::GetEvidenceResponse> {
         Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/GetEvidence is not supported".to_string())))
     }
+    async fn get_composite_evidence(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetCompositeEvidenceRequest) -> ::ttrpc::Result<super::attestation_agent::GetEvidenceResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/GetCompositeEvidence is not supported".to_string())))
+    }
+    async fn get_additional_evidence(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetAdditionalEvidenceRequest) -> ::ttrpc::Result<super::attestation_agent::GetEvidenceResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/GetAdditionalEvidence is not supported".to_string())))
+    }
     async fn get_token(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetTokenRequest) -> ::ttrpc::Result<super::attestation_agent::GetTokenResponse> {
         Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/GetToken is not supported".to_string())))
     }
@@ -138,6 +176,12 @@ pub fn create_attestation_agent_service(service: Arc<dyn AttestationAgentService
 
     methods.insert("GetEvidence".to_string(),
                     Box::new(GetEvidenceMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
+
+    methods.insert("GetCompositeEvidence".to_string(),
+                    Box::new(GetCompositeEvidenceMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
+
+    methods.insert("GetAdditionalEvidence".to_string(),
+                    Box::new(GetAdditionalEvidenceMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
 
     methods.insert("GetToken".to_string(),
                     Box::new(GetTokenMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);

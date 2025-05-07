@@ -9,12 +9,16 @@ use attestation::attestation_agent_service_server::{
 };
 use attestation::{
     BindInitDataRequest, BindInitDataResponse, ExtendRuntimeMeasurementRequest,
-    ExtendRuntimeMeasurementResponse, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
-    GetTeeTypeResponse, GetTokenRequest, GetTokenResponse,
+    ExtendRuntimeMeasurementResponse, GetAdditionalEvidenceRequest, GetCompositeEvidenceRequest,
+    GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest, GetTeeTypeResponse,
+    GetTokenRequest, GetTokenResponse,
 };
 use attestation_agent::{AttestationAPIs, AttestationAgent};
+use crypto::HashAlgorithm;
+use kbs_types::TeePubKey;
 use log::{debug, error};
 use std::net::SocketAddr;
+use std::str::FromStr;
 use tonic::{transport::Server, Request, Response, Status};
 
 mod attestation {
@@ -71,6 +75,72 @@ impl AttestationAgentService for AA {
             })?;
 
         debug!("AA (grpc): Get evidence successfully!");
+
+        let reply = GetEvidenceResponse { evidence };
+
+        Result::Ok(Response::new(reply))
+    }
+
+    async fn get_additional_evidence(
+        &self,
+        request: Request<GetAdditionalEvidenceRequest>,
+    ) -> Result<Response<GetEvidenceResponse>, Status> {
+        let request = request.into_inner();
+
+        debug!("AA (grpc): get additional evidence ...");
+
+        let evidence = self
+            .inner
+            .get_additional_evidence(&request.runtime_data)
+            .await
+            .map_err(|e| {
+                error!("AA (grpc): get additional evidence failed:\n{e:?}");
+                Status::internal(format!(
+                    "[ERROR:{AGENT_NAME}] AA get additional evidence failed"
+                ))
+            })?;
+
+        debug!("AA (grpc): Get evidence successfully!");
+
+        let reply = GetEvidenceResponse { evidence };
+
+        Result::Ok(Response::new(reply))
+    }
+
+    async fn get_composite_evidence(
+        &self,
+        request: Request<GetCompositeEvidenceRequest>,
+    ) -> Result<Response<GetEvidenceResponse>, Status> {
+        let request = request.into_inner();
+
+        debug!("AA (grpc): get composite evidence ...");
+
+        let tee_pubkey: TeePubKey = serde_json::from_str(&request.tee_pub_key).map_err(|e| {
+            error!("AA (grpc): get composite evidence failed:\n {e:?}");
+            Status::internal(format!(
+                "[ERROR:{AGENT_NAME}] Failed to deserialize Tee Pub Key"
+            ))
+        })?;
+
+        let hash_algorithm = HashAlgorithm::from_str(&request.hash_algorithm).map_err(|e| {
+            error!("AA (grpc): get composite evidence failed:\n {e:?}");
+            Status::internal(format!(
+                "[ERROR:{AGENT_NAME}] Failed to parse hash algorithm"
+            ))
+        })?;
+
+        let evidence = self
+            .inner
+            .get_composite_evidence(tee_pubkey, request.nonce, hash_algorithm)
+            .await
+            .map_err(|e| {
+                error!("AA (grpc): get composite evidence failed:\n{e:?}");
+                Status::internal(format!(
+                    "[ERROR:{AGENT_NAME}] AA get composite evidence failed"
+                ))
+            })?;
+
+        debug!("AA (grpc): Get composite evidence successfully!");
 
         let reply = GetEvidenceResponse { evidence };
 
