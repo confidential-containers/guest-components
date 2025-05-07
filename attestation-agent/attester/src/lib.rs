@@ -77,12 +77,14 @@ pub enum InitDataResult {
     Unsupported,
 }
 
+pub(crate) type TeeEvidence = serde_json::Value;
+
 #[async_trait::async_trait]
 pub(crate) trait Attester {
     /// Call the hardware driver to get the Hardware specific evidence.
     /// The parameter `report_data` will be used as the user input of the
     /// evidence to avoid reply attack.
-    async fn get_evidence(&self, report_data: Vec<u8>) -> Result<String>;
+    async fn get_evidence(&self, report_data: Vec<u8>) -> Result<TeeEvidence>;
 
     /// Extend TEE specific dynamic measurement register
     /// to enable dynamic measurement capabilities for input data at runtime.
@@ -182,7 +184,7 @@ pub struct CompositeAttester {
 /// that represent the guest.
 #[derive(Serialize, Deserialize)]
 pub struct CompositeEvidence {
-    primary_evidence: String,
+    primary_evidence: TeeEvidence,
     // The additional evidence is a map of Tee -> evidence,
     // but we convert it to a string to avoid any inconsistencies
     // with serialization. The string in this struct is exactly
@@ -275,13 +277,16 @@ impl CompositeAttester {
 
     /// Get the evidence from the primary attester.
     /// The caller is responsible for handling the report data.
-    pub async fn primary_evidence(&self, report_data: Vec<u8>) -> Result<String> {
+    pub async fn primary_evidence(&self, report_data: Vec<u8>) -> Result<TeeEvidence> {
         self.primary_attester.get_evidence(report_data).await
     }
 
     /// Get the evidence from any additional attesters.
     /// The caller is responsible for handling the report data.
-    pub async fn additional_evidence(&self, report_data: Vec<u8>) -> Result<HashMap<Tee, String>> {
+    pub async fn additional_evidence(
+        &self,
+        report_data: Vec<u8>,
+    ) -> Result<HashMap<Tee, TeeEvidence>> {
         let mut evidence = HashMap::new();
 
         for (tee, attester) in &self.additional_attesters {

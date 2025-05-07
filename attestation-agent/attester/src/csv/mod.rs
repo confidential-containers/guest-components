@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::Attester;
+use super::{Attester, TeeEvidence};
 use anyhow::{bail, Context, Ok, Result};
 use codicon::Decoder;
 use csv_rs::{
@@ -41,7 +41,7 @@ pub struct CsvAttester {}
 
 #[async_trait::async_trait]
 impl Attester for CsvAttester {
-    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
         if report_data.len() > 64 {
             bail!("CSV Attester: Report data must be no more than 64 bytes");
         }
@@ -63,7 +63,7 @@ impl Attester for CsvAttester {
             cert_chain: CertificateChain { hsk, cek, pek },
             serial_number: report_signer.sn.to_vec(),
         };
-        serde_json::to_string(&evidence).context("Serialize CSV evidence failed")
+        serde_json::to_value(&evidence).context("Serialize CSV evidence failed")
     }
 }
 
