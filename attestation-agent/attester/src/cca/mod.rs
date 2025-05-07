@@ -4,7 +4,7 @@
 //
 
 use super::tsm_report::*;
-use super::Attester;
+use super::{Attester, TeeEvidence};
 use anyhow::*;
 use serde::{Deserialize, Serialize};
 
@@ -28,7 +28,7 @@ struct CcaEvidence {
 
 #[async_trait::async_trait]
 impl Attester for CcaAttester {
-    async fn get_evidence(&self, mut challenge: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, mut challenge: Vec<u8>) -> Result<TeeEvidence> {
         if challenge.len() > CCA_CHALLENGE_SIZE {
             bail!("CCA Attester: Challenge size must be {CCA_CHALLENGE_SIZE} bytes or less.");
         }
@@ -37,8 +37,7 @@ impl Attester for CcaAttester {
         let tsm = TsmReportPath::new(TsmReportProvider::Cca)?;
         let token = tsm.attestation_report(TsmReportData::Cca(challenge))?;
         let evidence = CcaEvidence { token };
-        let ev =
-            serde_json::to_string(&evidence).context("Serialization of CCA evidence failed")?;
+        let ev = serde_json::to_value(&evidence).context("Serialization of CCA evidence failed")?;
         Ok(ev)
     }
 }
