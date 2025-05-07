@@ -6,7 +6,7 @@
 use crate::utils::pad;
 use crate::InitDataResult;
 
-use super::Attester;
+use super::{Attester, TeeEvidence};
 use anyhow::*;
 use serde::{Deserialize, Serialize};
 use sev::firmware::guest::AttestationReport;
@@ -31,7 +31,7 @@ pub struct SnpAttester {}
 
 #[async_trait::async_trait]
 impl Attester for SnpAttester {
-    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
         if report_data.len() > 64 {
             bail!("SNP Attester: Report data must be no more than 64 bytes");
         }
@@ -50,7 +50,7 @@ impl Attester for SnpAttester {
             cert_chain: certs,
         };
 
-        serde_json::to_string(&evidence).context("Serialize SNP evidence failed")
+        serde_json::to_value(&evidence).context("Serialize SNP evidence failed")
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> Result<InitDataResult> {
