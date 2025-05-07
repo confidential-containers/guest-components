@@ -31,7 +31,7 @@ impl EvidenceProvider for NativeEvidenceProvider {
         hash_algorithm: HashAlgorithm,
     ) -> Result<String> {
         self.0
-            .evidence(tee_pubkey, nonce, hash_algorithm)
+            .composite_evidence(tee_pubkey, nonce, hash_algorithm)
             .await
             .map_err(|e| Error::GetEvidence(e.to_string()))
     }
