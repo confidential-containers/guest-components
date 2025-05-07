@@ -171,7 +171,7 @@ impl AttestationAPIs for AttestationAgent {
             .attester
             .primary_evidence(runtime_data.to_vec())
             .await?;
-        Ok(evidence.into_bytes())
+        Ok(evidence.to_string().into_bytes())
     }
 
     /// Extend runtime measurement register. Parameters
