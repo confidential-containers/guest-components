@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::{Attester, InitDataResult};
+use super::{Attester, InitDataResult, TeeEvidence};
 use anyhow::{bail, Context, Result};
 use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
 use log::{debug, info};
@@ -31,7 +31,7 @@ struct Evidence {
 
 #[async_trait::async_trait]
 impl Attester for AzSnpVtpmAttester {
-    async fn get_evidence(&self, report_data: Vec<u8>) -> anyhow::Result<String> {
+    async fn get_evidence(&self, report_data: Vec<u8>) -> anyhow::Result<TeeEvidence> {
         let report = vtpm::get_report()?;
         let quote = vtpm::get_quote(&report_data)?;
         let certs = imds::get_certs()?;
@@ -43,7 +43,7 @@ impl Attester for AzSnpVtpmAttester {
             vcek,
         };
 
-        Ok(serde_json::to_string(&evidence)?)
+        Ok(serde_json::to_value(&evidence)?)
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> anyhow::Result<InitDataResult> {

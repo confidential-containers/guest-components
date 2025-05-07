@@ -4,7 +4,7 @@
 //
 
 use super::tsm_report::*;
-use super::Attester;
+use super::{Attester, TeeEvidence};
 use crate::utils::pad;
 use crate::InitDataResult;
 use anyhow::*;
@@ -127,7 +127,7 @@ impl TdxAttester {
 
 #[async_trait::async_trait]
 impl Attester for TdxAttester {
-    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
         if report_data.len() > TDX_REPORT_DATA_SIZE {
             bail!("TDX Attester: Report data must be no more than {TDX_REPORT_DATA_SIZE} bytes");
         }
@@ -170,7 +170,7 @@ impl Attester for TdxAttester {
             aa_eventlog,
         };
 
-        serde_json::to_string(&evidence).context("Serialize TDX evidence failed")
+        serde_json::to_value(&evidence).context("Serialize TDX evidence failed")
     }
 
     async fn extend_runtime_measurement(

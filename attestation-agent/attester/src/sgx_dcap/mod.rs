@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::Attester;
+use super::{Attester, TeeEvidence};
 use anyhow::{bail, Context, Result};
 use base64::Engine;
 use occlum_dcap::{sgx_report_data_t, DcapQuote};
@@ -47,7 +47,7 @@ pub struct SgxDcapAttester {}
 
 #[async_trait::async_trait]
 impl Attester for SgxDcapAttester {
-    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
         if report_data.len() > 64 {
             bail!("SGX Attester: Report data should be SHA384 base64 String");
         }
@@ -81,7 +81,7 @@ impl Attester for SgxDcapAttester {
             quote: base64::engine::general_purpose::STANDARD.encode(quote),
         };
 
-        serde_json::to_string(&evidence).context("Serialize SGX DCAP Attester evidence failed")
+        serde_json::to_value(&evidence).context("Serialize SGX DCAP Attester evidence failed")
     }
 }
 
