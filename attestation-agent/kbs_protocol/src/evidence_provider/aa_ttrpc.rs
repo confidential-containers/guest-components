@@ -11,7 +11,7 @@ use ttrpc::context;
 
 use crate::{
     ttrpc_protos::{
-        attestation_agent::{GetEvidenceRequest, GetTeeTypeRequest},
+        attestation_agent::{GetCompositeEvidenceRequest, GetTeeTypeRequest},
         attestation_agent_ttrpc::AttestationAgentServiceClient,
     },
     Error, Result,
@@ -50,7 +50,7 @@ impl EvidenceProvider for AAEvidenceProvider {
         let pubkey_string = serde_json::to_string(&tee_pubkey).map_err(|e| {
             Error::AAEvidenceProvider(format!("Failed to serialize Tee Pub Key: {e}"))
         })?;
-        let req = GetEvidenceRequest {
+        let req = GetCompositeEvidenceRequest {
             TeePubKey: pubkey_string,
             Nonce: nonce,
             HashAlgorithm: hash_algorithm.to_string(),
@@ -58,7 +58,7 @@ impl EvidenceProvider for AAEvidenceProvider {
         };
         let res = self
             .client
-            .get_evidence(
+            .get_composite_evidence(
                 context::with_timeout(AA_TTRPC_TIMEOUT_SECONDS * 1000 * 1000 * 1000),
                 &req,
             )
