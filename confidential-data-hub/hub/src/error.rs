@@ -16,27 +16,52 @@ pub enum Error {
         source: kms::Error,
     },
 
-    #[error("get resource failed")]
+    #[error("Get Resource failed")]
     GetResource {
         #[source]
         source: kms::Error,
     },
 
-    #[error("decrypt image (unwrap key) failed")]
+    #[error("Decrypt Image (UnwrapKey) failed")]
     ImageDecryption(#[from] image::Error),
 
     #[error("init Hub failed: {0}")]
     InitializationFailed(String),
 
-    #[error("unseal secret failed")]
+    #[error("Unseal Secret failed")]
     UnsealSecret(#[from] secret::SecretError),
 
-    #[error("secure mount failed")]
+    #[error("Secure Mount failed")]
     SecureMount(#[from] storage::Error),
 
-    #[error("image pull failed")]
+    #[error("Image Pull failed: {source}")]
     ImagePull {
         #[source]
-        source: anyhow::Error,
+        source: image_rs::PullImageError,
     },
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::anyhow;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(Error::KbsClient { source: kms::Error::KbsClientError("details".into()) }, "kbs client initialization failed")]
+    #[case(Error::GetResource { source: kms::Error::KbsClientError("details".into()) }, "Get Resource failed")]
+    #[case(
+        Error::UnsealSecret(secret::SecretError::VersionError),
+        "Unseal Secret failed"
+    )]
+    #[case(
+        Error::SecureMount(storage::Error::StorageTypeNotRecognized(
+            strum::ParseError::VariantNotFound
+        )),
+        "Secure Mount failed"
+    )]
+    #[case(Error::ImagePull {source: image_rs::PullImageError::SignatureValidationFailed{source: anyhow!("details")}}, "Image Pull failed: Image policy rejected")]
+    fn test_brief_message(#[case] error: Error, #[case] expected: &str) {
+        let brief_message = error.to_string();
+        assert_eq!(brief_message, expected);
+    }
 }
