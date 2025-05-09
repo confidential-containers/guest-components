@@ -24,8 +24,8 @@ use kbs_types::Tee;
 use crate::{keypair::TeeKeyPair, token_provider::Token};
 
 pub(crate) enum ClientTee {
-    Unitialized,
-    _Initializated(Tee),
+    Uninitialized,
+    _Initialized(Tee),
 }
 
 /// This Client is used to connect to the remote KBS.

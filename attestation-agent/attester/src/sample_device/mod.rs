@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Alibaba Cloud
+// Copyright (c) 2025 IBM
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -7,30 +7,35 @@ use super::{Attester, TeeEvidence};
 use anyhow::*;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
+use std::env;
 
-// Sample attester is always supported
+// The sample device attester can be enabled
+// vi an environment variable.
 pub fn detect_platform() -> bool {
-    true
+    env::var("ENABLE_SAMPLE_DEVICE").is_ok()
 }
 
-// A simple example of TEE evidence.
 #[derive(Serialize, Deserialize, Debug)]
-struct SampleQuote {
+struct SampleDeviceEvidence {
     svn: String,
     report_data: String,
 }
 
 #[derive(Debug, Default)]
-pub struct SampleAttester {}
+pub struct SampleDeviceAttester {}
 
 #[async_trait::async_trait]
-impl Attester for SampleAttester {
+impl Attester for SampleDeviceAttester {
     async fn get_evidence(&self, report_data: Vec<u8>) -> Result<TeeEvidence> {
-        let evidence = SampleQuote {
-            svn: "1".to_string(),
+        let evidence = SampleDeviceEvidence {
+            svn: "2".to_string(),
             report_data: base64::engine::general_purpose::STANDARD.encode(report_data),
         };
 
-        serde_json::to_value(&evidence).context("Serialize sample evidence failed")
+        serde_json::to_value(&evidence).context("Failed to serialize sample evidence.")
+    }
+
+    fn tee_class(&self) -> String {
+        "gpu".to_string()
     }
 }

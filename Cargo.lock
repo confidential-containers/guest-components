@@ -411,6 +411,7 @@ dependencies = [
  "cfg-if",
  "clap 4.2.7",
  "codicon",
+ "crypto",
  "csv-rs",
  "hex",
  "hyper 0.14.32",
@@ -3476,8 +3477,7 @@ dependencies = [
 [[package]]
 name = "kbs-types"
 version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6db954f164e19a63a1eb7c04c46511167d68a5eb5025d4a435c1ba297f00dbf4"
+source = "git+https://github.com/fitzthum/kbs-types?branch=multi-device-composite#4eee602253c80e5eea1679aeded5927bb8f315db"
 dependencies = [
  "base64 0.22.1",
  "serde",
