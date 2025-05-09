@@ -6,13 +6,13 @@
 //! Helps to get auths directly from [`DockerAuthConfig`]s
 //! inside a `auth.json`
 
+use anyhow::anyhow;
 use std::collections::HashMap;
 
-use anyhow::*;
 use base64::Engine;
 use oci_client::{secrets::RegistryAuth, Reference};
 
-use super::DockerAuthConfig;
+use super::{AuthError, AuthResult, DockerAuthConfig};
 
 /// Read credentials from the auth config, s.t.
 /// try to search the target auth due to the
@@ -22,7 +22,7 @@ use super::DockerAuthConfig;
 pub fn credential_from_auth_config(
     reference: &Reference,
     auths: &HashMap<String, DockerAuthConfig>,
-) -> Result<RegistryAuth> {
+) -> AuthResult<RegistryAuth> {
     let registry_auth_map: HashMap<&str, &str> = auths
         .iter()
         .map(|auth| (&auth.0[..], &auth.1.auth[..]))
@@ -35,7 +35,8 @@ pub fn credential_from_auth_config(
         .iter()
         .find_map(|key| registry_auth_map.get(&key[..]))
     {
-        let (username, password) = decode_auth(auth_str)?;
+        let (username, password) =
+            decode_auth(auth_str).map_err(|_| AuthError::InvalidRegistryAuthFile)?;
         return Ok(RegistryAuth::Basic(username, password));
     }
 
@@ -46,7 +47,8 @@ pub fn credential_from_auth_config(
         .iter()
         .find(|(key, _)| normalize_key_to_registry(key) == image_registry)
     {
-        let (username, password) = decode_auth(auth_str)?;
+        let (username, password) =
+            decode_auth(auth_str).map_err(|_| AuthError::InvalidRegistryAuthFile)?;
         return Ok(RegistryAuth::Basic(username, password));
     }
 
@@ -85,7 +87,7 @@ fn normalize_registry(registry: &str) -> &str {
 /// Decode base64-encoded `<username>:<password>`,
 /// return (`<username>`, `<password>`). We support both
 /// `<username>` and `<password>` are in utf8
-fn decode_auth(auth: &str) -> Result<(String, String)> {
+fn decode_auth(auth: &str) -> anyhow::Result<(String, String)> {
     let decoded = base64::engine::general_purpose::STANDARD.decode(auth)?;
     let auth = String::from_utf8(decoded)?;
     let (username, password) = auth

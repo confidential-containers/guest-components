@@ -2,7 +2,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Context, Result};
+pub mod unpack;
+pub use unpack::{unpack, UnpackError};
+
 use log::error;
 use sha2::Digest;
 use std::{
@@ -10,11 +12,27 @@ use std::{
     pin::Pin,
     task::Poll,
 };
+use thiserror::Error;
 use tokio::io::{AsyncRead, ReadBuf};
 
 use crate::digest::{DigestHasher, LayerDigestHasher, DIGEST_SHA256_PREFIX, DIGEST_SHA512_PREFIX};
-use crate::unpack::unpack;
-use crate::ERR_BAD_UNCOMPRESSED_DIGEST;
+
+pub type StreamResult<T> = std::result::Result<T, StreamError>;
+
+#[derive(Error, Debug)]
+pub enum StreamError {
+    #[error("Failed to roll back when unpacking")]
+    FailedToRollBack {
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("Unsupported uncompressed digest format: {0}")]
+    UnsupportedDigestFormat(String),
+
+    #[error("Failed to unpack layer")]
+    UnPackLayerFailed(#[from] UnpackError),
+}
 
 struct HashReader<R, H> {
     reader: R,
@@ -62,33 +80,31 @@ pub async fn stream_processing(
     layer_reader: impl AsyncRead + Unpin,
     diff_id: &str,
     destination: &Path,
-) -> Result<String> {
+) -> StreamResult<String> {
     let dest = destination.to_path_buf();
     let hasher = if diff_id.starts_with(DIGEST_SHA256_PREFIX) {
         LayerDigestHasher::Sha256(sha2::Sha256::new())
     } else if diff_id.starts_with(DIGEST_SHA512_PREFIX) {
         LayerDigestHasher::Sha512(sha2::Sha512::new())
     } else {
-        bail!("{}: {:?}", ERR_BAD_UNCOMPRESSED_DIGEST, diff_id);
+        return Err(StreamError::UnsupportedDigestFormat(diff_id.to_string()));
     };
 
-    async_processing(layer_reader, hasher, dest)
-        .await
-        .map_err(|e| anyhow!("hasher {} {:?}", DIGEST_SHA256_PREFIX, e))
+    async_processing(layer_reader, hasher, dest).await
 }
 
 async fn async_processing(
     layer_reader: (impl AsyncRead + Unpin),
     hasher: LayerDigestHasher,
     destination: PathBuf,
-) -> Result<String> {
+) -> StreamResult<String> {
     let mut hash_reader = HashReader::new(layer_reader, hasher);
     if let Err(e) = unpack(&mut hash_reader, destination.as_path()).await {
         error!("failed to unpack layer: {e:?}");
         tokio::fs::remove_dir_all(destination.as_path())
             .await
-            .context("Failed to roll back when unpacking")?;
-        return Err(e);
+            .map_err(|source| StreamError::FailedToRollBack { source })?;
+        return Err(e.into());
     }
 
     Ok(hash_reader.hasher.digest_finalize())
