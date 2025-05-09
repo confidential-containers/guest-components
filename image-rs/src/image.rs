@@ -111,8 +111,8 @@ pub struct ImageClient {
     /// The metadata database for `image-rs` client.
     pub(crate) meta_store: Arc<RwLock<MetaStore>>,
 
-    /// The supported snapshots for `image-rs` client.
-    pub(crate) snapshots: HashMap<SnapshotType, Box<dyn Snapshotter>>,
+    /// The supported snapshot for `image-rs` client.
+    pub(crate) snapshot: Box<dyn Snapshotter>,
 
     /// The config
     pub(crate) config: ImageConfig,
@@ -131,37 +131,33 @@ impl Default for ImageClient {
 
 impl ImageClient {
     ///Initialize metadata database and supported snapshots.
-    pub fn init_snapshots(
+    pub fn init_snapshot(
+        snapshot: &SnapshotType,
         work_dir: &Path,
         _meta_store: &MetaStore,
-    ) -> HashMap<SnapshotType, Box<dyn Snapshotter>> {
-        let mut snapshots = HashMap::new();
+    ) -> Box<dyn Snapshotter> {
+        match snapshot {
+            #[cfg(feature = "snapshot-overlayfs")]
+            SnapshotType::Overlay => {
+                let data_dir = work_dir.join(SnapshotType::Overlay.to_string());
+                let overlayfs = OverlayFs::new(data_dir);
 
-        #[cfg(feature = "snapshot-overlayfs")]
-        {
-            let data_dir = work_dir.join(SnapshotType::Overlay.to_string());
-            let overlayfs = OverlayFs::new(data_dir);
-            snapshots.insert(
-                SnapshotType::Overlay,
-                Box::new(overlayfs) as Box<dyn Snapshotter>,
-            );
+                Box::new(overlayfs) as Box<dyn Snapshotter>
+            }
+            #[cfg(feature = "snapshot-unionfs")]
+            SnapshotType::OcclumUnionfs => {
+                let occlum_unionfs_index = _meta_store
+                    .snapshot_db
+                    .get(&SnapshotType::OcclumUnionfs.to_string())
+                    .unwrap_or(&0);
+                let occlum_unionfs = Unionfs {
+                    data_dir: work_dir.join(SnapshotType::OcclumUnionfs.to_string()),
+                    index: std::sync::atomic::AtomicUsize::new(*occlum_unionfs_index),
+                };
+
+                Box::new(occlum_unionfs) as Box<dyn Snapshotter>
+            }
         }
-        #[cfg(feature = "snapshot-unionfs")]
-        {
-            let occlum_unionfs_index = _meta_store
-                .snapshot_db
-                .get(&SnapshotType::OcclumUnionfs.to_string())
-                .unwrap_or(&0);
-            let occlum_unionfs = Unionfs {
-                data_dir: work_dir.join(SnapshotType::OcclumUnionfs.to_string()),
-                index: std::sync::atomic::AtomicUsize::new(*occlum_unionfs_index),
-            };
-            snapshots.insert(
-                SnapshotType::OcclumUnionfs,
-                Box::new(occlum_unionfs) as Box<dyn Snapshotter>,
-            );
-        }
-        snapshots
     }
 
     /// Create an ImageClient instance with specific work directory.
@@ -173,11 +169,11 @@ impl ImageClient {
             error!("failed to construct layer store: {e:?}");
             LayerStore::default()
         });
-        let snapshots = Self::init_snapshots(&config.work_dir, &meta_store);
+        let snapshot = Self::init_snapshot(&config.default_snapshot, &config.work_dir, &meta_store);
 
         Self {
             meta_store: Arc::new(RwLock::new(meta_store)),
-            snapshots,
+            snapshot,
             registry_auth: None,
             signature_validator: None,
             registry_handler: None,
@@ -318,7 +314,11 @@ impl ImageClient {
             {
                 let m = self.meta_store.read().await;
                 if let Some(image_data) = &m.image_db.get(&id) {
-                    return service::create_nydus_bundle(image_data, bundle_dir, snapshot);
+                    return service::create_nydus_bundle(
+                        image_data,
+                        bundle_dir,
+                        &mut self.snapshot,
+                    );
                 }
             }
 
@@ -353,7 +353,7 @@ impl ImageClient {
         {
             let m = self.meta_store.read().await;
             if let Some(image_data) = &m.image_db.get(&id) {
-                return create_bundle(image_data, bundle_dir, snapshot);
+                return create_bundle(image_data, bundle_dir, &mut self.snapshot)
             }
         }
 
@@ -398,7 +398,7 @@ impl ImageClient {
             );
         }
 
-        let image_id = create_bundle(&image_data, bundle_dir, snapshot)?;
+        let image_id = create_bundle(&image_data, bundle_dir, &mut self.snapshot)?;
 
         self.meta_store
             .write()
@@ -465,22 +465,13 @@ impl ImageClient {
             .get_nydus_config()
             .expect("Nydus configuration not found");
         let work_dir = self.config.work_dir.clone();
-        let snapshot = match self.snapshots.get_mut(&self.config.default_snapshot) {
-            Some(s) => s,
-            _ => {
-                bail!(
-                    "default snapshot {} not found",
-                    &self.config.default_snapshot
-                );
-            }
-        };
         let image_id = service::start_nydus_service(
             image_data,
             reference,
             nydus_config,
             &work_dir,
             bundle_dir,
-            snapshot,
+            &mut self.snapshot,
         )
         .await?;
 

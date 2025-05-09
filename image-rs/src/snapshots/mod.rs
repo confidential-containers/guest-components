@@ -15,7 +15,6 @@ pub mod overlay;
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum SnapshotType {
-    Unknown,
     #[cfg(feature = "snapshot-overlayfs")]
     Overlay,
     #[cfg(feature = "snapshot-unionfs")]
@@ -37,7 +36,6 @@ impl Default for SnapshotType {
 impl std::fmt::Display for SnapshotType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let out = match self {
-            Self::Unknown => "unknown",
             #[cfg(feature = "snapshot-overlayfs")]
             Self::Overlay => "overlay",
             #[cfg(feature = "snapshot-unionfs")]
