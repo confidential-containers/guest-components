@@ -145,7 +145,11 @@ impl ClientBuilder {
             }
         };
 
-        let snapshots = ImageClient::init_snapshots(&self.config.work_dir, &meta_store);
+        let snapshot = ImageClient::init_snapshot(
+            &self.config.default_snapshot,
+            &self.config.work_dir,
+            &meta_store,
+        );
         info!("Image work directory: {:?}", self.config.work_dir);
         let meta_store = Arc::new(RwLock::new(meta_store));
 
@@ -156,7 +160,7 @@ impl ClientBuilder {
             signature_validator,
             registry_handler,
             meta_store,
-            snapshots,
+            snapshot,
             config: self.config,
             layer_store,
         })
