@@ -2,24 +2,23 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context};
 use log::{error, info, warn};
 use oci_client::{
     client::{Certificate, CertificateEncoding, ClientConfig, ClientProtocol},
     manifest::{OciDescriptor, OciImageManifest},
     secrets::RegistryAuth,
-    Reference,
+    ParseError, Reference,
 };
 use oci_spec::image::{ImageConfiguration, Os};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use thiserror::Error;
 
 use tokio::sync::RwLock;
 
-use crate::bundle::{create_runtime_config, BUNDLE_ROOTFS};
-use crate::config::{ImageConfig, CONFIGURATION_FILE_NAME, DEFAULT_WORK_DIR};
 use crate::decoder::Compression;
 use crate::layer_store::LayerStore;
 use crate::meta_store::{MetaStore, METAFILE};
@@ -27,6 +26,14 @@ use crate::pull::PullClient;
 use crate::signature::SignatureValidator;
 use crate::snapshots::{SnapshotType, Snapshotter};
 use crate::{auth::Auth, registry::RegistryHandler};
+use crate::{
+    bundle::{create_runtime_config, BUNDLE_ROOTFS},
+    pull::PullLayerError,
+};
+use crate::{
+    config::{ImageConfig, CONFIGURATION_FILE_NAME, DEFAULT_WORK_DIR},
+    signature::SignatureError,
+};
 
 #[cfg(feature = "snapshot-unionfs")]
 use crate::snapshots::occlum::unionfs::Unionfs;
@@ -35,6 +42,69 @@ use crate::snapshots::overlay::OverlayFs;
 
 #[cfg(feature = "nydus")]
 use crate::nydus::{service, utils};
+
+pub type PullImageResult<T> = std::result::Result<T, PullImageError>;
+
+#[derive(Error, Debug)]
+pub enum PullImageError {
+    #[error("Illegal image reference")]
+    IllegalImageReference {
+        #[source]
+        source: ParseError,
+    },
+
+    #[error("failed to compose a legal image reference with given registry configuration")]
+    IllegalRegistryConfigurationFormat {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error(
+        "Failed to pull image {original_image_url} from all mirror/mapping locations or original location: {tried_list}"
+    )]
+    AllTasksTried {
+        original_image_url: String,
+        tried_list: String,
+    },
+
+    #[error("Illegal registry auth for image {image} from {auth_source}")]
+    IllegalRegistryAuth { image: String, auth_source: String },
+
+    #[error("Failed to pull image manifest")]
+    FailedToPullManifest {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error("Failed to create bundle")]
+    FailedToCreateBundle {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[cfg(feature = "signature")]
+    #[error("Image policy rejected: {0}")]
+    SignatureValidationFailed(#[from] SignatureError),
+
+    #[error("{0} layers are not pulled successfully")]
+    NotAllUniqueLayersPulled(usize),
+
+    #[error("Errors happened when pulling image: {0}")]
+    PullLayersFailed(#[from] PullLayerError),
+
+    #[cfg(feature = "nydus")]
+    #[error("Failed to pull nydus image")]
+    NydusImagePullFailed {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error("Internal error")]
+    Internal {
+        #[source]
+        source: anyhow::Error,
+    },
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TaskType {
@@ -200,11 +270,14 @@ impl ImageClient {
         bundle_dir: &Path,
         auth_info: &Option<&str>,
         decrypt_config: &Option<&str>,
-    ) -> Result<String> {
-        let reference = Reference::try_from(image_url)?;
+    ) -> PullImageResult<String> {
+        let reference = Reference::try_from(image_url)
+            .map_err(|source| PullImageError::IllegalImageReference { source })?;
 
         let tasks = match &self.registry_handler {
-            Some(handler) => handler.process(reference)?,
+            Some(handler) => handler
+                .process(reference)
+                .map_err(|source| PullImageError::IllegalRegistryConfigurationFormat { source })?,
             None => vec![ImagePullTask {
                 image_reference: reference,
                 use_http: false,
@@ -212,6 +285,7 @@ impl ImageClient {
             }],
         };
 
+        let mut tried_images_and_errors = Vec::new();
         for task in tasks {
             let task_image_url = task.image_reference.to_string();
             match self
@@ -219,11 +293,18 @@ impl ImageClient {
                 .await
             {
                 Ok(image_id) => return Ok(image_id),
-                Err(e) => warn!("failed to pull image {image_url} from {task_image_url}: {e:#?}"),
+                Err(e) => {
+                    warn!("failed to pull image {image_url} from {task_image_url}: {e:#?}");
+                    tried_images_and_errors
+                        .push(format!("image: {}, error: {}", task_image_url, e));
+                }
             }
         }
 
-        Err(anyhow!("failed to pull image {image_url}"))
+        Err(PullImageError::AllTasksTried {
+            original_image_url: image_url.into(),
+            tried_list: tried_images_and_errors.join("\n"),
+        })
     }
 
     async fn pull_task(
@@ -233,7 +314,7 @@ impl ImageClient {
         bundle_dir: &Path,
         decrypt_config: &Option<&str>,
         image_url: &str,
-    ) -> Result<String> {
+    ) -> PullImageResult<String> {
         // Try to find a valid registry auth. Logic order
         // 1. the input parameter
         // 2. from self.registry_auth
@@ -243,14 +324,21 @@ impl ImageClient {
                 Some((username, password)) => {
                     RegistryAuth::Basic(username.to_string(), password.to_string())
                 }
-                None => bail!("Invalid authentication info ({:?})", auth_info),
+                None => {
+                    return Err(PullImageError::IllegalRegistryAuth {
+                        image: image_url.into(),
+                        auth_source: format!("input `{input_auth}`"),
+                    })
+                }
             },
             None => match &self.registry_auth {
-                Some(registry_auth) => {
-                    registry_auth
-                        .credential_for_reference(&task.image_reference)
-                        .await?
-                }
+                Some(registry_auth) => registry_auth
+                    .credential_for_reference(&task.image_reference)
+                    .await
+                    .map_err(|_| PullImageError::IllegalRegistryAuth {
+                        image: image_url.into(),
+                        auth_source: "auth config".into(),
+                    })?,
                 None => {
                     info!("Use Anonymous image registry auth");
                     RegistryAuth::Anonymous
@@ -294,20 +382,11 @@ impl ImageClient {
             &auth,
             self.config.max_concurrent_layer_downloads_per_image,
             client_config,
-        )?;
+        )
+        .map_err(|source| PullImageError::Internal { source })?;
         let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
 
         let id = image_manifest.config.digest.clone();
-
-        let snapshot = match self.snapshots.get_mut(&self.config.default_snapshot) {
-            Some(s) => s,
-            _ => {
-                bail!(
-                    "default snapshot {} not found",
-                    &self.config.default_snapshot
-                );
-            }
-        };
 
         #[cfg(feature = "nydus")]
         if utils::is_nydus_image(&image_manifest) {
@@ -318,7 +397,8 @@ impl ImageClient {
                         image_data,
                         bundle_dir,
                         &mut self.snapshot,
-                    );
+                    )
+                    .map_err(|source| PullImageError::FailedToCreateBundle { source });
                 }
             }
 
@@ -326,8 +406,7 @@ impl ImageClient {
             if let Some(signature_validator) = &self.signature_validator {
                 signature_validator
                     .check_image_signature(image_url, &image_digest, &auth)
-                    .await
-                    .context("image security validation failed")?;
+                    .await?;
             }
 
             let (mut image_data, _, _) = create_image_meta(
@@ -336,7 +415,8 @@ impl ImageClient {
                 &image_manifest,
                 &image_digest,
                 &image_config,
-            )?;
+            )
+            .map_err(|source| PullImageError::Internal { source })?;
 
             return self
                 .do_pull_image_with_nydus(
@@ -346,7 +426,8 @@ impl ImageClient {
                     decrypt_config,
                     bundle_dir,
                 )
-                .await;
+                .await
+                .map_err(|source| PullImageError::NydusImagePullFailed { source });
         }
 
         // If image has already been populated, just create the bundle.
@@ -354,6 +435,7 @@ impl ImageClient {
             let m = self.meta_store.read().await;
             if let Some(image_data) = &m.image_db.get(&id) {
                 return create_bundle(image_data, bundle_dir, &mut self.snapshot)
+                    .map_err(|source| PullImageError::FailedToCreateBundle { source });
             }
         }
 
@@ -361,8 +443,7 @@ impl ImageClient {
         if let Some(signature_validator) = &self.signature_validator {
             signature_validator
                 .check_image_signature(image_url, &image_digest, &auth)
-                .await
-                .context("image security validation failed")?;
+                .await?;
         }
 
         let (mut image_data, unique_layers, unique_diff_ids) = create_image_meta(
@@ -371,7 +452,8 @@ impl ImageClient {
             &image_manifest,
             &image_digest,
             &image_config,
-        )?;
+        )
+        .map_err(|source| PullImageError::Internal { source })?;
 
         let unique_layers_len = unique_layers.len();
         let layer_metas = client
@@ -392,13 +474,13 @@ impl ImageClient {
 
         self.meta_store.write().await.layer_db.extend(layer_db);
         if unique_layers_len != image_data.layer_metas.len() {
-            bail!(
-                " {} layers failed to pull",
-                unique_layers_len - image_data.layer_metas.len()
-            );
+            return Err(PullImageError::NotAllUniqueLayersPulled(
+                unique_layers_len - image_data.layer_metas.len(),
+            ));
         }
 
-        let image_id = create_bundle(&image_data, bundle_dir, &mut self.snapshot)?;
+        let image_id = create_bundle(&image_data, bundle_dir, &mut self.snapshot)
+            .map_err(|source| PullImageError::FailedToCreateBundle { source })?;
 
         self.meta_store
             .write()
@@ -416,7 +498,8 @@ impl ImageClient {
             .write()
             .await
             .write_to_file(&meta_file)
-            .context("update meta store failed")?;
+            .context("update meta store failed")
+            .map_err(|source| PullImageError::Internal { source })?;
         Ok(image_id)
     }
 
@@ -428,7 +511,7 @@ impl ImageClient {
         image_manifest: &OciImageManifest,
         decrypt_config: &Option<&str>,
         bundle_dir: &Path,
-    ) -> Result<String> {
+    ) -> anyhow::Result<String> {
         let diff_ids = image_data.image_config.rootfs().diff_ids();
         let bootstrap_id = if !diff_ids.is_empty() {
             diff_ids[diff_ids.len() - 1].to_string()
@@ -493,7 +576,7 @@ fn create_image_meta(
     image_manifest: &OciImageManifest,
     image_digest: &str,
     image_config: &str,
-) -> Result<(ImageMeta, Vec<OciDescriptor>, Vec<String>)> {
+) -> anyhow::Result<(ImageMeta, Vec<OciDescriptor>, Vec<String>)> {
     let image_data = ImageMeta {
         id: id.to_string(),
         digest: image_digest.to_string(),
@@ -538,7 +621,7 @@ fn create_bundle(
     image_data: &ImageMeta,
     bundle_dir: &Path,
     snapshot: &mut Box<dyn Snapshotter>,
-) -> Result<String> {
+) -> anyhow::Result<String> {
     let layer_path = image_data
         .layer_metas
         .iter()

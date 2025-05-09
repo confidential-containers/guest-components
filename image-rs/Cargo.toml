@@ -54,6 +54,7 @@ sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "5df33d6
 strum.workspace = true
 strum_macros = "0.27"
 astral-tokio-tar = "0.5.1"
+thiserror.workspace = true
 tokio.workspace = true
 tokio-util = "0.7.15"
 toml.workspace = true
