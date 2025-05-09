@@ -90,8 +90,7 @@ impl DataHub for Hub {
             .lock()
             .await
             .pull_image(image_url, Path::new(bundle_path), &None, &None)
-            .await
-            .map_err(|e| Error::ImagePull { source: e })?;
+            .await?;
         Ok(manifest_digest)
     }
 }
@@ -99,12 +98,7 @@ impl DataHub for Hub {
 async fn initialize_image_client(config: ImageConfig) -> Result<Mutex<ImageClient>> {
     debug!("Image client lazy initializing...");
 
-    let image_client = Into::<ClientBuilder>::into(config)
-        .build()
-        .await
-        .map_err(|e| {
-            Error::InitializationFailed(format!("failed to initialize image pull client :{e:?}"))
-        })?;
+    let image_client = Into::<ClientBuilder>::into(config).build().await?;
 
     Ok(Mutex::new(image_client))
 }
