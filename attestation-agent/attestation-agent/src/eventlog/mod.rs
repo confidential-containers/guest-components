@@ -71,7 +71,10 @@ impl EventLog {
             // The content of AAEL can be empty when the previous AA created this file
             // but did not do anything.
             if content.is_empty() {
-                let file = File::open(EVENTLOG_PATH).context("open eventlog")?;
+                let file = File::options()
+                    .write(true)
+                    .open(EVENTLOG_PATH)
+                    .context("open eventlog")?;
                 let mut eventlog = Self {
                     writer: Box::new(FileWriter { file }),
                     rtmr_extender,
@@ -239,7 +242,8 @@ impl Display for LogEntry<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use attester::detect_tee_type;
+    use async_trait::async_trait;
+    use attester::{detect_tee_type, Attester};
     use rstest::rstest;
     use std::sync::{Arc, Mutex};
 
@@ -321,5 +325,87 @@ mod tests {
         let dig = event.digest_with(hash_alg);
         let dig_hex = dig.iter().map(|c| format!("{c:02x}")).collect::<String>();
         assert_eq!(dig_hex, digest);
+    }
+
+    struct MockedAttester;
+
+    #[async_trait]
+    impl Attester for MockedAttester {
+        async fn get_evidence(&self, _report_data: Vec<u8>) -> Result<String> {
+            bail!("unimplemented")
+        }
+
+        async fn extend_runtime_measurement(
+            &self,
+            _event_digest: Vec<u8>,
+            _register_index: u64,
+        ) -> Result<()> {
+            Ok(())
+        }
+
+        async fn get_runtime_measurement(&self, _pcr_index: u64) -> Result<Vec<u8>> {
+            Ok(vec![])
+        }
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_eventlog_from_nothing() {
+        if std::path::Path::new(EVENTLOG_PATH).exists() {
+            std::fs::remove_file(EVENTLOG_PATH).unwrap();
+        }
+        let tee = Box::new(MockedAttester);
+        let rtmr_extender = Arc::new(tee as _);
+        let mut eventlog = EventLog::new(rtmr_extender, HashAlgorithm::Sha256, 17)
+            .await
+            .unwrap();
+        eventlog
+            .extend_entry(
+                LogEntry::Event {
+                    domain: "domain",
+                    operation: "operation",
+                    content: "content".try_into().unwrap(),
+                },
+                17,
+            )
+            .await
+            .unwrap();
+        drop(eventlog);
+        std::fs::remove_file(EVENTLOG_PATH).unwrap();
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_eventlog_from_empty_file() {
+        if !Path::new(EVENTLOG_PARENT_DIR_PATH).exists() {
+            std::fs::create_dir_all(EVENTLOG_PARENT_DIR_PATH).unwrap();
+        }
+        let f = std::fs::File::options()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(EVENTLOG_PATH)
+            .unwrap();
+        f.sync_all().unwrap();
+        drop(f);
+
+        let tee = Box::new(MockedAttester);
+        let rtmr_extender = Arc::new(tee as _);
+        let mut eventlog = EventLog::new(rtmr_extender, HashAlgorithm::Sha256, 17)
+            .await
+            .unwrap();
+        eventlog
+            .extend_entry(
+                LogEntry::Event {
+                    domain: "domain",
+                    operation: "operation",
+                    content: "content".try_into().unwrap(),
+                },
+                17,
+            )
+            .await
+            .unwrap();
+        drop(eventlog);
+        std::fs::remove_file(EVENTLOG_PATH).unwrap();
     }
 }
