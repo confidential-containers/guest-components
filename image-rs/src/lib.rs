@@ -11,6 +11,7 @@ pub mod config;
 pub mod decoder;
 pub mod decrypt;
 pub mod digest;
+pub mod error;
 pub mod image;
 pub mod layer_store;
 pub mod meta_store;
@@ -26,3 +27,5 @@ pub mod stream;
 pub mod unpack;
 #[cfg(feature = "verity")]
 pub mod verity;
+
+pub use error::{PullImageError, Result};

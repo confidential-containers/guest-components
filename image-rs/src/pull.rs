@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Result};
 use futures_util::stream::{self, StreamExt, TryStreamExt};
 use oci_client::{
     client::ClientConfig,
@@ -16,12 +16,12 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio_util::io::StreamReader;
 
-use crate::decoder::Compression;
 use crate::decrypt::Decryptor;
 use crate::image::LayerMeta;
 use crate::layer_store::LayerStore;
 use crate::meta_store::MetaStore;
 use crate::stream::stream_processing;
+use crate::{decoder::Compression, PullImageError};
 
 /// The PullClient connects to remote OCI registry, pulls the container image,
 /// and save the image layers under the layer store and return the layer meta info.
@@ -96,7 +96,7 @@ impl<'a> PullClient<'a> {
         diff_ids: &[String],
         decrypt_config: &Option<&str>,
         meta_store: Arc<RwLock<MetaStore>>,
-    ) -> Result<Vec<LayerMeta>> {
+    ) -> crate::Result<Vec<LayerMeta>> {
         let meta_store = &meta_store;
         let layer_metas: Vec<(usize, LayerMeta)> = stream::iter(layer_descs)
             .enumerate()
@@ -105,7 +105,9 @@ impl<'a> PullClient<'a> {
                     .client
                     .pull_blob_stream(&self.reference, &layer)
                     .await
-                    .map_err(|e| anyhow!("failed to async pull blob stream {}", e.to_string()))?;
+                    .map_err(|e| PullImageError::PullLayersFailed {
+                        source: anyhow!("failed to async pull blob stream {e}"),
+                    })?;
                 let layer_reader = StreamReader::new(layer_stream.stream);
                 self.async_handle_layer(
                     layer,
@@ -115,7 +117,6 @@ impl<'a> PullClient<'a> {
                     meta_store.clone(),
                 )
                 .await
-                .map_err(|e| anyhow!("failed to handle layer: {:?}", e))
                 .map(|layer_meta| (i, layer_meta))
             })
             .buffer_unordered(self.max_concurrent_download)
@@ -133,7 +134,7 @@ impl<'a> PullClient<'a> {
         decrypt_config: &Option<&str>,
         layer_reader: (impl tokio::io::AsyncRead + Unpin + Send),
         ms: Arc<RwLock<MetaStore>>,
-    ) -> Result<LayerMeta> {
+    ) -> crate::Result<LayerMeta> {
         if let Some(layer_meta) = ms.read().await.layer_db.get(&layer.digest) {
             return Ok(layer_meta.clone());
         }
@@ -158,14 +159,16 @@ impl<'a> PullClient<'a> {
                 move || {
                     decryptor
                         .get_decrypt_key(&layer, &decrypt_config.as_deref())
-                        .context("failed to get decrypt key")
+                        .map_err(|source| PullImageError::ImageDecryptionKeyNotFound { source })
                 }
             })
             .await
-            .context("decryptor thread failed to execute")??;
+            .map_err(|source| PullImageError::Internal {
+                source: source.into(),
+            })??;
             let plaintext_layer = decryptor
                 .async_get_plaintext_layer(layer_reader, &layer, &decrypt_key)
-                .map_err(|e| anyhow!("failed to async_get_plaintext_layer: {:?}", e))?;
+                .map_err(|source| PullImageError::ImageDecryptionFailed { source })?;
             layer_meta.uncompressed_digest = self
                 .async_decompress_unpack_layer(
                     plaintext_layer,
@@ -173,7 +176,8 @@ impl<'a> PullClient<'a> {
                     &decryptor.media_type,
                     &destination,
                 )
-                .await?;
+                .await
+                .map_err(|source| PullImageError::PullLayersFailed { source })?;
             layer_meta.encrypted = true;
         } else {
             layer_meta.uncompressed_digest = self
@@ -183,16 +187,19 @@ impl<'a> PullClient<'a> {
                     &layer.media_type,
                     &destination,
                 )
-                .await?;
+                .await
+                .map_err(|source| PullImageError::PullLayersFailed { source })?;
         }
 
         // uncompressed digest should equal to the diff_ids in image_config.
         if layer_meta.uncompressed_digest != diff_id {
-            bail!(
-                "unequal uncompressed digest {:?} config diff_id {:?}",
-                layer_meta.uncompressed_digest,
-                diff_id
-            );
+            return Err(PullImageError::PullLayersFailed {
+                source: anyhow!(
+                    "unequal uncompressed digest {:?} config diff_id {:?}",
+                    layer_meta.uncompressed_digest,
+                    diff_id
+                ),
+            });
         }
 
         Ok(layer_meta)
