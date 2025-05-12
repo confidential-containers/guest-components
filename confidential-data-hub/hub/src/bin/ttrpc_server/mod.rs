@@ -20,10 +20,12 @@ use crate::{
     protos::{
         api::{
             GetResourceRequest, GetResourceResponse, ImagePullRequest, ImagePullResponse,
-            SecureMountRequest, SecureMountResponse, UnsealSecretInput, UnsealSecretOutput,
+            InitOverlayNetworkRequest, InitOverlayNetworkResponse, SecureMountRequest,
+            SecureMountResponse, UnsealSecretInput, UnsealSecretOutput,
         },
         api_ttrpc::{
-            GetResourceService, ImagePullService, SealedSecretService, SecureMountService,
+            GetResourceService, ImagePullService, OverlayNetworkService, SealedSecretService,
+            SecureMountService,
         },
         keyprovider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput},
         keyprovider_ttrpc::KeyProviderService,
@@ -202,6 +204,33 @@ impl ImagePullService for Server {
         let mut reply = ImagePullResponse::new();
         reply.manifest_digest = manifest_digest;
         debug!("[ttRPC CDH] pull image succeeded.");
+        Ok(reply)
+    }
+}
+
+#[async_trait]
+impl OverlayNetworkService for Server {
+    async fn init_overlay_network(
+        &self,
+        _ctx: &TtrpcContext,
+        req: InitOverlayNetworkRequest,
+    ) -> ::ttrpc::Result<InitOverlayNetworkResponse> {
+        debug!("[ttRPC CDH] Initialize overlay network request");
+        let _resource = self
+            .hub
+            .init_overlay_network(req.pod_name)
+            .await
+            .map_err(|e| {
+                let detailed_error = format_error!(e);
+                error!("[ttRPC CDH] Initialize Overlay Network:\n{detailed_error}");
+                let mut status = Status::new();
+                status.set_code(Code::INTERNAL);
+                status.set_message("[CDH] [ERROR]: initialize overlay network failed".to_string());
+                Error::RpcStatus(status)
+            })?;
+
+        let reply = InitOverlayNetworkResponse::new();
+        debug!("[ttRPC CDH] initialize overlay network succeeded.");
         Ok(reply)
     }
 }

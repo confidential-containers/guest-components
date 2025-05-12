@@ -45,6 +45,8 @@ env_logger = { workspace = true, optional = true }
 image-rs = { path = "../../image-rs", default-features = false, features = ["kata-cc-rustls-tls"] }
 kms = { path = "../kms", default-features = false }
 log.workspace = true
+nix = { workspace = true, features = ["net"] }
+overlay_network.path = "../overlay-network"
 prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
 rand.workspace = true
@@ -102,3 +104,6 @@ grpc = ["prost", "tonic", "tonic-build", "tokio/signal"]
 
 # for secret_cli
 cli = ["clap/derive", "tokio/rt-multi-thread", "tokio/sync", "tokio/macros"]
+
+# support overlay network
+overlay-network = ["overlay_network/overlay-network"]
