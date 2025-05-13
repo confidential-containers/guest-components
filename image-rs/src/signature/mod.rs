@@ -139,7 +139,8 @@ impl SignatureValidator {
         // Get the policy set that matches the image.
         let reqs = self.policy.requirements_for_image(&image);
         if reqs.is_empty() {
-            bail!("List of verification policy requirements must not be empty");
+            // Note that if no policy covers the image, the image is considered to be allowed.
+            return Ok(());
         }
 
         // The image must meet the requirements of each policy in the policy set.
