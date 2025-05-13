@@ -112,17 +112,14 @@ enum MatchResult {
     Unmatched,
 }
 
-impl FromStr for RegistryHandler {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut config: Config = toml::from_str(s)?;
+impl RegistryHandler {
+    pub fn from_vec(s: Vec<u8>) -> Result<Self> {
+        let registry_configuration = String::from_utf8(s)?;
+        let mut config: Config = toml::from_str(&registry_configuration)?;
         config.validate_and_tidy()?;
         Ok(Self { config })
     }
-}
 
-impl RegistryHandler {
     fn generate_unqualified_search_tasks(&self, reference: &Reference) -> Vec<ImagePullTask> {
         let mut tasks = Vec::new();
 
@@ -371,7 +368,7 @@ location = "docker.io"
 location = "123456.mirror.aliyuncs.com"
 "#;
 
-        RegistryHandler::from_str(config).unwrap()
+        RegistryHandler::from_vec(config.as_bytes().to_vec()).unwrap()
     }
 
     #[test]
