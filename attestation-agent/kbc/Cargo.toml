@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["The Attestation Agent Authors"]
 publish = false
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
 anyhow.workspace = true
@@ -38,6 +39,7 @@ default = ["sample_kbc", "rust-crypto"]
 cc_kbc = ["kbs_protocol/background_check"]
 all-attesters = ["kbs_protocol?/all-attesters"]
 tdx-attester = ["kbs_protocol/tdx-attester"]
+tdx-attester-libtdx = ["kbs_protocol/tdx-attester-libtdx"]
 sgx-attester = ["kbs_protocol/sgx-attester"]
 az-snp-vtpm-attester= ["kbs_protocol/az-snp-vtpm-attester"]
 az-tdx-vtpm-attester= ["kbs_protocol/az-tdx-vtpm-attester"]

@@ -8,4 +8,5 @@
 pub mod aes256ctr;
 pub mod aes256gcm;
 
+pub mod ec;
 pub mod rsa;

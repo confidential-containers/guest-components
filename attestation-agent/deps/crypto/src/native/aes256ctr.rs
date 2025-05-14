@@ -8,14 +8,14 @@
 use anyhow::*;
 use openssl::symm::Cipher;
 
-pub fn decrypt(encrypted_data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
+pub fn decrypt(key: &[u8], encrypted_data: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     let cipher = Cipher::aes_256_ctr();
 
     openssl::symm::decrypt(cipher, key, Some(iv), encrypted_data)
         .map_err(|e| anyhow!(e.to_string()))
 }
 
-pub fn encrypt(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
+pub fn encrypt(key: &[u8], data: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
     let cipher = Cipher::aes_256_ctr();
     let ciphertext =
         openssl::symm::encrypt(cipher, key, Some(iv), data).map_err(|e| anyhow!(e.to_string()))?;
@@ -40,8 +40,8 @@ mod tests {
         b"16bytes ivlength"
     )]
     fn en_decrypt(#[case] plaintext: &[u8], #[case] key: &[u8], #[case] iv: &[u8]) {
-        let ciphertext = encrypt(plaintext, key, iv).expect("encryption failed");
-        let plaintext_de = decrypt(&ciphertext, key, iv).expect("decryption failed");
+        let ciphertext = encrypt(key, plaintext, iv).expect("encryption failed");
+        let plaintext_de = decrypt(key, &ciphertext, iv).expect("decryption failed");
         assert_eq!(plaintext, plaintext_de);
     }
 }

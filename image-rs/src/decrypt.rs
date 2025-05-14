@@ -65,12 +65,12 @@ mod encryption {
         /// `descriptor` and `decrypt_config` are required for layer data decryption process.
         ///
         /// * `decrypt_config` - decryption key info in following format:\
-        ///           - \<filename> \
-        ///           - \<filename>:file=\<passwordfile> \
-        ///           - \<filename>:pass=\<password> \
-        ///           - \<filename>:fd=\<filedescriptor> \
-        ///           - \<filename>:\<password> \
-        ///           - provider:<cmd/gprc>
+        ///   - \<filename> \
+        ///   - \<filename>:file=\<passwordfile> \
+        ///   - \<filename>:pass=\<password> \
+        ///   - \<filename>:fd=\<filedescriptor> \
+        ///   - \<filename>:\<password> \
+        ///   - provider:<cmd/gprc>
         pub fn get_plaintext_layer(
             &self,
             descriptor: &OciDescriptor,

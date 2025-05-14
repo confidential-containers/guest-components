@@ -25,13 +25,19 @@ jobs:
   ci:
     if: github.event_name != 'push'
     name: Check
-    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
         rust:
-          - 1.83.0
+          - 1.80.0
           - stable
+        exclude:
+          - instance: ubuntu-24.04-arm
+            rust: stable
+    runs-on: ${{ matrix.instance }}
 
     steps:
       - name: Code checkout

@@ -26,10 +26,21 @@ impl RSAKeyPair {
     pub fn decrypt(&self, mode: PaddingMode, cipher_text: Vec<u8>) -> Result<Vec<u8>> {
         let mut plaintext = [0; RSA_PUBKEY_LENGTH];
         let decrypted_size = match mode {
+            // TODO: Update to OAEP + Sha256 API
+            // Now the OAEP decrypter provided by openssl API is an ffi binding for
+            // `RSA_public_encrypt` in openssl
+            // Due to <https://docs.openssl.org/master/man3/RSA_public_encrypt/#synopsis>
+            // this api assumes the digest algorithm is SHA-1.
+            // This is not compatible with the implementation of the KBS side who uses
+            // sha256.
+            //
+            // Let's mark this as a TODO because we are using EC now. Even if we want
+            // to use RSA OAEP, the rust version of this crate can work normally.
             PaddingMode::OAEP => self
                 .private_key
                 .private_decrypt(&cipher_text, &mut plaintext, Padding::PKCS1_OAEP)
                 .map_err(|e| anyhow!("RSA key decrypt OAEP failed: {:?}", e))?,
+            #[allow(deprecated)]
             PaddingMode::PKCS1v15 => self
                 .private_key
                 .private_decrypt(&cipher_text, &mut plaintext, Padding::PKCS1)

@@ -25,14 +25,21 @@ jobs:
       matrix:
         rust:
           - stable
+          - 1.80.0
         instance:
           - ubuntu-24.04
           - s390x
+          - ubuntu-24.04-arm
         include:
           - instance: ubuntu-24.04
             cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,all-attesters,bin"
           - instance: s390x
             cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,se-attester,bin"
+          - instance: ubuntu-24.04-arm
+            cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,cca-attester,bin"
+        exclude:
+          - instance: ubuntu-24.04-arm
+            rust: stable
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
@@ -51,11 +58,6 @@ jobs:
       - name: Install protoc
         run: |
           sudo apt-get update && sudo apt-get install -y protobuf-compiler
-
-      - uses: ./.github/actions/install-intel-dcap
-        with:
-          ubuntu-version: noble
-        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Install TPM dependencies
         run: |

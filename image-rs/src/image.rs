@@ -2,11 +2,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Context, Result};
-use log::info;
-use oci_client::manifest::{OciDescriptor, OciImageManifest};
-use oci_client::secrets::RegistryAuth;
-use oci_client::Reference;
+use anyhow::{anyhow, bail, Context, Result};
+use log::{error, info, warn};
+use oci_client::{
+    client::{Certificate, CertificateEncoding, ClientConfig, ClientProtocol},
+    manifest::{OciDescriptor, OciImageManifest},
+    secrets::RegistryAuth,
+    Reference,
+};
 use oci_spec::image::{ImageConfiguration, Os};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
@@ -15,14 +18,15 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::auth::Auth;
 use crate::bundle::{create_runtime_config, BUNDLE_ROOTFS};
 use crate::config::{ImageConfig, CONFIGURATION_FILE_NAME, DEFAULT_WORK_DIR};
 use crate::decoder::Compression;
+use crate::layer_store::LayerStore;
 use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
 use crate::signature::SignatureValidator;
 use crate::snapshots::{SnapshotType, Snapshotter};
+use crate::{auth::Auth, registry::RegistryHandler};
 
 #[cfg(feature = "snapshot-unionfs")]
 use crate::snapshots::occlum::unionfs::Unionfs;
@@ -31,6 +35,22 @@ use crate::snapshots::overlay::OverlayFs;
 
 #[cfg(feature = "nydus")]
 use crate::nydus::{service, utils};
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TaskType {
+    Origininal,
+    Remapped,
+    Mirror,
+    UnqualifiedSearch,
+}
+
+/// A single image pull task
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImagePullTask {
+    pub image_reference: Reference,
+    pub use_http: bool,
+    pub task_type: TaskType,
+}
 
 /// The metadata info for container image layer.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -85,6 +105,9 @@ pub struct ImageClient {
     /// policy
     pub(crate) signature_validator: Option<SignatureValidator>,
 
+    /// Registry configuration module
+    pub(crate) registry_handler: Option<RegistryHandler>,
+
     /// The metadata database for `image-rs` client.
     pub(crate) meta_store: Arc<RwLock<MetaStore>>,
 
@@ -93,23 +116,16 @@ pub struct ImageClient {
 
     /// The config
     pub(crate) config: ImageConfig,
+
+    /// The image layer store
+    pub(crate) layer_store: LayerStore,
 }
 
 impl Default for ImageClient {
     // construct a default instance of `ImageClient`
     fn default() -> ImageClient {
         let work_dir = Path::new(DEFAULT_WORK_DIR);
-        let config = ImageConfig::try_from(work_dir.join(CONFIGURATION_FILE_NAME).as_path())
-            .unwrap_or_default();
-        let meta_store = MetaStore::try_from(work_dir.join(METAFILE).as_path()).unwrap_or_default();
-        let snapshots = Self::init_snapshots(&config.work_dir, &meta_store);
-        ImageClient {
-            registry_auth: None,
-            meta_store: Arc::new(RwLock::new(meta_store)),
-            snapshots,
-            signature_validator: None,
-            config,
-        }
+        ImageClient::new(work_dir.to_path_buf())
     }
 }
 
@@ -153,6 +169,10 @@ impl ImageClient {
         let config = ImageConfig::try_from(work_dir.join(CONFIGURATION_FILE_NAME).as_path())
             .unwrap_or_else(|_| ImageConfig::new(work_dir.clone()));
         let meta_store = MetaStore::try_from(work_dir.join(METAFILE).as_path()).unwrap_or_default();
+        let layer_store = LayerStore::new(work_dir).unwrap_or_else(|e| {
+            error!("failed to construct layer store: {e:?}");
+            LayerStore::default()
+        });
         let snapshots = Self::init_snapshots(&config.work_dir, &meta_store);
 
         Self {
@@ -160,7 +180,9 @@ impl ImageClient {
             snapshots,
             registry_auth: None,
             signature_validator: None,
+            registry_handler: None,
             config,
+            layer_store,
         }
     }
 
@@ -185,6 +207,37 @@ impl ImageClient {
     ) -> Result<String> {
         let reference = Reference::try_from(image_url)?;
 
+        let tasks = match &self.registry_handler {
+            Some(handler) => handler.process(reference)?,
+            None => vec![ImagePullTask {
+                image_reference: reference,
+                use_http: false,
+                task_type: TaskType::Origininal,
+            }],
+        };
+
+        for task in tasks {
+            let task_image_url = task.image_reference.to_string();
+            match self
+                .pull_task(task, auth_info, bundle_dir, decrypt_config, &task_image_url)
+                .await
+            {
+                Ok(image_id) => return Ok(image_id),
+                Err(e) => warn!("failed to pull image {image_url} from {task_image_url}: {e:#?}"),
+            }
+        }
+
+        Err(anyhow!("failed to pull image {image_url}"))
+    }
+
+    async fn pull_task(
+        &mut self,
+        task: ImagePullTask,
+        auth_info: &Option<&str>,
+        bundle_dir: &Path,
+        decrypt_config: &Option<&str>,
+        image_url: &str,
+    ) -> Result<String> {
         // Try to find a valid registry auth. Logic order
         // 1. the input parameter
         // 2. from self.registry_auth
@@ -197,7 +250,11 @@ impl ImageClient {
                 None => bail!("Invalid authentication info ({:?})", auth_info),
             },
             None => match &self.registry_auth {
-                Some(registry_auth) => registry_auth.credential_for_reference(&reference).await?,
+                Some(registry_auth) => {
+                    registry_auth
+                        .credential_for_reference(&task.image_reference)
+                        .await?
+                }
                 None => {
                     info!("Use Anonymous image registry auth");
                     RegistryAuth::Anonymous
@@ -205,14 +262,42 @@ impl ImageClient {
             },
         };
 
+        let mut client_config = ClientConfig::default();
+        if task.use_http {
+            client_config.protocol = ClientProtocol::Http;
+        }
+
+        if let Some(no_proxy) = &self.config.skip_proxy_ips {
+            client_config.no_proxy = Some(no_proxy.clone())
+        }
+
+        if let Some(https_proxy) = &self.config.image_pull_proxy {
+            client_config.https_proxy = Some(https_proxy.clone());
+            if task.task_type != TaskType::Origininal && !task.use_http {
+                warn!(
+                    "The image pull try from {} will use the configured https proxy",
+                    task.image_reference
+                );
+            }
+        }
+
+        let certs = self
+            .config
+            .extra_root_certificates
+            .iter()
+            .map(|pem| pem.as_bytes())
+            .map(|data| Certificate {
+                encoding: CertificateEncoding::Pem,
+                data: data.to_vec(),
+            });
+        client_config.extra_root_certificates.extend(certs);
+
         let mut client = PullClient::new(
-            reference,
-            &self.config.work_dir.join("layers"),
+            task.image_reference,
+            self.layer_store.clone(),
             &auth,
             self.config.max_concurrent_layer_downloads_per_image,
-            self.config.skip_proxy_ips.as_deref(),
-            self.config.image_pull_proxy.as_deref(),
-            self.config.extra_root_certificates.clone(),
+            client_config,
         )?;
         let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
 

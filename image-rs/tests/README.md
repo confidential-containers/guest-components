@@ -33,7 +33,7 @@ Implemented in `signature_verification.rs`.
 
 Image Signature Verification includes the following four
 tests illustrated in 
-<https://github.com/confidential-containers/image-rs/issues/43>,
+<https://github.com/confidential-containers/guest-components/issues/43>,
 s.t.
 
 | |signed image|unsigned image|

@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["The Attestation Agent Authors"]
 publish = false
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
 aes-gcm.workspace = true
@@ -27,7 +28,6 @@ tonic.workspace = true
 uuid = { workspace = true, features = ["fast-rng", "v4"] }
 
 [build-dependencies]
-shadow-rs = "0.37.0"
 tonic-build.workspace = true
 
 [dev-dependencies]

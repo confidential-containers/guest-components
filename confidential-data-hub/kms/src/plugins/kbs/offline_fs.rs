@@ -12,8 +12,9 @@ use log::warn;
 use resource_uri::ResourceUri;
 use tokio::fs;
 
+use crate::{Error, Result};
+
 use super::Kbc;
-use super::{Error, Result};
 
 const KEYS_PATH: &str = "/etc/aa-offline_fs_kbc-keys.json";
 const RESOURCES_PATH: &str = "/etc/aa-offline_fs_kbc-resources.json";
@@ -81,7 +82,7 @@ mod tests {
     use resource_uri::ResourceUri;
     use rstest::rstest;
 
-    use crate::kms::plugins::kbs::{offline_fs::OfflineFsKbc, Kbc};
+    use crate::plugins::kbs::{offline_fs::OfflineFsKbc, Kbc};
 
     #[rstest]
     #[tokio::test]

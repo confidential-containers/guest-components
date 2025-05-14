@@ -3,44 +3,49 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use self::rtmr::TdxRtmrEvent;
-
 use super::tsm_report::*;
 use super::Attester;
 use crate::utils::pad;
 use crate::InitDataResult;
 use anyhow::*;
 use base64::Engine;
+use iocuddle::{Group, Ioctl, WriteRead};
 use report::TdReport;
 use scroll::Pread;
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::Path;
-use tdx_attest_rs::tdx_report_t;
 
 mod report;
 mod rtmr;
 
 const TDX_REPORT_DATA_SIZE: usize = 64;
 const CCEL_PATH: &str = "/sys/firmware/acpi/tables/data/CCEL";
+const TDX_GUEST_IOCTL: &str = "/dev/tdx_guest";
 
 pub fn detect_platform() -> bool {
-    TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || Path::new("/dev/tdx_guest").exists()
+    TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || Path::new(TDX_GUEST_IOCTL).exists()
 }
 
-fn get_quote_ioctl(report_data: &Vec<u8>) -> Result<Vec<u8>> {
-    let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
-        // report_data.resize() ensures copying report_data to
-        // tdx_attest_rs::tdx_report_data_t cannot panic.
-        d: report_data.as_slice().try_into().unwrap(),
-    };
+#[allow(unused_variables)]
+fn get_quote_ioctl(report_data: &[u8]) -> Result<Vec<u8>> {
+    cfg_if::cfg_if! {
+            if #[cfg(feature = "tdx-attest-dcap-ioctls")] {
+                let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
+                    // report_data.resize() ensures copying report_data to
+                    // tdx_attest_rs::tdx_report_data_t cannot panic.
+                    d: report_data.as_slice().try_into().unwrap(),
+                };
 
-    match tdx_attest_rs::tdx_att_get_quote(Some(&tdx_report_data), None, None, 0) {
-        (tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS, Some(q)) => Ok(q),
-        (error_code, _) => Err(anyhow!(
-            "TDX getquote ioctl: failed with error code: {:?}",
-            error_code
-        )),
+                match tdx_attest_rs::tdx_att_get_quote(Some(&tdx_report_data), None, None, 0) {
+                    (tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS, Some(q)) => Ok(q),
+                    (error_code, _) => Err(anyhow!(
+                        "TDX DCAP get_quote: failed with error code: {:?}",
+                        error_code
+                    )),
+                }
+            } else {
+                Err(anyhow!("TDX DCAP ioctls: support not available"))
+        }
     }
 }
 
@@ -72,20 +77,34 @@ struct TdxEvidence {
 #[derive(Debug, Default)]
 pub struct TdxAttester {}
 
+#[repr(C)]
+struct TdxReportReq {
+    report_data: [u8; 64],
+
+    d: [u8; 1024],
+}
+
+impl Default for TdxReportReq {
+    fn default() -> Self {
+        Self {
+            report_data: [0; 64],
+            d: [0; 1024],
+        }
+    }
+}
+
+const TDX: Group = Group::new(b'T');
+const TDX_CMD_GET_REPORT0: Ioctl<WriteRead, &TdxReportReq> = unsafe { TDX.write_read(0x1) };
+
 impl TdxAttester {
     fn get_report() -> Result<TdReport> {
-        let mut report = tdx_report_t { d: [0; 1024] };
-        match tdx_attest_rs::tdx_att_get_report(None, &mut report) {
-            tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
-                log::debug!("Successfully got report")
-            }
-            error_code => {
-                bail!(
-                    "TDX Attester: Failed to get TD report. Error code: {:?}",
-                    error_code
-                );
-            }
-        };
+        let mut report = TdxReportReq::default();
+        let mut fd =
+            std::fs::File::open(TDX_GUEST_IOCTL).context("Open TD report ioctl() failed")?;
+
+        TDX_CMD_GET_REPORT0
+            .ioctl(&mut fd, &mut report)
+            .context("Get TD report ioctl() failed")?;
 
         let td_report = report
             .d
@@ -137,7 +156,7 @@ impl Attester for TdxAttester {
             }
         };
 
-        let aa_eventlog = match fs::read_to_string(DEFAULT_EVENTLOG_PATH) {
+        let aa_eventlog = match std::fs::read_to_string(DEFAULT_EVENTLOG_PATH) {
             Result::Ok(el) => Some(el),
             Result::Err(e) => {
                 log::warn!("Read AA Eventlog failed: {:?}", e);
@@ -166,11 +185,19 @@ impl Attester for TdxAttester {
         let rtmr_index = Self::pcr_to_rtmr(register_index);
 
         let extend_data: [u8; 48] = pad(&event_digest);
-        let event: Vec<u8> = TdxRtmrEvent::default()
+
+        log::debug!(
+            "TDX Attester: extend RTRM{rtmr_index}: {}",
+            hex::encode(extend_data)
+        );
+
+        #[cfg(feature = "tdx-attest-dcap-ioctls")]
+        let event: Vec<u8> = rtmr::TdxRtmrEvent::default()
             .with_extend_data(extend_data)
             .with_rtmr_index(rtmr_index)
             .into();
 
+        #[cfg(feature = "tdx-attest-dcap-ioctls")]
         match tdx_attest_rs::tdx_att_extend(&event) {
             tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
                 log::debug!("TDX extend runtime measurement succeeded.")
@@ -216,5 +243,10 @@ mod tests {
 
         let evidence = attester.get_evidence(report_data).await;
         assert!(evidence.is_ok());
+    }
+    #[ignore]
+    #[tokio::test]
+    async fn test_tdx_get_report() {
+        assert!(TdxAttester::get_report().is_ok());
     }
 }

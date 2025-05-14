@@ -108,8 +108,8 @@ else
     features := $(features),rust-crypto
 endif
 
-ifeq ($(ARCH), s390x)
-    LINT_OPTION = lint-s390x
+ifeq ($(ARCH), $(filter $(ARCH), s390x aarch64))
+    LINT_OPTION = lint-$(ARCH)
 else
     LINT_OPTION = lint-default
 endif
@@ -127,6 +127,9 @@ lint-default:
 
 lint-s390x:
 	cd attestation-agent && cargo clippy --no-default-features --features openssl,kbs,coco_as,bin,grpc,ttrpc
+
+lint-aarch64:
+	cd attestation-agent && cargo clippy --no-default-features --features openssl,rust-crypto,cca-attester,kbs,coco_as,bin,grpc,ttrpc
 
 install: 
 	install -D -m0755 $(TARGET) $(DESTDIR)/$(BIN_NAME)

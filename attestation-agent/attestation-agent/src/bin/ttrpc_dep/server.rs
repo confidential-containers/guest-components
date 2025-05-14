@@ -12,14 +12,15 @@ use crate::ttrpc_dep::ttrpc_protocol::{
     attestation_agent::{
         ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse, GetDerivedKeyRequest,
         GetDerivedKeyResponse, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
-        GetTeeTypeResponse, GetTokenRequest, GetTokenResponse, UpdateConfigurationRequest,
-        UpdateConfigurationResponse,
+        GetTeeTypeResponse, GetTokenRequest, GetTokenResponse,
     },
     attestation_agent_ttrpc::AttestationAgentService,
 };
 
+#[allow(dead_code)]
 pub const AGENT_NAME: &str = "attestation-agent";
 
+#[allow(dead_code)]
 pub struct AA {
     pub(crate) inner: AttestationAgent,
 }
@@ -133,31 +134,6 @@ impl AttestationAgentService for AA {
 
         debug!("AA (ttrpc): extend runtime measurement succeeded.");
         let reply = ExtendRuntimeMeasurementResponse::new();
-        ::ttrpc::Result::Ok(reply)
-    }
-
-    async fn update_configuration(
-        &self,
-        _ctx: &::ttrpc::r#async::TtrpcContext,
-        req: UpdateConfigurationRequest,
-    ) -> ::ttrpc::Result<UpdateConfigurationResponse> {
-        debug!("AA (ttrpc): update configuration ...");
-
-        self.inner
-            .update_configuration(&req.config)
-            .await
-            .map_err(|e| {
-                error!("AA (ttrpc): update configuration failed:\n {e:?}");
-                let mut error_status = ::ttrpc::proto::Status::new();
-                error_status.set_code(Code::INTERNAL);
-                error_status.set_message(format!(
-                    "[ERROR:{AGENT_NAME}] AA update configuration failed"
-                ));
-                ::ttrpc::Error::RpcStatus(error_status)
-            })?;
-
-        debug!("AA (ttrpc): update configuration succeeded.");
-        let reply = UpdateConfigurationResponse::new();
         ::ttrpc::Result::Ok(reply)
     }
 

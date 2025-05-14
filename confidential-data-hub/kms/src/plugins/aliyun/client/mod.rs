@@ -12,9 +12,9 @@ mod client_key_client;
 mod ecs_ram_role_client;
 mod sts_token_client;
 
-use crate::kms::plugins::_IN_GUEST_DEFAULT_KEY_PATH;
-use crate::kms::{Annotations, Decrypter, Encrypter, Getter, ProviderSettings};
-use crate::kms::{Error, Result};
+use crate::plugins::_IN_GUEST_DEFAULT_KEY_PATH;
+use crate::{Annotations, Decrypter, Encrypter, Getter, ProviderSettings};
+use crate::{Error, Result};
 
 use client_key_client::ClientKeyClient;
 use ecs_ram_role_client::EcsRamRoleClient;
@@ -206,7 +206,7 @@ mod tests {
     use rstest::rstest;
     use serde_json::{json, Map, Value};
 
-    use crate::kms::{
+    use crate::{
         plugins::aliyun::client::AliyunKmsClient, Annotations, Decrypter, Encrypter, Getter,
     };
 

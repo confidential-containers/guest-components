@@ -35,8 +35,13 @@ jobs:
         instance:
           - ubuntu-24.04
           - s390x
+          - ubuntu-24.04-arm
         rust:
           - stable
+          - 1.80.0
+        exclude:
+          - instance: ubuntu-24.04-arm
+            rust: stable
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
@@ -63,7 +68,7 @@ jobs:
       - name: Musl build with default features
         run: |
           make LIBC=musl
-        if: matrix.instance == 'ubuntu-24.04'
+        if: ${{ startsWith(matrix.instance, 'ubuntu-24.04') }}
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1

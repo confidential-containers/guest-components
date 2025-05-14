@@ -24,7 +24,7 @@ pub struct RSAKeyPair {
 
 impl RSAKeyPair {
     pub fn new() -> Result<RSAKeyPair> {
-        let mut rng = rand::thread_rng();
+        let mut rng = rsa::rand_core::OsRng;
 
         let private_key = RsaPrivateKey::new(&mut rng, RSA_PUBKEY_LENGTH)?;
         let public_key = RsaPublicKey::from(&private_key);
@@ -41,6 +41,7 @@ impl RSAKeyPair {
                 .private_key
                 .decrypt(Oaep::new::<sha2::Sha256>(), &cipher_text)
                 .map_err(|e| anyhow!("RSA key decrypt OAEP failed: {:?}", e)),
+            #[allow(deprecated)]
             PaddingMode::PKCS1v15 => self
                 .private_key
                 .decrypt(Pkcs1v15Encrypt, &cipher_text)

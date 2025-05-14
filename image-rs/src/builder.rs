@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{path::PathBuf, sync::Arc};
+use std::{path::PathBuf, str::FromStr, sync::Arc};
 
 use log::{info, warn};
 use tokio::sync::RwLock;
@@ -12,13 +12,15 @@ use crate::{
     auth::Auth,
     config::{ImageConfig, NydusConfig},
     image::ImageClient,
+    layer_store::LayerStore,
     meta_store::{MetaStore, METAFILE},
+    registry::RegistryHandler,
     resource::ResourceProvider,
     signature::SignatureValidator,
     snapshots::SnapshotType,
 };
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 #[derive(Default)]
 pub struct ClientBuilder {
@@ -54,6 +56,12 @@ impl ClientBuilder {
         Some(authenticated_registry_credentials_uri),
         String
     );
+    __impl_config!(
+        registry_configuration_uri,
+        Some(registry_configuration_uri),
+        String
+    );
+
     __impl_config!(max_concurrent_layer_downloads_per_image, usize);
     __impl_config!(nydus_config, Some(nydus_config), NydusConfig);
 
@@ -112,6 +120,17 @@ impl ClientBuilder {
             }
         };
 
+        let registry_handler = match &self.config.registry_configuration_uri {
+            Some(uri) => {
+                let registry_configuration = resource_provider.get_resource(uri).await?;
+                let registry_configuration = String::from_utf8(registry_configuration)
+                    .context("illegal registry configuration")?;
+                let registry_handler = RegistryHandler::from_str(&registry_configuration)?;
+                Some(registry_handler)
+            }
+            None => None,
+        };
+
         let meta_store = match MetaStore::try_from(self.config.work_dir.join(METAFILE).as_path()) {
             Ok(ms) => {
                 info!("Existing metadata found. Using previous ones.");
@@ -127,12 +146,16 @@ impl ClientBuilder {
 
         let meta_store = Arc::new(RwLock::new(meta_store));
 
+        let layer_store = LayerStore::new(self.config.work_dir.clone())?;
+
         Ok(ImageClient {
             registry_auth,
             signature_validator,
+            registry_handler,
             meta_store,
             snapshots,
             config: self.config,
+            layer_store,
         })
     }
 }

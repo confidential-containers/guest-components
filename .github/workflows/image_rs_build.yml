@@ -32,11 +32,15 @@ jobs:
       fail-fast: false
       matrix:
         rust:
-          - 1.83.0
+          - 1.80.0
           - stable
         instance:
           - ubuntu-24.04
           - s390x
+          - ubuntu-24.04-arm
+        exclude:
+          - instance: ubuntu-24.04-arm
+            rust: stable
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
@@ -55,11 +59,6 @@ jobs:
       - name: Install nettle-sys building dependence
         run: |
           sudo apt install -y clang llvm pkg-config nettle-dev protobuf-compiler libprotobuf-dev
-
-      - uses: ./.github/actions/install-intel-dcap
-        with:
-          ubuntu-version: noble
-        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Install TPM dependencies
         run: |
@@ -142,4 +141,4 @@ jobs:
       - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe + nydus
         run: |
           sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-native-tls,keywrap-jwe,nydus
-        if: matrix.instance == 'ubuntu-24.04'
+        if: ${{ startsWith(matrix.instance, 'ubuntu-24.04') }}

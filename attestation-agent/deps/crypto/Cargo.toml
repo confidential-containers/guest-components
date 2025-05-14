@@ -4,15 +4,22 @@ version = "0.1.0"
 authors = ["The Attestation Agent Authors"]
 publish = false
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
 aes-gcm = { workspace = true, optional = true }
+aes-kw = { version = "0.2.1", optional = true }
 anyhow.workspace = true
 base64.workspace = true
+concat-kdf = { version = "0.1.0", optional = true }
 ctr = { workspace = true, optional = true }
 kbs-types.workspace = true
-openssl = { workspace = true, features = ["vendored"], optional = true}
+openssl = { workspace = true, features = ["vendored"], optional = true }
+p256 = { version = "0.13.1", features = ["ecdh", "pem"], optional = true }
 rand.workspace = true
+
+# This is for API compability of p256 who is using the old version of `rand`
+rand_08 = { package = "rand", version = "0.8", optional = true }
 rsa = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
@@ -25,5 +32,13 @@ rstest.workspace = true
 
 [features]
 default = ["rust-crypto"]
-rust-crypto = ["dep:aes-gcm", "ctr", "rsa"]
+rust-crypto = [
+    "dep:aes-gcm",
+    "ctr",
+    "rsa/sha2",
+    "aes-kw",
+    "concat-kdf",
+    "p256",
+    "rand_08",
+]
 openssl = ["dep:openssl"]

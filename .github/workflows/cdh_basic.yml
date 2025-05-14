@@ -5,12 +5,14 @@ on:
     branches:
       - "main"
     paths:
+      - 'image-rs/**'
       - 'confidential-data-hub/**'
       - '.github/workflows/cdh_basic.yml'
       - 'Cargo.toml'
       - 'Cargo.lock'
   pull_request:
     paths:
+      - 'image-rs/**'
       - 'confidential-data-hub/**'
       - '.github/workflows/cdh_basic.yml'
       - 'Cargo.toml'
@@ -35,8 +37,13 @@ jobs:
         instance:
           - ubuntu-24.04
           - s390x
+          - ubuntu-24.04-arm
         rust:
           - stable
+          - 1.80.0
+        exclude:
+          - instance: ubuntu-24.04-arm
+            rust: stable
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
@@ -60,20 +67,15 @@ jobs:
           mkdir -p ${HOME}/.local/bin
           make RESOURCE_PROVIDER=kbs,sev && make install PREFIX=${HOME}/.local
 
-      - name: Musl build
-        run: |
-          make LIBC=musl
-        if: matrix.instance == 'ubuntu-24.04'
-
       - name: Run cargo test
         run: |
-          sudo -E PATH=$PATH -s cargo test --features kbs,aliyun,sev,bin -p confidential-data-hub
+          sudo -E PATH=$PATH -s cargo test --features kbs,aliyun,sev,bin -p kms -p confidential-data-hub
 
       - name: Run cargo fmt check
         run: |
-          sudo -E PATH=$PATH -s cargo fmt -p confidential-data-hub -- --check
+          sudo -E PATH=$PATH -s cargo fmt -p kms -p confidential-data-hub -- --check
 
       - name: Run rust lint check
         run: |
           # We are getting error in generated code due to derive_partial_eq_without_eq check, so ignore it for now
-          sudo -E PATH=$PATH -s cargo clippy -p confidential-data-hub -- -D warnings -A clippy::derive-partial-eq-without-eq 
+          sudo -E PATH=$PATH -s cargo clippy -p kms -p confidential-data-hub -- -D warnings -A clippy::derive-partial-eq-without-eq 

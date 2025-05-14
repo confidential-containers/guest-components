@@ -170,11 +170,7 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Resul
             let times = [atime, atime];
 
             dirs.insert(path.clone(), times);
-        } else if kind.is_symlink() {
-            let mtime = FileTime::from_unix_time(mtime, 0);
-            filetime::set_symlink_file_times(file_path, mtime, mtime)
-                .context(format!("failed to set mtime for sym link `{file_path}`"))?;
-        } else if !kind.is_hard_link() {
+        } else if !kind.is_symlink() && !kind.is_hard_link() {
             // for other files except link we use fchown
             let f = fs::OpenOptions::new()
                 .write(true)
