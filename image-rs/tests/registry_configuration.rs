@@ -80,7 +80,7 @@ async fn test_use_registry_configuration(#[case] image_ref: &str, #[case] succes
     // of cache of old client.
     let mut image_client = image_rs::builder::ClientBuilder::default()
         .registry_configuration_uri("kbs:///default/registry-configuration/test".into())
-        .work_dir(work_dir.into_path())
+        .work_dir(work_dir.path().to_path_buf())
         .build()
         .await
         .unwrap();
