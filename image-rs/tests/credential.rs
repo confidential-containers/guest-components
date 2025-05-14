@@ -28,7 +28,7 @@ async fn test_use_credential(#[case] image_ref: &str, #[case] auth_file_uri: &st
     // of cache of old client.
     let mut image_client = image_rs::builder::ClientBuilder::default()
         .authenticated_registry_credentials_uri(auth_file_uri.to_string())
-        .work_dir(work_dir.into_path())
+        .work_dir(work_dir.path().to_path_buf())
         .build()
         .await
         .unwrap();
