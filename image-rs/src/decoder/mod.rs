@@ -47,10 +47,7 @@ impl Compression {
         match self {
             Self::Gzip => gzip_decode(input, output),
             Self::Zstd => zstd_decode(input, output),
-            Self::Uncompressed => Err(io::Error::new(
-                io::ErrorKind::Other,
-                "uncompressed input data".to_string(),
-            )),
+            Self::Uncompressed => Err(io::Error::other("uncompressed input data".to_string())),
         }
     }
 
