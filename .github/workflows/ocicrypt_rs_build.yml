@@ -145,4 +145,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -p ocicrypt-rs --all-targets --all-features -- -D warnings -A clippy::derive_partial_eq_without_eq
+          args: -p ocicrypt-rs --all-targets --all-features -- -D warnings
