@@ -164,10 +164,7 @@ impl Default for ImageConfig {
     fn default() -> ImageConfig {
         ImageConfig {
             work_dir: PathBuf::from(DEFAULT_WORK_DIR.to_string()),
-            #[cfg(feature = "snapshot-overlayfs")]
-            default_snapshot: SnapshotType::Overlay,
-            #[cfg(not(feature = "snapshot-overlayfs"))]
-            default_snapshot: SnapshotType::Unknown,
+            default_snapshot: SnapshotType::default(),
             max_concurrent_layer_downloads_per_image: DEFAULT_MAX_CONCURRENT_DOWNLOAD,
             #[cfg(feature = "nydus")]
             nydus_config: Some(NydusConfig::default()),
@@ -252,10 +249,7 @@ impl ImageConfig {
     pub fn from_kernel_cmdline() -> Self {
         let mut res = ImageConfig {
             work_dir: PathBuf::from(DEFAULT_WORK_DIR.to_string()),
-            #[cfg(feature = "snapshot-overlayfs")]
-            default_snapshot: SnapshotType::Overlay,
-            #[cfg(not(feature = "snapshot-overlayfs"))]
-            default_snapshot: SnapshotType::Unknown,
+            default_snapshot: SnapshotType::default(),
             max_concurrent_layer_downloads_per_image: DEFAULT_MAX_CONCURRENT_DOWNLOAD,
             #[cfg(feature = "nydus")]
             nydus_config: Some(NydusConfig::default()),

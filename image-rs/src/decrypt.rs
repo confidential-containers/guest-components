@@ -2,9 +2,50 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Result};
 use oci_client::manifest::{self, OciDescriptor};
+use thiserror::Error;
 use tokio::io::AsyncRead;
+
+pub type DecryptLayerResult<T> = std::result::Result<T, DecryptLayerError>;
+
+#[derive(Error, Debug)]
+pub enum DecryptLayerError {
+    #[error("Decryption not supported. Please compile image-rs with `encryption` feature")]
+    NotSupported,
+
+    #[error("Unencrypted media type")]
+    UnencryptedMediaType,
+
+    #[error("decrypt_config is empty")]
+    EmptyDecryptConfig,
+
+    #[error("Create decrypt config failed")]
+    CreateDecryptConfigFailed {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error("Failed to decrypt the image layer, please ensure that the decryption key is placed and correct")]
+    DecryptLayerOptsDataFailed {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error("No decrypt config detected from the annotations of the image manifest")]
+    NoDecryptConfigDetectedFromManifest,
+
+    #[error("Failed to prepare decryption context: {source}")]
+    PrepareDecryptionContextFailed {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error("Read layer data failed")]
+    ReadLayerDataFailed {
+        #[source]
+        source: std::io::Error,
+    },
+}
 
 /// Image layer encryption type information and associated methods to decrypt image layers.
 #[derive(Default, Clone, Debug)]
@@ -26,7 +67,6 @@ impl Decryptor {
 #[cfg(feature = "encryption")]
 mod encryption {
     use super::*;
-    use anyhow::anyhow;
     use ocicrypt_rs::config::CryptoConfig;
     use ocicrypt_rs::encryption::{
         async_decrypt_layer, decrypt_layer, decrypt_layer_key_opts_data,
@@ -39,9 +79,6 @@ mod encryption {
     use std::io::Read;
 
     impl Decryptor {
-        const ERR_EMPTY_CFG: &'static str = "decrypt_config is empty";
-        const ERR_UNENCRYPTED_MEDIA_TYPE: &'static str = "unencrypted media type";
-
         /// Construct Decryptor from media_type.
         pub fn from_media_type(media_type: &str) -> Self {
             let (media_type, encrypted) = match media_type {
@@ -76,15 +113,16 @@ mod encryption {
             descriptor: &OciDescriptor,
             encrypted_layer: Vec<u8>,
             decrypt_config: &str,
-        ) -> Result<Vec<u8>> {
+        ) -> DecryptLayerResult<Vec<u8>> {
             if !self.is_encrypted() {
-                bail!("{}: {}", Self::ERR_UNENCRYPTED_MEDIA_TYPE, self.media_type);
+                return Err(DecryptLayerError::UnencryptedMediaType);
             }
             if decrypt_config.is_empty() {
-                bail!(Self::ERR_EMPTY_CFG);
+                return Err(DecryptLayerError::EmptyDecryptConfig);
             }
 
-            let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])?;
+            let cc = create_decrypt_config(vec![decrypt_config.to_string()], vec![])
+                .map_err(|source| DecryptLayerError::CreateDecryptConfigFailed { source })?;
             decrypt_layer_data(&encrypted_layer, descriptor, &cc)
                 .map(|(decrypted_data, _)| decrypted_data)
         }
@@ -94,9 +132,9 @@ mod encryption {
             &self,
             descriptor: &OciDescriptor,
             decrypt_config: &Option<&str>,
-        ) -> Result<Vec<u8>> {
+        ) -> DecryptLayerResult<Vec<u8>> {
             if !self.is_encrypted() {
-                bail!("unencrypted media type: {}", self.media_type);
+                return Err(DecryptLayerError::UnencryptedMediaType);
             }
 
             let keys = match decrypt_config {
@@ -104,11 +142,13 @@ mod encryption {
                 None => Vec::new(),
             };
 
-            let cc = create_decrypt_config(keys, vec![])?;
+            let cc = create_decrypt_config(keys, vec![])
+                .map_err(|source| DecryptLayerError::CreateDecryptConfigFailed { source })?;
             if let Some(decrypt_config) = cc.decrypt_config {
                 decrypt_layer_key_opts_data(&decrypt_config, descriptor.annotations.as_ref())
+                    .map_err(|source| DecryptLayerError::DecryptLayerOptsDataFailed { source })
             } else {
-                Err(anyhow!("failed to retrieve decrypt key!"))
+                Err(DecryptLayerError::NoDecryptConfigDetectedFromManifest)
             }
         }
 
@@ -117,13 +157,13 @@ mod encryption {
             encrypted_layer: impl AsyncRead + Send,
             descriptor: &OciDescriptor,
             priv_opts_data: &[u8],
-        ) -> Result<impl AsyncRead + Send> {
+        ) -> DecryptLayerResult<impl AsyncRead + Send> {
             let (layer_decryptor, _dec_digest) = async_decrypt_layer(
                 encrypted_layer,
                 descriptor.annotations.as_ref(),
                 priv_opts_data,
             )
-            .map_err(|e| anyhow!("failed to async decrypt layer {}", e.to_string()))?;
+            .map_err(|source| DecryptLayerError::PrepareDecryptionContextFailed { source })?;
             Ok(layer_decryptor)
         }
     }
@@ -132,23 +172,28 @@ mod encryption {
         encrypted_layer: &[u8],
         descriptor: &OciDescriptor,
         crypto_config: &CryptoConfig,
-    ) -> Result<(Vec<u8>, String)> {
+    ) -> DecryptLayerResult<(Vec<u8>, String)> {
         if let Some(decrypt_config) = &crypto_config.decrypt_config {
             let (layer_decryptor, dec_digest) = decrypt_layer(
                 decrypt_config,
                 encrypted_layer,
                 descriptor.annotations.as_ref(),
                 false,
-            )?;
+            )
+            .map_err(|source| DecryptLayerError::PrepareDecryptionContextFailed { source })?;
             let mut plaintext_data: Vec<u8> = Vec::new();
-            let mut decryptor =
-                layer_decryptor.ok_or_else(|| anyhow!("missing layer decryptor"))?;
 
-            decryptor.read_to_end(&mut plaintext_data)?;
+            // The layer_decryptor returned by `decrypt_layer` is Some(_)
+            // if the 4th parameter of `decrypt_layer` is false.
+            let mut decryptor = layer_decryptor.unwrap();
+
+            decryptor
+                .read_to_end(&mut plaintext_data)
+                .map_err(|source| DecryptLayerError::ReadLayerDataFailed { source })?;
 
             Ok((plaintext_data, dec_digest))
         } else {
-            Err(anyhow!("no decrypt config available"))
+            Err(DecryptLayerError::NoDecryptConfigDetectedFromManifest)
         }
     }
 
@@ -239,7 +284,7 @@ mod encryption {
                 descriptor: OciDescriptor,
                 encrypted_layer: Vec<u8>,
                 decrypt_config: &'a str,
-                result: Result<Vec<u8>>,
+                result: DecryptLayerResult<Vec<u8>>,
             }
 
             let tests = &[
@@ -249,7 +294,7 @@ mod encryption {
                     descriptor: OciDescriptor::default(),
                     encrypted_layer: Vec::<u8>::new(),
                     decrypt_config: "",
-                    result: Err(anyhow!("{}: {}", Decryptor::ERR_UNENCRYPTED_MEDIA_TYPE, "")),
+                    result: Err(DecryptLayerError::UnencryptedMediaType),
                 },
                 TestData {
                     encrypted: false,
@@ -257,7 +302,7 @@ mod encryption {
                     descriptor: OciDescriptor::default(),
                     encrypted_layer: Vec::<u8>::new(),
                     decrypt_config: "foo",
-                    result: Err(anyhow!("{}: {}", Decryptor::ERR_UNENCRYPTED_MEDIA_TYPE, "")),
+                    result: Err(DecryptLayerError::UnencryptedMediaType),
                 },
                 TestData {
                     encrypted: true,
@@ -265,7 +310,9 @@ mod encryption {
                     descriptor: OciDescriptor::default(),
                     encrypted_layer: Vec::<u8>::new(),
                     decrypt_config: "provider:grpc",
-                    result: Err(anyhow!("missing private key needed for decryption")),
+                    result: Err(DecryptLayerError::PrepareDecryptionContextFailed {
+                        source: anyhow::anyhow!("missing private key needed for decryption"),
+                    }),
                 },
                 TestData {
                     encrypted: true,
@@ -273,7 +320,9 @@ mod encryption {
                     descriptor: OciDescriptor::default(),
                     encrypted_layer: Vec::<u8>::new(),
                     decrypt_config: "provider:grpc",
-                    result: Err(anyhow!("missing private key needed for decryption")),
+                    result: Err(DecryptLayerError::PrepareDecryptionContextFailed {
+                        source: anyhow::anyhow!("missing private key needed for decryption"),
+                    }),
                 },
             ];
 
@@ -351,22 +400,16 @@ impl Decryptor {
         _descriptor: &OciDescriptor,
         _encrypted_layer: Vec<u8>,
         _decrypt_config: &str,
-    ) -> Result<Vec<u8>> {
-        bail!(
-            "no support of encryption, can't handle '{}'",
-            self.media_type
-        );
+    ) -> DecryptLayerResult<Vec<u8>> {
+        Err(DecryptLayerError::NotSupported)
     }
 
     pub fn get_decrypt_key(
         &self,
         _descriptor: &OciDescriptor,
         _decrypt_config: &Option<&str>,
-    ) -> Result<Vec<u8>> {
-        bail!(
-            "no support of encryption, can't handle '{}'",
-            self.media_type
-        );
+    ) -> DecryptLayerResult<Vec<u8>> {
+        Err(DecryptLayerError::NotSupported)
     }
 
     pub fn async_get_plaintext_layer(
@@ -374,12 +417,9 @@ impl Decryptor {
         encrypted_layer: impl AsyncRead,
         _descriptor: &OciDescriptor,
         _priv_opts_data: &[u8],
-    ) -> Result<impl AsyncRead> {
+    ) -> DecryptLayerResult<impl AsyncRead> {
         if self.is_encrypted() {
-            bail!(
-                "no support of encryption, can't handle '{}'",
-                self.media_type
-            );
+            Err(DecryptLayerError::NotSupported)
         } else {
             Ok(encrypted_layer)
         }

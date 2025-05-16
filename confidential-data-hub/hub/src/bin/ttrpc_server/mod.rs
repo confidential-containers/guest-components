@@ -55,7 +55,7 @@ impl SealedSecretService for Server {
             error!("[ttRPC CDH] UnsealSecret :\n{detailed_error}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
-            status.set_message("[CDH] [ERROR]: Unseal Secret failed".into());
+            status.set_message(format!("[CDH] [ERROR]: {e}"));
             Error::RpcStatus(status)
         })?;
 
@@ -79,7 +79,7 @@ impl GetResourceService for Server {
             error!("[ttRPC CDH] GetResource :\n{detailed_error}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
-            status.set_message("[CDH] [ERROR]: Get Resource failed".into());
+            status.set_message(format!("[CDH] [ERROR]: {e}"));
             Error::RpcStatus(status)
         })?;
 
@@ -121,7 +121,7 @@ impl KeyProviderService for Server {
             error!("[ttRPC CDH] UnWrapKey :\n{detailed_error}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
-            status.set_message("[CDH] [ERROR]: UnwrapKey failed".to_string());
+            status.set_message(format!("[CDH] [ERROR]: {e}"));
             Error::RpcStatus(status)
         })?;
 
@@ -167,7 +167,7 @@ impl SecureMountService for Server {
             error!("[ttRPC CDH] Secure Mount :\n{detailed_error}");
             let mut status = Status::new();
             status.set_code(Code::INTERNAL);
-            status.set_message("[CDH] [ERROR]: secure mount failed".to_string());
+            status.set_message(format!("[CDH] [ERROR]: {e}"));
             Error::RpcStatus(status)
         })?;
 
@@ -195,7 +195,7 @@ impl ImagePullService for Server {
                 error!("[ttRPC CDH] Pull Image :\n{detailed_error}");
                 let mut status = Status::new();
                 status.set_code(Code::INTERNAL);
-                status.set_message("[CDH] [ERROR]: pull image failed".to_string());
+                status.set_message(format!("[CDH] [ERROR]: {e}"));
                 Error::RpcStatus(status)
             })?;
 

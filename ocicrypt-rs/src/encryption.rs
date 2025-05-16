@@ -233,7 +233,7 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
     }
 
     if !encrypted {
-        let mut lbch = LayerBlockCipherHandler::new()?;
+        let mut lbch = LayerBlockCipherHandler::default();
         let mut lbco = LayerBlockCipherOptions::default();
 
         lbch.encrypt(layer_reader, AES256CTR, &mut lbco)?;
@@ -269,7 +269,7 @@ pub fn decrypt_layer<R: Read>(
         public: pub_opts,
         private: priv_opts,
     };
-    let mut lbch = LayerBlockCipherHandler::new()?;
+    let mut lbch = LayerBlockCipherHandler::default();
 
     lbch.decrypt(layer_reader, &mut opts)?;
 
@@ -293,7 +293,7 @@ pub fn async_decrypt_layer<R: tokio::io::AsyncRead + Send>(
         public: pub_opts,
         private: priv_opts,
     };
-    let mut lbch = LayerBlockCipherHandler::new()?;
+    let mut lbch = LayerBlockCipherHandler::default();
 
     lbch.decrypt(layer_reader, &mut opts)?;
 
