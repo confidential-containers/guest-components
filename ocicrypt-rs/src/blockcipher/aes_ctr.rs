@@ -161,14 +161,11 @@ impl<R: Read> Read for AESCTRBlockCipher<R> {
                     .clone()
                     .verify_slice(&state.exp_hmac)
                     .map_err(|_| {
-                        std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            format!(
-                                "failed decrypt byte stream, exp hmac: {:?} , actual hmac: {:?}",
-                                &state.exp_hmac,
-                                state.hmac.clone().finalize().into_bytes()
-                            ),
-                        )
+                        std::io::Error::other(format!(
+                            "failed decrypt byte stream, exp hmac: {:?} , actual hmac: {:?}",
+                            &state.exp_hmac,
+                            state.hmac.clone().finalize().into_bytes()
+                        ))
                     })?;
             }
         } else if read_len > 0 {
@@ -226,14 +223,11 @@ impl<R: tokio::io::AsyncRead> tokio::io::AsyncRead for AESCTRBlockCipher<R> {
             } else {
                 // If we done encrypting, let the HMAC comparison provide a verdict
                 hmac.clone().verify_slice(exp_hmac).map_err(|_| {
-                    std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!(
-                            "failed decrypt byte stream, exp hmac: {:?} , actual hmac: {:?}",
-                            exp_hmac,
-                            hmac.clone().finalize().into_bytes()
-                        ),
-                    )
+                    std::io::Error::other(format!(
+                        "failed decrypt byte stream, exp hmac: {:?} , actual hmac: {:?}",
+                        exp_hmac,
+                        hmac.clone().finalize().into_bytes()
+                    ))
                 })?;
             }
         } else if !buf_filled.is_empty() {
