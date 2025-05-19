@@ -40,7 +40,7 @@ jwt-simple = { version = "0.12", default-features = false, features = [
 ] }
 kbs-types = "0.10.0"
 log = "0.4.27"
-nix = "0.29"
+nix = "0.30"
 openssl = "0.10"
 prost = "0.13"
 protobuf = "=3.7.1"
