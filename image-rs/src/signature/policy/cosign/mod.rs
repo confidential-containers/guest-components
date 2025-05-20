@@ -125,6 +125,7 @@ impl CosignParameters {
         let auth = match auth {
             RegistryAuth::Anonymous => Auth::Anonymous,
             RegistryAuth::Basic(username, pass) => Auth::Basic(username.clone(), pass.clone()),
+            RegistryAuth::Bearer(token) => Auth::Bearer(token.clone()),
         };
 
         let config = ClientConfig {
