@@ -378,7 +378,7 @@ dependencies = [
  "serde_json",
  "serial_test",
  "sha2 0.10.9",
- "strum 0.27.1",
+ "strum",
  "tempfile",
  "thiserror 2.0.12",
  "tokio",
@@ -417,7 +417,7 @@ dependencies = [
  "serde_with",
  "sev 6.0.0",
  "sha2 0.10.9",
- "strum 0.27.1",
+ "strum",
  "tdx-attest-rs",
  "tempfile",
  "thiserror 2.0.12",
@@ -1176,7 +1176,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
- "strum 0.27.1",
+ "strum",
  "tokio",
  "tonic",
  "tonic-build",
@@ -1231,7 +1231,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
- "strum 0.27.1",
+ "strum",
  "tempfile",
  "thiserror 2.0.12",
  "tokio",
@@ -1477,7 +1477,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
- "strum 0.27.1",
+ "strum",
  "zeroize",
 ]
 
@@ -3100,8 +3100,8 @@ dependencies = [
  "nix 0.30.1",
  "nydus-api",
  "nydus-service",
- "oci-client 0.14.0",
- "oci-spec 0.8.1",
+ "oci-client",
+ "oci-spec",
  "ocicrypt-rs",
  "prost 0.13.5",
  "protobuf 3.7.1",
@@ -3116,8 +3116,8 @@ dependencies = [
  "serial_test",
  "sha2 0.10.9",
  "sigstore",
- "strum 0.27.1",
- "strum_macros 0.27.1",
+ "strum",
+ "strum_macros",
  "tempfile",
  "test-utils",
  "testcontainers",
@@ -3417,7 +3417,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sev 0.1.0",
- "strum 0.27.1",
+ "strum",
  "tokio",
  "tonic",
  "tonic-build",
@@ -3506,7 +3506,7 @@ dependencies = [
  "serde_json",
  "sev 0.1.0",
  "sha2 0.10.9",
- "strum 0.27.1",
+ "strum",
  "thiserror 2.0.12",
  "tokio",
  "toml 0.8.22",
@@ -4128,32 +4128,6 @@ dependencies = [
 
 [[package]]
 name = "oci-client"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "474675fdc023fbcc9dcf4782e938a3a1ae5fd469c728d8db40599bd25c77e1ba"
-dependencies = [
- "bytes",
- "chrono",
- "futures-util",
- "http 1.2.0",
- "http-auth",
- "jwt",
- "lazy_static",
- "oci-spec 0.7.1",
- "olpc-cjson",
- "regex",
- "reqwest 0.12.15",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
- "unicase",
-]
-
-[[package]]
-name = "oci-client"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b74df13319e08bc386d333d3dc289c774c88cc543cae31f5347db07b5ec2172"
@@ -4165,7 +4139,7 @@ dependencies = [
  "http-auth",
  "jwt",
  "lazy_static",
- "oci-spec 0.8.1",
+ "oci-spec",
  "olpc-cjson",
  "regex",
  "reqwest 0.12.15",
@@ -4176,22 +4150,6 @@ dependencies = [
  "tokio",
  "tracing",
  "unicase",
-]
-
-[[package]]
-name = "oci-spec"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da406e58efe2eb5986a6139626d611ce426e5324a824133d76367c765cf0b882"
-dependencies = [
- "derive_builder",
- "getset",
- "regex",
- "serde",
- "serde_json",
- "strum 0.26.3",
- "strum_macros 0.26.4",
- "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -4206,8 +4164,8 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "strum 0.27.1",
- "strum_macros 0.27.1",
+ "strum",
+ "strum_macros",
  "thiserror 2.0.12",
 ]
 
@@ -6239,7 +6197,7 @@ dependencies = [
  "ed25519",
  "ed25519-dalek",
  "elliptic-curve",
- "oci-client 0.15.0",
+ "oci-client",
  "olpc-cjson",
  "openidconnect",
  "p256",
@@ -6401,30 +6359,11 @@ dependencies = [
 
 [[package]]
 name = "strum"
-version = "0.26.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
-
-[[package]]
-name = "strum"
 version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f64def088c51c9510a8579e3c5d67c65349dcf755e5479ad3d010aa6454e2c32"
 dependencies = [
- "strum_macros 0.27.1",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.26.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
-dependencies = [
- "heck 0.5.0",
- "proc-macro2",
- "quote",
- "rustversion",
- "syn 2.0.99",
+ "strum_macros",
 ]
 
 [[package]]
