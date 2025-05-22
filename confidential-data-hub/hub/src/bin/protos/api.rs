@@ -1087,6 +1087,268 @@ impl ::protobuf::reflect::ProtobufValue for ImagePullResponse {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
+// @@protoc_insertion_point(message:api.InitOverlayNetworkRequest)
+#[derive(PartialEq,Clone,Default,Debug)]
+pub struct InitOverlayNetworkRequest {
+    // message fields
+    // @@protoc_insertion_point(field:api.InitOverlayNetworkRequest.pod_name)
+    pub pod_name: ::std::string::String,
+    // @@protoc_insertion_point(field:api.InitOverlayNetworkRequest.lighthouse_pub_ip)
+    pub lighthouse_pub_ip: ::std::string::String,
+    // special fields
+    // @@protoc_insertion_point(special_field:api.InitOverlayNetworkRequest.special_fields)
+    pub special_fields: ::protobuf::SpecialFields,
+}
+
+impl<'a> ::std::default::Default for &'a InitOverlayNetworkRequest {
+    fn default() -> &'a InitOverlayNetworkRequest {
+        <InitOverlayNetworkRequest as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl InitOverlayNetworkRequest {
+    pub fn new() -> InitOverlayNetworkRequest {
+        ::std::default::Default::default()
+    }
+
+    fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
+        let mut fields = ::std::vec::Vec::with_capacity(2);
+        let mut oneofs = ::std::vec::Vec::with_capacity(0);
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "pod_name",
+            |m: &InitOverlayNetworkRequest| { &m.pod_name },
+            |m: &mut InitOverlayNetworkRequest| { &mut m.pod_name },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "lighthouse_pub_ip",
+            |m: &InitOverlayNetworkRequest| { &m.lighthouse_pub_ip },
+            |m: &mut InitOverlayNetworkRequest| { &mut m.lighthouse_pub_ip },
+        ));
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<InitOverlayNetworkRequest>(
+            "InitOverlayNetworkRequest",
+            fields,
+            oneofs,
+        )
+    }
+}
+
+impl ::protobuf::Message for InitOverlayNetworkRequest {
+    const NAME: &'static str = "InitOverlayNetworkRequest";
+
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
+        while let Some(tag) = is.read_raw_tag_or_eof()? {
+            match tag {
+                10 => {
+                    self.pod_name = is.read_string()?;
+                },
+                18 => {
+                    self.lighthouse_pub_ip = is.read_string()?;
+                },
+                tag => {
+                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u64 {
+        let mut my_size = 0;
+        if !self.pod_name.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.pod_name);
+        }
+        if !self.lighthouse_pub_ip.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.lighthouse_pub_ip);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
+        self.special_fields.cached_size().set(my_size as u32);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
+        if !self.pod_name.is_empty() {
+            os.write_string(1, &self.pod_name)?;
+        }
+        if !self.lighthouse_pub_ip.is_empty() {
+            os.write_string(2, &self.lighthouse_pub_ip)?;
+        }
+        os.write_unknown_fields(self.special_fields.unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn special_fields(&self) -> &::protobuf::SpecialFields {
+        &self.special_fields
+    }
+
+    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
+        &mut self.special_fields
+    }
+
+    fn new() -> InitOverlayNetworkRequest {
+        InitOverlayNetworkRequest::new()
+    }
+
+    fn clear(&mut self) {
+        self.pod_name.clear();
+        self.lighthouse_pub_ip.clear();
+        self.special_fields.clear();
+    }
+
+    fn default_instance() -> &'static InitOverlayNetworkRequest {
+        static instance: InitOverlayNetworkRequest = InitOverlayNetworkRequest {
+            pod_name: ::std::string::String::new(),
+            lighthouse_pub_ip: ::std::string::String::new(),
+            special_fields: ::protobuf::SpecialFields::new(),
+        };
+        &instance
+    }
+}
+
+impl ::protobuf::MessageFull for InitOverlayNetworkRequest {
+    fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("InitOverlayNetworkRequest").unwrap()).clone()
+    }
+}
+
+impl ::std::fmt::Display for InitOverlayNetworkRequest {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for InitOverlayNetworkRequest {
+    type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
+}
+
+// @@protoc_insertion_point(message:api.InitOverlayNetworkResponse)
+#[derive(PartialEq,Clone,Default,Debug)]
+pub struct InitOverlayNetworkResponse {
+    // message fields
+    // @@protoc_insertion_point(field:api.InitOverlayNetworkResponse.return_code)
+    pub return_code: i32,
+    // special fields
+    // @@protoc_insertion_point(special_field:api.InitOverlayNetworkResponse.special_fields)
+    pub special_fields: ::protobuf::SpecialFields,
+}
+
+impl<'a> ::std::default::Default for &'a InitOverlayNetworkResponse {
+    fn default() -> &'a InitOverlayNetworkResponse {
+        <InitOverlayNetworkResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl InitOverlayNetworkResponse {
+    pub fn new() -> InitOverlayNetworkResponse {
+        ::std::default::Default::default()
+    }
+
+    fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
+        let mut fields = ::std::vec::Vec::with_capacity(1);
+        let mut oneofs = ::std::vec::Vec::with_capacity(0);
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "return_code",
+            |m: &InitOverlayNetworkResponse| { &m.return_code },
+            |m: &mut InitOverlayNetworkResponse| { &mut m.return_code },
+        ));
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<InitOverlayNetworkResponse>(
+            "InitOverlayNetworkResponse",
+            fields,
+            oneofs,
+        )
+    }
+}
+
+impl ::protobuf::Message for InitOverlayNetworkResponse {
+    const NAME: &'static str = "InitOverlayNetworkResponse";
+
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
+        while let Some(tag) = is.read_raw_tag_or_eof()? {
+            match tag {
+                8 => {
+                    self.return_code = is.read_int32()?;
+                },
+                tag => {
+                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u64 {
+        let mut my_size = 0;
+        if self.return_code != 0 {
+            my_size += ::protobuf::rt::int32_size(1, self.return_code);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
+        self.special_fields.cached_size().set(my_size as u32);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
+        if self.return_code != 0 {
+            os.write_int32(1, self.return_code)?;
+        }
+        os.write_unknown_fields(self.special_fields.unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn special_fields(&self) -> &::protobuf::SpecialFields {
+        &self.special_fields
+    }
+
+    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
+        &mut self.special_fields
+    }
+
+    fn new() -> InitOverlayNetworkResponse {
+        InitOverlayNetworkResponse::new()
+    }
+
+    fn clear(&mut self) {
+        self.return_code = 0;
+        self.special_fields.clear();
+    }
+
+    fn default_instance() -> &'static InitOverlayNetworkResponse {
+        static instance: InitOverlayNetworkResponse = InitOverlayNetworkResponse {
+            return_code: 0,
+            special_fields: ::protobuf::SpecialFields::new(),
+        };
+        &instance
+    }
+}
+
+impl ::protobuf::MessageFull for InitOverlayNetworkResponse {
+    fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("InitOverlayNetworkResponse").unwrap()).clone()
+    }
+}
+
+impl ::std::fmt::Display for InitOverlayNetworkResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for InitOverlayNetworkResponse {
+    type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\tapi.proto\x12\x03api\"+\n\x11UnsealSecretInput\x12\x16\n\x06secret\
     \x18\x01\x20\x01(\x0cR\x06secret\"2\n\x12UnsealSecretOutput\x12\x1c\n\tp\
@@ -1103,14 +1365,20 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     ImagePullRequest\x12\x1b\n\timage_url\x18\x01\x20\x01(\tR\x08imageUrl\
     \x12\x1f\n\x0bbundle_path\x18\x02\x20\x01(\tR\nbundlePath\"<\n\x11ImageP\
     ullResponse\x12'\n\x0fmanifest_digest\x18\x01\x20\x01(\tR\x0emanifestDig\
-    est2V\n\x13SealedSecretService\x12?\n\x0cUnsealSecret\x12\x16.api.Unseal\
-    SecretInput\x1a\x17.api.UnsealSecretOutput2V\n\x12GetResourceService\x12\
-    @\n\x0bGetResource\x12\x17.api.GetResourceRequest\x1a\x18.api.GetResourc\
-    eResponse2V\n\x12SecureMountService\x12@\n\x0bSecureMount\x12\x17.api.Se\
-    cureMountRequest\x1a\x18.api.SecureMountResponse2N\n\x10ImagePullService\
-    \x12:\n\tPullImage\x12\x15.api.ImagePullRequest\x1a\x16.api.ImagePullRes\
-    ponseBaZ_github.com/confidential-containers/guest-components/confidentia\
-    l-data-hub/golang/pkg/api/cdhapib\x06proto3\
+    est\"b\n\x19InitOverlayNetworkRequest\x12\x19\n\x08pod_name\x18\x01\x20\
+    \x01(\tR\x07podName\x12*\n\x11lighthouse_pub_ip\x18\x02\x20\x01(\tR\x0fl\
+    ighthousePubIp\"=\n\x1aInitOverlayNetworkResponse\x12\x1f\n\x0breturn_co\
+    de\x18\x01\x20\x01(\x05R\nreturnCode2V\n\x13SealedSecretService\x12?\n\
+    \x0cUnsealSecret\x12\x16.api.UnsealSecretInput\x1a\x17.api.UnsealSecretO\
+    utput2V\n\x12GetResourceService\x12@\n\x0bGetResource\x12\x17.api.GetRes\
+    ourceRequest\x1a\x18.api.GetResourceResponse2V\n\x12SecureMountService\
+    \x12@\n\x0bSecureMount\x12\x17.api.SecureMountRequest\x1a\x18.api.Secure\
+    MountResponse2N\n\x10ImagePullService\x12:\n\tPullImage\x12\x15.api.Imag\
+    ePullRequest\x1a\x16.api.ImagePullResponse2n\n\x15OverlayNetworkService\
+    \x12U\n\x12InitOverlayNetwork\x12\x1e.api.InitOverlayNetworkRequest\x1a\
+    \x1f.api.InitOverlayNetworkResponseBaZ_github.com/confidential-container\
+    s/guest-components/confidential-data-hub/golang/pkg/api/cdhapib\x06proto\
+    3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
@@ -1128,7 +1396,7 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
     file_descriptor.get(|| {
         let generated_file_descriptor = generated_file_descriptor_lazy.get(|| {
             let mut deps = ::std::vec::Vec::with_capacity(0);
-            let mut messages = ::std::vec::Vec::with_capacity(8);
+            let mut messages = ::std::vec::Vec::with_capacity(10);
             messages.push(UnsealSecretInput::generated_message_descriptor_data());
             messages.push(UnsealSecretOutput::generated_message_descriptor_data());
             messages.push(GetResourceRequest::generated_message_descriptor_data());
@@ -1137,6 +1405,8 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
             messages.push(SecureMountResponse::generated_message_descriptor_data());
             messages.push(ImagePullRequest::generated_message_descriptor_data());
             messages.push(ImagePullResponse::generated_message_descriptor_data());
+            messages.push(InitOverlayNetworkRequest::generated_message_descriptor_data());
+            messages.push(InitOverlayNetworkResponse::generated_message_descriptor_data());
             let mut enums = ::std::vec::Vec::with_capacity(0);
             ::protobuf::reflect::GeneratedFileDescriptor::new_generated(
                 file_descriptor_proto(),
