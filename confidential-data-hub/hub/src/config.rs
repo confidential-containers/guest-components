@@ -188,7 +188,7 @@ sigstore_config_uri = "kbs:///default/sigstore-config/test"
 image_security_policy_uri = "kbs:///default/security-policy/test"
 authenticated_registry_credentials_uri = "kbs:///default/credential/test"
 extra_root_certificates = ["cert1", "cert2"]
-image_pull_proxy = "http://127.0.0.1:8080"
+https_proxy = "http://127.0.0.1:8080"
     "#,
         Some(CdhConfig {
             kbc: KbsConfig {
@@ -202,8 +202,9 @@ image_pull_proxy = "http://127.0.0.1:8080"
                 sigstore_config_uri: Some("kbs:///default/sigstore-config/test".to_string()),
                 image_security_policy_uri: Some("kbs:///default/security-policy/test".to_string()),
                 authenticated_registry_credentials_uri: Some("kbs:///default/credential/test".to_string()),
-                image_pull_proxy: Some("http://127.0.0.1:8080".into()),
-                skip_proxy_ips: None,
+                https_proxy: Some("http://127.0.0.1:8080".into()),
+                http_proxy: None,
+                no_proxy: None,
                 extra_root_certificates: vec!["cert1".into(), "cert2".into()],
                 ..Default::default()
             },
@@ -239,8 +240,9 @@ name = "offline_fs_kbc"
                 sigstore_config_uri: None,
                 image_security_policy_uri: None,
                 authenticated_registry_credentials_uri: None,
-                image_pull_proxy: None,
-                skip_proxy_ips: None,
+                https_proxy: None,
+                http_proxy: None,
+                no_proxy: None,
                 ..Default::default()
         },
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
@@ -265,8 +267,9 @@ some_undefined_field = "unknown value"
                 sigstore_config_uri: None,
                 image_security_policy_uri: None,
                 authenticated_registry_credentials_uri: None,
-                image_pull_proxy: None,
-                skip_proxy_ips: None,
+                https_proxy: None,
+                http_proxy: None,
+                no_proxy: None,
                 ..Default::default()
         },
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
