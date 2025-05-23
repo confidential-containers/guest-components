@@ -167,7 +167,7 @@ mod tests {
     use std::{env, io::Write};
 
     use anyhow::anyhow;
-    use image_rs::config::ImageConfig;
+    use image_rs::config::{ImageConfig, ProxyConfig};
     use rstest::rstest;
 
     use crate::{config::DEFAULT_CDH_SOCKET_ADDR, CdhConfig, KbsConfig};
@@ -188,7 +188,9 @@ sigstore_config_uri = "kbs:///default/sigstore-config/test"
 image_security_policy_uri = "kbs:///default/security-policy/test"
 authenticated_registry_credentials_uri = "kbs:///default/credential/test"
 extra_root_certificates = ["cert1", "cert2"]
-image_pull_proxy = "http://127.0.0.1:8080"
+
+[image.image_pull_proxy]
+https_proxy = "http://127.0.0.1:8080"
     "#,
         Some(CdhConfig {
             kbc: KbsConfig {
@@ -202,8 +204,11 @@ image_pull_proxy = "http://127.0.0.1:8080"
                 sigstore_config_uri: Some("kbs:///default/sigstore-config/test".to_string()),
                 image_security_policy_uri: Some("kbs:///default/security-policy/test".to_string()),
                 authenticated_registry_credentials_uri: Some("kbs:///default/credential/test".to_string()),
-                image_pull_proxy: Some("http://127.0.0.1:8080".into()),
-                skip_proxy_ips: None,
+                image_pull_proxy: Some(ProxyConfig {
+                    https_proxy: Some("http://127.0.0.1:8080".into()),
+                    http_proxy: None,
+                    no_proxy: None,
+                }),
                 extra_root_certificates: vec!["cert1".into(), "cert2".into()],
                 ..Default::default()
             },
@@ -240,7 +245,6 @@ name = "offline_fs_kbc"
                 image_security_policy_uri: None,
                 authenticated_registry_credentials_uri: None,
                 image_pull_proxy: None,
-                skip_proxy_ips: None,
                 ..Default::default()
         },
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
@@ -266,7 +270,6 @@ some_undefined_field = "unknown value"
                 image_security_policy_uri: None,
                 authenticated_registry_credentials_uri: None,
                 image_pull_proxy: None,
-                skip_proxy_ips: None,
                 ..Default::default()
         },
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
