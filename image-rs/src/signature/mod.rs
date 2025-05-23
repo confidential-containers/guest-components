@@ -64,6 +64,7 @@ pub struct SignatureValidator {
 
     no_proxy: Option<String>,
     https_proxy: Option<String>,
+    http_proxy: Option<String>,
 
     #[cfg(feature = "signature-simple")]
     simple_signing_sigstore_config: Option<policy::SigstoreConfig>,
@@ -159,6 +160,7 @@ impl SignatureValidator {
         workdir: &Path,
         no_proxy: Option<String>,
         https_proxy: Option<String>,
+        http_proxy: Option<String>,
         certificates: Vec<String>,
         resource_provider: Arc<ResourceProvider>,
     ) -> SignatureResult<Self> {
@@ -202,6 +204,7 @@ impl SignatureValidator {
             resource_provider,
             no_proxy,
             https_proxy,
+            http_proxy,
             certificates,
             #[cfg(feature = "signature-simple")]
             simple_signing_sigstore_config,
