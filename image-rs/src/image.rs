@@ -351,17 +351,29 @@ impl ImageClient {
             client_config.protocol = ClientProtocol::Http;
         }
 
-        if let Some(no_proxy) = &self.config.skip_proxy_ips {
-            client_config.no_proxy = Some(no_proxy.clone())
-        }
+        if let Some(proxy_config) = &self.config.image_pull_proxy {
+            if let Some(no_proxy) = &proxy_config.no_proxy {
+                client_config.no_proxy = Some(no_proxy.clone())
+            }
 
-        if let Some(https_proxy) = &self.config.image_pull_proxy {
-            client_config.https_proxy = Some(https_proxy.clone());
-            if task.task_type != TaskType::Origininal && !task.use_http {
-                warn!(
-                    "The image pull try from {} will use the configured https proxy",
-                    task.image_reference
-                );
+            if let Some(https_proxy) = &proxy_config.https_proxy {
+                client_config.https_proxy = Some(https_proxy.clone());
+                if task.task_type != TaskType::Origininal && !task.use_http {
+                    warn!(
+                        "The image pull try from {} will use the configured https proxy",
+                        task.image_reference
+                    );
+                }
+            }
+
+            if let Some(http_proxy) = &proxy_config.http_proxy {
+                client_config.http_proxy = Some(http_proxy.clone());
+                if task.task_type != TaskType::Origininal && task.use_http {
+                    warn!(
+                        "The image pull try from {} will use the configured http proxy",
+                        task.image_reference
+                    );
+                }
             }
         }
 

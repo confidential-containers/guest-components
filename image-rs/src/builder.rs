@@ -133,7 +133,6 @@ impl ClientBuilder {
                     &policy_bytes,
                     sigstore_config,
                     &self.config.work_dir,
-                    self.config.skip_proxy_ips.clone(),
                     self.config.image_pull_proxy.clone(),
                     self.config.extra_root_certificates.clone(),
                     resource_provider.clone(),
