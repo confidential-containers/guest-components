@@ -3,7 +3,16 @@
 Confidential Data Hub (`CDH`) is a service running inside the guest to provide resource related
 APIs.
 
+### APIs
 
+The APIs are defined in the [proto file](./hub/protos/). 
+
+Note that CDH supports decryption of encrypted images. 
+To enable this you need to set environment `OCICRYPT_KEYPROVIDER_CONFIG`  to point to the [ocicrypt configuration file](./hub/src/image/ocicrypt_config.json) at startup, for example 
+
+```shell
+OCICRYPT_KEYPROVIDER_CONFIG=<path-to-ocicrypt_config.json> confidential-data-hub
+```
 
 ### Build
 
