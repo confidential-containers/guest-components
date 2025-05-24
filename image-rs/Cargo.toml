@@ -50,7 +50,7 @@ serde = { workspace = true, features = ["serde_derive", "rc"] }
 serde_json.workspace = true
 serde_yaml = { version = "0.9", optional = true }
 sha2.workspace = true
-sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "5df33d6b7d0590a534948a2b9b415cd6e13bafdc", default-features = false, optional = true }
+sigstore = { version = "0.12.1", default-features = false, optional = true }
 strum.workspace = true
 strum_macros = "0.27"
 astral-tokio-tar = "0.5.1"
