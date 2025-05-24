@@ -44,6 +44,7 @@ impl SignatureValidator {
                 self.certificates.iter().collect(),
                 self.no_proxy.as_ref(),
                 self.https_proxy.as_ref(),
+                self.http_proxy.as_ref(),
             )
             .await
     }
@@ -58,6 +59,7 @@ impl CosignParameters {
         certificates: Vec<&Certificate>,
         no_proxy: Option<&String>,
         https_proxy: Option<&String>,
+        http_proxy: Option<&String>,
     ) -> Result<()> {
         // Check before we access the network
         self.check_reference_rule_types()?;
@@ -72,7 +74,15 @@ impl CosignParameters {
 
         // Verification, will access the network
         let payloads = self
-            .verify_signature_and_get_payload(image, auth, key, certificates, no_proxy, https_proxy)
+            .verify_signature_and_get_payload(
+                image,
+                auth,
+                key,
+                certificates,
+                no_proxy,
+                https_proxy,
+                http_proxy,
+            )
             .await?;
 
         // check the reference rules (signed identity)
@@ -120,6 +130,7 @@ impl CosignParameters {
         certificates: Vec<&Certificate>,
         no_proxy: Option<&String>,
         https_proxy: Option<&String>,
+        http_proxy: Option<&String>,
     ) -> Result<Vec<SigPayload>> {
         let image_ref = OciReference::from_str(&image.reference.whole())?;
         let auth = match auth {
@@ -131,6 +142,7 @@ impl CosignParameters {
         let config = ClientConfig {
             no_proxy: no_proxy.cloned(),
             https_proxy: https_proxy.cloned(),
+            http_proxy: http_proxy.cloned(),
             extra_root_certificates: certificates.into_iter().cloned().collect(),
             ..Default::default()
         };
@@ -243,6 +255,7 @@ mod tests {
                 &oci_client::secrets::RegistryAuth::Anonymous,
                 key,
                 vec![],
+                None,
                 None,
                 None,
             )
@@ -359,6 +372,7 @@ mod tests {
                     &image,
                     &oci_client::secrets::RegistryAuth::Anonymous,
                     vec![],
+                    None,
                     None,
                     None,
                 )
