@@ -31,6 +31,11 @@ impl AttestationAgentServiceClient {
         }
     }
 
+    pub async fn get_derived_key(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::GetDerivedKeyRequest) -> ::ttrpc::Result<super::attestation_agent::GetDerivedKeyResponse> {
+        let mut cres = super::attestation_agent::GetDerivedKeyResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetDerivedKey", cres);
+    }
+
     pub async fn get_evidence(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::GetEvidenceRequest) -> ::ttrpc::Result<super::attestation_agent::GetEvidenceResponse> {
         let mut cres = super::attestation_agent::GetEvidenceResponse::new();
         ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetEvidence", cres);
@@ -39,6 +44,17 @@ impl AttestationAgentServiceClient {
     pub async fn get_token(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::GetTokenRequest) -> ::ttrpc::Result<super::attestation_agent::GetTokenResponse> {
         let mut cres = super::attestation_agent::GetTokenResponse::new();
         ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetToken", cres);
+    }
+}
+
+struct GetDerivedKeyMethod {
+    service: Arc<dyn AttestationAgentService + Send + Sync>,
+}
+
+#[async_trait]
+impl ::ttrpc::r#async::MethodHandler for GetDerivedKeyMethod {
+    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
+        ::ttrpc::async_request_handler!(self, ctx, req, attestation_agent, GetDerivedKeyRequest, get_derived_key);
     }
 }
 
@@ -66,6 +82,9 @@ impl ::ttrpc::r#async::MethodHandler for GetTokenMethod {
 
 #[async_trait]
 pub trait AttestationAgentService: Sync {
+    async fn get_derived_key(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetDerivedKeyRequest) -> ::ttrpc::Result<super::attestation_agent::GetDerivedKeyResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/GetDerivedKey is not supported".to_string())))
+    }
     async fn get_evidence(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetEvidenceRequest) -> ::ttrpc::Result<super::attestation_agent::GetEvidenceResponse> {
         Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/GetEvidence is not supported".to_string())))
     }
@@ -78,6 +97,9 @@ pub fn create_attestation_agent_service(service: Arc<dyn AttestationAgentService
     let mut ret = HashMap::new();
     let mut methods = HashMap::new();
     let streams = HashMap::new();
+
+    methods.insert("GetDerivedKey".to_string(),
+                    Box::new(GetDerivedKeyMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
 
     methods.insert("GetEvidence".to_string(),
                     Box::new(GetEvidenceMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
