@@ -62,11 +62,6 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
-      - name: Build and install
-        run: |
-          mkdir -p ${HOME}/.local/bin
-          make RESOURCE_PROVIDER=kbs,sev && make install PREFIX=${HOME}/.local
-
       - name: Run cargo fmt check
         run: |
           cargo fmt -p kms -p confidential-data-hub -- --check
@@ -74,6 +69,11 @@ jobs:
       - name: Run rust lint check
         run: |
           cargo clippy -p kms -p confidential-data-hub -- -D warnings
+
+      - name: Build and install
+        run: |
+          mkdir -p ${HOME}/.local/bin
+          make RESOURCE_PROVIDER=kbs,sev && make install PREFIX=${HOME}/.local
 
       - name: Run cargo test
         run: |
