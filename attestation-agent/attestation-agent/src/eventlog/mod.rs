@@ -242,8 +242,7 @@ impl Display for LogEntry<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
-    use attester::{Attester, CompositeAttester};
+    use attester::CompositeAttester;
     use rstest::rstest;
     use std::sync::{Arc, Mutex};
 
@@ -326,36 +325,14 @@ mod tests {
         assert_eq!(dig_hex, digest);
     }
 
-    struct MockedAttester;
-
-    #[async_trait]
-    impl Attester for MockedAttester {
-        async fn get_evidence(&self, _report_data: Vec<u8>) -> Result<String> {
-            bail!("unimplemented")
-        }
-
-        async fn extend_runtime_measurement(
-            &self,
-            _event_digest: Vec<u8>,
-            _register_index: u64,
-        ) -> Result<()> {
-            Ok(())
-        }
-
-        async fn get_runtime_measurement(&self, _pcr_index: u64) -> Result<Vec<u8>> {
-            Ok(vec![])
-        }
-    }
-
     #[tokio::test]
     #[serial_test::serial]
     async fn test_eventlog_from_nothing() {
         if std::path::Path::new(EVENTLOG_PATH).exists() {
             std::fs::remove_file(EVENTLOG_PATH).unwrap();
         }
-        let tee = Box::new(MockedAttester);
-        let rtmr_extender = Arc::new(tee as _);
-        let mut eventlog = EventLog::new(rtmr_extender, HashAlgorithm::Sha256, 17)
+        let rtmr_extender = CompositeAttester::new().unwrap();
+        let mut eventlog = EventLog::new(Arc::new(rtmr_extender), HashAlgorithm::Sha256, 17)
             .await
             .unwrap();
         eventlog
@@ -388,8 +365,7 @@ mod tests {
         f.sync_all().unwrap();
         drop(f);
 
-        let tee = Box::new(MockedAttester);
-        let rtmr_extender = Arc::new(tee as _);
+        let rtmr_extender = Arc::new(CompositeAttester::new().unwrap());
         let mut eventlog = EventLog::new(rtmr_extender, HashAlgorithm::Sha256, 17)
             .await
             .unwrap();
