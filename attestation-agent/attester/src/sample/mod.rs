@@ -6,6 +6,7 @@
 use super::{Attester, TeeEvidence};
 use anyhow::*;
 use base64::Engine;
+use log::warn;
 use serde::{Deserialize, Serialize};
 
 // Sample attester is always supported
@@ -32,5 +33,18 @@ impl Attester for SampleAttester {
         };
 
         serde_json::to_value(&evidence).context("Serialize sample evidence failed")
+    }
+
+    async fn extend_runtime_measurement(
+        &self,
+        _event_digest: Vec<u8>,
+        _register_index: u64,
+    ) -> Result<()> {
+        warn!("The Sample Attester does not extend any runtime measurement.");
+        Ok(())
+    }
+
+    async fn get_runtime_measurement(&self, _pcr_index: u64) -> Result<Vec<u8>> {
+        Ok(vec![])
     }
 }
