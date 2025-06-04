@@ -25,6 +25,7 @@ serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 sev = { version = "6.2.1", default-features = false, features = ["snp"], optional = true }
+nvml-wrapper = { version = "0.11.0", optional = true, default-features = false, features = ["serde"]}
 sha2.workspace = true
 strum.workspace = true
 tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.23", optional = true }
@@ -65,6 +66,7 @@ tsm-report = ["tempfile"]
 tdx-attester = ["scroll", "tsm-report", "iocuddle"]
 tdx-attest-dcap-ioctls = ["tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
+nvidia-attester = ["nvml-wrapper"]
 az-snp-vtpm-attester = ["az-snp-vtpm"]
 az-tdx-vtpm-attester = ["az-snp-vtpm-attester", "az-tdx-vtpm"]
 snp-attester = ["sev"]
