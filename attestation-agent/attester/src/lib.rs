@@ -40,6 +40,9 @@ pub mod tsm_report;
 #[cfg(feature = "se-attester")]
 pub mod se;
 
+#[cfg(feature = "nvidia-attester")]
+pub mod nvidia;
+
 pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
 
 impl TryFrom<Tee> for BoxedAttester {
@@ -67,6 +70,8 @@ impl TryFrom<Tee> for BoxedAttester {
             Tee::HygonDcu => Box::<hygon_dcu::DcuAttester>::default(),
             #[cfg(feature = "se-attester")]
             Tee::Se => Box::<se::SeAttester>::default(),
+            #[cfg(feature = "nvidia-attester")]
+            Tee::Nvidia => Box::<nvidia::NvAttester>::default(),
             _ => bail!("TEE is not supported!"),
         };
 
@@ -171,6 +176,11 @@ pub fn detect_tee_type() -> Tee {
 /// such as a confidential device.
 pub fn detect_attestable_devices() -> Vec<Tee> {
     let mut additional_devices = vec![];
+
+    #[cfg(feature = "nvidia-attester")]
+    if nvidia::detect_platform() {
+        additional_devices.push(Tee::Nvidia);
+    }
 
     if sample_device::detect_platform() {
         additional_devices.push(Tee::SampleDevice);
