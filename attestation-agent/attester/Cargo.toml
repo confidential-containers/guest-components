@@ -23,6 +23,7 @@ hex.workspace = true
 iocuddle = { version = "0.1.1", optional = true }
 kbs-types.workspace = true
 log.workspace = true
+nvml-wrapper = { git = "https://github.com/rust-nvml/nvml-wrapper", rev="7e0752f331" , optional = true, default-features = false, features = ["serde"]}
 occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.7", optional = true }
 pv = { version = "0.10.0", package = "s390_pv", optional = true }
 scroll = { version = "0.13.0", default-features = false, features = [
@@ -75,6 +76,7 @@ all-attesters = [
     "cca-attester",
     "se-attester",
     "tpm-attester",
+    "nvidia-attester",
 ]
 
 # tsm-report enables a module that helps attesters to use Linux TSM_REPORTS for generating
@@ -84,6 +86,7 @@ tsm-report = ["tempfile"]
 tdx-attester = ["scroll", "tsm-report", "iocuddle"]
 tdx-attest-dcap-ioctls = ["tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
+nvidia-attester = ["nvml-wrapper"]
 az-snp-vtpm-attester = ["az-snp-vtpm"]
 az-tdx-vtpm-attester = ["az-snp-vtpm-attester", "az-tdx-vtpm"]
 snp-attester = ["sev"]
