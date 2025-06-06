@@ -101,7 +101,7 @@ impl<T> KbsClientBuilder<T> {
         };
 
         let client = KbsClient {
-            _tee: ClientTee::Unitialized,
+            _tee: ClientTee::Uninitialized,
             tee_key,
             token,
             provider: self.provider,
