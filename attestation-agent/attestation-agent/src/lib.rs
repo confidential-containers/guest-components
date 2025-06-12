@@ -60,6 +60,9 @@ pub trait AttestationAPIs {
     /// Get TEE hardware signed evidence that includes the runtime data.
     async fn get_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>>;
 
+    /// Get a derived key
+    async fn get_derived_key(&self, context: Vec<u8>) -> Result<Vec<u8>>;
+
     /// Extend runtime measurement register
     async fn extend_runtime_measurement(
         &self,
@@ -173,6 +176,10 @@ impl AttestationAPIs for AttestationAgent {
     async fn get_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>> {
         let evidence = self.attester.get_evidence(runtime_data.to_vec()).await?;
         Ok(evidence.into_bytes())
+    }
+
+    async fn get_derived_key(&self, context: Vec<u8>) -> Result<Vec<u8>> {
+        self.attester.get_derived_key(context).await
     }
 
     /// Extend runtime measurement register. Parameters

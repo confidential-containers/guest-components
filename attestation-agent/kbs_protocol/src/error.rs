@@ -24,6 +24,9 @@ pub enum Error {
     #[error("get evidence failed: {0}")]
     GetEvidence(String),
 
+    #[error("get derived key failed: {0}")]
+    GetDerivedKey(String),
+
     #[error("get token failed: {0}")]
     GetTokenFailed(String),
 
