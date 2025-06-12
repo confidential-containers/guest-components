@@ -20,7 +20,7 @@ use std::{
         fd::{AsFd, AsRawFd},
         unix::fs::PermissionsExt,
     },
-    path::Path,
+    path::{Path, PathBuf},
 };
 use tokio::{fs, io::AsyncRead};
 use tokio_tar::ArchiveBuilder;
@@ -154,6 +154,12 @@ async fn convert_whiteout(
         destination.display(),
         original_path.display()
     ))?;
+
+    let path_str = path.to_string_lossy().into_owned();
+    let path_buf = PathBuf::from(path_str);
+    if let Some(parent) = path_buf.parent() {
+        fs::create_dir_all(parent).await?;
+    }
 
     mknod(path.as_c_str(), SFlag::S_IFCHR, Mode::empty(), 0)?;
 
