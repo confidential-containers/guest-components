@@ -3,24 +3,49 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{path::PathBuf, str::FromStr, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use log::{info, warn};
+use thiserror::Error;
 use tokio::sync::RwLock;
 
 use crate::{
-    auth::Auth,
+    auth::{Auth, AuthError},
     config::{ImageConfig, NydusConfig},
     image::ImageClient,
     layer_store::LayerStore,
     meta_store::{MetaStore, METAFILE},
     registry::RegistryHandler,
-    resource::ResourceProvider,
-    signature::SignatureValidator,
+    resource::{ResourceError, ResourceProvider},
+    signature::{SignatureError, SignatureValidator},
     snapshots::SnapshotType,
 };
 
-use anyhow::{Context, Result};
+pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
+
+#[derive(Error, Debug)]
+pub enum BuilderError {
+    #[error("Malwared registry configuration: {source}")]
+    InvalidRegistryConfiguration {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error("Initialize layer store failed: {source}")]
+    InitializeLayerStoreFailed {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error("Initialize resource provider failed: {0}")]
+    InitializeResourceProviderFailed(#[from] ResourceError),
+
+    #[error("Initialize auth module failed: {0}")]
+    InitializeAuthFailed(#[from] AuthError),
+
+    #[error("Initialize signature validator failed: {0}")]
+    InitializeSignatureValidatorFailed(#[from] SignatureError),
+}
 
 #[derive(Default)]
 pub struct ClientBuilder {
@@ -71,7 +96,7 @@ impl ClientBuilder {
     #[cfg(feature = "keywrap-native")]
     __impl_config!(kbs_uri, kbs_uri, String);
 
-    pub async fn build(self) -> Result<ImageClient> {
+    pub async fn build(self) -> BuilderResult<ImageClient> {
         #[cfg(feature = "keywrap-native")]
         let resource_provider = Arc::new(ResourceProvider::new(
             &self.config.kbc,
@@ -84,6 +109,7 @@ impl ClientBuilder {
 
         let registry_auth = match &self.config.authenticated_registry_credentials_uri {
             Some(uri) => {
+                info!("getting registry auth from {uri} ...");
                 let auth_bytes = resource_provider.get_resource(uri).await?;
                 let auth = Auth::new(&auth_bytes)?;
                 Some(auth)
@@ -101,18 +127,18 @@ impl ClientBuilder {
 
         let signature_validator = match &self.config.image_security_policy_uri {
             Some(uri) => {
+                info!("getting image security policy from {uri} ...");
                 let policy_bytes = resource_provider.get_resource(uri).await?;
-                let auth = SignatureValidator::new(
+                let signature_validator = SignatureValidator::new(
                     &policy_bytes,
                     sigstore_config,
                     &self.config.work_dir,
-                    self.config.skip_proxy_ips.clone(),
                     self.config.image_pull_proxy.clone(),
                     self.config.extra_root_certificates.clone(),
                     resource_provider.clone(),
                 )
                 .await?;
-                Some(auth)
+                Some(signature_validator)
             }
             None => {
                 warn!("No `image_security_policy_uri` given, thus all images can be pulled by the image client without filtering.");
@@ -122,10 +148,10 @@ impl ClientBuilder {
 
         let registry_handler = match &self.config.registry_configuration_uri {
             Some(uri) => {
+                info!("getting registry configuration from {uri} ...");
                 let registry_configuration = resource_provider.get_resource(uri).await?;
-                let registry_configuration = String::from_utf8(registry_configuration)
-                    .context("illegal registry configuration")?;
-                let registry_handler = RegistryHandler::from_str(&registry_configuration)?;
+                let registry_handler = RegistryHandler::from_vec(registry_configuration)
+                    .map_err(|source| BuilderError::InvalidRegistryConfiguration { source })?;
                 Some(registry_handler)
             }
             None => None,
@@ -142,18 +168,23 @@ impl ClientBuilder {
             }
         };
 
-        let snapshots = ImageClient::init_snapshots(&self.config.work_dir, &meta_store);
-
+        let snapshot = ImageClient::init_snapshot(
+            &self.config.default_snapshot,
+            &self.config.work_dir,
+            &meta_store,
+        );
+        info!("Image work directory: {:?}", self.config.work_dir);
         let meta_store = Arc::new(RwLock::new(meta_store));
 
-        let layer_store = LayerStore::new(self.config.work_dir.clone())?;
+        let layer_store = LayerStore::new(self.config.work_dir.clone())
+            .map_err(|source| BuilderError::InitializeLayerStoreFailed { source })?;
 
         Ok(ImageClient {
             registry_auth,
             signature_validator,
             registry_handler,
             meta_store,
-            snapshots,
+            snapshot,
             config: self.config,
             layer_store,
         })

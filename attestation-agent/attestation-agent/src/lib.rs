@@ -111,10 +111,11 @@ impl AttestationAgent {
                 Config::try_from(config_path)?
             }
             None => {
-                warn!("No AA config file specified. Using a default configuration.");
-                Config::new()?
+                warn!("No AA config file specified. Using a default configuration and the kbs address will be read from kernel cmdline.");
+                Config::default_with_kernel_cmdline()
             }
         };
+        debug!("Using config: {config:#?}");
         let config = RwLock::new(config);
 
         let tee = detect_tee_type();
@@ -138,14 +139,32 @@ impl AttestationAPIs for AttestationAgent {
         match token_type {
             #[cfg(feature = "kbs")]
             token::TokenType::Kbs => {
-                token::kbs::KbsTokenGetter::new(&self.config.read().await.token_configs.kbs)
-                    .get_token()
-                    .await
+                token::kbs::KbsTokenGetter::new(
+                    self.config
+                        .read()
+                        .await
+                        .token_configs
+                        .kbs
+                        .as_ref()
+                        .ok_or(anyhow::anyhow!(
+                            "kbs token config not configured in config file"
+                        ))?,
+                )
+                .get_token()
+                .await
             }
             #[cfg(feature = "coco_as")]
             token::TokenType::CoCoAS => {
                 token::coco_as::CoCoASTokenGetter::new(
-                    &self.config.read().await.token_configs.coco_as,
+                    self.config
+                        .read()
+                        .await
+                        .token_configs
+                        .coco_as
+                        .as_ref()
+                        .ok_or(anyhow::anyhow!(
+                            "coco_as token config not configured in config file"
+                        ))?,
                 )
                 .get_token()
                 .await

@@ -31,7 +31,7 @@ kbc = { path = "../attestation-agent/kbc", default-features = false, optional = 
 log = "0.4.27"
 loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27" }
 nix = { workspace = true, optional = true, features = ["mount", "fs"] }
-oci-client = { version = "0.14", default-features = false, optional = true }
+oci-client = { version = "0.15", default-features = false, optional = true }
 oci-spec = "0.8.1"
 ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = [
     "async-io",
@@ -50,10 +50,11 @@ serde = { workspace = true, features = ["serde_derive", "rc"] }
 serde_json.workspace = true
 serde_yaml = { version = "0.9", optional = true }
 sha2.workspace = true
-sigstore = { git = "https://github.com/sigstore/sigstore-rs.git", rev = "c39c519", default-features = false, optional = true }
+sigstore = { version = "0.12.1", default-features = false, optional = true }
 strum.workspace = true
 strum_macros = "0.27"
 astral-tokio-tar = "0.5.1"
+thiserror.workspace = true
 tokio.workspace = true
 tokio-util = "0.7.15"
 toml.workspace = true
@@ -175,13 +176,13 @@ keywrap-ttrpc = [
 keywrap-jwe = ["ocicrypt-rs/keywrap-jwe"]
 
 signature = ["hex"]
-signature-cosign = ["signature", "futures"]
+signature-cosign = ["signature", "futures", "sigstore/registry", "sigstore/cosign"]
 signature-cosign-rustls = [
     "signature-cosign",
-    "sigstore/cosign-rustls-tls",
+    "sigstore/rustls-tls",
     "sigstore/rustls-tls-native-roots",
 ]
-signature-cosign-native = ["signature-cosign", "sigstore/cosign-native-tls"]
+signature-cosign-native = ["signature-cosign", "sigstore/native-tls"]
 
 oci-client-rustls = [
     "oci-client/rustls-tls",

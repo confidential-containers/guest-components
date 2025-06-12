@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::Result;
 use futures_util::stream::{self, StreamExt, TryStreamExt};
 use oci_client::{
     client::ClientConfig,
@@ -13,15 +13,57 @@ use oci_client::{
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Arc;
+use thiserror::Error;
 use tokio::sync::RwLock;
 use tokio_util::io::StreamReader;
 
 use crate::decoder::Compression;
-use crate::decrypt::Decryptor;
-use crate::image::LayerMeta;
 use crate::layer_store::LayerStore;
 use crate::meta_store::MetaStore;
 use crate::stream::stream_processing;
+use crate::{
+    decoder::DecodeError,
+    decrypt::{DecryptLayerError, Decryptor},
+};
+use crate::{image::LayerMeta, stream::StreamError};
+
+pub type PullLayerResult<T> = std::result::Result<T, PullLayerError>;
+
+#[derive(Error, Debug)]
+pub enum PullLayerError {
+    #[error("failed to pull image manifest: {source}")]
+    PullManifestError {
+        #[source]
+        source: oci_client::errors::OciDistributionError,
+    },
+
+    #[error("Failed to download bootstrap layer")]
+    PullBootstrapLayerError,
+
+    #[error("Failed to async pull blob stream")]
+    PullBlobStramFailed {
+        #[source]
+        source: oci_client::errors::OciDistributionError,
+    },
+
+    #[error("Internal async rumtine error for tokio")]
+    RuntimeError(#[from] tokio::task::JoinError),
+
+    #[error("Failed to decrypt layer: {0}")]
+    ImageDecryptionFailed(#[from] DecryptLayerError),
+
+    #[error("unequal uncompressed digest {uncompressed_digest} config diff_id {diff_id}")]
+    UnequalUncompressedDigest {
+        uncompressed_digest: String,
+        diff_id: String,
+    },
+
+    #[error("Failed to decode layer: {0}")]
+    DecodeError(#[from] DecodeError),
+
+    #[error("Failed to decode layer data stream: {0}")]
+    HandleStreamError(#[from] StreamError),
+}
 
 /// The PullClient connects to remote OCI registry, pulls the container image,
 /// and save the image layers under the layer store and return the layer meta info.
@@ -64,11 +106,11 @@ impl<'a> PullClient<'a> {
     }
 
     /// pull_manifest pulls an image manifest and config data.
-    pub async fn pull_manifest(&mut self) -> Result<(OciImageManifest, String, String)> {
+    pub async fn pull_manifest(&mut self) -> PullLayerResult<(OciImageManifest, String, String)> {
         self.client
             .pull_manifest_and_config(&self.reference, self.auth)
             .await
-            .map_err(|e| anyhow!("failed to pull manifest {}", e.to_string()))
+            .map_err(|source| PullLayerError::PullManifestError { source })
     }
 
     /// pull_bootstrap pulls a nydus image's bootstrap layer.
@@ -78,13 +120,13 @@ impl<'a> PullClient<'a> {
         diff_id: String,
         decrypt_config: &Option<&str>,
         meta_store: Arc<RwLock<MetaStore>>,
-    ) -> Result<LayerMeta> {
+    ) -> PullLayerResult<LayerMeta> {
         let layer_metas = self
             .async_pull_layers(vec![bootstrap_desc], &[diff_id], decrypt_config, meta_store)
             .await?;
         match layer_metas.first() {
             Some(b) => Ok(b.clone()),
-            None => Err(anyhow!("Failed to  download this bootstrap layer")),
+            None => Err(PullLayerError::PullBootstrapLayerError),
         }
     }
 
@@ -96,7 +138,7 @@ impl<'a> PullClient<'a> {
         diff_ids: &[String],
         decrypt_config: &Option<&str>,
         meta_store: Arc<RwLock<MetaStore>>,
-    ) -> Result<Vec<LayerMeta>> {
+    ) -> PullLayerResult<Vec<LayerMeta>> {
         let meta_store = &meta_store;
         let layer_metas: Vec<(usize, LayerMeta)> = stream::iter(layer_descs)
             .enumerate()
@@ -105,7 +147,7 @@ impl<'a> PullClient<'a> {
                     .client
                     .pull_blob_stream(&self.reference, &layer)
                     .await
-                    .map_err(|e| anyhow!("failed to async pull blob stream {}", e.to_string()))?;
+                    .map_err(|source| PullLayerError::PullBlobStramFailed { source })?;
                 let layer_reader = StreamReader::new(layer_stream.stream);
                 self.async_handle_layer(
                     layer,
@@ -115,7 +157,6 @@ impl<'a> PullClient<'a> {
                     meta_store.clone(),
                 )
                 .await
-                .map_err(|e| anyhow!("failed to handle layer: {:?}", e))
                 .map(|layer_meta| (i, layer_meta))
             })
             .buffer_unordered(self.max_concurrent_download)
@@ -133,7 +174,7 @@ impl<'a> PullClient<'a> {
         decrypt_config: &Option<&str>,
         layer_reader: (impl tokio::io::AsyncRead + Unpin + Send),
         ms: Arc<RwLock<MetaStore>>,
-    ) -> Result<LayerMeta> {
+    ) -> PullLayerResult<LayerMeta> {
         if let Some(layer_meta) = ms.read().await.layer_db.get(&layer.digest) {
             return Ok(layer_meta.clone());
         }
@@ -155,17 +196,11 @@ impl<'a> PullClient<'a> {
                 let decryptor = decryptor.clone();
                 let layer = layer.clone();
                 let decrypt_config = decrypt_config.as_ref().map(|inner| inner.to_string());
-                move || {
-                    decryptor
-                        .get_decrypt_key(&layer, &decrypt_config.as_deref())
-                        .context("failed to get decrypt key")
-                }
+                move || decryptor.get_decrypt_key(&layer, &decrypt_config.as_deref())
             })
-            .await
-            .context("decryptor thread failed to execute")??;
-            let plaintext_layer = decryptor
-                .async_get_plaintext_layer(layer_reader, &layer, &decrypt_key)
-                .map_err(|e| anyhow!("failed to async_get_plaintext_layer: {:?}", e))?;
+            .await??;
+            let plaintext_layer =
+                decryptor.async_get_plaintext_layer(layer_reader, &layer, &decrypt_key)?;
             layer_meta.uncompressed_digest = self
                 .async_decompress_unpack_layer(
                     plaintext_layer,
@@ -188,11 +223,10 @@ impl<'a> PullClient<'a> {
 
         // uncompressed digest should equal to the diff_ids in image_config.
         if layer_meta.uncompressed_digest != diff_id {
-            bail!(
-                "unequal uncompressed digest {:?} config diff_id {:?}",
-                layer_meta.uncompressed_digest,
-                diff_id
-            );
+            return Err(PullLayerError::UnequalUncompressedDigest {
+                uncompressed_digest: layer_meta.uncompressed_digest,
+                diff_id,
+            });
         }
 
         Ok(layer_meta)
@@ -206,10 +240,12 @@ impl<'a> PullClient<'a> {
         diff_id: &str,
         media_type: &str,
         destination: &Path,
-    ) -> Result<String> {
+    ) -> PullLayerResult<String> {
         let decoder = Compression::try_from(media_type)?;
         let async_decoder = decoder.async_decompress(input_reader);
-        stream_processing(async_decoder, diff_id, destination).await
+        stream_processing(async_decoder, diff_id, destination)
+            .await
+            .map_err(Into::into)
     }
 }
 
@@ -217,8 +253,6 @@ impl<'a> PullClient<'a> {
 mod tests {
     use super::*;
     use crate::config::DEFAULT_MAX_CONCURRENT_DOWNLOAD;
-    use crate::decoder::ERR_BAD_MEDIA_TYPE;
-    use crate::ERR_BAD_UNCOMPRESSED_DIGEST;
     use flate2::write::GzEncoder;
     use oci_client::manifest::IMAGE_CONFIG_MEDIA_TYPE;
     use oci_spec::image::{ImageConfiguration, MediaType};
@@ -374,8 +408,6 @@ mod tests {
         )
         .expect("create reference failed");
 
-        let bad_media_err = format!("{}: {}", ERR_BAD_MEDIA_TYPE, IMAGE_CONFIG_MEDIA_TYPE);
-
         let empty_diff_id = "";
 
         let default_layer = OciDescriptor::default();
@@ -421,7 +453,7 @@ mod tests {
             diff_id: &'a str,
             decrypt_config: Option<&'a str>,
             layer_data: Vec<u8>,
-            result: Result<LayerMeta>,
+            result: PullLayerResult<LayerMeta>,
         }
 
         let tests = &[
@@ -430,24 +462,26 @@ mod tests {
                 diff_id: empty_diff_id,
                 decrypt_config: None,
                 layer_data: Vec::<u8>::new(),
-                result: Err(anyhow!(bad_media_err.clone())),
+                result: Err(PullLayerError::DecodeError(DecodeError::BadMediaType(
+                    IMAGE_CONFIG_MEDIA_TYPE.into(),
+                ))),
             },
             TestData {
                 layer: default_layer.clone(),
                 diff_id: "foo",
                 decrypt_config: None,
                 layer_data: Vec::<u8>::new(),
-                result: Err(anyhow!(bad_media_err.clone())),
+                result: Err(PullLayerError::DecodeError(DecodeError::BadMediaType(
+                    IMAGE_CONFIG_MEDIA_TYPE.into(),
+                ))),
             },
             TestData {
                 layer: uncompressed_layer,
                 diff_id: empty_diff_id,
                 decrypt_config: None,
                 layer_data: Vec::<u8>::new(),
-                result: Err(anyhow!(
-                    "{}: {:?}",
-                    ERR_BAD_UNCOMPRESSED_DIGEST,
-                    empty_diff_id
+                result: Err(PullLayerError::HandleStreamError(
+                    StreamError::UnsupportedDigestFormat("".into()),
                 )),
             },
             TestData {
@@ -455,10 +489,8 @@ mod tests {
                 diff_id: empty_diff_id,
                 decrypt_config: None,
                 layer_data: gzip_compressed_bytes,
-                result: Err(anyhow!(
-                    "{}: {:?}",
-                    ERR_BAD_UNCOMPRESSED_DIGEST,
-                    empty_diff_id
+                result: Err(PullLayerError::HandleStreamError(
+                    StreamError::UnsupportedDigestFormat("".into()),
                 )),
             },
         ];

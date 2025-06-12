@@ -18,9 +18,9 @@ macro_rules! assert_result {
             assert!($actual_result.is_err(), "{}", $msg);
 
             let expected_error = $expected_result.as_ref().unwrap_err();
-            let expected_error_msg = format!("{:?}", expected_error);
+            let expected_error_msg = format!("{}", expected_error);
 
-            let actual_error_msg = format!("{:?}", $actual_result.unwrap_err());
+            let actual_error_msg = format!("{}", $actual_result.unwrap_err());
 
             assert!(expected_error_msg == actual_error_msg, "{}", $msg);
         }

@@ -5,14 +5,19 @@
 use std::fmt;
 use std::io;
 
-use anyhow::{bail, Result};
 use oci_client::manifest;
 use oci_spec::image::MediaType;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use tokio::io::{AsyncRead, BufReader};
 
-/// Error message for unhandled media type.
-pub const ERR_BAD_MEDIA_TYPE: &str = "unhandled media type";
+pub type DecodeResult<T> = std::result::Result<T, DecodeError>;
+
+#[derive(Error, Debug)]
+pub enum DecodeError {
+    #[error("unhandled media type: {0}")]
+    BadMediaType(String),
+}
 
 /// Represents the layer compression algorithm type,
 /// and allows to decompress corresponding compressed data.
@@ -47,10 +52,7 @@ impl Compression {
         match self {
             Self::Gzip => gzip_decode(input, output),
             Self::Zstd => zstd_decode(input, output),
-            Self::Uncompressed => Err(io::Error::new(
-                io::ErrorKind::Other,
-                "uncompressed input data".to_string(),
-            )),
+            Self::Uncompressed => Err(io::Error::other("uncompressed input data".to_string())),
         }
     }
 
@@ -107,7 +109,7 @@ where
 }
 
 impl TryFrom<&str> for Compression {
-    type Error = anyhow::Error;
+    type Error = DecodeError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         let mut media_type_str = s;
@@ -129,7 +131,7 @@ impl TryFrom<&str> for Compression {
             MediaType::ImageLayerZstd | MediaType::ImageLayerNonDistributableZstd => {
                 Compression::Zstd
             }
-            _ => bail!("{}: {}", ERR_BAD_MEDIA_TYPE, media_type),
+            _ => return Err(DecodeError::BadMediaType(media_type_str.into())),
         };
 
         Ok(decoder)
@@ -139,7 +141,6 @@ impl TryFrom<&str> for Compression {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::anyhow;
     use flate2::write::GzEncoder;
     use std::io::Write;
 
@@ -248,21 +249,21 @@ mod tests {
         #[derive(Debug)]
         struct TestData<'a> {
             media_type_str: &'a str,
-            result: Result<Compression>,
+            result: DecodeResult<Compression>,
         }
 
         let tests = &[
             TestData {
                 media_type_str: "",
-                result: Err(anyhow!("{}: {}", ERR_BAD_MEDIA_TYPE, "")),
+                result: Err(DecodeError::BadMediaType("".into())),
             },
             TestData {
                 media_type_str: "foo",
-                result: Err(anyhow!("{}: {}", ERR_BAD_MEDIA_TYPE, "foo")),
+                result: Err(DecodeError::BadMediaType("foo".into())),
             },
             TestData {
                 media_type_str: "foo/ bar",
-                result: Err(anyhow!("{}: {}", ERR_BAD_MEDIA_TYPE, "foo/ bar")),
+                result: Err(DecodeError::BadMediaType("foo/ bar".into())),
             },
             TestData {
                 media_type_str: manifest::IMAGE_LAYER_MEDIA_TYPE,

@@ -117,21 +117,6 @@ image_security_policy_uri = "kbs:///default/security-policy/test"
 # By default this value is not set.
 authenticated_registry_credentials_uri = "kbs:///default/credential/test"
 
-# Proxy that will be used to pull image
-#
-# By default this value is not set.
-image_pull_proxy = "http://127.0.0.1:5432"
-
-# No proxy env that will be used to pull image.
-#
-# This will ensure that when we access the image registry with specified
-# IPs, the `image_pull_proxy` will not be used.
-#
-# If `image_pull_proxy` is not set, this field will do nothing.
-#
-# By default this value is not set.
-skip_proxy_ips = "192.168.0.1,localhost"
-
 # To support registries with self signed certs. This config item
 # is used to add extra trusted root certifications. The certificates
 # must be encoded by PEM.
@@ -177,3 +162,25 @@ oLSG2dLCK9mjjraPjau34Q==
 #
 # This value defaults to `/run/image-rs/`.
 work_dir = "/run/image-rs"
+
+[image.image_pull_proxy]
+
+# HTTPS proxy that will be used to pull image
+#
+# By default this value is not set.
+https_proxy = "http://127.0.0.1:5432"
+
+# HTTP proxy that will be used to pull image
+#
+# By default this value is not set.
+http_proxy = "http://127.0.0.1:5432"
+
+# No proxy env that will be used to pull image.
+#
+# This will ensure that when we access the image registry with specified
+# IPs, both `https_proxy` and `http_proxy` will not be used.
+#
+# If neither `https_proxy` nor `http_proxy` is not set, this field will do nothing.
+#
+# By default this value is not set.
+no_proxy = "192.168.0.1,localhost"

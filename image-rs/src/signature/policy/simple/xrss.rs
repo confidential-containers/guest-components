@@ -88,6 +88,10 @@ impl RegistryClient {
 
                 Ok(oauth_token_response_body.token)
             }
+            // TODO: support bearer token authentication
+            RegistryAuth::Bearer(_) => {
+                bail!("Bearer token authentication is not supported yet")
+            }
         }
     }
 

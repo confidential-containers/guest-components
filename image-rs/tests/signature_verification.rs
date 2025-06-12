@@ -182,7 +182,7 @@ async fn do_signature_verification_tests(
 
         let mut client_builder = image_rs::builder::ClientBuilder::default()
             .image_security_policy_uri(POLICY_URI.to_string())
-            .work_dir(work_dir.into_path());
+            .work_dir(work_dir.path().to_path_buf());
 
         #[cfg(feature = "signature-simple")]
         {

@@ -24,10 +24,10 @@ scroll = { version = "0.12.0", default-features = false, features = ["derive", "
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
-sev = { version = "4.0.0", default-features = false, features = ["snp"], optional = true }
+sev = { version = "6.2.1", default-features = false, features = ["snp"], optional = true }
 sha2.workspace = true
 strum.workspace = true
-tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.22", optional = true }
+tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.23", optional = true }
 thiserror.workspace = true
 # TODO: change it to "0.1", once released.
 csv-rs = { git = "https://github.com/openanolis/csv-rs", rev = "3045440", optional = true }

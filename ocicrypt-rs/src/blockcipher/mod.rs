@@ -153,11 +153,11 @@ pub enum LayerBlockCipherHandler<R> {
     Aes256Ctr(AESCTRBlockCipher<R>),
 }
 
-impl<R> LayerBlockCipherHandler<R> {
+impl<R> Default for LayerBlockCipherHandler<R> {
     /// Create a [`LayerBlockCipherHandler`] object with default aes ctr block cipher
-    pub fn new() -> Result<LayerBlockCipherHandler<R>> {
-        let aes_ctr_block_cipher = AESCTRBlockCipher::new(256)?;
-        Ok(LayerBlockCipherHandler::Aes256Ctr(aes_ctr_block_cipher))
+    fn default() -> LayerBlockCipherHandler<R> {
+        let aes_ctr_block_cipher = AESCTRBlockCipher::new(256).unwrap();
+        LayerBlockCipherHandler::Aes256Ctr(aes_ctr_block_cipher)
     }
 }
 
@@ -246,7 +246,7 @@ mod tests {
         let layer_data: Vec<u8> = b"this is some data".to_vec();
 
         let mut lbco = LayerBlockCipherOptions::default();
-        let mut lbch = LayerBlockCipherHandler::new().unwrap();
+        let mut lbch = LayerBlockCipherHandler::default();
         assert!(lbch
             .encrypt(layer_data.as_slice(), AES256CTR, &mut lbco)
             .is_ok());
@@ -262,7 +262,7 @@ mod tests {
         let serialized_json = serde_json::to_string(&lbco).unwrap();
 
         // Decrypt with valid key
-        let mut lbch = LayerBlockCipherHandler::new().unwrap();
+        let mut lbch = LayerBlockCipherHandler::default();
         let mut lbco: LayerBlockCipherOptions =
             serde_json::from_str(&serialized_json).unwrap_or_default();
 
@@ -275,7 +275,7 @@ mod tests {
         assert_eq!(layer_data, plaintxt_data);
 
         // Decrypt with invalid key
-        let mut lbch = LayerBlockCipherHandler::new().unwrap();
+        let mut lbch = LayerBlockCipherHandler::default();
         lbco.private.symmetric_key = vec![0; 32];
         assert!(lbch.decrypt(encrypted_data.as_slice(), &mut lbco).is_ok());
         let LayerBlockCipherHandler::Aes256Ctr(mut decryptor) = lbch;

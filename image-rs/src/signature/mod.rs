@@ -15,20 +15,54 @@ pub use policy::Policy;
 
 use anyhow::{bail, Context, Result};
 use oci_client::secrets::RegistryAuth;
+use thiserror::Error;
 
-use crate::resource::ResourceProvider;
+use crate::{config::ProxyConfig, resource::ResourceProvider};
 
 /// Image security config dir contains important information such as
 /// security policy configuration file and signature verification configuration file.
 pub const IMAGE_SECURITY_CONFIG_SUBDIR: &str = "image-security";
+
+pub type SignatureResult<T> = std::result::Result<T, SignatureError>;
+
+#[derive(Error, Debug)]
+pub enum SignatureError {
+    #[error("Failed to parse image reference: {0}")]
+    IllegalImageReference(String),
+
+    #[error("Illegal image digest: {0}")]
+    IllegalImageDigest(String),
+
+    #[error("Denied by policy: {source}")]
+    DeniedByPolicy {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error("Invalid image policy file")]
+    InvalidPolicyFile,
+
+    #[error("Failed to initialize work dir")]
+    InitializeWorkDir,
+
+    #[cfg(feature = "signature-simple")]
+    #[error("Invalid simple signing sigstore config")]
+    InvalidSimpleSigningSigstoreConfig,
+
+    #[cfg(feature = "signature-simple")]
+    #[error("Failed to update sigstore config")]
+    SigstoreConfigUpdateFailed {
+        #[source]
+        source: anyhow::Error,
+    },
+}
 
 pub struct SignatureValidator {
     policy: Policy,
 
     resource_provider: Arc<ResourceProvider>,
 
-    no_proxy: Option<String>,
-    https_proxy: Option<String>,
+    proxy_config: Option<ProxyConfig>,
 
     #[cfg(feature = "signature-simple")]
     simple_signing_sigstore_config: Option<policy::SigstoreConfig>,
@@ -70,10 +104,14 @@ impl SignatureValidator {
                 "Policy `reject` rejects image {}",
                 image.reference.to_string()
             ),
-            PolicyReqType::SimpleSigning(inner) => {
-                self.simple_signing_allows_image(inner, image, auth).await
-            }
-            PolicyReqType::Cosign(inner) => self.cosign_allows_image(inner, image, auth).await,
+            PolicyReqType::SimpleSigning(inner) => self
+                .simple_signing_allows_image(inner, image, auth)
+                .await
+                .context("rejected by `signedBy` rule"),
+            PolicyReqType::Cosign(inner) => self
+                .cosign_allows_image(inner, image, auth)
+                .await
+                .context("rejected by `sigstoreSigned` rule"),
         }
     }
 
@@ -89,20 +127,26 @@ impl SignatureValidator {
         image_reference: &str,
         image_digest: &str,
         auth: &RegistryAuth,
-    ) -> Result<()> {
-        let reference = oci_client::Reference::try_from(image_reference)?;
+    ) -> SignatureResult<()> {
+        let reference = oci_client::Reference::try_from(image_reference)
+            .map_err(|_| SignatureError::IllegalImageReference(image_reference.to_string()))?;
         let mut image = Image::default_with_reference(reference);
-        image.set_manifest_digest(image_digest)?;
+        image
+            .set_manifest_digest(image_digest)
+            .map_err(|_| SignatureError::IllegalImageDigest(image_digest.to_string()))?;
 
         // Get the policy set that matches the image.
         let reqs = self.policy.requirements_for_image(&image);
         if reqs.is_empty() {
-            bail!("List of verification policy requirements must not be empty");
+            // Note that if no policy covers the image, the image is considered to be allowed.
+            return Ok(());
         }
 
         // The image must meet the requirements of each policy in the policy set.
         for req in reqs.iter() {
-            self.check_image_requirement(req, &image, auth).await?;
+            self.check_image_requirement(req, &image, auth)
+                .await
+                .map_err(|source| SignatureError::DeniedByPolicy { source })?;
         }
 
         Ok(())
@@ -112,13 +156,15 @@ impl SignatureValidator {
         policy: &[u8],
         _simple_signing_sigstore_config: Option<Vec<u8>>,
         workdir: &Path,
-        no_proxy: Option<String>,
-        https_proxy: Option<String>,
+        proxy_config: Option<ProxyConfig>,
         certificates: Vec<String>,
         resource_provider: Arc<ResourceProvider>,
-    ) -> Result<Self> {
-        let policy: Policy = serde_json::from_slice(policy).context("parse image policy")?;
-        tokio::fs::create_dir_all(workdir.join(IMAGE_SECURITY_CONFIG_SUBDIR)).await?;
+    ) -> SignatureResult<Self> {
+        let policy: Policy =
+            serde_json::from_slice(policy).map_err(|_| SignatureError::InvalidPolicyFile)?;
+        tokio::fs::create_dir_all(workdir.join(IMAGE_SECURITY_CONFIG_SUBDIR))
+            .await
+            .map_err(|_| SignatureError::InitializeWorkDir)?;
 
         #[cfg(feature = "signature-simple")]
         let simple_signing_sigstore_config = match _simple_signing_sigstore_config {
@@ -126,12 +172,14 @@ impl SignatureValidator {
                 let sig_store_config_dir = workdir.join(policy::simple::SIG_STORE_CONFIG_SUB_DIR);
                 tokio::fs::create_dir_all(&sig_store_config_dir)
                     .await
-                    .context("Create Simple Signing sigstore-config dir failed")?;
-                let mut sigstore_config: policy::SigstoreConfig =
-                    serde_yaml::from_slice(&cfg).context("parse simple signing sigstore config")?;
+                    .map_err(|_| SignatureError::InitializeWorkDir)?;
+                let mut sigstore_config: policy::SigstoreConfig = serde_yaml::from_slice(&cfg)
+                    .context("parse simple signing sigstore config")
+                    .map_err(|_| SignatureError::InvalidSimpleSigningSigstoreConfig)?;
                 sigstore_config
                     .update_from_path(&sig_store_config_dir)
-                    .await?;
+                    .await
+                    .map_err(|source| SignatureError::SigstoreConfigUpdateFailed { source })?;
                 Some(sigstore_config)
             }
             None => None,
@@ -150,8 +198,7 @@ impl SignatureValidator {
         Ok(Self {
             policy,
             resource_provider,
-            no_proxy,
-            https_proxy,
+            proxy_config,
             certificates,
             #[cfg(feature = "signature-simple")]
             simple_signing_sigstore_config,

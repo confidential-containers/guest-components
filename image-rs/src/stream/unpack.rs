@@ -8,6 +8,7 @@ use futures::StreamExt;
 use log::{debug, warn};
 use nix::libc::timeval;
 use nix::sys::stat::{mknod, Mode, SFlag};
+use thiserror::Error;
 
 use std::{
     collections::HashMap,
@@ -25,18 +26,90 @@ use tokio::{fs, io::AsyncRead};
 use tokio_tar::ArchiveBuilder;
 use xattr::FileExt;
 
+pub type UnpackResult<T> = std::result::Result<T, UnpackError>;
+
+#[derive(Error, Debug)]
+pub enum UnpackError {
+    #[error("Failed to delete existing broken layer when unpacking")]
+    DeleteExistingLayerFailed {
+        #[source]
+        source: io::Error,
+    },
+
+    #[error("Create layer directory failed")]
+    CreateLayerDirectoryFailed {
+        #[source]
+        source: io::Error,
+    },
+
+    #[error("Failed to read entries from the tar")]
+    ReadTarEntriesFailed {
+        #[source]
+        source: io::Error,
+    },
+
+    #[error("Illegal entry name in the layer tar: {0}")]
+    IllegalEntryName(String),
+
+    #[error("Failed to get a legal UID of the file")]
+    IllegalUid {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error("Failed to get a legal GID of the file")]
+    IllegalGid {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error("Failed to get a legal mtime of the file")]
+    IllegalMtime {
+        #[source]
+        source: io::Error,
+    },
+
+    #[error("Convert whiteout file failed: {source}")]
+    ConvertWhiteoutFailed {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    #[error("Failed to unpack layer to destination")]
+    UnpackFailed {
+        #[source]
+        source: io::Error,
+    },
+
+    #[error("Failed to set ownership for path: {path}")]
+    SetOwnershipsFailed {
+        #[source]
+        source: anyhow::Error,
+        path: String,
+    },
+
+    #[error("Failed to set file mtime: {path}")]
+    SetMTimeFailed {
+        #[source]
+        source: anyhow::Error,
+        path: String,
+    },
+}
+
 // TODO: Add unit tests for both xattr supporting case and
 // non-supporting case.
-fn is_attr_available(path: &Path) -> Result<bool> {
-    let dest = std::fs::File::open(path)?;
+fn is_attr_available(path: &Path) -> bool {
+    let Ok(dest) = std::fs::File::open(path) else {
+        return false;
+    };
     match dest.set_xattr("user.overlay.origin", b"") {
         Ok(_) => {
             debug!("xattrs supported for {path:?}");
-            Ok(true)
+            true
         }
         Err(e) => {
             debug!("xattrs is not supported for {path:?}, because {e:?}");
-            Ok(false)
+            false
         }
     }
 }
@@ -88,7 +161,7 @@ async fn convert_whiteout(
 }
 
 /// Unpack the contents of tarball to the destination path
-pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Result<()> {
+pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> UnpackResult<()> {
     if destination.exists() {
         warn!(
             "unpack destination {:?} already exists, will delete and rerwrite the layer",
@@ -96,12 +169,14 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Resul
         );
         fs::remove_dir_all(destination)
             .await
-            .context("Failed to delete existed broken layer when unpacking")?;
+            .map_err(|source| UnpackError::DeleteExistingLayerFailed { source })?;
     }
 
-    fs::create_dir_all(destination).await?;
+    fs::create_dir_all(destination)
+        .await
+        .map_err(|source| UnpackError::CreateLayerDirectoryFailed { source })?;
 
-    let attr_available = is_attr_available(destination)?;
+    let attr_available = is_attr_available(destination);
     let mut archive = ArchiveBuilder::new(input)
         .set_ignore_zeros(true)
         .set_unpack_xattrs(attr_available)
@@ -110,47 +185,68 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Resul
 
     let mut entries = archive
         .entries()
-        .context("failed to read entries from the tar")?;
+        .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?;
 
     let mut dirs: HashMap<CString, [timeval; 2]> = HashMap::default();
     while let Some(file) = entries.next().await {
-        let mut file = file?;
+        let mut file = file.map_err(|source| UnpackError::ReadTarEntriesFailed { source })?;
 
-        let entry_path = file.path()?;
-        let entry_name = entry_path
-            .file_name()
-            .unwrap_or_default()
-            .to_str()
-            .ok_or(anyhow!("Invalid unicode in path: {:?}", entry_path))?;
+        let entry_path = file
+            .path()
+            .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?;
+        let entry_name = entry_path.file_name().unwrap_or_default().to_str().ok_or(
+            UnpackError::IllegalEntryName(entry_path.to_string_lossy().to_string()),
+        )?;
         let uid = file
             .header()
-            .uid()?
+            .uid()
+            .map_err(|e| UnpackError::IllegalUid {
+                source: anyhow!("corrupted UID in header: {e:?}"),
+            })?
             .try_into()
-            .context("UID is too large!")?;
+            .map_err(|_| UnpackError::IllegalUid {
+                source: anyhow!("UID too large"),
+            })?;
         let gid = file
             .header()
-            .gid()?
+            .gid()
+            .map_err(|e| UnpackError::IllegalGid {
+                source: anyhow!("corrupted GID in header: {e:?}"),
+            })?
             .try_into()
-            .context("GID is too large!")?;
+            .map_err(|_| UnpackError::IllegalGid {
+                source: anyhow!("GID too large"),
+            })?;
         let mode = file.header().mode().ok();
 
         if attr_available && is_whiteout(entry_name) {
-            convert_whiteout(entry_name, &entry_path, uid, gid, mode, destination).await?;
+            convert_whiteout(entry_name, &entry_path, uid, gid, mode, destination)
+                .await
+                .map_err(|source| UnpackError::ConvertWhiteoutFailed { source })?;
             continue;
         }
 
-        file.unpack_in(destination).await?;
+        file.unpack_in(destination)
+            .await
+            .map_err(|source| UnpackError::UnpackFailed { source })?;
 
-        let path = CString::new(format!(
+        let path = format!(
             "{}/{}",
             destination.display(),
-            file.path()?.display()
-        ))?;
+            file.path()
+                .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?
+                .display()
+        );
+        let path_cstring =
+            CString::new(path.clone()).map_err(|_| UnpackError::IllegalEntryName(path.clone()))?;
 
-        let file_path = path.to_str().expect("must be utf8");
+        let file_path = path_cstring.to_str().expect("must be utf8");
 
         let kind = file.header().entry_type();
-        let mtime = file.header().mtime()? as i64;
+        let mtime = file
+            .header()
+            .mtime()
+            .map_err(|source| UnpackError::IllegalMtime { source })? as i64;
 
         // krata-tokio-tar crate does not provide a way to preserve permissions
         // for all kinds of files.
@@ -161,7 +257,9 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Resul
         // the mtime again.
         if kind.is_dir() || file.header().as_ustar().is_none() && file.path_bytes().ends_with(b"/")
         {
-            set_perms_ownerships(&path, ChownType::LChown, uid, gid, mode).await?;
+            set_perms_ownerships(&path_cstring, ChownType::LChown, uid, gid, mode)
+                .await
+                .map_err(|source| UnpackError::SetOwnershipsFailed { source, path })?;
             let atime = timeval {
                 tv_sec: mtime,
                 tv_usec: 0,
@@ -169,21 +267,33 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Resul
 
             let times = [atime, atime];
 
-            dirs.insert(path.clone(), times);
+            dirs.insert(path_cstring.clone(), times);
         } else if !kind.is_symlink() && !kind.is_hard_link() {
             // for other files except link we use fchown
             let f = fs::OpenOptions::new()
                 .write(true)
                 .open(file_path)
                 .await
-                .context("open file failed")?;
+                .map_err(|e| UnpackError::SetOwnershipsFailed {
+                    source: anyhow!("failed to open file: {e}"),
+                    path: path.clone(),
+                })?;
 
-            set_perms_ownerships(&path, ChownType::FChown(f), uid, gid, mode).await?;
+            set_perms_ownerships(&path_cstring, ChownType::FChown(f), uid, gid, mode)
+                .await
+                .map_err(|source| UnpackError::SetOwnershipsFailed {
+                    source,
+                    path: path.clone(),
+                })?;
 
             // set mtime
             let mtime = FileTime::from_unix_time(mtime, 0);
-            filetime::set_file_times(file_path, mtime, mtime)
-                .context(format!("failed to set mtime for `{file_path}`"))?;
+            filetime::set_file_times(file_path, mtime, mtime).map_err(|e| {
+                UnpackError::SetMTimeFailed {
+                    source: e.into(),
+                    path,
+                }
+            })?;
         }
     }
 
@@ -191,11 +301,13 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Resul
     for (k, v) in dirs.iter() {
         let ret = unsafe { nix::libc::utimes(k.as_ptr(), v.as_ptr()) };
         if ret != 0 {
-            bail!(
-                "change directory: {:?} utime error: {:?}",
-                k,
-                io::Error::last_os_error()
-            );
+            return Err(UnpackError::SetMTimeFailed {
+                source: anyhow!(
+                    "change directory utime error: {:?}",
+                    io::Error::last_os_error(),
+                ),
+                path: k.to_string_lossy().to_string(),
+            });
         }
     }
 
@@ -344,7 +456,7 @@ mod tests {
         assert_eq!(metadata.gid(), 10);
         assert_eq!(metadata.uid(), 10);
 
-        let attr_available = is_attr_available(destination).unwrap();
+        let attr_available = is_attr_available(destination);
         if attr_available {
             let path = destination.join("whiteout_file.txt");
             let metadata = fs::metadata(path).await.unwrap();

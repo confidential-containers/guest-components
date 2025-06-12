@@ -53,7 +53,7 @@ impl SealedSecretService for Arc<Cdh> {
             .map_err(|e| {
                 let detailed_error = format_error!(e);
                 error!("[gRPC CDH] Call CDH to unseal secret failed:\n{detailed_error}");
-                Status::internal(format!("[ERROR] CDH unseal secret failed: {}", e))
+                Status::internal(format!("[CDH] [ERROR]: {e}"))
             })?;
 
         debug!("[gRPC CDH] Unseal secret successfully!");
@@ -80,7 +80,7 @@ impl GetResourceService for Arc<Cdh> {
             .map_err(|e| {
                 let detailed_error = format_error!(e);
                 error!("[gRPC CDH] Call CDH to get resource failed:\n{detailed_error}");
-                Status::internal(format!("[ERROR] CDH get resource failed: {}", e))
+                Status::internal(format!("[CDH] [ERROR]: {e}"))
             })?;
 
         debug!("[gRPC CDH] Get resource successfully!");
@@ -109,7 +109,7 @@ impl SecureMountService for Arc<Cdh> {
         let mount_path = self.inner.secure_mount(storage).await.map_err(|e| {
             let detailed_error = format_error!(e);
             error!("[gRPC CDH] Call CDH to secure mount failed:\n{detailed_error}");
-            Status::internal(format!("[ERROR] CDH secure mount failed: {}", e))
+            Status::internal(format!("[CDH] [ERROR]: {e}"))
         })?;
 
         debug!("[gRPC CDH] Secure mount successfully!");
@@ -136,7 +136,7 @@ impl ImagePullService for Arc<Cdh> {
             .map_err(|e| {
                 let detailed_error = format_error!(e);
                 error!("[gRPC CDH] Call CDH to pull image failed:\n{detailed_error}");
-                Status::internal(format!("[ERROR] CDH image pulling failed: {}", e))
+                Status::internal(format!("[CDH] [ERROR]: {e}"))
             })?;
 
         debug!("[gRPC CDH] Pull image successfully!");
@@ -185,7 +185,7 @@ impl KeyProviderService for Arc<Cdh> {
             .map_err(|e| {
                 let detailed_error = format_error!(e);
                 error!("[gRPC CDH] Call CDH to Unwrap Key failed:\n{detailed_error}");
-                Status::internal(format!("[ERROR] CDH Unwrap Key failed: {}", e))
+                Status::internal(format!("[CDH] [ERROR]: {e}"))
             })?;
 
         // Construct output structure and serialize it as the return value of gRPC

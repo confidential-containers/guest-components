@@ -73,7 +73,7 @@ impl TsmReportPath {
         // Remove the Drop set by tempdir_in() since it errors on ConfigFS
         // and leaks the created path. We implement our own Drop that removes the
         // path (rmdir way) when TsmReportPath instance goes out of scope.
-        let path = p.into_path();
+        let path = p.keep();
 
         check_tsm_report_provider(path.as_path(), wanted).inspect_err(|_| {
             let _ = std::fs::remove_dir(path.as_path());
