@@ -19,6 +19,7 @@ mod report;
 mod rtmr;
 
 const TDX_REPORT_DATA_SIZE: usize = 64;
+const TDX_RTMR_PATH: &str = "/sys/devices/virtual/misc/tdx_guest/measurements";
 const CCEL_PATH: &str = "/sys/firmware/acpi/tables/data/CCEL";
 const TDX_GUEST_IOCTL: &str = "/dev/tdx_guest";
 
@@ -50,15 +51,17 @@ fn get_quote_ioctl(report_data: &[u8]) -> Result<Vec<u8>> {
 }
 
 // Return true if the TD environment can extend runtime measurement,
-// else false. The best guess at the moment is that if "TSM reports"
-// is available, the TD runs Linux upstream kernel and is _currently_
-// not able to do it.
+// else false. The best guess at the moment is that if tdx-attest-dcap-ioctls
+// is enabled, runtime measurement is possible. It's also possible if TDX_RTMR_PATH
+// exits.
 fn runtime_measurement_extend_available() -> bool {
-    if Path::new("/sys/kernel/config/tsm/report").exists() {
-        return false;
+    cfg_if::cfg_if! {
+            if #[cfg(feature = "tdx-attest-dcap-ioctls")] {
+                true
+            } else {
+                Path::new(TDX_RTMR_PATH).exists()
+        }
     }
-
-    true
 }
 
 pub const DEFAULT_EVENTLOG_PATH: &str = "/run/attestation-agent/eventlog";
@@ -187,9 +190,18 @@ impl Attester for TdxAttester {
         let extend_data: [u8; 48] = pad(&event_digest);
 
         log::debug!(
-            "TDX Attester: extend RTRM{rtmr_index}: {}",
+            "TDX Attester: extend RTMR{rtmr_index}: {}",
             hex::encode(extend_data)
         );
+
+        let rtmr_path = Path::new(TDX_RTMR_PATH);
+        if rtmr_path.exists() {
+            std::fs::write(
+                rtmr_path.join(format!("rtmr{rtmr_index}:sha384")),
+                extend_data,
+            )
+            .context("TDX Attester: failed to extend RTMR")?;
+        }
 
         #[cfg(feature = "tdx-attest-dcap-ioctls")]
         let event: Vec<u8> = rtmr::TdxRtmrEvent::default()
