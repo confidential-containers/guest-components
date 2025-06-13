@@ -5,9 +5,6 @@ on:
     branches:
     - main
 
-env:
-  RUST_TOOLCHAIN: 1.80.0
-
 jobs:
   publish-aa:
     permissions:
@@ -52,9 +49,7 @@ jobs:
 
     - uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
-        toolchain: ${{ env.RUST_TOOLCHAIN }}
         target: ${{ env.RUST_TARGET }}
-        override: true
 
     - name: Install tpm dependencies
       if: matrix.platform.tee == 'az-cvm-vtpm'
@@ -138,9 +133,7 @@ jobs:
 
     - uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
-        toolchain: ${{ env.RUST_TOOLCHAIN }}
         target: ${{ env.RUST_TARGET }}
-        override: true
 
     - name: Install dependencies
       run: |
