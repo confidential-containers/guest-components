@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use attester::Attesters;
+use attester::CompositeAttester;
 use clap::Parser;
 use std::io::Read;
 use tokio::fs;
@@ -29,7 +29,7 @@ async fn main() {
     let mut report_data = vec![0u8; 64];
 
     let cli = Cli::parse();
-    let attesters = Attesters::new().expect("Failed to initialize attesters.");
+    let attesters = CompositeAttester::new().expect("Failed to initialize attesters.");
 
     match cli {
         Cli::Stdio => std::io::stdin()
