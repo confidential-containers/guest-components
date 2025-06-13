@@ -32,9 +32,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust:
-          - stable
-          - 1.80.0
         instance:
           - ubuntu-24.04
           - s390x
@@ -49,9 +46,6 @@ jobs:
           - instance: ubuntu-24.04-arm
             make_args: "ATTESTER=cca-attester TEE_PLATFORM=cca"
             cargo_test_opts: "--no-default-features --features openssl,rust-crypto,passport,cca-attester,kbs,coco_as,ttrpc,grpc"
-        exclude:
-          - instance: ubuntu-24.04-arm
-            rust: stable
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
@@ -59,11 +53,9 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Install Rust toolchain (${{ matrix.rust }})
+      - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: ${{ matrix.rust }}
-          override: true
           components: rustfmt, clippy
 
       - name: Install protoc
@@ -98,10 +90,7 @@ jobs:
           sudo -E PATH=$PATH -s cargo test ${{ matrix.cargo_test_opts }} -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p crypto -p resource_uri
 
       - name: Run cargo fmt check
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all -- --check
 
       - name: Run rust lint check
         run: |

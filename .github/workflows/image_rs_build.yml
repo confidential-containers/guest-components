@@ -31,16 +31,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust:
-          - 1.80.0
-          - stable
         instance:
           - ubuntu-24.04
           - s390x
           - ubuntu-24.04-arm
-        exclude:
-          - instance: ubuntu-24.04-arm
-            rust: stable
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
@@ -48,12 +42,9 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Install Rust toolchain (${{ matrix.rust }})
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
           components: rustfmt, clippy
 
       - name: Install nettle-sys building dependence
@@ -79,10 +70,7 @@ jobs:
         if: matrix.instance == 'ubuntu-24.04'
 
       - name: Run cargo fmt check
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -p image-rs -- --check
+        run: cargo fmt -p image-rs -- --check
 
       - name: Run rust lint check (all platforms)
         run: |
@@ -98,10 +86,7 @@ jobs:
         if: matrix.instance == 'ubuntu-24.04'
 
       - name: Run cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: -p image-rs --features default
+        run: cargo build -p image-rs --features default
 
       - name: Run cargo build, cross-compiling for powerpc64le
         run: |

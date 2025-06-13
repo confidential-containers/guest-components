@@ -32,9 +32,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust:
-          - stable
-          - 1.80.0
         instance:
           - ubuntu-24.04
           - ubuntu-24.04-arm
@@ -49,9 +46,6 @@ jobs:
             attester: az-tdx-vtpm-attester
           - instance: ubuntu-24.04-arm
             attester: cca-attester
-        exclude:
-          - instance: ubuntu-24.04-arm
-            rust: stable
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
@@ -59,12 +53,9 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Install Rust toolchain (${{ matrix.rust }})
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
           components: rustfmt, clippy
 
       - name: Install TPM dependencies
@@ -82,13 +73,7 @@ jobs:
           make ATTESTER=${{ matrix.attester }} && make install
 
       - name: Run rust lint check
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -p kbc --all-targets --features cc_kbc,${{ matrix.attester }},rust-crypto -- -D warnings
+        run: cargo clippy -p kbc --all-targets --features cc_kbc,${{ matrix.attester }},rust-crypto -- -D warnings
 
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --features cc_kbc,${{ matrix.attester }},rust-crypto -p kbc
+        run: cargo test --features cc_kbc,${{ matrix.attester }},rust-crypto -p kbc

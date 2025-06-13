@@ -23,9 +23,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust:
-          - stable
-          - 1.80.0
         instance:
           - ubuntu-24.04
           - s390x
@@ -37,9 +34,6 @@ jobs:
             cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,se-attester,bin"
           - instance: ubuntu-24.04-arm
             cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,cca-attester,bin"
-        exclude:
-          - instance: ubuntu-24.04-arm
-            rust: stable
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Code checkout
@@ -47,12 +41,9 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Install Rust toolchain (${{ matrix.rust }})
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
           components: rustfmt, clippy
 
       - name: Install protoc
@@ -71,25 +62,13 @@ jobs:
           sudo apt-get install -y libdevmapper-dev
 
       - name: Run cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: ${{ matrix.cargo_test_opts }}
+        run: cargo build ${{ matrix.cargo_test_opts }}
 
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: ${{ matrix.cargo_test_opts }}
+        run: cargo test ${{ matrix.cargo_test_opts }}
 
       - name: Run cargo fmt check
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all -- --check
 
       - name: Run rust clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: ${{ matrix.cargo_test_opts }}
+        run: cargo clippy ${{ matrix.cargo_test_opts }}

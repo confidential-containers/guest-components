@@ -31,12 +31,6 @@ jobs:
         instance:
           - ubuntu-24.04
           - ubuntu-24.04-arm
-        rust:
-          - 1.80.0
-          - stable
-        exclude:
-          - instance: ubuntu-24.04-arm
-            rust: stable
     runs-on: ${{ matrix.instance }}
 
     steps:
@@ -45,12 +39,9 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Install Rust toolchain (${{ matrix.rust }})
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
           components: rustfmt, clippy
 
       - name: Install tonic's protoc dependencies
@@ -58,91 +49,46 @@ jobs:
           sudo apt install -y protobuf-compiler libprotobuf-dev
 
       - name: Run cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: -p ocicrypt-rs --all-features
+        run: cargo build -p ocicrypt-rs --all-features
 
       - name: Run cargo build - keywrap-none
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: -p ocicrypt-rs --no-default-features
+        run: cargo build -p ocicrypt-rs --no-default-features
 
       - name: Run cargo build - block cipher openssl
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: -p ocicrypt-rs --no-default-features --features=block-cipher-openssl
+        run: cargo build -p ocicrypt-rs --no-default-features --features=block-cipher-openssl
 
       - name: Run cargo build - block cipher ring
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: -p ocicrypt-rs --no-default-features --features=block-cipher-ring
+        run: cargo build -p ocicrypt-rs --no-default-features --features=block-cipher-ring
 
       - name: Run cargo build - keywrap-jwe
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: -p ocicrypt-rs --no-default-features --features=keywrap-jwe
+        run: cargo build -p ocicrypt-rs --no-default-features --features=keywrap-jwe
 
       - name: Run cargo build - keywrap-keyprovider
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider
+        run: cargo build -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider
 
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --all-features
+        run: cargo test -p ocicrypt-rs --all-features
 
       - name: Run cargo test - keywrap-none
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features
+        run: cargo test -p ocicrypt-rs --no-default-features
 
       - name: Run cargo test - keywrap-jwe
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features --features=keywrap-jwe
+        run: cargo test -p ocicrypt-rs --no-default-features --features=keywrap-jwe
 
       - name: Run cargo test - keywrap-keyprovider-cmd
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-cmd
+        run: cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-cmd
 
       - name: Run cargo test - keywrap-keyprovider-grpc
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-grpc
+        run: cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-grpc
 
       - name: Run cargo test - keywrap-keyprovider-ttrpc
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-ttrpc
+        run: cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-ttrpc
 
       - name: Run cargo test - keywrap-keyprovider-native
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-native
+        run: cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-native
 
       - name: Run cargo fmt check
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -p ocicrypt-rs -- --check
+        run: cargo fmt -p ocicrypt-rs -- --check
 
       - name: Run rust lint check
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -p ocicrypt-rs --all-targets --all-features -- -D warnings
+        run: cargo clippy -p ocicrypt-rs --all-targets --all-features -- -D warnings
