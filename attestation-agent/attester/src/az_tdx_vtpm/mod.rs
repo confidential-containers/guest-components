@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::{Attester, InitDataResult};
+use super::{Attester, InitDataResult, TeeEvidence};
 use crate::az_snp_vtpm::utils;
 use anyhow::*;
 use az_tdx_vtpm::vtpm::Quote as TpmQuote;
@@ -34,7 +34,7 @@ struct Evidence {
 
 #[async_trait::async_trait]
 impl Attester for AzTdxVtpmAttester {
-    async fn get_evidence(&self, report_data: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, report_data: Vec<u8>) -> Result<TeeEvidence> {
         let hcl_report_bytes = vtpm::get_report_with_report_data(&report_data)?;
         let hcl_report = hcl::HclReport::new(hcl_report_bytes.clone())?;
         let td_report = hcl_report.try_into()?;
@@ -47,7 +47,7 @@ impl Attester for AzTdxVtpmAttester {
             hcl_report: hcl_report_bytes,
             td_quote: td_quote_bytes,
         };
-        Ok(serde_json::to_string(&evidence)?)
+        Ok(serde_json::to_value(&evidence)?)
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> anyhow::Result<InitDataResult> {
