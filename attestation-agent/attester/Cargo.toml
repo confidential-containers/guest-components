@@ -14,6 +14,7 @@ az-tdx-vtpm = { version = "0.7.0", default-features = false, features = ["attest
 base64.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
 cfg-if.workspace = true
+crypto.path = "../deps/crypto"
 hex.workspace = true
 iocuddle = { version = "0.1.1", optional = true }
 kbs-types.workspace = true
@@ -25,6 +26,7 @@ serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 sev = { version = "6.2.1", default-features = false, features = ["snp"], optional = true }
+nvml-wrapper = { version = "0.11.0", optional = true, default-features = false, features = ["serde"]}
 sha2.workspace = true
 strum.workspace = true
 tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.23", optional = true }
@@ -36,6 +38,7 @@ hyper = { version = "0.14", features = ["full"], optional = true }
 hyper-tls = { version = "0.5", optional = true }
 tokio = { version = "1", features = ["full"], optional = true }
 tempfile = { workspace = true, optional = true }
+env_logger = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio.workspace = true
@@ -65,6 +68,7 @@ tsm-report = ["tempfile"]
 tdx-attester = ["scroll", "tsm-report", "iocuddle"]
 tdx-attest-dcap-ioctls = ["tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
+nvidia-attester = ["nvml-wrapper"]
 az-snp-vtpm-attester = ["az-snp-vtpm"]
 az-tdx-vtpm-attester = ["az-snp-vtpm-attester", "az-tdx-vtpm"]
 snp-attester = ["sev"]
@@ -72,4 +76,4 @@ csv-attester = ["csv-rs", "codicon", "hyper", "hyper-tls", "tokio"]
 cca-attester = ["tsm-report"]
 se-attester  = ["pv"]
 
-bin = ["tokio/rt", "tokio/macros", "clap"]
+bin = ["tokio/rt", "tokio/macros", "clap", "env_logger"]

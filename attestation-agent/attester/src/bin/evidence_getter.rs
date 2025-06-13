@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use attester::*;
+use attester::CompositeAttester;
 use clap::Parser;
 use std::io::Read;
 use tokio::fs;
@@ -25,13 +25,12 @@ enum Cli {
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
     // report_data on all platforms is 64 bytes length.
     let mut report_data = vec![0u8; 64];
 
     let cli = Cli::parse();
-
-    let tee = detect_tee_type();
-    let attester: BoxedAttester = tee.try_into().expect("create attester failed");
+    let attesters = CompositeAttester::new().expect("Failed to initialize attesters.");
 
     match cli {
         Cli::Stdio => std::io::stdin()
@@ -50,9 +49,18 @@ async fn main() {
         }
     }
 
-    let evidence = attester
-        .get_evidence(report_data)
+    let evidence = attesters
+        .primary_evidence(report_data.clone())
         .await
         .expect("get evidence failed");
     println!("{evidence}");
+
+    let additional_evidence = attesters
+        .additional_evidence(report_data)
+        .await
+        .expect("get additional evidence failed");
+
+    for (tee, evidence) in additional_evidence {
+        println!("{tee:?} => {evidence}");
+    }
 }

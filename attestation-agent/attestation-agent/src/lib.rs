@@ -5,8 +5,9 @@
 
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
-use attester::{detect_tee_type, BoxedAttester};
-use kbs_types::Tee;
+use attester::CompositeAttester;
+use crypto::HashAlgorithm;
+use kbs_types::{Tee, TeePubKey};
 use std::{str::FromStr, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
 
@@ -57,8 +58,23 @@ pub trait AttestationAPIs {
     /// Get attestation Token
     async fn get_token(&self, token_type: &str) -> Result<Vec<u8>>;
 
-    /// Get TEE hardware signed evidence that includes the runtime data.
+    /// Get TEE hardware evidence from the primary attester with runtime
+    /// data included.
     async fn get_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>>;
+
+    /// Get TEE hardware evidence from all additional attesters with runtime data
+    /// included.
+    async fn get_additional_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>>;
+
+    /// Get the composite evidence from a confidential guest.
+    /// This includes the primary and additional evidence, which
+    /// are bound together by the runtime data.
+    async fn get_composite_evidence(
+        &self,
+        tee_pubkey: TeePubKey,
+        nonce: String,
+        hash_algorithm: HashAlgorithm,
+    ) -> Result<Vec<u8>>;
 
     /// Extend runtime measurement register
     async fn extend_runtime_measurement(
@@ -78,9 +94,8 @@ pub trait AttestationAPIs {
 /// Attestation agent to provide attestation service.
 pub struct AttestationAgent {
     config: RwLock<Config>,
-    attester: Arc<BoxedAttester>,
+    attester: Arc<CompositeAttester>,
     eventlog: Option<Mutex<EventLog>>,
-    tee: Tee,
 }
 
 impl AttestationAgent {
@@ -115,15 +130,12 @@ impl AttestationAgent {
         debug!("Using config: {config:#?}");
         let config = RwLock::new(config);
 
-        let tee = detect_tee_type();
-        let attester: BoxedAttester = tee.try_into()?;
-        let attester = Arc::new(attester);
+        let attester = Arc::new(CompositeAttester::new()?);
 
         Ok(AttestationAgent {
             config,
             attester,
             eventlog: None,
-            tee,
         })
     }
 }
@@ -169,10 +181,40 @@ impl AttestationAPIs for AttestationAgent {
         }
     }
 
-    /// Get TEE hardware signed evidence that includes the runtime data.
+    /// Get TEE hardware evidence from the primary attester with runtime
+    /// data included.
     async fn get_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>> {
-        let evidence = self.attester.get_evidence(runtime_data.to_vec()).await?;
-        Ok(evidence.into_bytes())
+        let evidence = self
+            .attester
+            .primary_evidence(runtime_data.to_vec())
+            .await?;
+        Ok(evidence.to_string().into_bytes())
+    }
+
+    /// Get TEE hardware evidence from all additional attesters with runtime data
+    /// included.
+    async fn get_additional_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>> {
+        let evidence = self
+            .attester
+            .additional_evidence(runtime_data.to_vec())
+            .await?;
+        Ok(serde_json::to_string(&evidence)?.into_bytes())
+    }
+
+    /// Get the composite evidence from a confidential guest.
+    /// This includes the primary and additional evidence, which
+    /// are bound together by the runtime data.
+    async fn get_composite_evidence(
+        &self,
+        tee_pubkey: TeePubKey,
+        nonce: String,
+        hash_algorithm: HashAlgorithm,
+    ) -> Result<Vec<u8>> {
+        let evidence = self
+            .attester
+            .composite_evidence(tee_pubkey, nonce, hash_algorithm)
+            .await?;
+        Ok(evidence.to_string().into_bytes())
     }
 
     /// Extend runtime measurement register. Parameters
@@ -226,6 +268,6 @@ impl AttestationAPIs for AttestationAgent {
     /// Get the tee type of current platform. If no platform is detected,
     /// `Sample` will be returned.
     fn get_tee_type(&self) -> Tee {
-        self.tee
+        self.attester.tee_type()
     }
 }

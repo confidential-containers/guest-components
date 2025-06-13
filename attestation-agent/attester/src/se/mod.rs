@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::Attester;
+use super::{Attester, TeeEvidence};
 use anyhow::*;
 use log::debug;
 use pv::{
@@ -63,7 +63,7 @@ pub struct SeAttester {}
 
 #[async_trait::async_trait]
 impl Attester for SeAttester {
-    async fn get_evidence(&self, req: Vec<u8>) -> Result<String> {
+    async fn get_evidence(&self, req: Vec<u8>) -> Result<TeeEvidence> {
         // req is serialized SeAttestationRequest String bytes
         let request: SeAttestationRequest = serde_json::from_slice(&req)?;
         let SeAttestationRequest {
@@ -101,6 +101,6 @@ impl Attester for SeAttester {
         };
 
         debug!("response json: {response:#?}");
-        Ok(serde_json::to_string(&response)?)
+        Ok(serde_json::to_value(&response)?)
     }
 }
