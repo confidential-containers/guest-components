@@ -49,8 +49,17 @@ async fn main() {
     }
 
     let evidence = attesters
-        .primary_evidence(report_data)
+        .primary_evidence(report_data.clone())
         .await
         .expect("get evidence failed");
     println!("{evidence}");
+
+    let additional_evidence = attesters
+        .additional_evidence(report_data)
+        .await
+        .expect("get additional evidence failed");
+
+    for (tee, evidence) in additional_evidence {
+        println!("{tee:?} => {evidence}");
+    }
 }
