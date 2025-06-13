@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use attester::CompositeAttester;
+use attester::{detect_attestable_devices, detect_tee_type, BoxedAttester};
 use clap::Parser;
 use std::io::Read;
 use tokio::fs;
@@ -29,7 +29,6 @@ async fn main() {
     let mut report_data = vec![0u8; 64];
 
     let cli = Cli::parse();
-    let attester = CompositeAttester::new().expect("Failed to initialize attester.");
 
     match cli {
         Cli::Stdio => std::io::stdin()
@@ -48,9 +47,22 @@ async fn main() {
         }
     }
 
-    let evidence = attester
-        .primary_evidence(report_data)
+    let evidence = TryInto::<BoxedAttester>::try_into(detect_tee_type())
+        .expect("Failed to initialize attester.")
+        .get_evidence(report_data.clone())
         .await
         .expect("get evidence failed");
-    println!("{evidence}");
+    println!("{:?}:{evidence}", detect_tee_type());
+
+    for tee in detect_attestable_devices() {
+        let attester =
+            TryInto::<BoxedAttester>::try_into(tee).expect("Failed to initialize device attester");
+
+        let evidence = attester
+            .get_evidence(report_data.clone())
+            .await
+            .expect("get additional evidence failed");
+
+        println!("{tee:?}:{evidence}");
+    }
 }
