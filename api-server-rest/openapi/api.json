@@ -19,6 +19,50 @@
     }
   ],
   "paths": {
+    "/aa/derived_key": {
+      "post": {
+        "tags": [],
+        "operationId": "_derived_key",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "success response",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid user data"
+          },
+          "500": {
+            "description": "internal server error"
+          }
+        }
+      }
+    },
     "/aa/evidence": {
       "get": {
         "tags": [],

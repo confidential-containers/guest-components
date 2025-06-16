@@ -512,16 +512,264 @@ impl ::protobuf::reflect::ProtobufValue for GetTokenResponse {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
+// @@protoc_insertion_point(message:attestation_agent.GetDerivedKeyRequest)
+#[derive(PartialEq,Clone,Default,Debug)]
+pub struct GetDerivedKeyRequest {
+    // message fields
+    // @@protoc_insertion_point(field:attestation_agent.GetDerivedKeyRequest.KeyId)
+    pub KeyId: ::std::vec::Vec<u8>,
+    // special fields
+    // @@protoc_insertion_point(special_field:attestation_agent.GetDerivedKeyRequest.special_fields)
+    pub special_fields: ::protobuf::SpecialFields,
+}
+
+impl<'a> ::std::default::Default for &'a GetDerivedKeyRequest {
+    fn default() -> &'a GetDerivedKeyRequest {
+        <GetDerivedKeyRequest as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl GetDerivedKeyRequest {
+    pub fn new() -> GetDerivedKeyRequest {
+        ::std::default::Default::default()
+    }
+
+    fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
+        let mut fields = ::std::vec::Vec::with_capacity(1);
+        let mut oneofs = ::std::vec::Vec::with_capacity(0);
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "KeyId",
+            |m: &GetDerivedKeyRequest| { &m.KeyId },
+            |m: &mut GetDerivedKeyRequest| { &mut m.KeyId },
+        ));
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<GetDerivedKeyRequest>(
+            "GetDerivedKeyRequest",
+            fields,
+            oneofs,
+        )
+    }
+}
+
+impl ::protobuf::Message for GetDerivedKeyRequest {
+    const NAME: &'static str = "GetDerivedKeyRequest";
+
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
+        while let Some(tag) = is.read_raw_tag_or_eof()? {
+            match tag {
+                10 => {
+                    self.KeyId = is.read_bytes()?;
+                },
+                tag => {
+                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u64 {
+        let mut my_size = 0;
+        if !self.KeyId.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.KeyId);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
+        self.special_fields.cached_size().set(my_size as u32);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
+        if !self.KeyId.is_empty() {
+            os.write_bytes(1, &self.KeyId)?;
+        }
+        os.write_unknown_fields(self.special_fields.unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn special_fields(&self) -> &::protobuf::SpecialFields {
+        &self.special_fields
+    }
+
+    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
+        &mut self.special_fields
+    }
+
+    fn new() -> GetDerivedKeyRequest {
+        GetDerivedKeyRequest::new()
+    }
+
+    fn clear(&mut self) {
+        self.KeyId.clear();
+        self.special_fields.clear();
+    }
+
+    fn default_instance() -> &'static GetDerivedKeyRequest {
+        static instance: GetDerivedKeyRequest = GetDerivedKeyRequest {
+            KeyId: ::std::vec::Vec::new(),
+            special_fields: ::protobuf::SpecialFields::new(),
+        };
+        &instance
+    }
+}
+
+impl ::protobuf::MessageFull for GetDerivedKeyRequest {
+    fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("GetDerivedKeyRequest").unwrap()).clone()
+    }
+}
+
+impl ::std::fmt::Display for GetDerivedKeyRequest {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for GetDerivedKeyRequest {
+    type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
+}
+
+// @@protoc_insertion_point(message:attestation_agent.GetDerivedKeyResponse)
+#[derive(PartialEq,Clone,Default,Debug)]
+pub struct GetDerivedKeyResponse {
+    // message fields
+    // @@protoc_insertion_point(field:attestation_agent.GetDerivedKeyResponse.DerivedKey)
+    pub DerivedKey: ::std::vec::Vec<u8>,
+    // special fields
+    // @@protoc_insertion_point(special_field:attestation_agent.GetDerivedKeyResponse.special_fields)
+    pub special_fields: ::protobuf::SpecialFields,
+}
+
+impl<'a> ::std::default::Default for &'a GetDerivedKeyResponse {
+    fn default() -> &'a GetDerivedKeyResponse {
+        <GetDerivedKeyResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl GetDerivedKeyResponse {
+    pub fn new() -> GetDerivedKeyResponse {
+        ::std::default::Default::default()
+    }
+
+    fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
+        let mut fields = ::std::vec::Vec::with_capacity(1);
+        let mut oneofs = ::std::vec::Vec::with_capacity(0);
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "DerivedKey",
+            |m: &GetDerivedKeyResponse| { &m.DerivedKey },
+            |m: &mut GetDerivedKeyResponse| { &mut m.DerivedKey },
+        ));
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<GetDerivedKeyResponse>(
+            "GetDerivedKeyResponse",
+            fields,
+            oneofs,
+        )
+    }
+}
+
+impl ::protobuf::Message for GetDerivedKeyResponse {
+    const NAME: &'static str = "GetDerivedKeyResponse";
+
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
+        while let Some(tag) = is.read_raw_tag_or_eof()? {
+            match tag {
+                10 => {
+                    self.DerivedKey = is.read_bytes()?;
+                },
+                tag => {
+                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u64 {
+        let mut my_size = 0;
+        if !self.DerivedKey.is_empty() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.DerivedKey);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
+        self.special_fields.cached_size().set(my_size as u32);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
+        if !self.DerivedKey.is_empty() {
+            os.write_bytes(1, &self.DerivedKey)?;
+        }
+        os.write_unknown_fields(self.special_fields.unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn special_fields(&self) -> &::protobuf::SpecialFields {
+        &self.special_fields
+    }
+
+    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
+        &mut self.special_fields
+    }
+
+    fn new() -> GetDerivedKeyResponse {
+        GetDerivedKeyResponse::new()
+    }
+
+    fn clear(&mut self) {
+        self.DerivedKey.clear();
+        self.special_fields.clear();
+    }
+
+    fn default_instance() -> &'static GetDerivedKeyResponse {
+        static instance: GetDerivedKeyResponse = GetDerivedKeyResponse {
+            DerivedKey: ::std::vec::Vec::new(),
+            special_fields: ::protobuf::SpecialFields::new(),
+        };
+        &instance
+    }
+}
+
+impl ::protobuf::MessageFull for GetDerivedKeyResponse {
+    fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("GetDerivedKeyResponse").unwrap()).clone()
+    }
+}
+
+impl ::std::fmt::Display for GetDerivedKeyResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for GetDerivedKeyResponse {
+    type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
+}
+
 static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x17attestation_agent.proto\x12\x11attestation_agent\"6\n\x12GetEviden\
     ceRequest\x12\x20\n\x0bRuntimeData\x18\x01\x20\x01(\x0cR\x0bRuntimeData\
     \"1\n\x13GetEvidenceResponse\x12\x1a\n\x08Evidence\x18\x01\x20\x01(\x0cR\
     \x08Evidence\"/\n\x0fGetTokenRequest\x12\x1c\n\tTokenType\x18\x01\x20\
     \x01(\tR\tTokenType\"(\n\x10GetTokenResponse\x12\x14\n\x05Token\x18\x01\
-    \x20\x01(\x0cR\x05Token2\xcc\x01\n\x17AttestationAgentService\x12\\\n\
-    \x0bGetEvidence\x12%.attestation_agent.GetEvidenceRequest\x1a&.attestati\
-    on_agent.GetEvidenceResponse\x12S\n\x08GetToken\x12\".attestation_agent.\
-    GetTokenRequest\x1a#.attestation_agent.GetTokenResponseb\x06proto3\
+    \x20\x01(\x0cR\x05Token\",\n\x14GetDerivedKeyRequest\x12\x14\n\x05KeyId\
+    \x18\x01\x20\x01(\x0cR\x05KeyId\"7\n\x15GetDerivedKeyResponse\x12\x1e\n\
+    \nDerivedKey\x18\x01\x20\x01(\x0cR\nDerivedKey2\xb0\x02\n\x17Attestation\
+    AgentService\x12b\n\rGetDerivedKey\x12'.attestation_agent.GetDerivedKeyR\
+    equest\x1a(.attestation_agent.GetDerivedKeyResponse\x12\\\n\x0bGetEviden\
+    ce\x12%.attestation_agent.GetEvidenceRequest\x1a&.attestation_agent.GetE\
+    videnceResponse\x12S\n\x08GetToken\x12\".attestation_agent.GetTokenReque\
+    st\x1a#.attestation_agent.GetTokenResponseb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
@@ -539,11 +787,13 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
     file_descriptor.get(|| {
         let generated_file_descriptor = generated_file_descriptor_lazy.get(|| {
             let mut deps = ::std::vec::Vec::with_capacity(0);
-            let mut messages = ::std::vec::Vec::with_capacity(4);
+            let mut messages = ::std::vec::Vec::with_capacity(6);
             messages.push(GetEvidenceRequest::generated_message_descriptor_data());
             messages.push(GetEvidenceResponse::generated_message_descriptor_data());
             messages.push(GetTokenRequest::generated_message_descriptor_data());
             messages.push(GetTokenResponse::generated_message_descriptor_data());
+            messages.push(GetDerivedKeyRequest::generated_message_descriptor_data());
+            messages.push(GetDerivedKeyResponse::generated_message_descriptor_data());
             let mut enums = ::std::vec::Vec::with_capacity(0);
             ::protobuf::reflect::GeneratedFileDescriptor::new_generated(
                 file_descriptor_proto(),

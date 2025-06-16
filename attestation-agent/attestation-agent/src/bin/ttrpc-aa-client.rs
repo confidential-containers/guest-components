@@ -6,6 +6,7 @@
 use base64::Engine;
 use clap::{arg, command, Args, Parser, Subcommand};
 use const_format::concatcp;
+use kbs_protocol::ttrpc_protos::attestation_agent::GetDerivedKeyRequest;
 use ttrpc::context;
 use ttrpc_dep::ttrpc_protocol::{
     attestation_agent::{
@@ -54,6 +55,9 @@ enum Operation {
     /// Get attestation token
     GetToken(GetTokenArgs),
 
+    /// Get derived key
+    GetDerivedKey(GetDerivedKeyArgs),
+
     /// Extend runtime measurement
     ExtendRuntimeMeasurement(ExtendRuntimeMeasurementArgs),
 }
@@ -73,6 +77,10 @@ struct GetTokenArgs {
     #[arg(short, long)]
     token_type: String,
 }
+
+#[derive(Args)]
+#[command(author, version, about, long_about = None)]
+struct GetDerivedKeyArgs {}
 
 #[derive(Args)]
 #[command(author, version, about, long_about = None)]
@@ -137,6 +145,17 @@ pub async fn main() {
                 .expect("request to AA");
             let token = String::from_utf8(res.Token).unwrap();
             println!("{token}");
+        }
+        Operation::GetDerivedKey(get_derived_key_args) => {
+            let req = GetDerivedKeyRequest {
+                ..Default::default()
+            };
+            let res = client
+                .get_derived_key(context::with_timeout(TIMEOUT), &req)
+                .await
+                .expect("request to AA");
+            let key = String::from_utf8(res.Key).unwrap();
+            println!("{key}");
         }
         Operation::ExtendRuntimeMeasurement(extend_runtime_measurement_args) => {
             let req = ExtendRuntimeMeasurementRequest {

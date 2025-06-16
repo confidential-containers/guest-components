@@ -9,8 +9,9 @@ use attestation::attestation_agent_service_server::{
 };
 use attestation::{
     BindInitDataRequest, BindInitDataResponse, ExtendRuntimeMeasurementRequest,
-    ExtendRuntimeMeasurementResponse, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
-    GetTeeTypeResponse, GetTokenRequest, GetTokenResponse,
+    ExtendRuntimeMeasurementResponse, GetDerivedKeyRequest, GetDerivedKeyResponse,
+    GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest, GetTeeTypeResponse,
+    GetTokenRequest, GetTokenResponse,
 };
 use attestation_agent::{AttestationAPIs, AttestationAgent};
 use log::{debug, error};
@@ -126,6 +127,26 @@ impl AttestationAgentService for AA {
         debug!("AA (grpc): init data binding successfully!");
 
         let reply = BindInitDataResponse {};
+
+        Result::Ok(Response::new(reply))
+    }
+
+    async fn get_derived_key(
+        &self,
+        request: Request<GetDerivedKeyRequest>,
+    ) -> Result<Response<GetDerivedKeyResponse>, Status> {
+        let request = request.into_inner();
+
+        debug!("AA (grpc): get derived key ...");
+
+        let derived_key = self.inner.get_derived_key().await.map_err(|e| {
+            error!("AA (grpc): get derived key failed:\n{e:?}");
+            Status::internal(format!("[ERROR:{AGENT_NAME}] AA get derived key failed"))
+        })?;
+
+        debug!("AA (grpc): Get derived key successfully!");
+
+        let reply = GetDerivedKeyResponse { derived_key };
 
         Result::Ok(Response::new(reply))
     }
