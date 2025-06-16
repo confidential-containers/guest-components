@@ -33,7 +33,7 @@ fn get_quote_ioctl(report_data: &[u8]) -> Result<Vec<u8>> {
                 let tdx_report_data = tdx_attest_rs::tdx_report_data_t {
                     // report_data.resize() ensures copying report_data to
                     // tdx_attest_rs::tdx_report_data_t cannot panic.
-                    d: report_data.as_slice().try_into().unwrap(),
+                    d: report_data.try_into().unwrap(),
                 };
 
                 match tdx_attest_rs::tdx_att_get_quote(Some(&tdx_report_data), None, None, 0) {
