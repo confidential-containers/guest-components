@@ -1,0 +1,55 @@
+name: Run clippy checks for Rust stable
+
+on:
+  # run every Sunday
+  schedule:
+    - cron: '0 3 * * 6'
+
+permissions:
+  contents: read
+
+jobs:
+  clippy:
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - api-server-rest
+          - coco_keyprovider
+          - crypto
+          - resource_uri
+          - kbs_protocol
+          - confidential-data-hub
+          - kms
+          - image-rs
+          - ocicrypt-rs
+        include:
+          - package: attestation-agent
+            feature-parameters: "--no-default-features --features rust-crypto,kbs,all-attesters,bin,ttrpc"
+          - package: kbc
+            feature-parameters: "--no-default-features --features openssl,cc_kbc,all-attesters"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Install protoc
+        run: sudo apt update && sudo apt install -y protobuf-compiler
+
+      - name: Install TPM dependencies
+        run: sudo apt install -y libtss2-dev
+
+      - name: Install dm-verity dependencies
+        run: sudo apt install -y libdevmapper-dev
+
+      - name: Run rust lint checks (${{matrix.package}})
+        run: cargo clippy -p ${{matrix.package}} ${{matrix.feature-parameters}} -- -D warnings
