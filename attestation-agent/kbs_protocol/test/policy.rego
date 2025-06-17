@@ -3,5 +3,5 @@ package policy
 default allow = false
 
 allow {
-	input["submods"]["cpu"]["ear.veraison.annotated-evidence"]["sample"]
+	input["submods"]["cpu0"]["ear.veraison.annotated-evidence"]["sample"]
 }
