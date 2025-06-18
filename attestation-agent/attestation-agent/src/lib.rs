@@ -167,9 +167,10 @@ impl AttestationAPIs for AttestationAgent {
                             "kbs token config not configured in config file"
                         ))?,
                 )
-                .get_token()
+                .get_token(self.initdata.as_deref())
                 .await
             }
+            // TODO: add initdata plaintext for CoCoAS token
             #[cfg(feature = "coco_as")]
             token::TokenType::CoCoAS => {
                 token::coco_as::CoCoASTokenGetter::new(

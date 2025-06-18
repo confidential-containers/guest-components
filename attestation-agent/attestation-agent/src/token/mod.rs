@@ -3,8 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::Result;
-use async_trait::async_trait;
 use strum::EnumString;
 
 #[cfg(feature = "kbs")]
@@ -22,9 +20,4 @@ pub enum TokenType {
     #[cfg(feature = "coco_as")]
     #[strum(serialize = "coco_as")]
     CoCoAS,
-}
-
-#[async_trait]
-pub trait GetToken {
-    async fn get_token(&self) -> Result<Vec<u8>>;
 }
