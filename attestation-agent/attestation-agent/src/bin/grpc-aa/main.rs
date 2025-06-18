@@ -37,13 +37,13 @@ struct Cli {
     #[arg(short, long)]
     config_file: Option<String>,
 
-    /// Initdata to be verified by AA. If initdata check failed, AA will failed to launch.
+    /// Initdata digest to be verified by AA. If initdata check failed, AA will failed to launch.
     /// The initdata should be base64 standard encoding.
     ///
     /// Example:
-    /// `--initdata AAAAAAAAAAAA`
+    /// `--initdata_digest AAAAAAAAAAAA`
     #[arg(short, long)]
-    initdata: Option<String>,
+    initdata_digest: Option<String>,
 }
 
 #[tokio::main]
@@ -54,8 +54,8 @@ pub async fn main() -> Result<()> {
     let attestation_socket = cli.attestation_sock.parse::<SocketAddr>()?;
 
     let mut aa = AttestationAgent::new(cli.config_file.as_deref()).context("start AA")?;
-    if let Some(initdata) = cli.initdata {
-        info!("Initdata is given by parameter, try to check.");
+    if let Some(initdata) = cli.initdata_digest {
+        info!("Initdata digest is given by parameter, try to check.");
         let initdata = base64::engine::general_purpose::STANDARD
             .decode(&initdata)
             .context("base64 decode initdata")?;
