@@ -5,13 +5,14 @@
 
 use std::time::Duration;
 
-use anyhow::bail;
+use anyhow::{bail, Context};
 use async_trait::async_trait;
+use attester::TeeEvidence;
 use crypto::HashAlgorithm;
-use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response, Tee};
+use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response, Tee, TeePubKey};
 use log::{debug, warn};
 use resource_uri::ResourceUri;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
@@ -46,6 +47,26 @@ const DEFAULT_HASH_ALGORITHM: HashAlgorithm = HashAlgorithm::Sha384;
 struct AttestationResponseData {
     // Attestation token in JWT format
     token: String,
+}
+
+/// CompositeEvidence is the combined evidence from all the TEEs
+/// that represent the guest.
+#[derive(Serialize, Deserialize)]
+pub struct CompositeEvidence {
+    pub primary_evidence: TeeEvidence,
+    // The additional evidence is a map of Tee -> evidence,
+    // but we convert it to a string to avoid any inconsistencies
+    // with serialization. The string in this struct is exactly
+    // what is used to calculate the runtime data.
+    pub additional_evidence: String,
+}
+
+#[derive(Serialize)]
+pub struct RuntimeData {
+    pub nonce: String,
+
+    #[serde(rename = "tee-pubkey")]
+    pub tee_pubkey: TeePubKey,
 }
 
 async fn get_request_extra_params() -> serde_json::Value {
@@ -135,6 +156,55 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         Ok(())
     }
 
+    /// Get composite evidence for the confidential guest.
+    async fn get_composite_evidence(
+        &self,
+        runtime_data: RuntimeData,
+        hash_algorithm: HashAlgorithm,
+        tee: Tee,
+    ) -> anyhow::Result<CompositeEvidence> {
+        let device_runtime_data =
+            serde_json::to_string(&runtime_data).context("serialize runtime data failed")?;
+
+        let device_runtime_data_hash = hash_algorithm.digest(device_runtime_data.as_bytes());
+        let additional_evidence = self
+            .provider
+            .get_additional_evidences(device_runtime_data_hash)
+            .await?;
+
+        debug!("get additional evidence with challenge: {device_runtime_data}");
+
+        // Calculate the runtime data for the primary attester, which includes
+        // the device evidence retrieved above.
+        let primary_runtime_data = match tee {
+            // SE handles the report data differently. As such, it does not support
+            // multi-device attestation.
+            Tee::Se => {
+                if additional_evidence.is_empty() {
+                    bail!("Cannot attest multiple devices on s390x platform.")
+                }
+                runtime_data.nonce.into_bytes()
+            }
+            _ => {
+                let primary_runtime_data = json!({
+                    "tee-pubkey": runtime_data.tee_pubkey,
+                    "nonce": runtime_data.nonce,
+                    "additional-evidence": additional_evidence,
+                });
+                let primary_runtime_data = serde_json::to_string(&primary_runtime_data)
+                    .context("serialize runtime data failed")?;
+                hash_algorithm.digest(primary_runtime_data.as_bytes())
+            }
+        };
+
+        let primary_evidence = self.provider.primary_evidence(primary_runtime_data).await?;
+        let guest_evidence = CompositeEvidence {
+            primary_evidence,
+            additional_evidence,
+        };
+        Ok(guest_evidence)
+    }
+
     /// Perform RCAR handshake with the given kbs host. If succeeds, the client will
     /// store the token.
     ///
@@ -191,17 +261,29 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         let algorithm = get_hash_algorithm(extra_params)?;
 
         let tee_pubkey = self.tee_key.export_pubkey()?;
-
-        let evidence = self
-            .provider
-            .get_evidence(tee_pubkey.clone(), challenge.nonce, algorithm)
-            .await?;
-        debug!("get evidence with challenge: {evidence}");
-
-        let attest_endpoint = format!("{}/{KBS_PREFIX}/attest", self.kbs_host_url);
-        let attest = Attestation {
+        let runtime_data = RuntimeData {
+            nonce: challenge.nonce,
             tee_pubkey,
-            tee_evidence: serde_json::from_str(&evidence)?, // TODO: change attesters to return Value?
+        };
+
+        let runtime_data_json = serde_json::to_value(&runtime_data)?;
+        let tee_evidence = self
+            .get_composite_evidence(runtime_data, algorithm, tee)
+            .await
+            .context("get composite evidence failed")?;
+
+        let tee_evidence_json = serde_json::to_value(tee_evidence)?;
+        let attest_endpoint = format!("{}/{KBS_PREFIX}/attest", self.kbs_host_url);
+        let init_data = self._initdata.as_ref().map(|initdata| {
+            json!({
+                "format": "toml",
+                "body": initdata,
+            })
+        });
+        let attest = Attestation {
+            init_data,
+            runtime_data: runtime_data_json,
+            tee_evidence: tee_evidence_json,
         };
 
         debug!("send attest request.");
