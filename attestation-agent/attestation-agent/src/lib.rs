@@ -15,6 +15,7 @@ pub use attester::InitDataResult;
 
 pub mod config;
 mod eventlog;
+pub mod initdata;
 pub mod token;
 
 use eventlog::{Content, EventLog, LogEntry};
@@ -96,6 +97,7 @@ pub struct AttestationAgent {
     config: RwLock<Config>,
     attester: Arc<CompositeAttester>,
     eventlog: Option<Mutex<EventLog>>,
+    initdata: Option<String>,
 }
 
 impl AttestationAgent {
@@ -136,7 +138,13 @@ impl AttestationAgent {
             config,
             attester,
             eventlog: None,
+            initdata: None,
         })
+    }
+
+    /// Set initdata toml as status of current AA instance.
+    pub fn set_initdata_toml(&mut self, initdata_toml: String) {
+        self.initdata = Some(initdata_toml);
     }
 }
 
