@@ -5,9 +5,7 @@
 
 use crate::config::coco_as::CoCoASConfig;
 
-use super::GetToken;
 use anyhow::*;
-use async_trait::async_trait;
 use attester::CompositeAttester;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
@@ -17,9 +15,8 @@ pub struct CoCoASTokenGetter {
     as_uri: String,
 }
 
-#[async_trait]
-impl GetToken for CoCoASTokenGetter {
-    async fn get_token(&self) -> Result<Vec<u8>> {
+impl CoCoASTokenGetter {
+    pub async fn get_token(&self) -> Result<Vec<u8>> {
         let attester = CompositeAttester::new()?;
         let evidence = attester.primary_evidence(vec![]).await?;
 
