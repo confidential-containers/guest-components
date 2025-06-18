@@ -61,7 +61,7 @@ pub trait AttestationAPIs {
     async fn get_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>>;
 
     /// Get a derived key
-    async fn get_derived_key(&self, context: Vec<u8>) -> Result<Vec<u8>>;
+    async fn get_derived_key(&self) -> Result<Vec<u8>>;
 
     /// Extend runtime measurement register
     async fn extend_runtime_measurement(
@@ -178,8 +178,8 @@ impl AttestationAPIs for AttestationAgent {
         Ok(evidence.into_bytes())
     }
 
-    async fn get_derived_key(&self, context: Vec<u8>) -> Result<Vec<u8>> {
-        self.attester.get_derived_key(context).await
+    async fn get_derived_key(&self) -> Result<Vec<u8>> {
+        self.attester.get_derived_key().await
     }
 
     /// Extend runtime measurement register. Parameters

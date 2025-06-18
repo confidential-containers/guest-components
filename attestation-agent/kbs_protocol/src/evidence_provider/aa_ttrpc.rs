@@ -10,7 +10,7 @@ use ttrpc::context;
 
 use crate::{
     ttrpc_protos::{
-        attestation_agent::{GetDerivedKeyRequest, GetEvidenceRequest, GetTeeTypeRequest},
+        attestation_agent::{GetEvidenceRequest, GetTeeTypeRequest},
         attestation_agent_ttrpc::AttestationAgentServiceClient,
     },
     Error, Result,
@@ -41,15 +41,11 @@ impl AAEvidenceProvider {
 impl EvidenceProvider for AAEvidenceProvider {
     /// Get derived key using the provided key ID
     async fn get_derived_key(&self, _context: Vec<u8>) -> Result<Vec<u8>> {
-        let req = GetDerivedKeyRequest {
-            ..Default::default()
-        };
         let res = self
             .client
-            .get_derived_key(
-                context::with_timeout(AA_TTRPC_TIMEOUT_SECONDS * 1000 * 1000 * 1000),
-                &req,
-            )
+            .get_derived_key(context::with_timeout(
+                AA_TTRPC_TIMEOUT_SECONDS * 1000 * 1000 * 1000,
+            ))
             .await
             .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e}")))?;
         Ok(res.DerivedKey)

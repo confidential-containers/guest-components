@@ -139,13 +139,7 @@ impl AAClient {
     }
 
     pub async fn get_derived_key(&self) -> Result<Vec<u8>> {
-        let req = GetDerivedKeyRequest {
-            ..Default::default()
-        };
-        let res = self
-            .client
-            .get_derived_key(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
-            .await?;
+        let res = self.client.get_derived_key().await?;
         Ok(res.DerivedKey)
     }
 }

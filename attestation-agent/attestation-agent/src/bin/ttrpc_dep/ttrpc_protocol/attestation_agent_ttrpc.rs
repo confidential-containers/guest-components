@@ -56,7 +56,7 @@ impl AttestationAgentServiceClient {
         ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetTeeType", cres);
     }
 
-    pub async fn get_derived_key(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::GetDerivedKeyRequest) -> ::ttrpc::Result<super::attestation_agent::GetDerivedKeyResponse> {
+    pub async fn get_derived_key(&self) -> ::ttrpc::Result<super::attestation_agent::GetDerivedKeyResponse> {
         let mut cres = super::attestation_agent::GetDerivedKeyResponse::new();
         ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetDerivedKey", cres);
     }

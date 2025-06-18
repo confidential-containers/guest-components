@@ -131,12 +131,7 @@ impl AttestationAgentService for AA {
         Result::Ok(Response::new(reply))
     }
 
-    async fn get_derived_key(
-        &self,
-        request: Request<GetDerivedKeyRequest>,
-    ) -> Result<Response<GetDerivedKeyResponse>, Status> {
-        let request = request.into_inner();
-
+    async fn get_derived_key(&self) -> Result<Response<GetDerivedKeyResponse>, Status> {
         debug!("AA (grpc): get derived key ...");
 
         let derived_key = self.inner.get_derived_key().await.map_err(|e| {
