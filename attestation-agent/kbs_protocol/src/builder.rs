@@ -25,6 +25,7 @@ pub struct KbsClientBuilder<T> {
     kbs_host_url: String,
     token: Option<String>,
     tee_key: Option<String>,
+    initdata: Option<String>,
 }
 
 impl KbsClientBuilder<Box<dyn EvidenceProvider>> {
@@ -38,6 +39,7 @@ impl KbsClientBuilder<Box<dyn EvidenceProvider>> {
             kbs_host_url: kbs_host_url.trim_end_matches('/').to_string(),
             token: None,
             tee_key: None,
+            initdata: None,
         }
     }
 }
@@ -50,6 +52,7 @@ impl KbsClientBuilder<Box<dyn TokenProvider>> {
             kbs_host_url: kbs_host_url.trim_end_matches('/').to_string(),
             token: None,
             tee_key: None,
+            initdata: None,
         }
     }
 }
@@ -67,6 +70,11 @@ impl<T> KbsClientBuilder<T> {
 
     pub fn set_tee_key(mut self, tee_key: &str) -> Self {
         self.tee_key = Some(tee_key.to_string());
+        self
+    }
+
+    pub fn add_initdata(mut self, initdata: String) -> Self {
+        self.initdata = Some(initdata);
         self
     }
 
@@ -109,6 +117,7 @@ impl<T> KbsClientBuilder<T> {
                 .build()
                 .context("Build KBS http client")?,
             kbs_host_url: self.kbs_host_url,
+            _initdata: self.initdata,
         };
 
         Ok(client)

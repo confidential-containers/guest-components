@@ -4,14 +4,14 @@
 //
 
 use async_trait::async_trait;
-use crypto::HashAlgorithm;
-use kbs_types::{Tee, TeePubKey};
+use attester::TeeEvidence;
+use kbs_types::Tee;
 use serde_json::json;
 use ttrpc::context;
 
 use crate::{
     ttrpc_protos::{
-        attestation_agent::{GetCompositeEvidenceRequest, GetTeeTypeRequest},
+        attestation_agent::{GetAdditionalEvidenceRequest, GetEvidenceRequest, GetTeeTypeRequest},
         attestation_agent_ttrpc::AttestationAgentServiceClient,
     },
     Error, Result,
@@ -41,31 +41,42 @@ impl AAEvidenceProvider {
 #[async_trait]
 impl EvidenceProvider for AAEvidenceProvider {
     /// Get evidence with as runtime data (report data, challege)
-    async fn get_evidence(
-        &self,
-        tee_pubkey: TeePubKey,
-        nonce: String,
-        hash_algorithm: HashAlgorithm,
-    ) -> Result<String> {
-        let pubkey_string = serde_json::to_string(&tee_pubkey).map_err(|e| {
-            Error::AAEvidenceProvider(format!("Failed to serialize Tee Pub Key: {e}"))
-        })?;
-        let req = GetCompositeEvidenceRequest {
-            TeePubKey: pubkey_string,
-            Nonce: nonce,
-            HashAlgorithm: hash_algorithm.to_string(),
+    async fn primary_evidence(&self, runtime_data: Vec<u8>) -> Result<TeeEvidence> {
+        let req = GetEvidenceRequest {
+            RuntimeData: runtime_data,
             ..Default::default()
         };
         let res = self
             .client
-            .get_composite_evidence(
+            .get_evidence(
                 context::with_timeout(AA_TTRPC_TIMEOUT_SECONDS * 1000 * 1000 * 1000),
                 &req,
             )
             .await
             .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e}")))?;
+        let evidence = serde_json::from_slice(&res.Evidence)
+            .map_err(|e| Error::AAEvidenceProvider(format!("illegal evidence format: {e}")))?;
+        Ok(evidence)
+    }
+
+    /// Get additional evidence with runtime data (report data, challege)
+    async fn get_additional_evidence(&self, runtime_data: Vec<u8>) -> Result<String> {
+        let req = GetAdditionalEvidenceRequest {
+            RuntimeData: runtime_data,
+            ..Default::default()
+        };
+        let res = self
+            .client
+            .get_additional_evidence(
+                context::with_timeout(AA_TTRPC_TIMEOUT_SECONDS * 1000 * 1000 * 1000),
+                &req,
+            )
+            .await
+            .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e}")))?;
+
         let evidence = String::from_utf8(res.Evidence)
-            .map_err(|e| Error::AAEvidenceProvider(format!("non-utf8 evidence: {e}")))?;
+            .map_err(|e| Error::AAEvidenceProvider(format!("failed to parse evidence: {e}")))?;
+
         Ok(evidence)
     }
 
