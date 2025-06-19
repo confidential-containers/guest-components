@@ -4,7 +4,7 @@
 //
 
 use anyhow::*;
-use attestation_agent::{AttestationAPIs, AttestationAgent};
+use attestation_agent::{initdata::Initdata, AttestationAPIs, AttestationAgent};
 use base64::Engine;
 use clap::{arg, command, Parser};
 use const_format::concatcp;
@@ -109,8 +109,8 @@ pub async fn main() -> Result<()> {
         info!("Initdata TOML file is given by parameter, try to check.");
         let initdata =
             std::fs::read_to_string(&initdata_toml).context("read initdata toml file")?;
-        let (_, digest) = attester::Initdata::parse_and_get_digest(&initdata)
-            .context("parse initdata from toml")?;
+        let (_, digest) =
+            Initdata::parse_and_get_digest(&initdata).context("parse initdata from toml")?;
         info!("Initdata digest: {:?}", digest);
         let res = aa.bind_init_data(&digest).await.context(
             "The initdata supplied by the parameter is inconsistent with that of the current platform.",
