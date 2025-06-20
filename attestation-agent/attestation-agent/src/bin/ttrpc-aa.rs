@@ -4,7 +4,7 @@
 //
 
 use anyhow::*;
-use attestation_agent::{AttestationAPIs, AttestationAgent};
+use attestation_agent::{initdata::Initdata, AttestationAPIs, AttestationAgent};
 use base64::Engine;
 use clap::{arg, command, Parser};
 use const_format::concatcp;
@@ -47,13 +47,26 @@ struct Cli {
     #[arg(short, long)]
     config_file: Option<String>,
 
-    /// Initdata to be verified by AA. If initdata check failed, AA will failed to launch.
+    /// Initdata digest to be verified by AA. If initdata check failed, AA will failed to launch.
     /// The initdata should be base64 standard encoding.
     ///
+    /// Note that this is an alternative to `--initdata_toml`, and only one of them should be used.
+    ///
     /// Example:
-    /// `--initdata AAAAAAAAAAAA`
+    /// `--initdata_digest AAAAAAAAAAAA`
     #[arg(short, long)]
-    initdata: Option<String>,
+    initdata_digest: Option<String>,
+
+    /// Path to the Initdata TOML file to be verified by AA. If initdata check failed, AA will failed to launch.
+    /// The initdata should be base64 standard encoding.
+    ///
+    /// Note that this is an alternative to `--initdata_digest`, and only one of them should be used.
+    /// If this option is provided, the file will be read and its content will be used for verification.
+    ///
+    /// Example:
+    /// `--initdata_toml /path/to/initdata.toml`
+    #[arg(short = 't', long)]
+    initdata_toml: Option<String>,
 }
 
 pub fn start_ttrpc_service(aa: AttestationAgent) -> Result<HashMap<String, Service>> {
@@ -76,8 +89,8 @@ pub async fn main() -> Result<()> {
         .context("clean previous attestation socket file")?;
 
     let mut aa = AttestationAgent::new(cli.config_file.as_deref()).context("start AA")?;
-    if let Some(initdata) = cli.initdata {
-        info!("Initdata is given by parameter, try to check.");
+    if let Some(initdata) = cli.initdata_digest {
+        info!("Initdata digest is given by parameter, try to check.");
         let initdata = base64::engine::general_purpose::STANDARD
             .decode(&initdata)
             .context("base64 decode initdata")?;
@@ -90,6 +103,25 @@ pub async fn main() -> Result<()> {
                 info!("Platform does not support initdata checking. Jumping.")
             }
         }
+    }
+
+    if let Some(initdata_toml) = cli.initdata_toml {
+        info!("Initdata TOML file is given by parameter, try to check.");
+        let initdata =
+            std::fs::read_to_string(&initdata_toml).context("read initdata toml file")?;
+        let (_, digest) =
+            Initdata::parse_and_get_digest(&initdata).context("parse initdata from toml")?;
+        info!("Initdata digest: {:?}", digest);
+        let res = aa.bind_init_data(&digest).await.context(
+            "The initdata supplied by the parameter is inconsistent with that of the current platform.",
+        )?;
+        match res {
+            attester::InitDataResult::Ok => info!("Check initdata passed."),
+            attester::InitDataResult::Unsupported => {
+                info!("Platform does not support initdata checking. Jumping.")
+            }
+        }
+        aa.set_initdata(initdata);
     }
 
     aa.init().await.context("init AA")?;

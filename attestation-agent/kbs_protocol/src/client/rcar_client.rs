@@ -5,13 +5,14 @@
 
 use std::time::Duration;
 
-use anyhow::bail;
+use anyhow::{bail, Context};
 use async_trait::async_trait;
+use attester::TeeEvidence;
 use crypto::HashAlgorithm;
-use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response, Tee};
+use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response, Tee, TeePubKey};
 use log::{debug, warn};
 use resource_uri::ResourceUri;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
@@ -46,6 +47,18 @@ const DEFAULT_HASH_ALGORITHM: HashAlgorithm = HashAlgorithm::Sha384;
 struct AttestationResponseData {
     // Attestation token in JWT format
     token: String,
+}
+
+/// CompositeEvidence is the combined evidence from all the TEEs
+/// that represent the guest.
+#[derive(Serialize, Deserialize)]
+pub struct CompositeEvidence {
+    pub primary_evidence: TeeEvidence,
+    // The additional evidence is a map of Tee -> evidence,
+    // but we convert it to a string to avoid any inconsistencies
+    // with serialization. The string in this struct is exactly
+    // what is used to calculate the runtime data.
+    pub additional_evidence: String,
 }
 
 async fn get_request_extra_params() -> serde_json::Value {
@@ -135,6 +148,61 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         Ok(())
     }
 
+    /// Get composite evidence for the confidential guest.
+    async fn get_composite_evidence(
+        &self,
+        nonce: String,
+        hash_algorithm: HashAlgorithm,
+        tee_pubkey: TeePubKey,
+        tee: Tee,
+    ) -> anyhow::Result<String> {
+        let device_runtime_data_json = json!({
+            "tee-pubkey": tee_pubkey,
+            "nonce": nonce
+        });
+
+        let device_runtime_data = serde_json::to_string(&device_runtime_data_json)
+            .context("serialize runtime data failed")?;
+
+        let device_runtime_data_hash = hash_algorithm.digest(device_runtime_data.as_bytes());
+        let additional_evidence = self
+            .provider
+            .get_additional_evidences(device_runtime_data_hash)
+            .await?;
+
+        debug!("get additional evidence with challenge: {nonce}");
+
+        // Calculate the runtime data for the primary attester, which includes
+        // the device evidence retrieved above.
+        let primary_runtime_data = match tee {
+            // SE handles the report data differently. As such, it does not support
+            // multi-device attestation.
+            Tee::Se => {
+                if additional_evidence.is_empty() {
+                    bail!("Cannot attest multiple devices on s390x platform.")
+                }
+                nonce.into_bytes()
+            }
+            _ => {
+                let primary_runtime_data = json!({
+                    "tee-pubkey": tee_pubkey,
+                    "nonce": nonce,
+                    "additional-evidence": additional_evidence,
+                });
+                let primary_runtime_data = serde_json::to_string(&primary_runtime_data)
+                    .context("serialize runtime data failed")?;
+                hash_algorithm.digest(primary_runtime_data.as_bytes())
+            }
+        };
+
+        let primary_evidence = self.provider.primary_evidence(primary_runtime_data).await?;
+        let guest_evidence = CompositeEvidence {
+            primary_evidence,
+            additional_evidence,
+        };
+        Ok(serde_json::to_string(&guest_evidence)?)
+    }
+
     /// Perform RCAR handshake with the given kbs host. If succeeds, the client will
     /// store the token.
     ///
@@ -143,10 +211,10 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
     async fn rcar_handshake(&mut self) -> anyhow::Result<()> {
         let auth_endpoint = format!("{}/{KBS_PREFIX}/auth", self.kbs_host_url);
 
-        let tee = match &self._tee {
+        let tee = match &self.tee {
             ClientTee::Uninitialized => {
                 let tee = self.provider.get_tee_type().await?;
-                self._tee = ClientTee::_Initialized(tee);
+                self.tee = ClientTee::_Initialized(tee);
                 tee
             }
             ClientTee::_Initialized(tee) => *tee,
@@ -191,17 +259,20 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         let algorithm = get_hash_algorithm(extra_params)?;
 
         let tee_pubkey = self.tee_key.export_pubkey()?;
-
         let evidence = self
-            .provider
-            .get_evidence(tee_pubkey.clone(), challenge.nonce, algorithm)
-            .await?;
-        debug!("get evidence with challenge: {evidence}");
+            .get_composite_evidence(challenge.nonce, algorithm, tee_pubkey.clone(), tee)
+            .await
+            .context("get composite evidence failed")?;
+
+        let tee_evidence = json!( {
+            "evidence": evidence,
+            "init_data": self.initdata.clone(),
+        });
 
         let attest_endpoint = format!("{}/{KBS_PREFIX}/attest", self.kbs_host_url);
         let attest = Attestation {
             tee_pubkey,
-            tee_evidence: serde_json::from_str(&evidence)?, // TODO: change attesters to return Value?
+            tee_evidence,
         };
 
         debug!("send attest request.");
