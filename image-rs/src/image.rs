@@ -277,6 +277,11 @@ impl ImageClient {
         let reference = Reference::try_from(image_url)
             .map_err(|source| PullImageError::IllegalImageReference { source })?;
 
+        if let Some(hosts_content) = &self.config.dns_mappings {
+            atomic_write_hosts(hosts_content)
+                .map_err(|source| PullImageError::IllegalRegistryConfigurationFormat { source })?
+        }
+
         let tasks = match &self.registry_handler {
             Some(handler) => handler
                 .process(reference)
@@ -656,7 +661,6 @@ fn create_bundle(
     Ok(image_id)
 }
 
-#[allow(dead_code)]
 fn atomic_write_hosts(content: &str) -> anyhow::Result<()> {
     let hosts_path = Path::new("/etc/hosts");
 
