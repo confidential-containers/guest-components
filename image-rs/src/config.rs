@@ -142,6 +142,18 @@ pub struct ImageConfig {
     #[serde(default = "Vec::default")]
     pub extra_root_certificates: Vec<String>,
 
+    /// dns_mappings is used for local registry configuration, specifically to support resolving
+    /// private registry domains within the guest VM.
+    ///
+    /// This field holds custom domain-to-IP address mappings (similar to entries found in an
+    /// `/etc/hosts` file). These mappings enable the guest to correctly resolve the private
+    /// registry's domain (e.g., `trust.hub`) to the host registry's IP address, thereby
+    /// enabling successful image pulls.
+    ///
+    /// This value defaults to `None`.
+    #[serde(default = "Option::default")]
+    pub dns_mappings: Option<String>,
+
     /// Nydus services configuration
     #[serde(rename = "nydus")]
     pub nydus_config: Option<NydusConfig>,
@@ -194,6 +206,7 @@ impl Default for ImageConfig {
             registry_configuration_uri: None,
             image_pull_proxy: None,
             extra_root_certificates: Vec::new(),
+            dns_mappings: None,
 
             #[cfg(feature = "keywrap-native")]
             kbc: default_kbc(),
@@ -280,6 +293,7 @@ impl ImageConfig {
             registry_configuration_uri: None,
             image_pull_proxy: None,
             extra_root_certificates: Vec::new(),
+            dns_mappings: None,
 
             #[cfg(feature = "keywrap-native")]
             kbc: default_kbc(),
