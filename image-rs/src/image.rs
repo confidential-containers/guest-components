@@ -12,9 +12,12 @@ use oci_client::{
 };
 use oci_spec::image::{ImageConfiguration, Os};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::{
+    collections::{BTreeSet, HashMap},
+    io::Write,
+};
 use thiserror::Error;
 
 use tokio::sync::RwLock;
@@ -273,6 +276,11 @@ impl ImageClient {
     ) -> PullImageResult<String> {
         let reference = Reference::try_from(image_url)
             .map_err(|source| PullImageError::IllegalImageReference { source })?;
+
+        if let Some(hosts_content) = &self.config.dns_mappings {
+            atomic_write_hosts(hosts_content)
+                .map_err(|source| PullImageError::IllegalRegistryConfigurationFormat { source })?
+        }
 
         let tasks = match &self.registry_handler {
             Some(handler) => handler
@@ -651,6 +659,32 @@ fn create_bundle(
     create_runtime_config(&image_config, bundle_dir)?;
     let image_id = image_data.id.clone();
     Ok(image_id)
+}
+
+fn atomic_write_hosts(content: &str) -> anyhow::Result<()> {
+    let hosts_path = Path::new("/etc/hosts");
+
+    // create temp_hosts
+    let mut temp_hosts = tempfile::NamedTempFile::new_in(hosts_path.parent().unwrap())?;
+
+    // write in
+    temp_hosts.write_all(content.as_bytes())?;
+    temp_hosts.as_file().sync_all()?;
+
+    // set permissions
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = temp_hosts.as_file().metadata()?.permissions();
+        // rw-r--r--
+        perms.set_mode(0o644);
+        temp_hosts.as_file().set_permissions(perms)?;
+    }
+
+    // atomic replacing
+    temp_hosts.persist(hosts_path)?;
+
+    Ok(())
 }
 
 #[cfg(not(target_arch = "s390x"))]

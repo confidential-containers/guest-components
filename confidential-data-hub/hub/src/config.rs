@@ -188,6 +188,7 @@ sigstore_config_uri = "kbs:///default/sigstore-config/test"
 image_security_policy_uri = "kbs:///default/security-policy/test"
 authenticated_registry_credentials_uri = "kbs:///default/credential/test"
 extra_root_certificates = ["cert1", "cert2"]
+dns_mappings = "172.20.1.2 trust.hub,dockerx.hub"
 
 [image.image_pull_proxy]
 https_proxy = "http://127.0.0.1:8080"
@@ -210,6 +211,7 @@ https_proxy = "http://127.0.0.1:8080"
                     no_proxy: None,
                 }),
                 extra_root_certificates: vec!["cert1".into(), "cert2".into()],
+                dns_mappings: Some("172.20.1.2 trust.hub,dockerx.hub".into()),
                 ..Default::default()
             },
             socket: "unix:///run/confidential-containers/cdh.sock".to_string(),
