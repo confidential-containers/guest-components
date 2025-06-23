@@ -20,6 +20,9 @@ cfg_if::cfg_if! {
     }
 }
 
+const CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS: &str =
+    "CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS";
+
 #[derive(Clone, Deserialize, Debug, PartialEq)]
 pub struct KbsConfig {
     pub name: String,
@@ -93,6 +96,13 @@ impl CdhConfig {
                 }
             }
         };
+
+        if let std::result::Result::Ok(env) =
+            env::var(CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS)
+        {
+            info!("Read authenticated registry credentials URI from env: {env}");
+            config.image.authenticated_registry_credentials_uri = Some(env);
+        }
 
         config.extend_credentials_from_kernel_cmdline()?;
         Ok(config)
@@ -320,5 +330,49 @@ some_undefined_field = "unknown value"
         let config = CdhConfig::new(Some("/thing".into())).unwrap_err();
         let expected = anyhow!("Config file /thing not found.");
         assert_eq!(format!("{config}"), format!("{expected}"));
+    }
+
+    #[test]
+    fn test_config_auth_override_by_env() {
+        let config = r#"
+[kbc]
+name = "offline_fs_kbc"
+
+[image]
+authenticated_registry_credentials_uri = "kbs:///default/auth/1"
+        "#;
+        let mut file = tempfile::Builder::new()
+            .append(true)
+            .suffix(".toml")
+            .tempfile()
+            .unwrap();
+        file.write_all(config.as_bytes()).unwrap();
+
+        // without env and from config file
+        let config_path = file.path().to_str().unwrap().to_string();
+        let config = CdhConfig::new(Some(config_path.clone())).expect("Must be successful");
+        assert_eq!(
+            config.image.authenticated_registry_credentials_uri,
+            Some("kbs:///default/auth/1".into())
+        );
+
+        // overrided by env
+        env::set_var(
+            "CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS",
+            "file:///test",
+        );
+        let config = CdhConfig::new(Some(config_path.clone())).unwrap();
+        assert_eq!(
+            config.image.authenticated_registry_credentials_uri,
+            Some("file:///test".to_string())
+        );
+        env::remove_var("CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS");
+
+        // no env again
+        let config = CdhConfig::new(Some(config_path)).unwrap();
+        assert_eq!(
+            config.image.authenticated_registry_credentials_uri,
+            Some("kbs:///default/auth/1".into())
+        );
     }
 }

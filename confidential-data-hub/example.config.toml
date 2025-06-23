@@ -115,6 +115,9 @@ image_security_policy_uri = "kbs:///default/security-policy/test"
 # e.g. `file:///etc/image-registry-auth.json`.
 #
 # By default this value is not set.
+#
+# Note that if an environment variable `CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS`
+# is set, the value of the environment variable will be used.
 authenticated_registry_credentials_uri = "kbs:///default/credential/test"
 
 # To support registries with self signed certs. This config item
