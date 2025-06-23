@@ -79,6 +79,13 @@ $(AA_BINARY):
 	@echo build $(AA) for $(TEE_PLATFORM)
 	cd $(AA) && $(MAKE) ttrpc=true ARCH=$(ARCH) LIBC=$(LIBC) ATTESTER=$(ATTESTER)
 
+aa-docker-protobuf:
+	docker run --rm -it -v "$$PWD":/app --workdir /app rust:1.87 sh \
+		-c "cd $(AA) &&  \
+		apt -y update && \
+		apt install -y tss2 libtss2-dev libtss2-esys-3.0.2-0 && \
+		cargo build -p kbs_protocol -p attestation-agent"
+
 $(ASR_BINARY):
 	@echo build $(ASR) for $(TEE_PLATFORM)
 	cd $(ASR) && $(MAKE) ARCH=$(ARCH) LIBC=$(LIBC)
