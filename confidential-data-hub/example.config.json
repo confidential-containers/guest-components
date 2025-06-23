@@ -20,6 +20,7 @@
         "sigstore_config_uri": "kbs:///default/sigstore-config/test",
         "image_security_policy_uri": "kbs:///default/security-policy/test",
         "authenticated_registry_credentials_uri": "kbs:///default/credential/test",
+        "registry_configuration_uri": "kbs:///default/registry-configuration/test",
         "image_pull_proxy": {
             "https_proxy": "http://127.0.0.1:5432",
             "http_proxy": "http://127.0.0.1:5432",

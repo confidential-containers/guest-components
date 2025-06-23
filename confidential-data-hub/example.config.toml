@@ -120,13 +120,28 @@ image_security_policy_uri = "kbs:///default/security-policy/test"
 # is set, the value of the environment variable will be used.
 authenticated_registry_credentials_uri = "kbs:///default/credential/test"
 
+# Registry configuration supports defining registry blocking, mirroring,
+# and remapping rules. This field points to a registry configuration file,
+# which can either be stored locally in the rootfs or retrieved from the KBS.
+#
+# See https://github.com/confidential-containers/guest-components/blob/main/image-rs/docs/registry_configuration.md
+# for more details about the registry configuration file.
+#
+# Now it supports two different forms:
+# - `KBS URI`: the registry configuration will be fetched from KBS,
+# e.g. `kbs:///default/registry-configuration/test`.
+# - `Local Path`: the registry configuration will be fetched from somewhere locally,
+# e.g. `file:///etc/registry-configuration.json`.
+#
+# By default this value is not set.
+registry_configuration_uri = "kbs:///default/registry-configuration/test"
+
 # To support registries with self signed certs. This config item
 # is used to add extra trusted root certifications. The certificates
 # must be encoded by PEM.
 #
 # By default this value is not set.
-extra_root_certificates = [
-"""
+extra_root_certificates = ["""
 -----BEGIN CERTIFICATE-----
 MIIFTDCCAvugAwIBAgIBADBGBgkqhkiG9w0BAQowOaAPMA0GCWCGSAFlAwQCAgUA
 oRwwGgYJKoZIhvcNAQEIMA0GCWCGSAFlAwQCAgUAogMCATCjAwIBATB7MRQwEgYD
@@ -158,8 +173,7 @@ xynud/f525jppJMcD/ofbQxUZuGKvb3f3zy+aLxqidoX7gca2Xd9jyUy5Y/83+ZN
 bz4PZx81UJzXVI9ABEh8/xilATh1ZxOePTBJjN7lgr0lXtKYjV/43yyxgUYrXNZS
 oLSG2dLCK9mjjraPjau34Q==
 -----END CERTIFICATE-----
-"""
-]
+"""]
 
 # The path to store the pulled image layer data.
 #
