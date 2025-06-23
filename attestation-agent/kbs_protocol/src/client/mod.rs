@@ -51,7 +51,7 @@ pub struct KbsClient<T> {
     pub(crate) _initdata: Option<String>,
 }
 
-pub const KBS_PROTOCOL_VERSION: &str = "0.3.0";
+pub const KBS_PROTOCOL_VERSION: &str = "0.4.0";
 
 pub const KBS_GET_RESOURCE_MAX_ATTEMPT: u64 = 3;
 
