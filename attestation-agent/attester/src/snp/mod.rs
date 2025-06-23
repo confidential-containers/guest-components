@@ -88,6 +88,6 @@ impl Attester for SnpAttester {
             0,                   // author_key_en
         );
 
-        Ok(firmware.get_derived_key(None, request).to_vec()?);
+        Ok(firmware.get_derived_key(None, request)?.to_vec())
     }
 }
