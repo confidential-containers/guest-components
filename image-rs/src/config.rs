@@ -118,7 +118,7 @@ pub struct ImageConfig {
     #[serde(default = "Option::default")]
     pub authenticated_registry_credentials_uri: Option<String>,
 
-    /// Registry configuration supports define registry blocking, mirroring,
+    /// Registry configuration supports defining registry blocking, mirroring,
     /// and remapping rules. This field points to a registry configuration file,
     /// which can either be stored locally in the rootfs or retrieved from the KBS.
     ///
