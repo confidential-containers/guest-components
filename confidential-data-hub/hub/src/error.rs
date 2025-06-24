@@ -39,6 +39,9 @@ pub enum Error {
 
     #[error("Image Client error: {0}")]
     ImageClient(#[from] image_rs::builder::BuilderError),
+
+    #[error("initialize overlay network failed")]
+    OverlayNetworkInit(#[from] overlay_network::OverlayNetworkError),
 }
 #[cfg(test)]
 mod tests {

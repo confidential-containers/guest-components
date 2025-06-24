@@ -57,3 +57,7 @@ service SecureMountService {
 service ImagePullService {
     rpc PullImage(ImagePullRequest) returns (ImagePullResponse) {};
 }
+
+service OverlayNetworkService {
+    rpc InitOverlayNetwork(InitOverlayNetworkRequest) returns (InitOverlayNetworkResponse) {};
+}

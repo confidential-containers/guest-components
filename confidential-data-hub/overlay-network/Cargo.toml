@@ -1,0 +1,31 @@
+[package]
+name = "overlay_network"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+base64.workspace = true
+log.workspace = true
+rand = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+strum = { workspace = true, features = ["derive"] }
+tempfile = { workspace = true, optional = true }
+thiserror.workspace = true
+tokio = { workspace = true, optional = true }
+nix = { workspace = true, features = ["net"] }
+kms = { path = "../kms", default-features = false }
+serde_yml.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+tokio = { workspace = true, features = ["rt", "macros" ] }
+
+[build-dependencies]
+anyhow.workspace = true
+
+[features]
+default = []
+overlay-network = []

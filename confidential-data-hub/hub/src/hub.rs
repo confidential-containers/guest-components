@@ -93,6 +93,19 @@ impl DataHub for Hub {
             .await?;
         Ok(manifest_digest)
     }
+
+    async fn init_overlay_network(&self, pod_name: String) -> Result<()> {
+        info!("init overlay network called");
+        //overlay_network::init(pod_name, lighthouse_pub_ip).await?;
+        // FIXME semantics here with OK result is weird...
+        // weird to invoke this (from kata agent) if it's not enabled ... etc
+        if self.config.overlay_network.enable {
+            // Ok to unwrap due to OverlayNetworkConfig.validate()
+            overlay_network::init(&self.config.kbc.url, pod_name, &self.config.overlay_network)
+                .await?;
+        }
+        Ok(())
+    }
 }
 
 async fn initialize_image_client(config: ImageConfig) -> Result<Mutex<ImageClient>> {
