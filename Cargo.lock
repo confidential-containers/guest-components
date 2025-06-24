@@ -363,6 +363,7 @@ dependencies = [
  "log",
  "prost 0.13.5",
  "protobuf 3.7.1",
+ "rdrand",
  "reqwest 0.12.15",
  "rstest",
  "serde",
@@ -3429,6 +3430,7 @@ dependencies = [
  "kbs-types",
  "log",
  "protobuf 3.7.1",
+ "rdrand",
  "reqwest 0.12.15",
  "resource_uri",
  "rstest",
@@ -5155,9 +5157,9 @@ dependencies = [
 
 [[package]]
 name = "rdrand"
-version = "0.8.3"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d92195228612ac8eed47adbc2ed0f04e513a4ccb98175b6f2bd04d963b533655"
+checksum = "0ade52388af32661ecdfe8a69b5425d68a1d363abdf5937db82cffbf0c7df214"
 dependencies = [
  "rand_core 0.6.4",
 ]

@@ -19,6 +19,7 @@ name = "ttrpc-aa-client"
 required-features = ["bin", "ttrpc"]
 
 [dependencies]
+rdrand.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 attester = { path = "../attester", default-features = false }

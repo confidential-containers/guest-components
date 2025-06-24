@@ -7,6 +7,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
+rdrand.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 attester = { path = "../attester", default-features = false }
