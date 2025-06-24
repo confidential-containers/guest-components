@@ -4,9 +4,7 @@
 //
 
 use crate::router::ApiHandler;
-use crate::ttrpc_proto::attestation_agent::{
-    GetDerivedKeyRequest, GetEvidenceRequest, GetTokenRequest,
-};
+use crate::ttrpc_proto::attestation_agent::{GetEvidenceRequest, GetTokenRequest};
 use crate::ttrpc_proto::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use anyhow::*;
 use async_trait::async_trait;
