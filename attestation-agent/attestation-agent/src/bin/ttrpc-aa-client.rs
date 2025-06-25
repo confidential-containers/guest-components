@@ -56,7 +56,7 @@ enum Operation {
     GetToken(GetTokenArgs),
 
     /// Get derived key
-    GetDerivedKey(),
+    GetDerivedKey(GetDerivedKeyArgs),
 
     /// Extend runtime measurement
     ExtendRuntimeMeasurement(ExtendRuntimeMeasurementArgs),
@@ -146,8 +146,14 @@ pub async fn main() {
             let token = String::from_utf8(res.Token).unwrap();
             println!("{token}");
         }
-        Operation::GetDerivedKey() => {
-            let res = client.get_derived_key().await.expect("request to AA");
+        Operation::GetDerivedKey(get_derived_key_args) => {
+            let req = GetDerivedKeyRequest {
+                ..Default::default()
+            };
+            let res = client
+                .get_derived_key(context::with_timeout(TIMEOUT), &req)
+                .await
+                .expect("request to AA");
             let key = String::from_utf8(res.Key).unwrap();
             println!("{key}");
         }

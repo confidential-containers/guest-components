@@ -4,7 +4,9 @@
 //
 
 use crate::router::ApiHandler;
-use crate::ttrpc_proto::attestation_agent::{GetEvidenceRequest, GetTokenRequest};
+use crate::ttrpc_proto::attestation_agent::{
+    GetDerivedKeyRequest, GetEvidenceRequest, GetTokenRequest,
+};
 use crate::ttrpc_proto::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use anyhow::*;
 use async_trait::async_trait;
@@ -65,6 +67,18 @@ impl ApiHandler for AAClient {
                 _ => {
                     return self.not_found();
                 }
+                None => return self.bad_request(),
+            },
+            AA_DERIVED_KEY_URL => match params.get() {
+                Some(key) => match self.get_derived_key().await {
+                    std::result::Result::Ok(results) => return self.octet_stream_response(results),
+                    Err(e) => return self.internal_error(e.to_string()),
+                },
+                None => return self.bad_request(),
+            },
+
+            _ => {
+                return self.not_found();
             }
         }
 
@@ -137,7 +151,13 @@ impl AAClient {
     }
 
     pub async fn get_derived_key(&self) -> Result<Vec<u8>> {
-        let res = self.client.get_derived_key().await?;
+        let req = GetDerivedKeyRequest {
+            ..Default::default()
+        };
+        let res = self
+            .client
+            .get_derived_key(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
+            .await?;
         Ok(res.DerivedKey)
     }
 }

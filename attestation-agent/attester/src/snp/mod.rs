@@ -66,12 +66,18 @@ impl Attester for SnpAttester {
         Ok(InitDataResult::Ok)
     }
 
-    async fn get_derived_key(&self) -> Result<Vec<u8>> {
+    async fn get_derived_key(&self, mut context: Vec<u8>) -> Result<Vec<u8>> {
+        if context.len() > 64 {
+            bail!("SNP Attester: Context must be no more than 64 bytes");
+        }
+
+        context.resize(64, 0);
+
         let mut firmware: Firmware = Firmware::open()?;
 
         // Create DerivedKey request with the documented parameters
         //
-        // GuestFieldSelect values for a bitwise u64 selection can be:
+        // GuestFieldSelect values below can be:
         // 0 > GUEST_POLICY > Indicates that the guest policy will be mixed into the key.
         // 1 > IMAGE_ID     > Indicates that the image ID of the guest will be mixed into the key.
         // 2 > FAMILY_ID    > Indicates the family ID of the guest will be mixed into the key.
@@ -88,6 +94,10 @@ impl Attester for SnpAttester {
             0,                   // author_key_en
         );
 
-        Ok(firmware.get_derived_key(None, request)?.to_vec())
+        let derived_key = firmware
+            .get_derived_key(None, request)
+            .context("Failed to get derived key")?;
+
+        Ok(derived_key.to_vec())
     }
 }

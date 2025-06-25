@@ -78,17 +78,26 @@ impl AttestationAgentService for AA {
         ::ttrpc::Result::Ok(reply)
     }
 
-    async fn get_derived_key(&self) -> ::ttrpc::Result<GetDerivedKeyResponse> {
+    async fn get_derived_key(
+        &self,
+        _ctx: &::ttrpc::r#async::TtrpcContext,
+        req: GetDerivedKeyRequest,
+    ) -> ::ttrpc::Result<GetDerivedKeyResponse> {
         debug!("AA (ttrpc): get derived key ...");
 
-        let derived_key = self.inner.get_derived_key().await.map_err(|e| {
-            error!("AA (ttrpc): get derived key failed:\n {e:?}");
-            let mut error_status = ::ttrpc::proto::Status::new();
-            error_status.set_code(Code::INTERNAL);
-            error_status
-                .set_message("[ERROR:{AGENT_NAME}] AA-KBC get derived key failed.".to_string());
-            ::ttrpc::Error::RpcStatus(error_status)
-        })?;
+        let empty_context = Vec::new();
+        let derived_key = self
+            .inner
+            .get_derived_key(empty_context)
+            .await
+            .map_err(|e| {
+                error!("AA (ttrpc): get derived key failed:\n {e:?}");
+                let mut error_status = ::ttrpc::proto::Status::new();
+                error_status.set_code(Code::INTERNAL);
+                error_status
+                    .set_message("[ERROR:{AGENT_NAME}] AA-KBC get derived key failed.".to_string());
+                ::ttrpc::Error::RpcStatus(error_status)
+            })?;
 
         debug!("AA (ttrpc): Get derived key successfully!");
 
