@@ -18,8 +18,8 @@ use anyhow::{bail, Context, Result};
 use attester::CompositeAttester;
 use const_format::concatcp;
 
-use kbs_types::HashAlgorithm;
 use event::AAEventlog;
+use kbs_types::HashAlgorithm;
 use log::debug;
 
 /// AA's eventlog will be put into this parent directory
