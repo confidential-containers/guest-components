@@ -18,7 +18,7 @@ use anyhow::{bail, Context, Result};
 use attester::CompositeAttester;
 use const_format::concatcp;
 
-use crypto::HashAlgorithm;
+use kbs_types::HashAlgorithm;
 use event::AAEventlog;
 use log::debug;
 
