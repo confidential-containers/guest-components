@@ -5,9 +5,7 @@
 
 use crate::config::kbs::KbsConfig;
 
-use super::GetToken;
 use anyhow::*;
-use async_trait::async_trait;
 use kbs_protocol::{evidence_provider::NativeEvidenceProvider, KbsClientBuilder};
 use serde::Serialize;
 
@@ -23,9 +21,8 @@ pub struct KbsTokenGetter {
     cert: Option<String>,
 }
 
-#[async_trait]
-impl GetToken for KbsTokenGetter {
-    async fn get_token(&self) -> Result<Vec<u8>> {
+impl KbsTokenGetter {
+    pub async fn get_token(&self, initdata: Option<&str>) -> Result<Vec<u8>> {
         let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
 
         let mut builder =
@@ -33,6 +30,10 @@ impl GetToken for KbsTokenGetter {
 
         if let Some(cert) = &self.cert {
             builder = builder.add_kbs_cert(cert);
+        }
+
+        if let Some(initdata) = initdata {
+            builder = builder.add_initdata(initdata.to_string());
         }
 
         let mut client = builder.build()?;

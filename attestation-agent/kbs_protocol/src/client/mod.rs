@@ -31,7 +31,7 @@ pub(crate) enum ClientTee {
 /// This Client is used to connect to the remote KBS.
 pub struct KbsClient<T> {
     /// TEE Type
-    pub(crate) _tee: ClientTee,
+    pub(crate) tee: ClientTee,
 
     /// The asymmetric key pair inside the TEE
     pub(crate) tee_key: TeeKeyPair,
@@ -46,9 +46,12 @@ pub struct KbsClient<T> {
 
     /// token
     pub(crate) token: Option<Token>,
+
+    /// initdata
+    pub(crate) initdata: Option<String>,
 }
 
-pub const KBS_PROTOCOL_VERSION: &str = "0.3.0";
+pub const KBS_PROTOCOL_VERSION: &str = "0.4.0";
 
 pub const KBS_GET_RESOURCE_MAX_ATTEMPT: u64 = 3;
 

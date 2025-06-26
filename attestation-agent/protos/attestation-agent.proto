@@ -11,12 +11,6 @@ message GetAdditionalEvidenceRequest {
     bytes RuntimeData = 1;
 }
 
-message GetCompositeEvidenceRequest {
-    string TeePubKey = 1;
-    string Nonce = 2;
-    string HashAlgorithm = 3;
-}
-
 message GetEvidenceResponse {
     bytes Evidence = 1;
 }
@@ -66,7 +60,6 @@ message GetTeeTypeResponse {
 
 service AttestationAgentService {
     rpc GetEvidence(GetEvidenceRequest) returns (GetEvidenceResponse) {};
-    rpc GetCompositeEvidence(GetCompositeEvidenceRequest) returns (GetEvidenceResponse) {};
     rpc GetAdditionalEvidence(GetAdditionalEvidenceRequest) returns (GetEvidenceResponse) {};
     rpc GetToken(GetTokenRequest) returns (GetTokenResponse) {};
     rpc ExtendRuntimeMeasurement(ExtendRuntimeMeasurementRequest) returns (ExtendRuntimeMeasurementResponse) {};

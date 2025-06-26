@@ -5,10 +5,8 @@
 
 use crate::config::coco_as::CoCoASConfig;
 
-use super::GetToken;
 use anyhow::*;
-use async_trait::async_trait;
-use attester::CompositeAttester;
+use attester::{detect_tee_type, BoxedAttester};
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
 
@@ -17,14 +15,13 @@ pub struct CoCoASTokenGetter {
     as_uri: String,
 }
 
-#[async_trait]
-impl GetToken for CoCoASTokenGetter {
-    async fn get_token(&self) -> Result<Vec<u8>> {
-        let attester = CompositeAttester::new()?;
-        let evidence = attester.primary_evidence(vec![]).await?;
+impl CoCoASTokenGetter {
+    pub async fn get_token(&self) -> Result<Vec<u8>> {
+        let primary_tee = detect_tee_type();
+        let attester = BoxedAttester::try_from(primary_tee)?;
+        let evidence = attester.get_evidence(vec![]).await?;
 
-        let tee = attester.tee_type();
-        let tee_string = serde_json::to_string(&tee)?
+        let tee_string = serde_json::to_string(&primary_tee)?
             .trim_end_matches('"')
             .trim_start_matches('"')
             .to_string();
