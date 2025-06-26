@@ -201,3 +201,24 @@ http_proxy = "http://127.0.0.1:5432"
 #
 # By default this value is not set.
 no_proxy = "192.168.0.1,localhost"
+
+# (Optional) Overlay network-related configuration
+# If enabled, overlay_network.nebula (and all its fields) are required
+[overlay_network]
+
+# Set enable to true to enable the overlay network
+enable = "true"
+
+[overlay_network.nebula]
+# The public IP address of the lighthouse (localhost just used as an example
+# here).
+lighthouse_pub_ip = "127.0.0.1"
+
+# The (internal/private) IP address of the lighthouse.
+# This MUST match the IP address (i.e. the internal/overlay/vpn IP address)
+# assigned to the lighthouse.
+lighthouse_overlay_ip = "192.168.100.100"
+
+# The netmask of the overlay network. The provided example is a /24 network,
+# allowing for 256 pods in the network.
+overlay_netmask = "255.255.255.0"

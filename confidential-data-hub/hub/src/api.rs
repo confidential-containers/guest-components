@@ -32,4 +32,7 @@ pub trait DataHub {
 
     /// Pull image of image url (reference), and place the merged layers in the `bundle_path/rootfs`
     async fn pull_image(&self, _image_url: &str, _bundle_path: &str) -> Result<String>;
+
+    /// Initialize the overlay network
+    async fn init_overlay_network(&self, pod_name: String) -> Result<()>;
 }
