@@ -4,7 +4,7 @@
 //
 
 use async_trait::async_trait;
-use crypto::HashAlgorithm;
+use kbs_types::HashAlgorithm;
 use kbs_types::{Tee, TeePubKey};
 use serde_json::json;
 use ttrpc::context;
