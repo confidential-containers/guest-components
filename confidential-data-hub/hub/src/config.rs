@@ -179,6 +179,7 @@ mod tests {
     use anyhow::anyhow;
     use image_rs::config::{ImageConfig, ProxyConfig};
     use rstest::rstest;
+    use serial_test::serial;
 
     use crate::{config::DEFAULT_CDH_SOCKET_ADDR, CdhConfig, KbsConfig};
 
@@ -285,6 +286,7 @@ some_undefined_field = "unknown value"
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
     })
     )]
+    #[serial]
     fn read_config(#[case] config: &str, #[case] expected: Option<CdhConfig>) {
         let mut file = tempfile::Builder::new()
             .append(true)
@@ -300,6 +302,7 @@ some_undefined_field = "unknown value"
     }
 
     #[test]
+    #[serial]
     fn test_config_path() {
         // --config takes precedence,
         // then env.CDH_CONFIG_PATH
@@ -333,6 +336,7 @@ some_undefined_field = "unknown value"
     }
 
     #[test]
+    #[serial]
     fn test_config_auth_override_by_env() {
         let config = r#"
 [kbc]
