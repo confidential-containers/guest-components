@@ -3421,7 +3421,7 @@ dependencies = [
 [[package]]
 name = "kbs-types"
 version = "0.12.0"
-source = "git+https://github.com/virtee/kbs-types.git?rev=868958e#868958ee919a480cebd3cfeb62dc2ee97cbbd680"
+source = "git+https://github.com/virtee/kbs-types.git?rev=f4055a1#f4055a17979c509d86924c9cb459221e2d45ff12"
 dependencies = [
  "base64 0.22.1",
  "serde",
