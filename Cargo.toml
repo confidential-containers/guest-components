@@ -38,8 +38,7 @@ hmac = "0.12.1"
 jwt-simple = { version = "0.12", default-features = false, features = [
     "pure-rust",
 ] }
-# Change this to version once kbs-types reaches a new version
-kbs-types = { git = "https://github.com/virtee/kbs-types.git", rev = "868958e" }
+kbs-types = { "git" = "https://github.com/virtee/kbs-types.git", rev = "f4055a1" }
 log = "0.4.27"
 nix = "0.30"
 openssl = "0.10"
