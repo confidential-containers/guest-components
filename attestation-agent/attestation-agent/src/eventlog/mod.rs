@@ -233,7 +233,7 @@ impl Display for LogEntry<'_> {
                     HashAlgorithm::Sha384 => ("sha384", value),
                     HashAlgorithm::Sha512 => ("sha512", value),
                 };
-                write!(f, "INIT {}/{}", sha, init_value)
+                write!(f, "INIT {sha}/{init_value}")
             }
         }
     }

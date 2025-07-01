@@ -36,7 +36,7 @@ impl KbsClientCapabilities for KbsClient<Box<dyn TokenProvider>> {
             self.kbs_host_url, resource_uri.repository, resource_uri.r#type, resource_uri.tag
         );
         if let Some(ref q) = resource_uri.query {
-            remote_url = format!("{}?{}", remote_url, q);
+            remote_url = format!("{remote_url}?{q}");
         }
 
         for attempt in 1..=KBS_GET_RESOURCE_MAX_ATTEMPT {

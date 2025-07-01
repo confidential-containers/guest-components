@@ -72,8 +72,8 @@ mod tests {
         let layer2 = layer_store.new_layer_store_path(); // 1
 
         assert_ne!(layer1, layer2, "store paths are not unique");
-        assert_eq!(layer1.file_name().unwrap(), "0", "path {:?}", layer1);
-        assert_eq!(layer2.file_name().unwrap(), "1", "path {:?}", layer2);
+        assert_eq!(layer1.file_name().unwrap(), "0", "path {layer1:?}");
+        assert_eq!(layer2.file_name().unwrap(), "1", "path {layer2:?}");
 
         fs::create_dir_all(layer1.clone()).await.unwrap();
         fs::create_dir_all(layer2.clone()).await.unwrap();
@@ -89,7 +89,7 @@ mod tests {
 
         assert_ne!(layer2, layer3, "store paths are not unique");
 
-        assert_eq!(layer3.file_name().unwrap(), "2", "path {:?}", layer3);
+        assert_eq!(layer3.file_name().unwrap(), "2", "path {layer3:?}");
 
         let layer_store1 = layer_store.clone();
 
@@ -100,7 +100,7 @@ mod tests {
         fs::create_dir_all(layer5.clone()).await.unwrap();
 
         assert_ne!(layer4, layer5, "store paths are not unique");
-        assert_eq!(layer4.file_name().unwrap(), "3", "path {:?}", layer4);
-        assert_eq!(layer5.file_name().unwrap(), "4", "path {:?}", layer5);
+        assert_eq!(layer4.file_name().unwrap(), "3", "path {layer4:?}");
+        assert_eq!(layer5.file_name().unwrap(), "4", "path {layer5:?}");
     }
 }

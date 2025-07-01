@@ -115,7 +115,7 @@ async fn main() {
                     }
                     Err(e) => {
                         if tried > args.retry {
-                            let error = format!("failed to unseal secret, {:?}", e);
+                            let error = format!("failed to unseal secret, {e:?}");
                             panic!("{error}");
                         }
                         warn!("Tried {tried} times... failed to unseal secret: {e}.");
@@ -154,7 +154,7 @@ async fn main() {
                 }
                 Err(e) => {
                     if tried > args.retry {
-                        let error = format!("failed to get resource, {:?}", e);
+                        let error = format!("failed to get resource, {e:?}");
                         panic!("{error}");
                     }
                     warn!("Tried {tried} times... failed to get resource: {e}.");

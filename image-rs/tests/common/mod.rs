@@ -70,11 +70,11 @@ pub async fn start_confidential_data_hub() -> Result<Child> {
             let cdh_path = format!("{}/grpc/{}", script_dir, "confidential-data-hub");
         }
     };
-    println!("cdh_path: {}", cdh_path);
-    println!("script_dir: {}", script_dir);
+    println!("cdh_path: {cdh_path}");
+    println!("script_dir: {script_dir}");
 
     if !Path::new(&cdh_path).exists() {
-        let script_path = format!("{}/{}", script_dir, "build_confidential_data_hub.sh");
+        let script_path = format!("{script_dir}/build_confidential_data_hub.sh");
         cfg_if::cfg_if! {
             if #[cfg(feature = "keywrap-ttrpc")] {
                 let output = Command::new(script_path)
@@ -82,14 +82,14 @@ pub async fn start_confidential_data_hub() -> Result<Child> {
                     .output()
                     .await
                     .expect("Failed to build confidential-data-hub");
-                println!("build ttrpc confidential-data-hub: {:?}", output);
+                println!("build ttrpc confidential-data-hub: {output:?}");
             } else {
                 let output = Command::new(script_path)
                     .env("RPC", "grpc")
                     .output()
                     .await
                     .expect("Failed to build confidential-data-hub");
-                println!("build grpc confidential-data-hub: {:?}", output);
+                println!("build grpc confidential-data-hub: {output:?}");
             }
         }
     }

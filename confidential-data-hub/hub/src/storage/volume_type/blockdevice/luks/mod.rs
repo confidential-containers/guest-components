@@ -52,7 +52,7 @@ impl Interpreter for LuksInterpreter {
             .take(5)
             .map(char::from)
             .collect();
-        let storage_key_path = format!("/tmp/encrypted_storage_key_{}", random_string);
+        let storage_key_path = format!("/tmp/encrypted_storage_key_{random_string}");
         create_storage_key_file(&storage_key_path, parameters.encryption_key.clone()).await?;
 
         let parameters = vec![
@@ -70,7 +70,7 @@ impl Interpreter for LuksInterpreter {
             .args(parameters)
             .spawn()
             .map_err(|e| {
-                error!("luks-encrypt-storage cmd fork failed: {:?}", e);
+                error!("luks-encrypt-storage cmd fork failed: {e:?}");
                 BlockDeviceError::BlockDeviceMountFailed
             })?;
 
@@ -79,7 +79,7 @@ impl Interpreter for LuksInterpreter {
             let mut stderr = String::new();
             if let Some(mut err) = encrypt_device.stderr.take() {
                 err.read_to_string(&mut stderr).await?;
-                error!("BlockDevice mount failed with stderr: {:?}", stderr);
+                error!("BlockDevice mount failed with stderr: {stderr:?}");
             } else {
                 error!("BlockDevice mount failed");
             }

@@ -262,14 +262,14 @@ mod encryption {
             ];
 
             for (i, d) in tests.iter().enumerate() {
-                let msg = format!("test[{}]: {:?}", i, d);
+                let msg = format!("test[{i}]: {d:?}");
 
                 let result = Decryptor::from_media_type(d.media_type);
 
-                let msg = format!("{}: result: {:?}", msg, result);
+                let msg = format!("{msg}: result: {result:?}");
 
-                assert_eq!(result.media_type, d.result.media_type, "{:?}", msg);
-                assert_eq!(result.encrypted, d.result.encrypted, "{:?}", msg);
+                assert_eq!(result.media_type, d.result.media_type, "{msg:?}");
+                assert_eq!(result.encrypted, d.result.encrypted, "{msg:?}");
             }
         }
 
@@ -353,7 +353,7 @@ mod encryption {
             );
 
             for (i, d) in tests.iter().enumerate() {
-                let msg = format!("test[{}]: {:?}", i, d);
+                let msg = format!("test[{i}]: {d:?}");
 
                 let decryptor = Decryptor {
                     media_type: d.media_type.to_string(),
@@ -365,7 +365,7 @@ mod encryption {
                     d.encrypted_layer.clone(),
                     d.decrypt_config,
                 );
-                let msg = format!("{}: result: {:?}", msg, result);
+                let msg = format!("{msg}: result: {result:?}");
 
                 test_utils::assert_result!(d.result, result, msg);
             }

@@ -137,7 +137,7 @@ async fn signature_verification_xrss() {
     match std::env::var("AUTH_PASSWORD") {
         Ok(auth_password) => match !auth_password.is_empty() {
             true => {
-                let auth = format!("iamapikey:{}", auth_password);
+                let auth = format!("iamapikey:{auth_password}");
                 let auth_info = &Some(auth.as_str());
                 do_signature_verification_tests(
                     &_TESTS_XRSS,

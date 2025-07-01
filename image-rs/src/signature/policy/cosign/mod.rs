@@ -254,10 +254,7 @@ mod tests {
             .await;
         assert!(
             res.is_ok(),
-            "failed test:\nparameter:  {:?}\nimage reference:  {}\nreason:  {:?}",
-            parameter,
-            image_reference,
-            res,
+            "failed test:\nparameter:  {parameter:?}\nimage reference:  {image_reference}\nreason:  {res:?}",
         );
     }
 
@@ -370,16 +367,13 @@ mod tests {
             assert_eq!(
                 res.is_ok(),
                 allow,
-                "test failed: \nimage: {}\npolicy:{}",
-                image_reference,
-                policy
+                "test failed: \nimage: {image_reference}\npolicy:{policy}",
             );
             if !allow {
                 let err_msg = res.unwrap_err().to_string();
                 assert_eq!(
                     err_msg, failed_reason,
-                    "test failed: failed reason unmatched.\nneed:{}\ngot:{}",
-                    failed_reason, err_msg
+                    "test failed: failed reason unmatched.\nneed:{failed_reason}\ngot:{err_msg}",
                 );
             }
         } else {

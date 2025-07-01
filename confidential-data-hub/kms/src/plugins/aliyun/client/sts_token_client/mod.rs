@@ -219,7 +219,7 @@ impl StsTokenClient {
             .join("&");
         let urlencoded_canonicalized_params: String =
             credential::urlencode_openapi(&canonicalized_params);
-        let string_to_sign = format!("POST&%2F&{}", urlencoded_canonicalized_params);
+        let string_to_sign = format!("POST&%2F&{urlencoded_canonicalized_params}");
         let string_signed = credential::sign(&string_to_sign, &(self.sk.clone() + "&"))?;
         params.insert("Signature".to_string(), string_signed.to_string());
 

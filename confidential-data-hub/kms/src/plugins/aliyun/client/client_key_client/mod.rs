@@ -88,7 +88,7 @@ impl ClientKeyClient {
     pub async fn from_provider_settings(provider_settings: &ProviderSettings) -> Result<Self> {
         let key_path = env::var("ALIYUN_IN_GUEST_KEY_PATH")
             .unwrap_or(ALIYUN_IN_GUEST_DEFAULT_KEY_PATH.to_owned());
-        info!("ALIYUN_IN_GUEST_KEY_PATH = {}", key_path);
+        info!("ALIYUN_IN_GUEST_KEY_PATH = {key_path}");
 
         let provider_settings: AliClientKeyProviderSettings =
             serde_json::from_value(Value::Object(provider_settings.clone())).map_err(|e| {
@@ -337,10 +337,7 @@ impl ClientKeyClient {
             canonicalized_headers
         );
         let string_signed = self.credential.sign(&string_to_sign)?;
-        headers.insert(
-            "Authorization",
-            format!("Bearer {}", string_signed).parse()?,
-        );
+        headers.insert("Authorization", format!("Bearer {string_signed}").parse()?);
 
         Ok(headers)
     }
