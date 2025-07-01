@@ -51,7 +51,7 @@ ring = "0.17"
 rsa = "0.9.8"
 rstest = "0.17"
 serde = { version = "1.0", features = ["derive"] }
-serde_with = { version = "3.13.0", features = ["base64"] }
+serde_with = { version = "3.14.0", features = ["base64"] }
 serde_json = "1.0"
 serial_test = "3"
 sha2 = "0.10.9"
