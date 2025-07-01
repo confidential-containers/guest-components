@@ -295,8 +295,7 @@ impl ImageClient {
                 Ok(image_id) => return Ok(image_id),
                 Err(e) => {
                     warn!("failed to pull image {image_url} from {task_image_url}: {e:#?}");
-                    tried_images_and_errors
-                        .push(format!("image: {}, error: {}", task_image_url, e));
+                    tried_images_and_errors.push(format!("image: {task_image_url}, error: {e}"));
                 }
             }
         }
@@ -753,7 +752,7 @@ mod tests {
             .pull_image(image, bundle1_dir.path(), &None, &None)
             .await
         {
-            panic!("failed to download image: {}", e);
+            panic!("failed to download image: {e}");
         }
 
         // Pull image again.
@@ -762,7 +761,7 @@ mod tests {
             .pull_image(image, bundle2_dir.path(), &None, &None)
             .await
         {
-            panic!("failed to download image: {}", e);
+            panic!("failed to download image: {e}");
         }
 
         // Assert that config is written out.
@@ -790,7 +789,7 @@ mod tests {
             .pull_image(image, bundle_dir.path(), &None, &None)
             .await
         {
-            panic!("failed to download image: {}", e);
+            panic!("failed to download image: {e}");
         }
 
         // Create a second temporary directory for the second image client
@@ -811,7 +810,7 @@ mod tests {
             .pull_image(image, bundle_dir_2.path(), &None, &None)
             .await
         {
-            panic!("failed to download image: {}", e);
+            panic!("failed to download image: {e}");
         }
 
         // Verify that the "layers" directory does not exist in the second work directory

@@ -88,7 +88,7 @@ impl CredentialClientKey {
                     CertBag::X509(x) => {
                         debug!("parse aliyun pkcs12 credential X509: {}", hex::encode(x))
                     }
-                    CertBag::SDSI(s) => debug!("parse aliyun pkcs12 credential SDSI: {:?}", s),
+                    CertBag::SDSI(s) => debug!("parse aliyun pkcs12 credential SDSI: {s:?}"),
                 },
                 _ => continue,
             }

@@ -169,13 +169,13 @@ impl KeyProviderService for Arc<Cdh> {
         .map_err(|e| {
             let detailed_error = format_error!(e);
             error!("[gRPC CDH] Call CDH to Unwrap Key failed:\n{detailed_error}");
-            Status::internal(format!("[ERROR] CDH Unwrap Key failed: {}", e))
+            Status::internal(format!("[ERROR] CDH Unwrap Key failed: {e}"))
         })?;
 
         let annotation_packet = key_provider_input.get_annotation().map_err(|e| {
             let detailed_error = format_error!(e);
             error!("[gRPC CDH] Call CDH to Unwrap Key failed:\n{detailed_error}");
-            Status::internal(format!("[ERROR] CDH Unwrap Key failed: {}", e))
+            Status::internal(format!("[ERROR] CDH Unwrap Key failed: {e}"))
         })?;
 
         let decrypted_optsdata = self
@@ -198,7 +198,7 @@ impl KeyProviderService for Arc<Cdh> {
             serde_json::to_vec(&output_struct).map_err(|e| {
                 let detailed_error = format_error!(e);
                 error!("[gRPC CDH] Call CDH to Unwrap Key failed:\n{detailed_error}");
-                Status::internal(format!("[ERROR] CDH Unwrap Key failed: {}", e))
+                Status::internal(format!("[ERROR] CDH Unwrap Key failed: {e}"))
             })?;
 
         debug!("[gRPC CDH] Unwrap Key successfully!");

@@ -496,7 +496,7 @@ mod tests {
         ];
 
         for (i, d) in tests.iter().enumerate() {
-            let msg = format!("test[{}]: {:?}", i, d);
+            let msg = format!("test[{i}]: {d:?}");
 
             let result = client
                 .async_handle_layer(
@@ -508,7 +508,7 @@ mod tests {
                 )
                 .await;
 
-            let msg = format!("{}: result: {:?}", msg, result);
+            let msg = format!("{msg}: result: {result:?}");
 
             assert_result!(d.result, result, msg);
         }

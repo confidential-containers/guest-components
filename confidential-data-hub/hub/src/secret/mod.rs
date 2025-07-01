@@ -78,7 +78,7 @@ impl Secret {
 
         let secret_base64 = b64.encode(secret_json);
 
-        let secret_string = format!("sealed.fakejwsheader.{}.fakesignature", secret_base64);
+        let secret_string = format!("sealed.fakejwsheader.{secret_base64}.fakesignature");
 
         Ok(secret_string)
     }

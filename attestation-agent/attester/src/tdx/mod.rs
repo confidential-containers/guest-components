@@ -151,7 +151,7 @@ impl Attester for TdxAttester {
         let cc_eventlog = match std::fs::read(CCEL_PATH) {
             Result::Ok(el) => Some(engine.encode(el)),
             Result::Err(e) => {
-                log::warn!("Read CC Eventlog failed: {:?}", e);
+                log::warn!("Read CC Eventlog failed: {e:?}");
                 None
             }
         };
@@ -159,7 +159,7 @@ impl Attester for TdxAttester {
         let aa_eventlog = match std::fs::read_to_string(DEFAULT_EVENTLOG_PATH) {
             Result::Ok(el) => Some(el),
             Result::Err(e) => {
-                log::warn!("Read AA Eventlog failed: {:?}", e);
+                log::warn!("Read AA Eventlog failed: {e:?}");
                 None
             }
         };

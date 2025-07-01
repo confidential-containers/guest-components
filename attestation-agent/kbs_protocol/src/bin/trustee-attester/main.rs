@@ -53,8 +53,8 @@ async fn main() -> Result<()> {
     let url = cli.url;
     let cert_file = cli.cert_file;
 
-    debug!("url {}", url);
-    debug!("cert_file {:?}", cert_file);
+    debug!("url {url}");
+    debug!("cert_file {cert_file:?}");
 
     // Native evidence provider
     let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
@@ -76,7 +76,7 @@ async fn main() -> Result<()> {
         Commands::GetResource { path } => {
             // resource_path should start with '/' but not with '//'
             let resource_path = match path.starts_with('/') {
-                false => format!("/{}", path),
+                false => format!("/{path}"),
                 true => path,
             };
             let resource = ResourceUri::new("", &resource_path)?;

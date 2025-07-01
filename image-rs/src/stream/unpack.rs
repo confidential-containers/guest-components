@@ -170,8 +170,7 @@ async fn convert_whiteout(
 pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> UnpackResult<()> {
     if destination.exists() {
         warn!(
-            "unpack destination {:?} already exists, will delete and rerwrite the layer",
-            destination
+            "unpack destination {destination:?} already exists, will delete and rerwrite the layer",
         );
         fs::remove_dir_all(destination)
             .await

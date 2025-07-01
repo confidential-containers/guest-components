@@ -65,7 +65,7 @@ fn main() {
         fn feature_list(features: Vec<&str>) -> String {
             let enabled_features: Vec<&str> = features
                 .into_iter()
-                .filter(|&feature| env::var(format!("CARGO_FEATURE_{}", feature)).is_ok())
+                .filter(|&feature| env::var(format!("CARGO_FEATURE_{feature}")).is_ok())
                 .collect();
 
             enabled_features.join(", ")
@@ -101,9 +101,9 @@ fn main() {
         let socket_type = feature_list(vec!["GRPC", "TTRPC"]);
 
         writeln!(f, "\n\nCommit Hash: {git_commit_hash} {git_status_output}",).unwrap();
-        writeln!(f, "Resource Providers: {}", resource_providers).unwrap();
-        writeln!(f, "Socket Type: {}", socket_type).unwrap();
+        writeln!(f, "Resource Providers: {resource_providers}").unwrap();
+        writeln!(f, "Socket Type: {socket_type}").unwrap();
 
-        writeln!(f, "KMS plugins: {}", kms).unwrap();
+        writeln!(f, "KMS plugins: {kms}").unwrap();
     }
 }

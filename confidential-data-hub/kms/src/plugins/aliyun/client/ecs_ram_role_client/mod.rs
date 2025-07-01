@@ -47,9 +47,9 @@ impl EcsRamRoleClient {
     pub async fn from_provider_settings(_provider_settings: &ProviderSettings) -> Result<Self> {
         let key_path = env::var("ALIYUN_IN_GUEST_KEY_PATH")
             .unwrap_or(ALIYUN_IN_GUEST_DEFAULT_KEY_PATH.to_owned());
-        info!("ALIYUN_IN_GUEST_KEY_PATH = {}", key_path);
+        info!("ALIYUN_IN_GUEST_KEY_PATH = {key_path}");
 
-        let ecs_ram_role_path = format!("{}/ecsRamRole.json", key_path);
+        let ecs_ram_role_path = format!("{key_path}/ecsRamRole.json");
 
         let ecs_ram_role_str = fs::read_to_string(ecs_ram_role_path).await.map_err(|e| {
             Error::AliyunKmsError(format!(

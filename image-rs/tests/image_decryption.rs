@@ -38,7 +38,7 @@ async fn test_decrypt_layers(#[case] image: &str) {
     // Set env for ocicrypt-rs. The env is needed by ocicrypt-rs
     // to communicate with CDH
     let manifest_dir = std::env!("CARGO_MANIFEST_DIR");
-    let keyprovider_config = format!("{}/{}", manifest_dir, OCICRYPT_CONFIG);
+    let keyprovider_config = format!("{manifest_dir}/{OCICRYPT_CONFIG}");
     std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
 
     let work_dir = tempfile::tempdir().unwrap();

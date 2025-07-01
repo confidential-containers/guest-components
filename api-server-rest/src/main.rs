@@ -116,7 +116,7 @@ async fn main() -> Result<()> {
     println!("API Server listening on http://{}", args.bind);
 
     if let Err(e) = server.await {
-        eprintln!("API server error: {}", e);
+        eprintln!("API server error: {e}");
     }
 
     Ok(())

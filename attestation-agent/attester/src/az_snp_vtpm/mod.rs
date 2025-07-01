@@ -13,7 +13,7 @@ pub fn detect_platform() -> bool {
     match is_snp_cvm() {
         Ok(is_snp) => is_snp,
         Err(err) => {
-            debug!("Failed to retrieve Azure HCL data from vTPM: {}", err);
+            debug!("Failed to retrieve Azure HCL data from vTPM: {err}");
             false
         }
     }
