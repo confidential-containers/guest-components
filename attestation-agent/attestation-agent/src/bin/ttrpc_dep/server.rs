@@ -6,17 +6,13 @@
 use ::ttrpc::proto::Code;
 use async_trait::async_trait;
 use attestation_agent::{AttestationAPIs, AttestationAgent};
-use crypto::HashAlgorithm;
-use kbs_types::TeePubKey;
 use log::{debug, error};
-use std::str::FromStr;
 
 use crate::ttrpc_dep::ttrpc_protocol::{
     attestation_agent::{
         ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse,
-        GetAdditionalEvidenceRequest, GetCompositeEvidenceRequest, GetEvidenceRequest,
-        GetEvidenceResponse, GetTeeTypeRequest, GetTeeTypeResponse, GetTokenRequest,
-        GetTokenResponse,
+        GetAdditionalEvidenceRequest, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
+        GetTeeTypeResponse, GetTokenRequest, GetTokenResponse,
     },
     attestation_agent_ttrpc::AttestationAgentService,
 };
@@ -95,54 +91,6 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (ttrpc): get evidence failed:\n {e:?}");
-                let mut error_status = ::ttrpc::proto::Status::new();
-                error_status.set_code(Code::INTERNAL);
-                error_status
-                    .set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get evidence failed"));
-                ::ttrpc::Error::RpcStatus(error_status)
-            })?;
-
-        debug!("AA (ttrpc): Get evidence successfully!");
-
-        let mut reply = GetEvidenceResponse::new();
-        reply.Evidence = evidence;
-
-        ::ttrpc::Result::Ok(reply)
-    }
-
-    async fn get_composite_evidence(
-        &self,
-        _ctx: &::ttrpc::r#async::TtrpcContext,
-        req: GetCompositeEvidenceRequest,
-    ) -> ::ttrpc::Result<GetEvidenceResponse> {
-        debug!("AA (ttrpc): get composite evidence ...");
-
-        let tee_pubkey: TeePubKey = serde_json::from_str(&req.TeePubKey).map_err(|e| {
-            error!("AA (ttrpc): get composite evidence failed:\n {e:?}");
-            let mut error_status = ::ttrpc::proto::Status::new();
-            error_status.set_code(Code::INTERNAL);
-            error_status.set_message(format!(
-                "[ERROR:{AGENT_NAME}] Failed to deserialize TeePubKey"
-            ));
-            ::ttrpc::Error::RpcStatus(error_status)
-        })?;
-
-        let hash_algorithm = HashAlgorithm::from_str(&req.HashAlgorithm).map_err(|e| {
-            error!("AA (ttrpc): get composite evidence failed:\n {e:?}");
-            let mut error_status = ::ttrpc::proto::Status::new();
-            error_status.set_code(Code::INTERNAL);
-            error_status.set_message(format!(
-                "[ERROR:{AGENT_NAME}] Failed to deserialize hash algorithm"
-            ));
-            ::ttrpc::Error::RpcStatus(error_status)
-        })?;
-
-        let evidence = self
-            .inner
-            .get_composite_evidence(tee_pubkey, req.Nonce, hash_algorithm)
-            .await
-            .map_err(|e| {
-                error!("AA (ttrpc): get composite evidence failed:\n {e:?}");
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
                 error_status

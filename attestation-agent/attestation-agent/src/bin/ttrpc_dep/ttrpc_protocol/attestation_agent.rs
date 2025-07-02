@@ -268,164 +268,6 @@ impl ::protobuf::reflect::ProtobufValue for GetAdditionalEvidenceRequest {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
-// @@protoc_insertion_point(message:attestation_agent.GetCompositeEvidenceRequest)
-#[derive(PartialEq,Clone,Default,Debug)]
-pub struct GetCompositeEvidenceRequest {
-    // message fields
-    // @@protoc_insertion_point(field:attestation_agent.GetCompositeEvidenceRequest.TeePubKey)
-    pub TeePubKey: ::std::string::String,
-    // @@protoc_insertion_point(field:attestation_agent.GetCompositeEvidenceRequest.Nonce)
-    pub Nonce: ::std::string::String,
-    // @@protoc_insertion_point(field:attestation_agent.GetCompositeEvidenceRequest.HashAlgorithm)
-    pub HashAlgorithm: ::std::string::String,
-    // special fields
-    // @@protoc_insertion_point(special_field:attestation_agent.GetCompositeEvidenceRequest.special_fields)
-    pub special_fields: ::protobuf::SpecialFields,
-}
-
-impl<'a> ::std::default::Default for &'a GetCompositeEvidenceRequest {
-    fn default() -> &'a GetCompositeEvidenceRequest {
-        <GetCompositeEvidenceRequest as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl GetCompositeEvidenceRequest {
-    pub fn new() -> GetCompositeEvidenceRequest {
-        ::std::default::Default::default()
-    }
-
-    fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(3);
-        let mut oneofs = ::std::vec::Vec::with_capacity(0);
-        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
-            "TeePubKey",
-            |m: &GetCompositeEvidenceRequest| { &m.TeePubKey },
-            |m: &mut GetCompositeEvidenceRequest| { &mut m.TeePubKey },
-        ));
-        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
-            "Nonce",
-            |m: &GetCompositeEvidenceRequest| { &m.Nonce },
-            |m: &mut GetCompositeEvidenceRequest| { &mut m.Nonce },
-        ));
-        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
-            "HashAlgorithm",
-            |m: &GetCompositeEvidenceRequest| { &m.HashAlgorithm },
-            |m: &mut GetCompositeEvidenceRequest| { &mut m.HashAlgorithm },
-        ));
-        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<GetCompositeEvidenceRequest>(
-            "GetCompositeEvidenceRequest",
-            fields,
-            oneofs,
-        )
-    }
-}
-
-impl ::protobuf::Message for GetCompositeEvidenceRequest {
-    const NAME: &'static str = "GetCompositeEvidenceRequest";
-
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
-        while let Some(tag) = is.read_raw_tag_or_eof()? {
-            match tag {
-                10 => {
-                    self.TeePubKey = is.read_string()?;
-                },
-                18 => {
-                    self.Nonce = is.read_string()?;
-                },
-                26 => {
-                    self.HashAlgorithm = is.read_string()?;
-                },
-                tag => {
-                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u64 {
-        let mut my_size = 0;
-        if !self.TeePubKey.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.TeePubKey);
-        }
-        if !self.Nonce.is_empty() {
-            my_size += ::protobuf::rt::string_size(2, &self.Nonce);
-        }
-        if !self.HashAlgorithm.is_empty() {
-            my_size += ::protobuf::rt::string_size(3, &self.HashAlgorithm);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
-        self.special_fields.cached_size().set(my_size as u32);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
-        if !self.TeePubKey.is_empty() {
-            os.write_string(1, &self.TeePubKey)?;
-        }
-        if !self.Nonce.is_empty() {
-            os.write_string(2, &self.Nonce)?;
-        }
-        if !self.HashAlgorithm.is_empty() {
-            os.write_string(3, &self.HashAlgorithm)?;
-        }
-        os.write_unknown_fields(self.special_fields.unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn special_fields(&self) -> &::protobuf::SpecialFields {
-        &self.special_fields
-    }
-
-    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
-        &mut self.special_fields
-    }
-
-    fn new() -> GetCompositeEvidenceRequest {
-        GetCompositeEvidenceRequest::new()
-    }
-
-    fn clear(&mut self) {
-        self.TeePubKey.clear();
-        self.Nonce.clear();
-        self.HashAlgorithm.clear();
-        self.special_fields.clear();
-    }
-
-    fn default_instance() -> &'static GetCompositeEvidenceRequest {
-        static instance: GetCompositeEvidenceRequest = GetCompositeEvidenceRequest {
-            TeePubKey: ::std::string::String::new(),
-            Nonce: ::std::string::String::new(),
-            HashAlgorithm: ::std::string::String::new(),
-            special_fields: ::protobuf::SpecialFields::new(),
-        };
-        &instance
-    }
-}
-
-impl ::protobuf::MessageFull for GetCompositeEvidenceRequest {
-    fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
-        static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
-        descriptor.get(|| file_descriptor().message_by_package_relative_name("GetCompositeEvidenceRequest").unwrap()).clone()
-    }
-}
-
-impl ::std::fmt::Display for GetCompositeEvidenceRequest {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for GetCompositeEvidenceRequest {
-    type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
-}
-
 // @@protoc_insertion_point(message:attestation_agent.GetEvidenceResponse)
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct GetEvidenceResponse {
@@ -1665,35 +1507,30 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \n\x17attestation-agent.proto\x12\x11attestation_agent\"6\n\x12GetEviden\
     ceRequest\x12\x20\n\x0bRuntimeData\x18\x01\x20\x01(\x0cR\x0bRuntimeData\
     \"@\n\x1cGetAdditionalEvidenceRequest\x12\x20\n\x0bRuntimeData\x18\x01\
-    \x20\x01(\x0cR\x0bRuntimeData\"w\n\x1bGetCompositeEvidenceRequest\x12\
-    \x1c\n\tTeePubKey\x18\x01\x20\x01(\tR\tTeePubKey\x12\x14\n\x05Nonce\x18\
-    \x02\x20\x01(\tR\x05Nonce\x12$\n\rHashAlgorithm\x18\x03\x20\x01(\tR\rHas\
-    hAlgorithm\"1\n\x13GetEvidenceResponse\x12\x1a\n\x08Evidence\x18\x01\x20\
-    \x01(\x0cR\x08Evidence\"/\n\x0fGetTokenRequest\x12\x1c\n\tTokenType\x18\
-    \x01\x20\x01(\tR\tTokenType\"(\n\x10GetTokenResponse\x12\x14\n\x05Token\
-    \x18\x01\x20\x01(\x0cR\x05Token\"\xae\x01\n\x1fExtendRuntimeMeasurementR\
-    equest\x12\x16\n\x06Domain\x18\x01\x20\x01(\tR\x06Domain\x12\x1c\n\tOper\
-    ation\x18\x02\x20\x01(\tR\tOperation\x12\x18\n\x07Content\x18\x03\x20\
-    \x01(\tR\x07Content\x12)\n\rRegisterIndex\x18\x04\x20\x01(\x04H\0R\rRegi\
-    sterIndex\x88\x01\x01B\x10\n\x0e_RegisterIndex\"\"\n\x20ExtendRuntimeMea\
-    surementResponse\"K\n\x11InitDataPlaintext\x12\x18\n\x07Content\x18\x01\
-    \x20\x01(\x0cR\x07Content\x12\x1c\n\tAlgorithm\x18\x02\x20\x01(\tR\tAlgo\
-    rithm\"-\n\x13BindInitDataRequest\x12\x16\n\x06Digest\x18\x01\x20\x01(\
-    \x0cR\x06Digest\"\x16\n\x14BindInitDataResponse\"\x13\n\x11GetTeeTypeReq\
-    uest\"&\n\x12GetTeeTypeResponse\x12\x10\n\x03tee\x18\x01\x20\x01(\tR\x03\
-    tee2\xf0\x05\n\x17AttestationAgentService\x12\\\n\x0bGetEvidence\x12%.at\
-    testation_agent.GetEvidenceRequest\x1a&.attestation_agent.GetEvidenceRes\
-    ponse\x12n\n\x14GetCompositeEvidence\x12..attestation_agent.GetComposite\
-    EvidenceRequest\x1a&.attestation_agent.GetEvidenceResponse\x12p\n\x15Get\
-    AdditionalEvidence\x12/.attestation_agent.GetAdditionalEvidenceRequest\
-    \x1a&.attestation_agent.GetEvidenceResponse\x12S\n\x08GetToken\x12\".att\
-    estation_agent.GetTokenRequest\x1a#.attestation_agent.GetTokenResponse\
-    \x12\x83\x01\n\x18ExtendRuntimeMeasurement\x122.attestation_agent.Extend\
-    RuntimeMeasurementRequest\x1a3.attestation_agent.ExtendRuntimeMeasuremen\
-    tResponse\x12_\n\x0cBindInitData\x12&.attestation_agent.BindInitDataRequ\
-    est\x1a'.attestation_agent.BindInitDataResponse\x12Y\n\nGetTeeType\x12$.\
-    attestation_agent.GetTeeTypeRequest\x1a%.attestation_agent.GetTeeTypeRes\
-    ponseb\x06proto3\
+    \x20\x01(\x0cR\x0bRuntimeData\"1\n\x13GetEvidenceResponse\x12\x1a\n\x08E\
+    vidence\x18\x01\x20\x01(\x0cR\x08Evidence\"/\n\x0fGetTokenRequest\x12\
+    \x1c\n\tTokenType\x18\x01\x20\x01(\tR\tTokenType\"(\n\x10GetTokenRespons\
+    e\x12\x14\n\x05Token\x18\x01\x20\x01(\x0cR\x05Token\"\xae\x01\n\x1fExten\
+    dRuntimeMeasurementRequest\x12\x16\n\x06Domain\x18\x01\x20\x01(\tR\x06Do\
+    main\x12\x1c\n\tOperation\x18\x02\x20\x01(\tR\tOperation\x12\x18\n\x07Co\
+    ntent\x18\x03\x20\x01(\tR\x07Content\x12)\n\rRegisterIndex\x18\x04\x20\
+    \x01(\x04H\0R\rRegisterIndex\x88\x01\x01B\x10\n\x0e_RegisterIndex\"\"\n\
+    \x20ExtendRuntimeMeasurementResponse\"K\n\x11InitDataPlaintext\x12\x18\n\
+    \x07Content\x18\x01\x20\x01(\x0cR\x07Content\x12\x1c\n\tAlgorithm\x18\
+    \x02\x20\x01(\tR\tAlgorithm\"-\n\x13BindInitDataRequest\x12\x16\n\x06Dig\
+    est\x18\x01\x20\x01(\x0cR\x06Digest\"\x16\n\x14BindInitDataResponse\"\
+    \x13\n\x11GetTeeTypeRequest\"&\n\x12GetTeeTypeResponse\x12\x10\n\x03tee\
+    \x18\x01\x20\x01(\tR\x03tee2\x80\x05\n\x17AttestationAgentService\x12\\\
+    \n\x0bGetEvidence\x12%.attestation_agent.GetEvidenceRequest\x1a&.attesta\
+    tion_agent.GetEvidenceResponse\x12p\n\x15GetAdditionalEvidence\x12/.atte\
+    station_agent.GetAdditionalEvidenceRequest\x1a&.attestation_agent.GetEvi\
+    denceResponse\x12S\n\x08GetToken\x12\".attestation_agent.GetTokenRequest\
+    \x1a#.attestation_agent.GetTokenResponse\x12\x83\x01\n\x18ExtendRuntimeM\
+    easurement\x122.attestation_agent.ExtendRuntimeMeasurementRequest\x1a3.a\
+    ttestation_agent.ExtendRuntimeMeasurementResponse\x12_\n\x0cBindInitData\
+    \x12&.attestation_agent.BindInitDataRequest\x1a'.attestation_agent.BindI\
+    nitDataResponse\x12Y\n\nGetTeeType\x12$.attestation_agent.GetTeeTypeRequ\
+    est\x1a%.attestation_agent.GetTeeTypeResponseb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
@@ -1711,10 +1548,9 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
     file_descriptor.get(|| {
         let generated_file_descriptor = generated_file_descriptor_lazy.get(|| {
             let mut deps = ::std::vec::Vec::with_capacity(0);
-            let mut messages = ::std::vec::Vec::with_capacity(13);
+            let mut messages = ::std::vec::Vec::with_capacity(12);
             messages.push(GetEvidenceRequest::generated_message_descriptor_data());
             messages.push(GetAdditionalEvidenceRequest::generated_message_descriptor_data());
-            messages.push(GetCompositeEvidenceRequest::generated_message_descriptor_data());
             messages.push(GetEvidenceResponse::generated_message_descriptor_data());
             messages.push(GetTokenRequest::generated_message_descriptor_data());
             messages.push(GetTokenResponse::generated_message_descriptor_data());
