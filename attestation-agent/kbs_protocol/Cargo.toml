@@ -62,6 +62,7 @@ az-snp-vtpm-attester = ["attester/az-snp-vtpm-attester"]
 az-tdx-vtpm-attester = ["attester/az-tdx-vtpm-attester"]
 snp-attester = ["attester/snp-attester"]
 csv-attester = ["attester/csv-attester"]
+hygon-dcu-attester = ["attester/hygon-dcu-attester"]
 cca-attester = ["attester/cca-attester"]
 se-attester = ["attester/se-attester"]
 
