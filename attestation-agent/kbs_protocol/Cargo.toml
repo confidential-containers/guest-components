@@ -53,7 +53,10 @@ aa_ttrpc = ["ttrpc-codegen", "passport", "ttrpc/async", "protobuf"]
 background_check = ["tokio/time"]
 all-attesters = ["attester/all-attesters"]
 tdx-attester = ["attester/tdx-attester"]
-tdx-attester-libtdx = ["attester/tdx-attester", "attester/tdx-attest-dcap-ioctls"]
+tdx-attester-libtdx = [
+    "attester/tdx-attester",
+    "attester/tdx-attest-dcap-ioctls",
+]
 sgx-attester = ["attester/sgx-attester"]
 az-snp-vtpm-attester = ["attester/az-snp-vtpm-attester"]
 az-tdx-vtpm-attester = ["attester/az-tdx-vtpm-attester"]

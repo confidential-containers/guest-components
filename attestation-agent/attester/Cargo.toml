@@ -9,8 +9,12 @@ license = "Apache-2.0"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-az-snp-vtpm = { version = "0.7.1", default-features = false, features = ["attester"], optional = true }
-az-tdx-vtpm = { version = "0.7.0", default-features = false, features = ["attester"], optional = true }
+az-snp-vtpm = { version = "0.7.1", default-features = false, features = [
+    "attester",
+], optional = true }
+az-tdx-vtpm = { version = "0.7.0", default-features = false, features = [
+    "attester",
+], optional = true }
 base64.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
 cfg-if.workspace = true
@@ -21,11 +25,16 @@ kbs-types.workspace = true
 log.workspace = true
 occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.7", optional = true }
 pv = { version = "0.10.0", package = "s390_pv", optional = true }
-scroll = { version = "0.12.0", default-features = false, features = ["derive", "std"], optional = true }
+scroll = { version = "0.12.0", default-features = false, features = [
+    "derive",
+    "std",
+], optional = true }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
-sev = { version = "6.2.1", default-features = false, features = ["snp"], optional = true }
+sev = { version = "6.2.1", default-features = false, features = [
+    "snp",
+], optional = true }
 sha2.workspace = true
 strum.workspace = true
 tdx-attest-rs = { git = "https://github.com/intel/SGXDataCenterAttestationPrimitives", tag = "DCAP_1.23", optional = true }
@@ -74,6 +83,6 @@ csv-attester = ["hygon", "codicon", "hyper", "hyper-tls", "tokio"]
 hygon-dcu-attester = ["hygon"]
 hygon = ["csv-rs"]
 cca-attester = ["tsm-report"]
-se-attester  = ["pv"]
+se-attester = ["pv"]
 
 bin = ["tokio/rt", "tokio/macros", "clap"]
