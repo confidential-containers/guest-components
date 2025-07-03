@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use anyhow::bail;
 use async_trait::async_trait;
-use crypto::HashAlgorithm;
+use kbs_types::HashAlgorithm;
 use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response, Tee};
 use log::{debug, warn};
 use resource_uri::ResourceUri;
@@ -310,7 +310,7 @@ impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
 
 #[cfg(test)]
 mod test {
-    use crypto::HashAlgorithm;
+    use kbs_types::HashAlgorithm;
     use rstest::rstest;
     use serde_json::{json, Value};
     use std::{env, path::PathBuf, time::Duration};

@@ -6,7 +6,7 @@
 use ::ttrpc::proto::Code;
 use async_trait::async_trait;
 use attestation_agent::{AttestationAPIs, AttestationAgent};
-use crypto::HashAlgorithm;
+use kbs_types::HashAlgorithm;
 use kbs_types::TeePubKey;
 use log::{debug, error};
 use std::str::FromStr;

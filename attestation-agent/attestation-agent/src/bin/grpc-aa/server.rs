@@ -14,7 +14,7 @@ use attestation::{
     GetTokenRequest, GetTokenResponse,
 };
 use attestation_agent::{AttestationAPIs, AttestationAgent};
-use crypto::HashAlgorithm;
+use kbs_types::HashAlgorithm;
 use kbs_types::TeePubKey;
 use log::{debug, error};
 use std::net::SocketAddr;

@@ -5,7 +5,7 @@
 
 use async_trait::async_trait;
 use attester::CompositeAttester;
-use crypto::HashAlgorithm;
+use kbs_types::HashAlgorithm;
 use kbs_types::{Tee, TeePubKey};
 
 use super::EvidenceProvider;

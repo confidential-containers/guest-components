@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
 
-use crypto::HashAlgorithm;
+use kbs_types::HashAlgorithm;
 
 pub mod sample;
 pub mod sample_device;
