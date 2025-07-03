@@ -8,6 +8,7 @@ use std::time::Duration;
 use anyhow::{bail, Context};
 use async_trait::async_trait;
 use attester::TeeEvidence;
+use canon_json::CanonicalFormatter;
 use crypto::HashAlgorithm;
 use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response, Tee, TeePubKey};
 use log::{debug, warn};
@@ -97,6 +98,13 @@ fn get_hash_algorithm(extra_params: serde_json::Value) -> Result<HashAlgorithm> 
     Ok(algorithm)
 }
 
+fn serialize_json_canonically<T: Serialize>(value: T) -> anyhow::Result<Vec<u8>> {
+    let mut buf = Vec::new();
+    let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
+    value.serialize(&mut ser)?;
+    Ok(buf)
+}
+
 async fn build_request(tee: Tee) -> Request {
     let extra_params = get_request_extra_params().await;
 
@@ -163,16 +171,15 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         hash_algorithm: HashAlgorithm,
         tee: Tee,
     ) -> anyhow::Result<CompositeEvidence> {
-        let device_runtime_data =
-            serde_json::to_string(&runtime_data).context("serialize runtime data failed")?;
+        let device_runtime_data = serialize_json_canonically(&runtime_data)?;
 
-        let device_runtime_data_hash = hash_algorithm.digest(device_runtime_data.as_bytes());
+        let device_runtime_data_hash = hash_algorithm.digest(&device_runtime_data);
         let additional_evidence = self
             .provider
-            .get_additional_evidences(device_runtime_data_hash)
+            .get_additional_evidence(device_runtime_data_hash)
             .await?;
 
-        debug!("get additional evidence with challenge: {device_runtime_data}");
+        debug!("get additional evidence with challenge: {device_runtime_data:?}");
 
         // Calculate the runtime data for the primary attester, which includes
         // the device evidence retrieved above.
@@ -191,9 +198,9 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
                     "nonce": runtime_data.nonce,
                     "additional-evidence": additional_evidence,
                 });
-                let primary_runtime_data = serde_json::to_string(&primary_runtime_data)
+                let primary_runtime_data = serialize_json_canonically(&primary_runtime_data)
                     .context("serialize runtime data failed")?;
-                hash_algorithm.digest(primary_runtime_data.as_bytes())
+                hash_algorithm.digest(&primary_runtime_data)
             }
         };
 
