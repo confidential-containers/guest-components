@@ -961,6 +961,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "canon-json"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5ae9f90437d2e2efba2a6c75b8279aa6b8f2f4017e0a4aeb64a76cd9d3a2bab"
+dependencies = [
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "caps"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3437,6 +3449,7 @@ dependencies = [
  "async-trait",
  "attester",
  "base64 0.22.1",
+ "canon-json",
  "clap",
  "crypto",
  "env_logger",
