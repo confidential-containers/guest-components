@@ -36,6 +36,9 @@ pub mod snp;
 #[cfg(feature = "csv-attester")]
 pub mod csv;
 
+#[cfg(feature = "hygon-dcu-attester")]
+pub mod hygon_dcu;
+
 #[cfg(feature = "tsm-report")]
 pub mod tsm_report;
 
@@ -65,6 +68,8 @@ impl TryFrom<Tee> for BoxedAttester {
             Tee::Snp => Box::<snp::SnpAttester>::default(),
             #[cfg(feature = "csv-attester")]
             Tee::Csv => Box::<csv::CsvAttester>::default(),
+            #[cfg(feature = "hygon-dcu-attester")]
+            Tee::HygonDcu => Box::<hygon_dcu::DcuAttester>::default(),
             #[cfg(feature = "se-attester")]
             Tee::Se => Box::<se::SeAttester>::default(),
             _ => bail!("TEE is not supported!"),
@@ -174,6 +179,11 @@ pub fn detect_attestable_devices() -> Vec<Tee> {
 
     if sample_device::detect_platform() {
         additional_devices.push(Tee::SampleDevice);
+    }
+
+    #[cfg(feature = "hygon-dcu-attester")]
+    if hygon_dcu::detect_platform() {
+        additional_devices.push(Tee::HygonDcu);
     }
 
     additional_devices
