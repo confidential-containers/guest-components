@@ -274,15 +274,22 @@ impl ImageClient {
         let reference = Reference::try_from(image_url)
             .map_err(|source| PullImageError::IllegalImageReference { source })?;
 
-        let tasks = match &self.registry_handler {
-            Some(handler) => handler
+        let tasks = if let Some(config) = &self.config.registry_config {
+            let registry_handler = RegistryHandler::new(config.clone()).unwrap();
+            registry_handler
                 .process(reference)
-                .map_err(|source| PullImageError::IllegalRegistryConfigurationFormat { source })?,
-            None => vec![ImagePullTask {
-                image_reference: reference,
-                use_http: false,
-                task_type: TaskType::Origininal,
-            }],
+                .map_err(|source| PullImageError::IllegalRegistryConfigurationFormat { source })?
+        } else {
+            match &self.registry_handler {
+                Some(handler) => handler.process(reference).map_err(|source| {
+                    PullImageError::IllegalRegistryConfigurationFormat { source }
+                })?,
+                None => vec![ImagePullTask {
+                    image_reference: reference,
+                    use_http: false,
+                    task_type: TaskType::Origininal,
+                }],
+            }
         };
 
         let mut tried_images_and_errors = Vec::new();

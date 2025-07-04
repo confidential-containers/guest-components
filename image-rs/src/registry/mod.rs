@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::image::{ImagePullTask, TaskType};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 struct Mirror {
     /// The mirror location
     location: String,
@@ -29,7 +29,7 @@ struct Mirror {
 
 /// Namespaced `[[registry]]` settings declared as
 /// <https://github.com/containers/image/blob/main/docs/containers-registries.conf.5.md#namespaced-registry-settings>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Registry {
     /// A prefix of the user-specified image name to be replaced
     /// Format like:
@@ -60,7 +60,7 @@ pub struct Registry {
     // TODO: add aliases
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Config {
     #[serde(default = "unqualified_search_registries_default")]
     #[serde(rename = "unqualified-search-registries")]
@@ -113,6 +113,11 @@ enum MatchResult {
 }
 
 impl RegistryHandler {
+    pub fn new(mut config: Config) -> Result<Self> {
+        config.validate_and_tidy().unwrap();
+        Ok(Self { config })
+    }
+
     pub fn from_vec(s: Vec<u8>) -> Result<Self> {
         let registry_configuration = String::from_utf8(s)?;
         let mut config: Config = toml::from_str(&registry_configuration)?;
