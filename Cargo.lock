@@ -961,6 +961,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "canon-json"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5ae9f90437d2e2efba2a6c75b8279aa6b8f2f4017e0a4aeb64a76cd9d3a2bab"
+dependencies = [
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "caps"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3417,8 +3429,7 @@ dependencies = [
 [[package]]
 name = "kbs-types"
 version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2be9fa1f64b3c8da5043cdc634007c6f7444b3ef1f3668f66b34180bdb398ec7"
+source = "git+https://github.com/Xynnn007/kbs-types.git?rev=590f371#590f371375580db8c64d8fc971b5517556d819c8"
 dependencies = [
  "base64 0.22.1",
  "serde",
@@ -3434,6 +3445,7 @@ dependencies = [
  "async-trait",
  "attester",
  "base64 0.22.1",
+ "canon-json",
  "clap",
  "crypto",
  "env_logger",

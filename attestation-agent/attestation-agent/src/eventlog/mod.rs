@@ -15,7 +15,7 @@ use std::{
 };
 
 use anyhow::{bail, Context, Result};
-use attester::CompositeAttester;
+use attester::BoxedAttester;
 use const_format::concatcp;
 
 use crypto::HashAlgorithm;
@@ -30,7 +30,7 @@ pub const EVENTLOG_PATH: &str = concatcp!(EVENTLOG_PARENT_DIR_PATH, "/eventlog")
 
 pub struct EventLog {
     writer: Box<dyn Writer>,
-    rtmr_extender: Arc<CompositeAttester>,
+    rtmr_extender: Arc<BoxedAttester>,
     alg: HashAlgorithm,
     pcr: u64,
 }
@@ -55,7 +55,7 @@ impl Writer for FileWriter {
 
 impl EventLog {
     pub async fn new(
-        rtmr_extender: Arc<CompositeAttester>,
+        rtmr_extender: Arc<BoxedAttester>,
         alg: HashAlgorithm,
         pcr: u64,
     ) -> Result<Self> {
@@ -242,7 +242,7 @@ impl Display for LogEntry<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use attester::CompositeAttester;
+    use attester::detect_tee_type;
     use rstest::rstest;
     use std::sync::{Arc, Mutex};
 
@@ -270,11 +270,13 @@ mod tests {
     async fn test_log_events() {
         let lines = Arc::new(Mutex::new(vec![]));
         let tw = TestWriter(lines.clone());
-        let rtmr_extender = Arc::new(CompositeAttester::new().unwrap());
+        let tee = detect_tee_type();
+        let rtmr_extender =
+            BoxedAttester::try_from(tee).expect("Failed to create BoxedAttester from Tee type");
         let mut el = EventLog {
             writer: Box::new(tw),
             pcr: 17,
-            rtmr_extender,
+            rtmr_extender: Arc::new(rtmr_extender),
             alg: HashAlgorithm::Sha256,
         };
         let i = LogEntry::Init {
@@ -331,7 +333,9 @@ mod tests {
         if std::path::Path::new(EVENTLOG_PATH).exists() {
             std::fs::remove_file(EVENTLOG_PATH).unwrap();
         }
-        let rtmr_extender = CompositeAttester::new().unwrap();
+        let tee = detect_tee_type();
+        let rtmr_extender =
+            BoxedAttester::try_from(tee).expect("Failed to create BoxedAttester from Tee type");
         let mut eventlog = EventLog::new(Arc::new(rtmr_extender), HashAlgorithm::Sha256, 17)
             .await
             .unwrap();
@@ -365,8 +369,10 @@ mod tests {
         f.sync_all().unwrap();
         drop(f);
 
-        let rtmr_extender = Arc::new(CompositeAttester::new().unwrap());
-        let mut eventlog = EventLog::new(rtmr_extender, HashAlgorithm::Sha256, 17)
+        let tee = detect_tee_type();
+        let rtmr_extender =
+            BoxedAttester::try_from(tee).expect("Failed to create BoxedAttester from Tee type");
+        let mut eventlog = EventLog::new(Arc::new(rtmr_extender), HashAlgorithm::Sha256, 17)
             .await
             .unwrap();
         eventlog
