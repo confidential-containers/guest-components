@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 
+use crate::registry::Config as RegistryConfig;
 use crate::snapshots::SnapshotType;
 
 /// By default use a work dir in `/run` because for confidential guests `/run`
@@ -126,6 +127,14 @@ pub struct ImageConfig {
     #[serde(default = "Option::default")]
     pub registry_configuration_uri: Option<String>,
 
+    /// Registry configuration supports registry blocking, mirroring and remapping rules.
+    /// This field points to a registry configuration file, which can either be stored locally
+    /// in the rootfs or retrieved from initdata.
+    ///
+    /// This value defaults to `None`.
+    #[serde(default = "Option::default")]
+    pub registry_config: Option<RegistryConfig>,
+
     /// The maximum number of layers downloaded concurrently when
     /// pulling one specific image.
     ///
@@ -192,6 +201,7 @@ impl Default for ImageConfig {
             sigstore_config_uri: None,
             authenticated_registry_credentials_uri: None,
             registry_configuration_uri: None,
+            registry_config: None,
             image_pull_proxy: None,
             extra_root_certificates: Vec::new(),
 
@@ -278,6 +288,7 @@ impl ImageConfig {
             sigstore_config_uri: None,
             authenticated_registry_credentials_uri: None,
             registry_configuration_uri: None,
+            registry_config: None,
             image_pull_proxy: None,
             extra_root_certificates: Vec::new(),
 
