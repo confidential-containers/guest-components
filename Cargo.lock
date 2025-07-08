@@ -3078,7 +3078,7 @@ dependencies = [
  "log",
  "loopdev",
  "nix 0.30.1",
- "nydus-api",
+ "nydus-api 0.4.0",
  "nydus-service",
  "oci-client",
  "oci-spec",
@@ -3970,6 +3970,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "nydus-api"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf5bfc5122bc63afba2a66b820ea9dd64f3f6776e3116b2b4faf900b547ce243"
+dependencies = [
+ "libc",
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "toml 0.5.11",
+]
+
+[[package]]
 name = "nydus-rafs"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3983,7 +3997,7 @@ dependencies = [
  "libc",
  "log",
  "nix 0.24.3",
- "nydus-api",
+ "nydus-api 0.3.1",
  "nydus-storage",
  "nydus-utils",
  "serde",
@@ -4002,7 +4016,7 @@ dependencies = [
  "log",
  "mio 0.8.11",
  "nix 0.24.3",
- "nydus-api",
+ "nydus-api 0.3.1",
  "nydus-rafs",
  "nydus-storage",
  "nydus-utils",
@@ -4030,7 +4044,7 @@ dependencies = [
  "libc",
  "log",
  "nix 0.24.3",
- "nydus-api",
+ "nydus-api 0.3.1",
  "nydus-utils",
  "reqwest 0.11.27",
  "serde",
@@ -4057,7 +4071,7 @@ dependencies = [
  "lz4",
  "lz4-sys",
  "nix 0.24.3",
- "nydus-api",
+ "nydus-api 0.3.1",
  "openssl",
  "serde",
  "serde_json",
