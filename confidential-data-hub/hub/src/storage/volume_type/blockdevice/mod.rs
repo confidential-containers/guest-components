@@ -17,8 +17,8 @@ use strum::{Display, EnumString};
 
 #[derive(EnumString, Serialize, Deserialize, Display, Debug, PartialEq, Eq)]
 pub enum BlockDeviceEncryptType {
-    #[strum(serialize = "luks")]
-    LUKS,
+    #[strum(serialize = "luks2")]
+    LUKS2,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -84,7 +84,7 @@ impl BlockDevice {
         let bd_parameter: BlockDeviceParameters = serde_json::from_str(&parameters)?;
 
         match bd_parameter.encryption_type {
-            BlockDeviceEncryptType::LUKS => {
+            BlockDeviceEncryptType::LUKS2 => {
                 luks::LuksInterpreter
                     .secure_device_mount(bd_parameter, mount_point)
                     .await?;
