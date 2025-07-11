@@ -113,6 +113,11 @@ enum MatchResult {
 }
 
 impl RegistryHandler {
+    pub fn new(mut config: Config) -> Result<Self> {
+        config.validate_and_tidy()?;
+        Ok(Self { config })
+    }
+
     pub fn from_vec(s: Vec<u8>) -> Result<Self> {
         let registry_configuration = String::from_utf8(s)?;
         let mut config: Config = toml::from_str(&registry_configuration)?;
