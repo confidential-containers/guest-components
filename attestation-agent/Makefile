@@ -131,6 +131,7 @@ lint-s390x:
 lint-aarch64:
 	cd attestation-agent && cargo clippy --no-default-features --features openssl,rust-crypto,cca-attester,kbs,coco_as,bin,grpc,ttrpc
 
+
 install: 
 	install -D -m0755 $(TARGET) $(DESTDIR)/$(BIN_NAME)
 
@@ -139,6 +140,7 @@ uninstall:
 
 clean:
 	cargo clean
+
 
 help:
 	@echo "==========================Help========================================="
