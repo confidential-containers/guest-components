@@ -75,6 +75,7 @@ all-attesters = [
     "snp-attester",
     "se-attester",
     "cca-attester",
+    "tpm-attester",
 ]
 tdx-attester = ["kbs_protocol?/tdx-attester", "attester/tdx-attester"]
 tdx-attester-libtdx = [
@@ -99,6 +100,7 @@ hygon-dcu-attester = [
     "kbs_protocol?/hygon-dcu-attester",
     "attester/hygon-dcu-attester",
 ]
+tpm-attester = ["kbs_protocol?/tpm-attester", "attester/tpm-attester"]
 
 # Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
 rust-crypto = ["kbs_protocol?/rust-crypto"]
