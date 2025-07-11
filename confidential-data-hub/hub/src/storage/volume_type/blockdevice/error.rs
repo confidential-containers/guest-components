@@ -12,8 +12,8 @@ pub enum BlockDeviceError {
     #[error("Error when getting encrypt/decrypt keys")]
     GetKeysFailure(#[from] anyhow::Error),
 
-    #[error("LUKS decryption mount failed")]
-    LUKSfsMountFailed,
+    #[error("LUKS2 decryption mount failed")]
+    LUKS2fsMountFailed,
 
     #[error("I/O error")]
     IOError(#[from] std::io::Error),
