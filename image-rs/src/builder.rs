@@ -146,15 +146,23 @@ impl ClientBuilder {
             }
         };
 
-        let registry_handler = match &self.config.registry_configuration_uri {
-            Some(uri) => {
-                info!("getting registry configuration from {uri} ...");
-                let registry_configuration = resource_provider.get_resource(uri).await?;
-                let registry_handler = RegistryHandler::from_vec(registry_configuration)
-                    .map_err(|source| BuilderError::InvalidRegistryConfiguration { source })?;
-                Some(registry_handler)
+        let registry_handler = if let Some(config) = &self.config.registry_config {
+            info!("using registry configuration from CDH config file");
+            Some(
+                RegistryHandler::new(config.clone())
+                    .map_err(|source| BuilderError::InvalidRegistryConfiguration { source })?,
+            )
+        } else {
+            match &self.config.registry_configuration_uri {
+                Some(uri) => {
+                    info!("getting registry configuration from {uri} ...");
+                    let registry_configuration = resource_provider.get_resource(uri).await?;
+                    let registry_handler = RegistryHandler::from_vec(registry_configuration)
+                        .map_err(|source| BuilderError::InvalidRegistryConfiguration { source })?;
+                    Some(registry_handler)
+                }
+                None => None,
             }
-            None => None,
         };
 
         let meta_store = match MetaStore::try_from(self.config.work_dir.join(METAFILE).as_path()) {
