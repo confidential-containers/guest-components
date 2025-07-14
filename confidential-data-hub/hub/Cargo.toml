@@ -46,6 +46,7 @@ image-rs = { path = "../../image-rs", default-features = false, features = ["kat
 kms = { path = "../kms", default-features = false }
 libcryptsetup-rs = { version = "0.13.1", optional = true, features = ["mutex"] }
 log.workspace = true
+nix.workspace = true
 prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
 rand.workspace = true
@@ -65,6 +66,7 @@ tokio = { workspace = true, features = [
 ] }
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
+uuid = { workspace = true, features = ["fast-rng", "v4"] }
 zeroize.workspace = true
 
 [build-dependencies]
