@@ -26,7 +26,7 @@ pub enum Volume {
 /// Indicating a mount point and its parameters.
 #[derive(PartialEq, Clone, Debug, Deserialize)]
 pub struct Storage {
-    /// Driver nameof the mount plugin.
+    /// Driver name of the mount plugin.
     pub volume_type: String,
 
     /// A key-value map to provide extra mount settings.
