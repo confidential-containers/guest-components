@@ -44,7 +44,7 @@ pub struct Storage {
 pub trait SecureMount {
     /// Mount the volume to `mount_point` due to the given options.
     async fn mount(
-        &self,
+        &mut self,
         options: &HashMap<String, String>,
         flags: &[String],
         mount_point: &str,
@@ -57,13 +57,13 @@ impl Storage {
         match volume_type {
             #[cfg(feature = "aliyun")]
             Volume::AliOss => {
-                let oss = aliyun::Oss {};
+                let mut oss = aliyun::Oss {};
                 oss.mount(&self.options, &self.flags, &self.mount_point)
                     .await?;
                 Ok(self.mount_point.clone())
             }
             Volume::BlockDevice => {
-                let bd = blockdevice::BlockDevice {};
+                let mut bd = blockdevice::BlockDevice {};
                 bd.mount(&self.options, &self.flags, &self.mount_point)
                     .await?;
                 Ok(self.mount_point.clone())
