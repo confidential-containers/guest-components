@@ -256,7 +256,7 @@ impl SecureMount for Oss {
     ///
     /// This is a wrapper for inner function to convert error type.
     async fn mount(
-        &self,
+        &mut self,
         options: &HashMap<String, String>,
         flags: &[String],
         mount_point: &str,
