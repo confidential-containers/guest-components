@@ -706,9 +706,6 @@ impl ::protobuf::reflect::ProtobufValue for SecureMountRequest {
 // @@protoc_insertion_point(message:api.SecureMountResponse)
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct SecureMountResponse {
-    // message fields
-    // @@protoc_insertion_point(field:api.SecureMountResponse.mount_path)
-    pub mount_path: ::std::string::String,
     // special fields
     // @@protoc_insertion_point(special_field:api.SecureMountResponse.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
@@ -726,13 +723,8 @@ impl SecureMountResponse {
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(1);
+        let mut fields = ::std::vec::Vec::with_capacity(0);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
-        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
-            "mount_path",
-            |m: &SecureMountResponse| { &m.mount_path },
-            |m: &mut SecureMountResponse| { &mut m.mount_path },
-        ));
         ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<SecureMountResponse>(
             "SecureMountResponse",
             fields,
@@ -751,9 +743,6 @@ impl ::protobuf::Message for SecureMountResponse {
     fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
         while let Some(tag) = is.read_raw_tag_or_eof()? {
             match tag {
-                10 => {
-                    self.mount_path = is.read_string()?;
-                },
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
                 },
@@ -766,18 +755,12 @@ impl ::protobuf::Message for SecureMountResponse {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u64 {
         let mut my_size = 0;
-        if !self.mount_path.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.mount_path);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
         my_size
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
-        if !self.mount_path.is_empty() {
-            os.write_string(1, &self.mount_path)?;
-        }
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -795,13 +778,11 @@ impl ::protobuf::Message for SecureMountResponse {
     }
 
     fn clear(&mut self) {
-        self.mount_path.clear();
         self.special_fields.clear();
     }
 
     fn default_instance() -> &'static SecureMountResponse {
         static instance: SecureMountResponse = SecureMountResponse {
-            mount_path: ::std::string::String::new(),
             special_fields: ::protobuf::SpecialFields::new(),
         };
         &instance
@@ -1098,19 +1079,18 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     MountRequest.OptionsEntryR\x07options\x12\x14\n\x05flags\x18\x03\x20\x03\
     (\tR\x05flags\x12\x1f\n\x0bmount_point\x18\x04\x20\x01(\tR\nmountPoint\
     \x1a:\n\x0cOptionsEntry\x12\x10\n\x03key\x18\x01\x20\x01(\tR\x03key\x12\
-    \x14\n\x05value\x18\x02\x20\x01(\tR\x05value:\x028\x01\"4\n\x13SecureMou\
-    ntResponse\x12\x1d\n\nmount_path\x18\x01\x20\x01(\tR\tmountPath\"P\n\x10\
-    ImagePullRequest\x12\x1b\n\timage_url\x18\x01\x20\x01(\tR\x08imageUrl\
-    \x12\x1f\n\x0bbundle_path\x18\x02\x20\x01(\tR\nbundlePath\"<\n\x11ImageP\
-    ullResponse\x12'\n\x0fmanifest_digest\x18\x01\x20\x01(\tR\x0emanifestDig\
-    est2V\n\x13SealedSecretService\x12?\n\x0cUnsealSecret\x12\x16.api.Unseal\
-    SecretInput\x1a\x17.api.UnsealSecretOutput2V\n\x12GetResourceService\x12\
-    @\n\x0bGetResource\x12\x17.api.GetResourceRequest\x1a\x18.api.GetResourc\
-    eResponse2V\n\x12SecureMountService\x12@\n\x0bSecureMount\x12\x17.api.Se\
-    cureMountRequest\x1a\x18.api.SecureMountResponse2N\n\x10ImagePullService\
-    \x12:\n\tPullImage\x12\x15.api.ImagePullRequest\x1a\x16.api.ImagePullRes\
-    ponseBaZ_github.com/confidential-containers/guest-components/confidentia\
-    l-data-hub/golang/pkg/api/cdhapib\x06proto3\
+    \x14\n\x05value\x18\x02\x20\x01(\tR\x05value:\x028\x01\"\x15\n\x13Secure\
+    MountResponse\"P\n\x10ImagePullRequest\x12\x1b\n\timage_url\x18\x01\x20\
+    \x01(\tR\x08imageUrl\x12\x1f\n\x0bbundle_path\x18\x02\x20\x01(\tR\nbundl\
+    ePath\"<\n\x11ImagePullResponse\x12'\n\x0fmanifest_digest\x18\x01\x20\
+    \x01(\tR\x0emanifestDigest2V\n\x13SealedSecretService\x12?\n\x0cUnsealSe\
+    cret\x12\x16.api.UnsealSecretInput\x1a\x17.api.UnsealSecretOutput2V\n\
+    \x12GetResourceService\x12@\n\x0bGetResource\x12\x17.api.GetResourceRequ\
+    est\x1a\x18.api.GetResourceResponse2V\n\x12SecureMountService\x12@\n\x0b\
+    SecureMount\x12\x17.api.SecureMountRequest\x1a\x18.api.SecureMountRespon\
+    se2N\n\x10ImagePullService\x12:\n\tPullImage\x12\x15.api.ImagePullReques\
+    t\x1a\x16.api.ImagePullResponseBaZ_github.com/confidential-containers/gu\
+    est-components/confidential-data-hub/golang/pkg/api/cdhapib\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
