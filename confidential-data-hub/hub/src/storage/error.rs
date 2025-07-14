@@ -12,13 +12,13 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Error, Debug)]
 pub enum Error {
     #[cfg(feature = "aliyun")]
-    #[error("Error when mounting Aliyun OSS")]
+    #[error("Error when mounting Aliyun OSS: {0}")]
     AliyunOssError(#[from] volume_type::aliyun::error::AliyunError),
 
     #[cfg(feature = "luks2")]
-    #[error("Error when mounting Block device")]
+    #[error("Error when mounting Block device: {0}")]
     BlockDeviceError(#[from] volume_type::blockdevice::error::BlockDeviceError),
 
-    #[error("Failed to recognize the storage type")]
+    #[error("Failed to recognize the storage type: {0}")]
     StorageTypeNotRecognized(#[from] strum::ParseError),
 }
