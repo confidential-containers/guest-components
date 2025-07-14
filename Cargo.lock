@@ -667,6 +667,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "bindgen"
+version = "0.71.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f58bf3d7db68cfbac37cfc485a8d711e87e064c3d0fe0435b92f7a407f9d6b3"
+dependencies = [
+ "bitflags 2.9.0",
+ "cexpr",
+ "clang-sys",
+ "itertools 0.12.1",
+ "log",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "rustc-hash 2.1.1",
+ "shlex",
+ "syn 2.0.99",
+]
+
+[[package]]
 name = "binstring"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1260,6 +1280,7 @@ dependencies = [
  "env_logger",
  "image-rs",
  "kms",
+ "libcryptsetup-rs",
  "log",
  "nix 0.31.1",
  "prost 0.14.3",
@@ -3738,6 +3759,37 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bcc35a38544a891a5f7c865aca548a982ccb3b8650a5b06d0fd33a10283c56fc"
 
 [[package]]
+name = "libcryptsetup-rs"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46ac95eaca7e328bed55c2caf082a81aa8479819b4445efbfc5fe3d2a77e9211"
+dependencies = [
+ "bitflags 2.9.0",
+ "either",
+ "libc",
+ "libcryptsetup-rs-sys",
+ "log",
+ "once_cell",
+ "per-thread-mutex",
+ "pkg-config",
+ "semver",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "libcryptsetup-rs-sys"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d70e7b16c75f442c560d3b9514c6343e8dde6426651745de12868e1500edbc0f"
+dependencies = [
+ "bindgen 0.71.1",
+ "cc",
+ "pkg-config",
+ "semver",
+]
+
+[[package]]
 name = "libloading"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4601,6 +4653,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6305423e0e7738146434843d1694d621cce767262b2a86910beab705e4493d9"
 dependencies = [
  "base64ct",
+]
+
+[[package]]
+name = "per-thread-mutex"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b20d1aaa7fcf3cd5a7b4506c38594d25e122ad45dec6da7f85bac52f3a3e562c"
+dependencies = [
+ "libc",
+ "log",
 ]
 
 [[package]]
