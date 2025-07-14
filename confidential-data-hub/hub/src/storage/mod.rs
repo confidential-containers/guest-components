@@ -5,4 +5,5 @@
 
 pub mod error;
 pub use error::*;
+pub mod drivers;
 pub mod volume_type;
