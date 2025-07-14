@@ -1282,6 +1282,7 @@ dependencies = [
  "tokio",
  "tonic 0.14.2",
  "ttrpc",
+ "uuid",
  "zeroize",
 ]
 
