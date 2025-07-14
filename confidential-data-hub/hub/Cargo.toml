@@ -38,11 +38,13 @@ async-trait.workspace = true
 attestation-agent = { path = "../../attestation-agent/attestation-agent", default-features = false, optional = true }
 base64.workspace = true
 cfg-if.workspace = true
-clap = { workspace = true, features = [ "derive" ], optional = true }
+clap = { workspace = true, features = ["derive"], optional = true }
 config = { workspace = true, optional = true }
 crypto.path = "../../attestation-agent/deps/crypto"
 env_logger = { workspace = true, optional = true }
-image-rs = { path = "../../image-rs", default-features = false, features = ["kata-cc-rustls-tls"] }
+image-rs = { path = "../../image-rs", default-features = false, features = [
+    "kata-cc-rustls-tls",
+] }
 kms = { path = "../kms", default-features = false }
 libcryptsetup-rs = { version = "0.13.1", optional = true, features = ["mutex"] }
 log.workspace = true
