@@ -46,6 +46,7 @@ image-rs = { path = "../../image-rs", default-features = false, features = [
     "kata-cc-rustls-tls",
 ] }
 kms = { path = "../kms", default-features = false }
+libcryptsetup-rs = { version = "0.13.1", optional = true, features = ["mutex"] }
 log.workspace = true
 prost = { workspace = true, optional = true }
 protos = { path = "../../protos", default-features = false, optional = true }
@@ -94,6 +95,10 @@ sev = ["kms/sev"]
 
 # support eHSM stacks (KMS, ...)
 ehsm = []
+
+# support luks2 encrypted block device storage enabled by cryptsetup.
+# It requires to install dependency `libcryptsetup-dev` for ubuntu.
+luks2 = ["libcryptsetup-rs"]
 
 # Binary RPC type
 bin = ["clap", "env_logger"]
