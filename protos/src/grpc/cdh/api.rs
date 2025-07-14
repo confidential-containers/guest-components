@@ -34,11 +34,8 @@ pub struct SecureMountRequest {
     #[prost(string, tag = "4")]
     pub mount_point: ::prost::alloc::string::String,
 }
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct SecureMountResponse {
-    #[prost(string, tag = "1")]
-    pub mount_path: ::prost::alloc::string::String,
-}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SecureMountResponse {}
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ImagePullRequest {
     #[prost(string, tag = "1")]
