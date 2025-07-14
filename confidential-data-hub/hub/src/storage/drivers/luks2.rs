@@ -129,3 +129,70 @@ impl Luks2Formatter {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::Write;
+
+    use serial_test::serial;
+    use zeroize::Zeroizing;
+
+    use crate::storage::drivers::luks2::Luks2Formatter;
+
+    const TEST_PASSPHRASE: &[u8] = b"test";
+    const NAME: &str = "test";
+
+    #[test]
+    #[serial]
+    fn encrypt_open_device_no_integrity() {
+        let mut bin_file = tempfile::NamedTempFile::new().unwrap();
+
+        bin_file
+            .as_file_mut()
+            .write_all(&vec![0; 20 * 1024 * 1024])
+            .unwrap();
+        let path = bin_file.path().to_str().unwrap();
+
+        let passphrase = Zeroizing::new(TEST_PASSPHRASE.to_vec());
+        let luks2_formatter = Luks2Formatter { integrity: false };
+        luks2_formatter
+            .encrypt_device(path, passphrase.clone())
+            .unwrap();
+
+        luks2_formatter.open_device(path, NAME, passphrase).unwrap();
+
+        luks2_formatter.close_device(NAME).unwrap();
+    }
+
+    #[test]
+    #[serial]
+    fn encrypt_open_device_integrity() {
+        let mut bin_file = tempfile::NamedTempFile::new().unwrap();
+
+        bin_file
+            .as_file_mut()
+            .write_all(&vec![0; 20 * 1024 * 1024])
+            .unwrap();
+        let path = bin_file.path().to_str().unwrap();
+
+        let passphrase = Zeroizing::new(TEST_PASSPHRASE.to_vec());
+        let luks2_formatter = Luks2Formatter { integrity: true };
+        luks2_formatter
+            .encrypt_device(path, passphrase.clone())
+            .unwrap();
+
+        luks2_formatter.open_device(path, NAME, passphrase).unwrap();
+
+        luks2_formatter.close_device(NAME).unwrap();
+    }
+
+    /// This test can be used to clean useless devices under /dev/mapper/
+    #[ignore]
+    #[test]
+    fn create_encrypt_close_test() {
+        let luks2_formatter = Luks2Formatter { integrity: false };
+        luks2_formatter
+            .close_device("d7920c40-e7dc-48a4-aff7-6eab51c7d2d5")
+            .unwrap();
+    }
+}
