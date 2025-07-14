@@ -15,6 +15,7 @@ pub enum Error {
     #[error("Error when mounting Aliyun OSS")]
     AliyunOssError(#[from] volume_type::aliyun::error::AliyunError),
 
+    #[cfg(feature = "luks2")]
     #[error("Error when mounting Block device")]
     BlockDeviceError(#[from] volume_type::blockdevice::error::BlockDeviceError),
 

@@ -5,6 +5,7 @@
 
 #[cfg(feature = "aliyun")]
 pub mod aliyun;
+#[cfg(feature = "luks2")]
 pub mod blockdevice;
 use std::{collections::HashMap, str::FromStr};
 
@@ -20,6 +21,9 @@ pub enum Volume {
     #[cfg(feature = "aliyun")]
     #[strum(serialize = "alibaba-cloud-oss")]
     AliOss,
+
+    #[cfg(feature = "luks2")]
+    #[strum(serialize = "block-device")]
     BlockDevice,
 }
 
@@ -62,8 +66,9 @@ impl Storage {
                     .await?;
                 Ok(self.mount_point.clone())
             }
+            #[cfg(feature = "luks2")]
             Volume::BlockDevice => {
-                let mut bd = blockdevice::BlockDevice {};
+                let mut bd = blockdevice::BlockDevice::default();
                 bd.mount(&self.options, &self.flags, &self.mount_point)
                     .await?;
                 Ok(self.mount_point.clone())
