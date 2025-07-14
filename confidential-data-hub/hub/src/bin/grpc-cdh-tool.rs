@@ -136,8 +136,8 @@ async fn main() {
                 options: storage.options,
                 mount_point: storage.mount_point,
             });
-            let res = client.secure_mount(req).await.expect("request to CDH");
-            println!("mount path: {}", res.into_inner().mount_path);
+            let _ = client.secure_mount(req).await.expect("request to CDH");
+            println!("mount succeed.");
         }
     }
 }

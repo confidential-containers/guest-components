@@ -167,11 +167,11 @@ async fn main() {
                 mount_point: storage.mount_point,
                 ..Default::default()
             };
-            let res = client
+            let _ = client
                 .secure_mount(context::with_timeout(args.timeout * NANO_PER_SECOND), &req)
                 .await
                 .expect("request to CDH");
-            println!("mount path: {}", res.mount_path);
+            println!("mount succeeded!");
         }
         Operation::PullImage(arg) => {
             let client = ImagePullServiceClient::new(inner);
