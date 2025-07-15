@@ -177,7 +177,10 @@ mod tests {
     use std::{env, io::Write};
 
     use anyhow::anyhow;
-    use image_rs::config::{ImageConfig, ProxyConfig};
+    use image_rs::{
+        config::{ImageConfig, ProxyConfig},
+        registry::{Config, Mirror, Registry},
+    };
     use rstest::rstest;
     use serial_test::serial;
 
@@ -200,6 +203,18 @@ image_security_policy_uri = "kbs:///default/security-policy/test"
 authenticated_registry_credentials_uri = "kbs:///default/credential/test"
 extra_root_certificates = ["cert1", "cert2"]
 
+[image.registry_config]
+unqualified-search-registries = ["docker.io", "example1.com"]
+
+[[image.registry_config.registry]]
+prefix = "example.com/foo"
+insecure = false
+blocked = false
+location = "internal-registry-for-example.com/bar"
+
+[[image.registry_config.registry.mirror]]
+location = "example-mirror-0.local/mirror-for-foo"
+
 [image.image_pull_proxy]
 https_proxy = "http://127.0.0.1:8080"
     "#,
@@ -215,6 +230,23 @@ https_proxy = "http://127.0.0.1:8080"
                 sigstore_config_uri: Some("kbs:///default/sigstore-config/test".to_string()),
                 image_security_policy_uri: Some("kbs:///default/security-policy/test".to_string()),
                 authenticated_registry_credentials_uri: Some("kbs:///default/credential/test".to_string()),
+                registry_config: Some(Config {
+                    unqualified_search_registries: vec!["docker.io".to_string(), "example1.com".to_string()],
+                    registry: vec![
+                        Registry {
+                            prefix: "example.com/foo".to_string(),
+                            insecure: false,
+                            blocked: false,
+                            location: "internal-registry-for-example.com/bar".to_string(),
+                            mirror: vec![
+                                Mirror {
+                                    location: "example-mirror-0.local/mirror-for-foo".to_string(),
+                                    insecure: false, //default
+                                }
+                            ],
+                        }
+                    ],
+                }),
                 image_pull_proxy: Some(ProxyConfig {
                     https_proxy: Some("http://127.0.0.1:8080".into()),
                     http_proxy: None,

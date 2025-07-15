@@ -18,12 +18,12 @@ use serde::{Deserialize, Serialize};
 use crate::image::{ImagePullTask, TaskType};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-struct Mirror {
+pub struct Mirror {
     /// The mirror location
-    location: String,
+    pub location: String,
 
     #[serde(default)]
-    insecure: bool,
+    pub insecure: bool,
     // TODO: add pull_from_mirror options
 }
 
@@ -39,24 +39,24 @@ pub struct Registry {
     /// - `host[:port]/namespace[/namespace…]/repo(:_tag|@digest)`
     /// - `[*.]host`
     #[serde(default)]
-    prefix: String,
+    pub prefix: String,
 
     /// Whether unencrypted HTTP as well as TLS connections with untrusted certificates are allowed.
     #[serde(default)]
-    insecure: bool,
+    pub insecure: bool,
 
     /// Whether the registry is blocked.
     #[serde(default)]
-    blocked: bool,
+    pub blocked: bool,
 
     /// Accepts the same format as the prefix field, and specifies the physical
     /// location of the prefix-rooted namespace.
     #[serde(default)]
-    location: String,
+    pub location: String,
 
     /// image mirrors
     #[serde(default)]
-    mirror: Vec<Mirror>,
+    pub mirror: Vec<Mirror>,
     // TODO: add aliases
 }
 
@@ -64,10 +64,10 @@ pub struct Registry {
 pub struct Config {
     #[serde(default = "unqualified_search_registries_default")]
     #[serde(rename = "unqualified-search-registries")]
-    unqualified_search_registries: Vec<String>,
+    pub unqualified_search_registries: Vec<String>,
 
     #[serde(default)]
-    registry: Vec<Registry>,
+    pub registry: Vec<Registry>,
     // TODO: add credential-helpers
     // TODO: add additional-layer-store-auth-helper
 }
