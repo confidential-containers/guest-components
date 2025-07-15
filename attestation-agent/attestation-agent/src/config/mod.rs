@@ -4,7 +4,7 @@
 //
 
 use anyhow::Result;
-use crypto::HashAlgorithm;
+use kbs_types::HashAlgorithm;
 use serde::Deserialize;
 
 /// Default PCR index used by AA. `17` is selected for its usage of dynamic root of trust for measurement.
@@ -107,7 +107,7 @@ impl TryFrom<&str> for Config {
 
 #[cfg(test)]
 mod tests {
-    use crypto::HashAlgorithm;
+    use kbs_types::HashAlgorithm;
 
     use crate::config::{EventlogConfig, TokenConfigs};
 
