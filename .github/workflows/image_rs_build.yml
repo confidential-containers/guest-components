@@ -47,13 +47,13 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Install nettle-sys building dependence
+      - name: Install nettle-sys building dependencies
         run: |
+          sudo apt update
           sudo apt install -y clang llvm pkg-config nettle-dev protobuf-compiler libprotobuf-dev
 
       - name: Install TPM dependencies
         run: |
-          sudo apt-get update
           sudo apt-get install -y libtss2-dev
         if: matrix.instance == 'ubuntu-24.04'
 
