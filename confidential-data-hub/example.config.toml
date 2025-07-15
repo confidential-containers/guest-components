@@ -136,6 +136,37 @@ authenticated_registry_credentials_uri = "kbs:///default/credential/test"
 # By default this value is not set.
 registry_configuration_uri = "kbs:///default/registry-configuration/test"
 
+# Registry configuration supports registry blocking, mirroring and remapping rules.
+# This field points to a registry configuration file, which can either be stored locally
+# in the rootfs or retrieved from initdata.
+#
+# By default this value is not set.
+[image.registry_config]
+unqualified-search-registries = ["docker.io", "example1.com"]
+
+[[image.registry_config.registry]]
+prefix = "example.com/banned"
+blocked = true
+
+[[image.registry_config.registry]]
+prefix = "example.com/foo"
+insecure = false
+blocked = false
+location = "internal-registry-for-example.com/bar"
+
+[[image.registry_config.registry.mirror]]
+location = "example-mirror-0.local/mirror-for-foo"
+
+[[image.registry_config.registry.mirror]]
+location = "example-mirror-1.local/mirrors/foo"
+insecure = true
+
+[[image.registry_config.registry]]
+location = "docker.io"
+
+[[image.registry_config.registry.mirror]]
+location = "123456.mirror.aliyuncs.com"
+
 # To support registries with self signed certs. This config item
 # is used to add extra trusted root certifications. The certificates
 # must be encoded by PEM.

@@ -21,6 +21,41 @@
         "image_security_policy_uri": "kbs:///default/security-policy/test",
         "authenticated_registry_credentials_uri": "kbs:///default/credential/test",
         "registry_configuration_uri": "kbs:///default/registry-configuration/test",
+        "registry_config": {
+            "unqualified-search-registries": [
+                "docker.io",
+                "example1.com"
+            ],
+            "registry": [
+                {
+                    "prefix": "example.com/banned",
+                    "blocked": true
+                },
+                {
+                    "prefix": "example.com/foo",
+                    "insecure": false,
+                    "blocked": false,
+                    "location": "internal-registry-for-example.com/bar",
+                    "mirror": [
+                        {
+                            "location": "example-mirror-0.local/mirror-for-foo"
+                        },
+                        {
+                            "location": "example-mirror-1.local/mirrors/foo",
+                            "insecure": true
+                        }
+                    ]
+                },
+                {
+                    "location": "docker.io",
+                    "mirror": [
+                        {
+                            "location": "123456.mirror.aliyuncs.com"
+                        }
+                    ]
+                }
+            ]
+        },
         "image_pull_proxy": {
             "https_proxy": "http://127.0.0.1:5432",
             "http_proxy": "http://127.0.0.1:5432",
