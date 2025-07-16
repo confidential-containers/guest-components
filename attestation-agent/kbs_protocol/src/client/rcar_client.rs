@@ -187,7 +187,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             // SE handles the report data differently. As such, it does not support
             // multi-device attestation.
             Tee::Se => {
-                if additional_evidence.is_empty() {
+                if !additional_evidence.is_empty() {
                     bail!("Cannot attest multiple devices on s390x platform.")
                 }
                 runtime_data.nonce.into_bytes()
