@@ -146,7 +146,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             let res = self
                 .rcar_handshake()
                 .await
-                .map_err(|e| Error::RcarHandshake(e.to_string()));
+                .map_err(|e| Error::RcarHandshake(format!("{e:#?}")));
 
             match res {
                 Ok(_) => break,
@@ -366,7 +366,7 @@ impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
                     );
                     self.rcar_handshake()
                         .await
-                        .map_err(|e| Error::RcarHandshake(e.to_string()))?;
+                        .map_err(|e| Error::RcarHandshake(format!("{e:#?}")))?;
 
                     continue;
                 }
