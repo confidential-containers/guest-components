@@ -12,7 +12,6 @@ use pv::{
     uv::{AttestationCmd, ConfigUid, UvDevice},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{self, Value};
 use serde_with::{base64::Base64, serde_as};
 use std::fs;
 
@@ -36,17 +35,6 @@ pub struct SeAttestationRequest {
     encr_request_nonce: Vec<u8>,
     #[serde_as(as = "Base64")]
     image_hdr_tags: BootHdrTags,
-}
-
-/// This is a compatibility struct for Se attestation challenge
-/// for KBS protocol.
-/// More details for the reason please refer to:
-/// https://github.com/confidential-containers/trustee/pull/345
-#[derive(Deserialize)]
-pub struct SeRcarCompatableChallenge {
-    nonce: Vec<u8>,
-    #[serde(rename = "tee-pubkey")]
-    _tee_pubkey: Value,
 }
 
 #[repr(C)]
@@ -75,10 +63,7 @@ pub struct SeAttester {}
 #[async_trait::async_trait]
 impl Attester for SeAttester {
     async fn get_evidence(&self, req: Vec<u8>) -> Result<TeeEvidence> {
-        let req: SeRcarCompatableChallenge = serde_json::from_slice(&req)?;
-
-        // req is serialized SeAttestationRequest String bytes
-        let request: SeAttestationRequest = serde_json::from_slice(&req.nonce)?;
+        let request: SeAttestationRequest = serde_json::from_slice(&req)?;
         let SeAttestationRequest {
             request_blob,
             measurement_size,
