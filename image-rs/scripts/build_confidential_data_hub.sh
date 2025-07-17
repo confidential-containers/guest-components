@@ -19,8 +19,8 @@ CDH_DIR=$SCRIPT_DIR/../../confidential-data-hub
 
 pushd $CDH_DIR
 
-make RESOURCE_PROVIDER=none KMS_PROVIDER=none RPC="${RPC}"
-make DESTDIR="${SCRIPT_DIR}/${RPC}" install
+make RESOURCE_PROVIDER=none KMS_PROVIDER=none RPC="${RPC}" LIBC=gnu
+make DESTDIR="${SCRIPT_DIR}/${RPC}" install LIBC=gnu
 
 file "${SCRIPT_DIR}/${RPC}/confidential-data-hub"
 popd
