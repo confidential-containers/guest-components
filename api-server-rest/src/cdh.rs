@@ -64,7 +64,7 @@ impl ApiHandler for CDHClient {
 impl CDHClient {
     pub fn new(cdh_addr: &str, accepted_method: Vec<Method>) -> Result<Self> {
         let inner = ttrpc::asynchronous::Client::connect(cdh_addr)
-            .context(format!("ttrpc connect to CDH addr: {} failed!", cdh_addr))?;
+            .context(format!("ttrpc connect to CDH addr: {cdh_addr} failed!"))?;
         let client = GetResourceServiceClient::new(inner);
 
         Ok(Self {
@@ -75,7 +75,7 @@ impl CDHClient {
 
     pub async fn get_resource(&self, resource_path: &str) -> Result<Vec<u8>> {
         let req = GetResourceRequest {
-            ResourcePath: format!("{}{}", KBS_PREFIX, resource_path),
+            ResourcePath: format!("{KBS_PREFIX}{resource_path}"),
             ..Default::default()
         };
         let res = self
