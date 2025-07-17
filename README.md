@@ -1,5 +1,6 @@
-# Confidential Container Tools and Components 
+# Confidential Container Tools and Components
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fconfidential-containers%2Fimage-rs.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fconfidential-containers%2Fimage-rs?ref=badge_shield)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/confidential-containers/guest-components/badge)](https://scorecard.dev/viewer/?uri=github.com/confidential-containers/guest-components)
 
 This repository includes tools and components for confidential container images.
 
