@@ -62,7 +62,7 @@ jobs:
       - name: Build and install
         run: |
           mkdir -p ${HOME}/.local/bin
-          make RESOURCE_PROVIDER=kbs,sev && make install PREFIX=${HOME}/.local
+          LIBC=gnu make RESOURCE_PROVIDER=kbs,sev && LIBC=gnu make install PREFIX=${HOME}/.local
 
       - name: Run cargo fmt check
         run: cargo fmt -p kms -p confidential-data-hub -- --check
