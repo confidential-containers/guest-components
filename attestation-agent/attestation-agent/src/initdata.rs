@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 
-use crypto::HashAlgorithm;
+use kbs_types::HashAlgorithm;
 use serde::Deserialize;
 
 /// Initdata defined in

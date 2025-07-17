@@ -6,7 +6,7 @@
 use std::str::FromStr;
 
 use anyhow::{anyhow, bail, Context, Result};
-use crypto::HashAlgorithm;
+use kbs_types::HashAlgorithm;
 use sha2::{digest::FixedOutput, Digest, Sha256, Sha384, Sha512};
 
 #[derive(Clone)]
