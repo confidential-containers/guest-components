@@ -30,7 +30,7 @@ pub(crate) async fn register_kek(
 
     resource_url.set_path(&path);
 
-    debug!("register KEK into {}", resource_url);
+    debug!("register KEK into {resource_url}");
     let _ = client
         .post(resource_url)
         .header("Content-Type", "application/octet-stream")

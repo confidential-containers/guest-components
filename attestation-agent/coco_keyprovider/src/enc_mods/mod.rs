@@ -75,7 +75,7 @@ fn parse_input_params(input: &str) -> Result<InputParams> {
         .iter()
         .filter_map(|field| field.split_once('='))
         .collect();
-    debug!("Get new request: {:?}", map);
+    debug!("Get new request: {map:?}");
     let sample = map
         .get("sample")
         .map(|sa| sa.parse::<bool>().unwrap_or(false))
