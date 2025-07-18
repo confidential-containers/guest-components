@@ -16,7 +16,7 @@ clap = { workspace = true, features = ["derive"], optional = true }
 crypto = { path = "../deps/crypto", default-features = false }
 env_logger = { workspace = true, optional = true }
 jwt-simple.workspace = true
-kbs-types.workspace = true
+kbs-types = { "git" = "https://github.com/virtee/kbs-types.git", rev = "f4055a1" }
 log.workspace = true
 protobuf = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["cookies", "json"], optional = true }
@@ -66,6 +66,7 @@ csv-attester = ["attester/csv-attester"]
 hygon-dcu-attester = ["attester/hygon-dcu-attester"]
 cca-attester = ["attester/cca-attester"]
 se-attester = ["attester/se-attester"]
+tpm-attester = ["attester/tpm-attester"]
 
 rust-crypto = ["reqwest/rustls-tls", "crypto/rust-crypto"]
 openssl = ["reqwest/native-tls-vendored", "crypto/openssl"]

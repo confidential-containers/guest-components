@@ -40,6 +40,10 @@ pub mod tsm_report;
 #[cfg(feature = "se-attester")]
 pub mod se;
 
+#[cfg(feature = "tpm-attester")]
+pub mod tpm;
+pub mod tpm_utils;
+
 pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
 
 impl TryFrom<Tee> for BoxedAttester {
@@ -67,6 +71,8 @@ impl TryFrom<Tee> for BoxedAttester {
             Tee::HygonDcu => Box::<hygon_dcu::DcuAttester>::default(),
             #[cfg(feature = "se-attester")]
             Tee::Se => Box::<se::SeAttester>::default(),
+            #[cfg(feature = "tpm-attester")]
+            Tee::Tpm => Box::<tpm::TpmAttester>::default(),
             _ => bail!("TEE is not supported!"),
         };
 
@@ -152,6 +158,11 @@ pub fn detect_tee_type() -> Tee {
         return Tee::Se;
     }
 
+    #[cfg(feature = "tpm-attester")]
+    if tpm::detect_platform() {
+        return Tee::Tpm;
+    }
+
     log::warn!(
         "No TEE platform detected. Sample Attester will be used.
          If you are expecting to collect evidence from inside a confidential guest,
@@ -180,6 +191,9 @@ pub fn detect_attestable_devices() -> Vec<Tee> {
     if hygon_dcu::detect_platform() {
         additional_devices.push(Tee::HygonDcu);
     }
+
+    // TBD: Should we add TPM as additional device here
+    // if primary TEE is not vTPM based (eg. AzTdxVtpm, AzSnpVtpm, etc.)?
 
     additional_devices
 }
