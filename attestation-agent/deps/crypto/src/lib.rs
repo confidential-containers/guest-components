@@ -34,3 +34,5 @@ pub use asymmetric::*;
 
 mod algorithms;
 pub use algorithms::*;
+
+pub mod rand;
