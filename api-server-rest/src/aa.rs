@@ -4,7 +4,9 @@
 //
 
 use crate::router::ApiHandler;
-use crate::ttrpc_proto::attestation_agent::{GetEvidenceRequest, GetTokenRequest};
+use crate::ttrpc_proto::attestation_agent::{
+    ExtendRuntimeMeasurementRequest, GetEvidenceRequest, GetTokenRequest,
+};
 use crate::ttrpc_proto::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use anyhow::*;
 use async_trait::async_trait;
@@ -20,6 +22,7 @@ pub const AA_ROOT: &str = "/aa";
 /// URL for querying CDH get resource API
 const AA_TOKEN_URL: &str = "/token";
 const AA_EVIDENCE_URL: &str = "/evidence";
+const AA_MEASUREMENT_URL: &str = "/extend_runtime_measurement";
 
 pub struct AAClient {
     client: AttestationAgentServiceClient,
@@ -50,17 +53,13 @@ impl ApiHandler for AAClient {
             .map(|v| form_urlencoded::parse(v.as_bytes()).into_owned().collect())
             .unwrap_or_default();
 
-        if params.len() != 1 {
-            return self.not_allowed();
-        }
-
         match url_path {
             AA_TOKEN_URL => match params.get("token_type") {
                 Some(token_type) => match self.get_token(token_type).await {
                     std::result::Result::Ok(results) => return self.octet_stream_response(results),
                     Err(e) => return self.internal_error(e.to_string()),
                 },
-                None => return self.bad_request(),
+                None => return self.internal_error("invalid param: token_type None!".to_string()),
             },
             AA_EVIDENCE_URL => match params.get("runtime_data") {
                 Some(runtime_data) => {
@@ -71,8 +70,38 @@ impl ApiHandler for AAClient {
                         Err(e) => return self.internal_error(e.to_string()),
                     }
                 }
-                None => return self.bad_request(),
+                None => {
+                    return self.internal_error("invalid param: runtime_data None!".to_string())
+                }
             },
+            AA_MEASUREMENT_URL => {
+                let domain = params.get("domain");
+                let operation = params.get("operation");
+                let content = params.get("content");
+                match (domain, operation, content) {
+                    (Some(domain), Some(operation), Some(content)) => {
+                        let register_index: Option<u64> = params
+                            .get("register_index")
+                            .and_then(|value| value.parse::<u64>().ok());
+
+                        match self
+                            .extend_runtime_measurement(domain, operation, content, register_index)
+                            .await
+                        {
+                            std::result::Result::Ok(results) => {
+                                return self.octet_stream_response(results)
+                            }
+                            Err(e) => return self.internal_error(e.to_string()),
+                        }
+                    }
+                    _ => {
+                        return self.internal_error(format!(
+                            "invalid params: domain {:?}, operation {:?}, content {:?}!",
+                            domain, operation, content
+                        ))
+                    }
+                }
+            }
 
             _ => {
                 return self.not_found();
@@ -115,5 +144,25 @@ impl AAClient {
             .get_evidence(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
             .await?;
         Ok(res.Evidence)
+    }
+
+    pub async fn extend_runtime_measurement(
+        &self,
+        domain: &str,
+        operation: &str,
+        content: &str,
+        register_index: Option<u64>,
+    ) -> Result<Vec<u8>> {
+        let req = ExtendRuntimeMeasurementRequest {
+            Domain: domain.to_string(),
+            Operation: operation.to_string(),
+            Content: content.to_string(),
+            RegisterIndex: register_index,
+            ..Default::default()
+        };
+        self.client
+            .extend_runtime_measurement(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
+            .await?;
+        Ok("runtime measurement extend success".into())
     }
 }
