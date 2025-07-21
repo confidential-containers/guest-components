@@ -8,11 +8,15 @@ use anyhow::{Context, Result};
 use csv_rs::api::dcu::{AttestationReport, DcuDevice};
 use log::warn;
 use serde::{Deserialize, Serialize};
-use std::{cmp::min, fs};
+use std::{cmp::min, fs, path::Path};
 
 const DCU_NODES_DIR: &str = "/sys/devices/virtual/kfd/kfd/topology/nodes";
 
 pub fn detect_platform() -> bool {
+    if !Path::new("/dev/mkfd").exists() {
+        return false;
+    }
+
     let std::result::Result::Ok(entries) = fs::read_dir(DCU_NODES_DIR) else {
         warn!("Cannot read DCU nodes directory: {DCU_NODES_DIR}");
         return false;
