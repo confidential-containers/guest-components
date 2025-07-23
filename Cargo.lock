@@ -352,6 +352,7 @@ dependencies = [
  "async-trait",
  "attester",
  "base64 0.22.1",
+ "byteorder",
  "clap",
  "config",
  "const_format",
