@@ -24,6 +24,7 @@ async-trait.workspace = true
 attester = { path = "../attester", default-features = false }
 crypto = { path = "../deps/crypto" }
 base64.workspace = true
+byteorder = "1.5.0"
 clap = { workspace = true, features = ["derive"], optional = true }
 config.workspace = true
 const_format.workspace = true

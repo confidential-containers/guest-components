@@ -3,14 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-pub mod event;
+pub mod tcg2;
 
 use std::{
     fmt::Display,
-    fs::{File, OpenOptions},
-    io::Write,
+    fs::{remove_file, File},
+    io::{Read, Seek, SeekFrom, Write},
     path::Path,
-    str::FromStr,
     sync::Arc,
 };
 
@@ -19,13 +18,18 @@ use attester::BoxedAttester;
 use const_format::concatcp;
 
 use kbs_types::HashAlgorithm;
-use log::debug;
+use log::warn;
+
+use crate::eventlog::tcg2::Tcg2EventEntry;
 
 /// AA's eventlog will be put into this parent directory
 pub const EVENTLOG_PARENT_DIR_PATH: &str = "/run/attestation-agent";
 
 /// AA's eventlog will be stored inside the file
 pub const EVENTLOG_PATH: &str = concatcp!(EVENTLOG_PARENT_DIR_PATH, "/eventlog");
+
+/// A new log entry will be cached in this file before writing to the eventlog file.
+pub const WAL_CACHE: &str = concatcp!(EVENTLOG_PARENT_DIR_PATH, "/.wal_event_entry");
 
 pub struct EventLog {
     writer: Box<dyn Writer>,
@@ -68,6 +72,16 @@ impl Writer for FileWriter {
     }
 }
 
+/// Write Ahead Log
+struct WalCache {
+    /// The target PCR value after the log is written.
+    expected_pcr: Vec<u8>,
+
+    /// The event data to be written.
+    event_data: String,
+
+    /// The offset of the event data in the event log.
+    event_offset: u64,
 }
 
 impl EventLog {
@@ -79,124 +93,140 @@ impl EventLog {
         tokio::fs::create_dir_all(EVENTLOG_PARENT_DIR_PATH)
             .await
             .context("create eventlog parent dir")?;
-        if Path::new(EVENTLOG_PATH).exists() {
-            debug!("Previous AAEL found. Skip INIT entry recording...");
-            let content = tokio::fs::read_to_string(EVENTLOG_PATH)
-                .await
-                .context("Read AAEL")?;
+        let mut file = File::options()
+            .append(true)
+            .create(true)
+            .open(EVENTLOG_PATH)
+            .context("open AAEL file")?;
+        let pos = file.stream_position()?;
 
-            // The content of AAEL can be empty when the previous AA created this file
-            // but did not do anything.
-            if content.is_empty() {
-                let file = File::options()
-                    .write(true)
-                    .open(EVENTLOG_PATH)
-                    .context("open eventlog")?;
-                let mut eventlog = Self {
-                    writer: Box::new(FileWriter { file }),
+        let mut writer = Box::new(FileWriter { file, pos });
+        // if any WAL cache file exists, we should handle recovering from crash
+        match Self::read_wal_cache(alg.digest_len()) {
+            Ok(Some(wal_cache)) => {
+                warn!("Recover from a previous crash.");
+                let current_pcr = rtmr_extender.get_runtime_measurement(pcr).await.context("get runtime measurement")?;
+                let aael_event = Event::try_from(&wal_cache.event_data[..])?;
+                let (tcg2_event, tcg2_event_digest) = Into::<Tcg2EventEntry>::into(aael_event).digest(alg);
+                let tcg2_event_data = tcg2_event.to_le_bytes();
+
+                // if the PCR has not been extended yet, we should just write eventlog
+                if current_pcr != wal_cache.expected_pcr {
+                    let mut pcr_status = current_pcr.clone();
+                    let mut tcg2_event_digest_clone = tcg2_event_digest.clone();
+                    pcr_status.append(&mut tcg2_event_digest_clone);
+                    let digest_to_be_updated = alg.digest(&pcr_status);
+
+                    if digest_to_be_updated != wal_cache.expected_pcr {
+                        bail!("fatal error when recovering. The eventlog file {EVENTLOG_PATH} is probably corrupted, or other process has extend the target PCR {pcr}.")
+                    }
+
+                    // else, update the PCR
+                    rtmr_extender.extend_runtime_measurement(tcg2_event_digest, pcr).await?;
+                }
+
+                writer.seek(wal_cache.event_offset)?;
+                writer.write(&tcg2_event_data)?;
+                Self::clean_wal_cache()?;
+                Ok(Self {
+                    writer,
                     rtmr_extender,
                     alg,
                     pcr,
-                };
-                eventlog
-                    .extend_init_entry()
-                    .await
-                    .context("extend INIT entry")?;
-                return Ok(eventlog);
+                })
             }
-
-            let aael = AAEventlog::from_str(&content).context("Parse AAEL")?;
-            let rtmr = rtmr_extender
-                .get_runtime_measurement(pcr)
-                .await
-                .context("Get RTMR failed")?;
-
-            // The integrity check might fail when previous AA record the entry into
-            // aael but failed to extend RTMR. This check will try to catch this case
-            // and do then unfinished RTMR extending.
-            match aael.integrity_check(&rtmr) {
-                true => debug!("Existing RTMR is consistent with current AAEL"),
-                false => {
-                    debug!(
-                        "Existing RTMR is not consistent with current AAEL, do a RTMR extending..."
-                    );
-                    let digest = match aael.events.is_empty() {
-                        true => alg.digest(
-                            format!(
-                                "INIT {}/{:0>width$}",
-                                aael.hash_algorithm,
-                                hex::encode(aael.init_state),
-                                width = aael.hash_algorithm.digest_len()
-                            )
-                            .as_bytes(),
-                        ),
-                        false => alg.digest(aael.events[0].as_bytes()),
-                    };
-                    rtmr_extender
-                        .extend_runtime_measurement(digest, pcr)
-                        .await
-                        .context("Extend RTMR failed")?;
-                }
-            }
-
-            let file = OpenOptions::new()
-                .append(true)
-                .open(EVENTLOG_PATH)
-                .context("open eventlog")?;
-
-            return Ok(Self {
-                writer: Box::new(FileWriter { file }),
+            Err(_) => bail!("Failed to read wal cache. This is a significant error caused by a previous crash. Please try delete `{WAL_CACHE}` and restart the attestation agent."),
+            Ok(None) => Ok(Self {
+                writer,
                 rtmr_extender,
                 alg,
                 pcr,
-            });
+            })
         }
-
-        debug!("No AA eventlog exists, creating a new one and do INIT entry recording...");
-        let file = File::create(EVENTLOG_PATH).context("create eventlog")?;
-        let writer = Box::new(FileWriter { file });
-        let mut eventlog = Self {
-            writer,
-            rtmr_extender,
-            alg,
-            pcr,
-        };
-        eventlog
-            .extend_init_entry()
-            .await
-            .context("extend INIT entry")?;
-        Ok(eventlog)
     }
 
-    pub async fn extend_entry(&mut self, log_entry: LogEntry<'_>, pcr: u64) -> Result<()> {
-        let digest = log_entry.digest_with(self.alg);
-        // The order must be ensured to keep consistency. s.t. first write AAEL
-        // and then extend RTMR.
-        self.writer.append(&log_entry).context("write log entry")?;
-        self.rtmr_extender
-            .extend_runtime_measurement(digest, pcr)
-            .await?;
-
+    /// Record the event and the target digest into cache file before write, this would do
+    /// help when there is a crash between extending PCR and logging event.
+    fn write_wal_cache(&self, wal_cache: WalCache) -> Result<()> {
+        let mut file = File::create(WAL_CACHE)?;
+        file.write_all(&wal_cache.event_offset.to_be_bytes())?;
+        file.write_all(wal_cache.expected_pcr.as_ref())?;
+        file.write_all(wal_cache.event_data.as_ref())?;
+        file.sync_data()?;
         Ok(())
     }
 
-    pub async fn extend_init_entry(&mut self) -> Result<()> {
-        let pcr = self.rtmr_extender.get_runtime_measurement(self.pcr).await?;
-        let init_value = hex::encode(pcr);
-        let init_value = format!("{:0>width$}", init_value, width = self.alg.digest_len());
-        let init_entry = LogEntry::Init {
-            hash_alg: self.alg,
-            value: &init_value,
+    /// Remove the wal cache file.
+    pub fn clean_wal_cache() -> Result<()> {
+        remove_file(WAL_CACHE)?;
+        Ok(())
+    }
+
+    /// Try to read the wal cache file.
+    fn read_wal_cache(digest_len: usize) -> Result<Option<WalCache>> {
+        if !Path::new(WAL_CACHE).exists() {
+            return Ok(None);
+        }
+        let mut file = File::open(WAL_CACHE)?;
+        let mut event_offset = [0u8; 8];
+        file.read_exact(&mut event_offset)?;
+        let event_offset = u64::from_le_bytes(event_offset);
+
+        let mut expected_pcr = vec![0u8; digest_len];
+        file.read_exact(&mut expected_pcr)?;
+
+        let mut event_data = String::new();
+        let _ = file.read_to_string(&mut event_data)?;
+
+        Ok(Some(WalCache {
+            expected_pcr,
+            event_data,
+            event_offset,
+        }))
+    }
+
+    /// This an atomic operation, which will both extend the PCR and write the eventlog to disk.
+    /// We should bring in a little transection mechanism (WAL, Write Ahead Log) to make sure the atomicity.
+    ///
+    /// The logical order:
+    ///
+    /// 1. write expected PCR and AAEL event data to WAL cache file on filesystem (memory backend)
+    /// 2. Extend PCR
+    /// 3. Write eventlog entry to AAEL file on filesystem (memory backend)
+    /// 4. delete WAL cache file on filesystem (memory backend)
+    ///
+    /// Once kernel provides a more robust way (atomic) to maintain an eventlog,
+    /// we can remove the WAL cache file mechanism.
+    pub async fn extend_entry(&mut self, log_entry: Event<'_>, pcr: u64) -> Result<()> {
+        let aael_event_data = log_entry.to_string();
+        let rtmr = self.rtmr_extender.pcr_to_ccmr(self.pcr);
+        let (tcg2_event, event_digest) = Into::<Tcg2EventEntry>::into(log_entry)
+            .with_target_measurement_register(rtmr as u32)
+            .digest(self.alg);
+
+        let tcg2_event_data = tcg2_event.to_le_bytes();
+        let mut current_pcr = self.rtmr_extender.get_runtime_measurement(pcr).await?;
+
+        current_pcr.extend_from_slice(&event_digest);
+        let expected_pcr = self.alg.digest(&current_pcr);
+
+        let event_offset = self.writer.current_pos();
+        let wal_cache = WalCache {
+            expected_pcr,
+            event_data: aael_event_data,
+            event_offset,
         };
-        let digest = init_entry.digest_with(self.alg);
-        self.writer
-            .append(&init_entry)
-            .context("write INIT log entry")?;
+        self.write_wal_cache(wal_cache)
+            .context("write wal cache file failed")?;
 
         self.rtmr_extender
-            .extend_runtime_measurement(digest, self.pcr)
-            .await
-            .context("write INIT entry")?;
+            .extend_runtime_measurement(event_digest, pcr)
+            .await?;
+        self.writer
+            .write(&tcg2_event_data)
+            .context("write log entry")?;
+
+        Self::clean_wal_cache().context("remove wal cache file failed")?;
         Ok(())
     }
 }
@@ -301,37 +331,48 @@ mod tests {
     /// The eventlog will influence the underlying hardware
     #[ignore]
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_log_events() {
+        std::fs::create_dir_all(EVENTLOG_PARENT_DIR_PATH).unwrap();
         let lines = Arc::new(Mutex::new(vec![]));
-        let tw = TestWriter(lines.clone());
+        let tw = TestWriter {
+            content: lines.clone(),
+            pos: 0,
+        };
         let tee = detect_tee_type();
         let rtmr_extender =
             BoxedAttester::try_from(tee).expect("Failed to create BoxedAttester from Tee type");
+
         let mut el = EventLog {
             writer: Box::new(tw),
             pcr: 17,
             rtmr_extender: Arc::new(rtmr_extender),
-            alg: HashAlgorithm::Sha256,
-        };
-        let i = LogEntry::Init {
-            hash_alg: HashAlgorithm::Sha256,
-            value: "0000000000000000000000000000000000000000000000000000000000000000",
+            alg: HashAlgorithm::Sha384,
         };
 
-        el.extend_entry(i, 17).await.unwrap();
-        let i_line = concat!(
-            "INIT sha256/00000000000000000000000000",
-            "00000000000000000000000000000000000000"
-        );
-        assert_eq!(lines.lock().unwrap().join("\n"), i_line);
-        let ev = LogEntry::Event {
-            domain: "one",
-            operation: "two",
-            content: "three".try_into().unwrap(),
-        };
-        el.extend_entry(ev, 17).await.unwrap();
-        let e_line = "one two three";
-        assert_eq!(lines.lock().unwrap()[1], e_line);
+        el.extend_entry(
+            Event {
+                domain: "domain",
+                operation: "operation",
+                content: "content1".try_into().unwrap(),
+            },
+            17,
+        )
+        .await
+        .unwrap();
+        el.extend_entry(
+            Event {
+                domain: "domain",
+                operation: "operation",
+                content: "content2".try_into().unwrap(),
+            },
+            17,
+        )
+        .await
+        .unwrap();
+
+        let expected = tokio::fs::read("./test/aael.bin").await.unwrap();
+        assert_eq!(expected, lines.lock().unwrap().to_vec());
     }
 
     #[rstest]
@@ -339,11 +380,11 @@ mod tests {
         "domain",
         "operation",
         "content",
-        "65aad3b1620d4fe224d727579db2db87ff5c033f3e4424ae0fd72eb1149d3bd5",
+        "46df8dacf00a07d34a83cdf56d7978697790787cf2ba1432ef7c38f22cd96351",
         HashAlgorithm::Sha256
     )]
-    #[case("domain", "operation", "content", "26d944cb8d99096590252283b8c807b9508329b068703bdb7bac7eb6efe5b32fc0fadf1462662b95d2c708aa49c0bfe1", HashAlgorithm::Sha384)]
-    #[case("domain", "operation", "content", "6e75837e0fbf8367fa4550254b8f0f52eb659be0901340357ed91dda97f0ebca10537540a021eec78df9d29ade51609a01eaaa46d32e0218cdac1644dc9933b0", HashAlgorithm::Sha512)]
+    #[case("domain", "operation", "content", "dad5f0e226318ffa9839b75a472c6aa7fdb5834949d0a0a22990cf04d5692440fb00f3aa0609db7e49cd8d793f670d02", HashAlgorithm::Sha384)]
+    #[case("domain", "operation", "content", "b708d222ca8bd44dfe6ba0c4ca2cbb72379276fba8091025217064be45a813e5d6124ccf073219edb617d1faf007d55061465bdf34b7437dbdc9a7405bd4e9c0", HashAlgorithm::Sha512)]
     fn test_event_digest(
         #[case] domain: &str,
         #[case] operation: &str,
@@ -351,12 +392,13 @@ mod tests {
         #[case] digest: &str,
         #[case] hash_alg: HashAlgorithm,
     ) {
-        let event = LogEntry::Event {
+        let event = Event {
             domain,
             operation,
             content: content.try_into().unwrap(),
         };
-        let dig = event.digest_with(hash_alg);
+
+        let (_, dig) = Into::<Tcg2EventEntry>::into(event).digest(hash_alg);
         let dig_hex = dig.iter().map(|c| format!("{c:02x}")).collect::<String>();
         assert_eq!(dig_hex, digest);
     }
@@ -375,7 +417,7 @@ mod tests {
             .unwrap();
         eventlog
             .extend_entry(
-                LogEntry::Event {
+                Event {
                     domain: "domain",
                     operation: "operation",
                     content: "content".try_into().unwrap(),
@@ -411,7 +453,7 @@ mod tests {
             .unwrap();
         eventlog
             .extend_entry(
-                LogEntry::Event {
+                Event {
                     domain: "domain",
                     operation: "operation",
                     content: "content".try_into().unwrap(),
