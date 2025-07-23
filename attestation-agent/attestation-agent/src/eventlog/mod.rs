@@ -36,21 +36,39 @@ pub struct EventLog {
 }
 
 trait Writer: Sync + Send {
-    fn append(&mut self, entry: &LogEntry) -> Result<()>;
+    fn write(&mut self, data: &[u8]) -> Result<()>;
+    fn seek(&mut self, pos: u64) -> Result<()>;
+    fn current_pos(&self) -> u64;
 }
 
 pub struct FileWriter {
     file: File,
+    pos: u64,
 }
 
 impl Writer for FileWriter {
-    fn append(&mut self, entry: &LogEntry) -> Result<()> {
-        writeln!(self.file, "{entry}").context("failed to write log")?;
+    fn write(&mut self, data: &[u8]) -> Result<()> {
+        self.file.write(data).context("failed to write log")?;
         self.file
-            .flush()
+            .sync_data()
             .context("failed to flush log to I/O media")?;
+        self.pos += data.len() as u64;
         Ok(())
     }
+
+    fn seek(&mut self, pos: u64) -> Result<()> {
+        self.file
+            .seek(SeekFrom::Start(pos))
+            .context("failed to seek log")?;
+        self.pos = pos;
+        Ok(())
+    }
+
+    fn current_pos(&self) -> u64 {
+        self.pos
+    }
+}
+
 }
 
 impl EventLog {
@@ -246,12 +264,24 @@ mod tests {
     use rstest::rstest;
     use std::sync::{Arc, Mutex};
 
-    struct TestWriter(Arc<Mutex<Vec<String>>>);
+    struct TestWriter {
+        content: Arc<Mutex<Vec<u8>>>,
+        pos: u64,
+    }
 
     impl Writer for TestWriter {
-        fn append(&mut self, entry: &LogEntry) -> Result<()> {
-            self.0.lock().unwrap().push(entry.to_string());
+        fn write(&mut self, data: &[u8]) -> Result<()> {
+            self.content.lock().unwrap().extend_from_slice(data);
             Ok(())
+        }
+
+        fn seek(&mut self, pos: u64) -> Result<()> {
+            self.pos = pos;
+            Ok(())
+        }
+
+        fn current_pos(&self) -> u64 {
+            self.pos
         }
     }
 
