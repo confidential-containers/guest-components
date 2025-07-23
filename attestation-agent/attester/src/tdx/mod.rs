@@ -113,16 +113,6 @@ impl TdxAttester {
 
         Ok(td_report)
     }
-
-    fn pcr_to_rtmr(register_index: u64) -> u64 {
-        // The match follows https://github.com/confidential-containers/td-shim/blob/main/doc/tdshim_spec.md#td-event-log
-        match register_index {
-            1 | 7 => 0,
-            2..=6 => 1,
-            8..=15 => 2,
-            _ => 3,
-        }
-    }
 }
 
 #[async_trait::async_trait]
@@ -182,7 +172,8 @@ impl Attester for TdxAttester {
             bail!("TDX Attester: Cannot extend runtime measurement on this system");
         }
 
-        let rtmr_index = Self::pcr_to_rtmr(register_index);
+        let ccmr_index = self.pcr_to_ccmr(register_index);
+        let rtmr_index = ccmr_index - 1;
 
         let extend_data: [u8; 48] = pad(&event_digest);
 
@@ -225,9 +216,20 @@ impl Attester for TdxAttester {
 
     async fn get_runtime_measurement(&self, pcr_index: u64) -> Result<Vec<u8>> {
         let td_report = Self::get_report()?;
-        let rtmr_index = Self::pcr_to_rtmr(pcr_index) as usize;
+        let ccmr = self.pcr_to_ccmr(pcr_index) as usize;
 
-        Ok(td_report.get_rtmr(rtmr_index))
+        Ok(td_report.get_rtmr(ccmr - 1))
+    }
+
+    fn pcr_to_ccmr(&self, pcr_index: u64) -> u64 {
+        // The match follows https://github.com/confidential-containers/td-shim/blob/main/doc/tdshim_spec.md#td-event-log
+        // and https://uefi.org/specs/UEFI/2.11/38_Confidential_Computing.html#intel-trust-domain-extension
+        match pcr_index {
+            1 | 7 => 1,
+            2..=6 => 2,
+            8..=15 => 3,
+            _ => 4,
+        }
     }
 }
 
