@@ -47,4 +47,9 @@ impl Attester for SampleAttester {
     async fn get_runtime_measurement(&self, _pcr_index: u64) -> Result<Vec<u8>> {
         Ok(vec![])
     }
+
+    fn pcr_to_ccmr(&self, pcr_index: u64) -> u64 {
+        warn!("The Sample Attester does not have any pcr to rtmr mapping.");
+        pcr_index
+    }
 }
