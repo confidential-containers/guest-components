@@ -17,11 +17,11 @@ mod eventlog;
 pub mod initdata;
 pub mod token;
 
-use eventlog::{Content, EventLog, LogEntry};
+use eventlog::EventLog;
 use log::{debug, info, warn};
 use token::*;
 
-use crate::config::Config;
+use crate::{config::Config, eventlog::Event};
 
 /// Attestation Agent (AA for short) is a rust library crate for attestation procedure
 /// in confidential containers. It provides kinds of service APIs related to attestation,
@@ -244,13 +244,7 @@ impl AttestationAPIs for AttestationAgent {
                 pcr
             });
 
-            let content: Content = content.try_into()?;
-
-            let log_entry = LogEntry::Event {
-                domain,
-                operation,
-                content,
-            };
+            let log_entry = Event::new(domain, operation, content)?;
 
             (pcr, log_entry)
         };

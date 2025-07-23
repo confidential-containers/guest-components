@@ -14,11 +14,10 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use attester::BoxedAttester;
 use const_format::concatcp;
 
-use event::AAEventlog;
 use kbs_types::HashAlgorithm;
 use log::debug;
 
@@ -215,45 +214,50 @@ impl<'a> TryFrom<&'a str> for Content<'a> {
     }
 }
 
-pub enum LogEntry<'a> {
-    Event {
-        domain: &'a str,
-        operation: &'a str,
-        content: Content<'a>,
-    },
-    Init {
-        hash_alg: HashAlgorithm,
-        value: &'a str,
-    },
+pub struct Event<'a> {
+    domain: &'a str,
+    operation: &'a str,
+    content: Content<'a>,
 }
 
-impl LogEntry<'_> {
-    /// Calculate the LogEntry's digest with the given [`HashAlgorithm`]
-    pub fn digest_with(&self, hash_alg: HashAlgorithm) -> Vec<u8> {
-        let log_entry = self.to_string();
-        hash_alg.digest(log_entry.as_bytes())
+impl<'a> Event<'a> {
+    pub fn new(domain: &'a str, operation: &'a str, content: &'a str) -> Result<Self> {
+        let content = Content::try_from(content)?;
+        Ok(Event {
+            domain,
+            operation,
+            content,
+        })
     }
 }
 
-impl Display for LogEntry<'_> {
+impl<'a> TryFrom<&'a str> for Event<'a> {
+    type Error = anyhow::Error;
+
+    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
+        let first_sp = s
+            .find(' ')
+            .ok_or(anyhow!("No space found in event string"))?;
+        let after_first = &s[first_sp + 1..];
+        let second_sp_rel = after_first
+            .find(' ')
+            .ok_or(anyhow!("No second space found in event string"))?;
+        let second_sp = first_sp + 1 + second_sp_rel;
+
+        let domain = &s[..first_sp];
+        let operation = &s[first_sp + 1..second_sp];
+        let content = &s[second_sp + 1..];
+        Ok(Event {
+            domain,
+            operation,
+            content: Content::try_from(content)?,
+        })
+    }
+}
+
+impl Display for Event<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LogEntry::Event {
-                domain,
-                operation,
-                content,
-            } => {
-                write!(f, "{} {} {}", domain, operation, content.0)
-            }
-            LogEntry::Init { hash_alg, value } => {
-                let (sha, init_value) = match hash_alg {
-                    HashAlgorithm::Sha256 => ("sha256", value),
-                    HashAlgorithm::Sha384 => ("sha384", value),
-                    HashAlgorithm::Sha512 => ("sha512", value),
-                };
-                write!(f, "INIT {sha}/{init_value}")
-            }
-        }
+        write!(f, "{} {} {}", self.domain, self.operation, self.content.0)
     }
 }
 
