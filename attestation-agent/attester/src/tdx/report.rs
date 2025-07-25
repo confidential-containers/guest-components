@@ -125,8 +125,11 @@ mod test {
     #[case(8, "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")]
     #[case(16, "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")]
     fn get_runtime_measurement(#[case] pcr_index: u64, #[case] expected: &str) {
+        use crate::Attester;
+
         let report_bin = include_bytes!("../../test/tdx_report_1.bin");
-        let rtmr_index = TdxAttester::pcr_to_rtmr(pcr_index) as usize;
+        let attester = TdxAttester::default();
+        let rtmr_index = attester.pcr_to_ccmr(pcr_index) as usize - 1;
 
         let expected = hex::decode(expected).unwrap();
         let td_report = report_bin.pread::<TdReport>(0).unwrap();

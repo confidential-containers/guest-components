@@ -108,6 +108,15 @@ pub trait Attester {
     async fn get_runtime_measurement(&self, _pcr_index: u64) -> Result<Vec<u8>> {
         bail!("Unimplemented")
     }
+
+    /// This function is used to get the CC measurement register value of
+    /// the given PCR register index. Different platforms have different mapping
+    /// relationship between PCR and platform RTMR.
+    ///
+    /// Reference https://uefi.org/specs/UEFI/2.11/38_Confidential_Computing.html#vendor-specific-information
+    fn pcr_to_ccmr(&self, _pcr_index: u64) -> u64 {
+        panic!("Unimplemented")
+    }
 }
 
 // Detect which TEE platform the KBC running environment is.
