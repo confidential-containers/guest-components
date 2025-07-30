@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    let evidence = attester.get_evidence(vec![]).await?;
+    let evidence = attester.get_evidence(report_data).await?;
     println!("{evidence}");
     Ok(())
 }
