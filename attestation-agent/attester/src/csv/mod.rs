@@ -120,6 +120,45 @@ impl Attester for CsvAttester {
         };
         serde_json::to_value(&evidence).context("Serialize CSV evidence failed")
     }
+
+    /// Extend TEE specific dynamic measurement register
+    /// to enable dynamic measurement capabilities for input data at runtime.
+    async fn extend_runtime_measurement(
+        &self,
+        event_digest: Vec<u8>,
+        register_index: u64,
+    ) -> Result<()> {
+        let ccmr = self.pcr_to_ccmr(register_index);
+        let mut csv_guest = CsvGuest::open()?;
+
+        csv_guest.req_rtmr_extend(ccmr as u8, &event_digest)?;
+        Ok(())
+    }
+
+    /// This function is used to get the runtime measurement registry value of
+    /// the given PCR register index. Different platforms have different mapping
+    /// relationship between PCR and platform RTMR.
+    async fn get_runtime_measurement(&self, pcr_index: u64) -> Result<Vec<u8>> {
+        let mut csv_guest = CsvGuest::open()?;
+        let ccmr_index = self.pcr_to_ccmr(pcr_index);
+        let bitmap = 1 << (ccmr_index);
+        let (_, rtmr_read) = csv_guest.req_rtmr_read(bitmap)?;
+        let reg_data = rtmr_read.get_read_reg(ccmr_index as usize);
+        Ok(reg_data.to_vec())
+    }
+
+    /// This function is used to get the CC measurement register value of
+    /// the given PCR register index. Different platforms have different mapping
+    /// relationship between PCR and platform RTMR.
+    fn pcr_to_ccmr(&self, pcr_index: u64) -> u64 {
+        match pcr_index {
+            0 => 0,
+            1 | 7 => 1,
+            2..=6 => 2,
+            8..=15 => 3,
+            _ => 4,
+        }
+    }
 }
 
 #[cfg(test)]
