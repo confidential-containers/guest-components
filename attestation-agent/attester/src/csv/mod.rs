@@ -16,7 +16,7 @@ use super::{Attester, TeeEvidence};
 use anyhow::{bail, Context, Result};
 use codicon::Decoder;
 use csv_rs::{
-    api::guest::{AttestationReport, CsvGuest},
+    api::guest::{AttestationReport, AttestationReportWrapper, CsvGuest},
     certs::{ca, csv},
 };
 use hyper::{body::HttpBody, Client};
@@ -44,7 +44,7 @@ struct CertificateChain {
 
 #[derive(Serialize, Deserialize)]
 struct CsvEvidence {
-    attestation_report: AttestationReport,
+    attestation_report: AttestationReportWrapper,
 
     cert_chain: CertificateChain,
 
@@ -93,7 +93,10 @@ impl Attester for CsvAttester {
         let data = report_data.as_slice().try_into()?;
         let mut csv_guest = CsvGuest::open()?;
 
-        let (attestation_report, report_signer) = csv_guest.get_report(Some(data), None)?;
+        let attestation_report = csv_guest.get_report_ext(Some(data), None, 1)?;
+
+        let report = AttestationReport::try_from(&attestation_report)?;
+        let report_signer = report.signer();
         let pek = csv::Certificate::decode(&mut &report_signer.pek_cert[..], ())?;
 
         let hsk_cek = match std::env::var(CSV_INCLUDE_CERT_CHAIN_ENV) {
