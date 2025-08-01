@@ -191,10 +191,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "base64 0.22.1",
  "clap",
  "form_urlencoded",
  "hyper 0.14.32",
  "protobuf 3.7.1",
+ "serde",
  "serde_json",
  "tokio",
  "ttrpc",
