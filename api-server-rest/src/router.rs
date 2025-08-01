@@ -22,6 +22,13 @@ pub trait ApiHandler: Send {
         Ok(Response::new(Body::empty()))
     }
 
+    // Build an empty response with 200 status code.
+    fn empty_response(&self) -> Result<Response<Body>> {
+        Ok(Response::builder()
+            .status(StatusCode::OK)
+            .body(Body::empty())?)
+    }
+
     // Build octet-stream response for bytes data.
     fn octet_stream_response(&self, data: Vec<u8>) -> Result<Response<Body>> {
         Ok(Response::builder()

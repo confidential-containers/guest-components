@@ -4,10 +4,13 @@
 //
 
 use crate::router::ApiHandler;
-use crate::ttrpc_proto::attestation_agent::{GetEvidenceRequest, GetTokenRequest};
+use crate::ttrpc_proto::attestation_agent::{
+    ExtendRuntimeMeasurementRequest, GetEvidenceRequest, GetTokenRequest,
+};
 use crate::ttrpc_proto::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use anyhow::*;
 use async_trait::async_trait;
+use base64::Engine;
 use hyper::{Body, Method, Request, Response};
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -20,6 +23,7 @@ pub const AA_ROOT: &str = "/aa";
 /// URL for querying CDH get resource API
 const AA_TOKEN_URL: &str = "/token";
 const AA_EVIDENCE_URL: &str = "/evidence";
+const AA_AAEL_URL: &str = "/aael";
 
 pub struct AAClient {
     client: AttestationAgentServiceClient,
@@ -73,6 +77,24 @@ impl ApiHandler for AAClient {
                 }
                 None => return self.bad_request(),
             },
+            AA_AAEL_URL => {
+                let Some(domain) = params.get("domain") else {
+                    return self.bad_request();
+                };
+
+                let Some(operation) = params.get("operation") else {
+                    return self.bad_request();
+                };
+
+                let Some(content) = params.get("content") else {
+                    return self.bad_request();
+                };
+
+                match self.extend_aael_entry(domain, operation, content).await {
+                    std::result::Result::Ok(_) => return self.empty_response(),
+                    Err(e) => return self.internal_error(e.to_string()),
+                }
+            }
 
             _ => {
                 return self.not_found();
@@ -115,5 +137,38 @@ impl AAClient {
             .get_evidence(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
             .await?;
         Ok(res.Evidence)
+    }
+
+    pub async fn extend_aael_entry(
+        &self,
+        domain: &str,
+        operation: &str,
+        content: &str,
+    ) -> Result<()> {
+        let domain = base64::engine::general_purpose::URL_SAFE
+            .decode(domain)
+            .context("base64 URL decode domain failed")?;
+        let domain = String::from_utf8(domain).context("domain is not valid utf8")?;
+
+        let operation = base64::engine::general_purpose::URL_SAFE
+            .decode(operation)
+            .context("base64 URL decode operation failed")?;
+        let operation = String::from_utf8(operation).context("operation is not valid utf8")?;
+
+        let content = base64::engine::general_purpose::URL_SAFE
+            .decode(content)
+            .context("base64 URL decode content failed")?;
+        let content = String::from_utf8(content).context("content is not valid utf8")?;
+        let req = ExtendRuntimeMeasurementRequest {
+            Domain: domain.into(),
+            Operation: operation.into(),
+            Content: content.into(),
+            ..Default::default()
+        };
+        let _ = self
+            .client
+            .extend_runtime_measurement(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
+            .await?;
+        Ok(())
     }
 }

@@ -48,6 +48,23 @@ fn _evidence() {}
 
 #[utoipa::path(
     get,
+    path = "/aa/aael",
+    params(
+        ("domain" = String, Query, description = "Attestation Agent Event Log Domain (Base64 URL safe encoded)"),
+        ("operation" = String, Query, description = "Attestation Agent Event Log Operation (Base64 URL safe encoded)"),
+        ("event" = String, Query, description = "Attestation Agent Event Log Content (Base64 URL safe encoded)"),
+    ),
+    responses(
+        (status = 200, description = "success response"),
+        (status = 400, description = "bad request for invalid query param"),
+        (status = 403, description = "forbid external access"),
+        (status = 405, description = "only Get method allowed")
+    )
+)]
+fn _rtmr() {}
+
+#[utoipa::path(
+    get,
     path = "/cdh/resource/{repository}/{type}/{tag}",
     responses(
         (status = 200, description = "success response",
