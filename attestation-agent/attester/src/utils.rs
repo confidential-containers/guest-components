@@ -117,6 +117,7 @@ fn trim_ccel(mut ccel: Vec<u8>) -> Result<Vec<u8>> {
                 0xb => 0x20,
                 0xc => 0x30,
                 0xd => 0x40,
+                0x12 => 0x20,
                 _ => {
                     bail!("invalid ccel: unsupported digest algorithm");
                 }
