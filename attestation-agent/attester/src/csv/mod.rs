@@ -21,6 +21,7 @@ use csv_rs::{
 };
 use hyper::{body::HttpBody, Client};
 use hyper_tls::HttpsConnector;
+use kbs_types::HashAlgorithm;
 use log::debug;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -158,6 +159,10 @@ impl Attester for CsvAttester {
             8..=15 => 3,
             _ => 4,
         }
+    }
+
+    fn ccel_hash_algorithm(&self) -> HashAlgorithm {
+        HashAlgorithm::Sm3
     }
 }
 

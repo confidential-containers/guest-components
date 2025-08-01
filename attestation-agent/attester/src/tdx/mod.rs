@@ -10,6 +10,7 @@ use crate::InitDataResult;
 use anyhow::*;
 use base64::Engine;
 use iocuddle::{Group, Ioctl, WriteRead};
+use kbs_types::HashAlgorithm;
 use report::TdReport;
 use scroll::Pread;
 use serde::{Deserialize, Serialize};
@@ -210,6 +211,10 @@ impl Attester for TdxAttester {
             8..=15 => 3,
             _ => 4,
         }
+    }
+
+    fn ccel_hash_algorithm(&self) -> HashAlgorithm {
+        HashAlgorithm::Sha384
     }
 }
 
