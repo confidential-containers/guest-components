@@ -12,6 +12,8 @@
 
 const CSV_INCLUDE_CERT_CHAIN_ENV: &str = "CSV_INCLUDE_CERT_CHAIN_IN_ATTESTATION_REPORT";
 
+use crate::utils::read_eventlog;
+
 use super::{Attester, TeeEvidence};
 use anyhow::{bail, Context, Result};
 use codicon::Decoder;
@@ -51,6 +53,12 @@ struct CsvEvidence {
 
     // Base64 Encoded CSV Serial Number (Used to identify HYGON chip ID)
     serial_number: Vec<u8>,
+
+    /// Base64 encoded Eventlog
+    /// This might include the
+    /// - CCEL: <https://uefi.org/specs/ACPI/6.5/05_ACPI_Software_Programming_Model.html#cc-event-log-acpi-table>
+    /// - AAEL in TCG2 encoding: <https://github.com/confidential-containers/trustee/blob/main/kbs/docs/confidential-containers-eventlog.md>
+    cc_eventlog: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -113,10 +121,11 @@ impl Attester for CsvAttester {
         };
 
         let cert_chain = CertificateChain { hsk_cek, pek };
-
+        let cc_eventlog = read_eventlog().await?;
         let evidence = CsvEvidence {
             attestation_report,
             cert_chain,
+            cc_eventlog,
             serial_number: report_signer.sn.to_vec(),
         };
         serde_json::to_value(&evidence).context("Serialize CSV evidence failed")
