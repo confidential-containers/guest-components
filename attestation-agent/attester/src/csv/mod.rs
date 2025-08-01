@@ -12,15 +12,18 @@
 
 const CSV_INCLUDE_CERT_CHAIN_ENV: &str = "CSV_INCLUDE_CERT_CHAIN_IN_ATTESTATION_REPORT";
 
+use crate::utils::read_eventlog;
+
 use super::{Attester, TeeEvidence};
 use anyhow::{bail, Context, Result};
 use codicon::Decoder;
 use csv_rs::{
-    api::guest::{AttestationReport, CsvGuest},
+    api::guest::{AttestationReport, AttestationReportWrapper, CsvGuest},
     certs::{ca, csv},
 };
 use hyper::{body::HttpBody, Client};
 use hyper_tls::HttpsConnector;
+use kbs_types::HashAlgorithm;
 use log::debug;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -44,12 +47,18 @@ struct CertificateChain {
 
 #[derive(Serialize, Deserialize)]
 struct CsvEvidence {
-    attestation_report: AttestationReport,
+    attestation_report: AttestationReportWrapper,
 
     cert_chain: CertificateChain,
 
     // Base64 Encoded CSV Serial Number (Used to identify HYGON chip ID)
     serial_number: Vec<u8>,
+
+    /// Base64 encoded Eventlog
+    /// This might include the
+    /// - CCEL: <https://uefi.org/specs/ACPI/6.5/05_ACPI_Software_Programming_Model.html#cc-event-log-acpi-table>
+    /// - AAEL in TCG2 encoding: <https://github.com/confidential-containers/trustee/blob/main/kbs/docs/confidential-containers-eventlog.md>
+    cc_eventlog: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -93,7 +102,10 @@ impl Attester for CsvAttester {
         let data = report_data.as_slice().try_into()?;
         let mut csv_guest = CsvGuest::open()?;
 
-        let (attestation_report, report_signer) = csv_guest.get_report(Some(data), None)?;
+        let attestation_report = csv_guest.get_report_ext(Some(data), None, 1)?;
+
+        let report = AttestationReport::try_from(&attestation_report)?;
+        let report_signer = report.signer();
         let pek = csv::Certificate::decode(&mut &report_signer.pek_cert[..], ())?;
 
         let hsk_cek = match std::env::var(CSV_INCLUDE_CERT_CHAIN_ENV) {
@@ -109,13 +121,57 @@ impl Attester for CsvAttester {
         };
 
         let cert_chain = CertificateChain { hsk_cek, pek };
-
+        let cc_eventlog = read_eventlog().await?;
         let evidence = CsvEvidence {
             attestation_report,
             cert_chain,
+            cc_eventlog,
             serial_number: report_signer.sn.to_vec(),
         };
         serde_json::to_value(&evidence).context("Serialize CSV evidence failed")
+    }
+
+    /// Extend TEE specific dynamic measurement register
+    /// to enable dynamic measurement capabilities for input data at runtime.
+    async fn extend_runtime_measurement(
+        &self,
+        event_digest: Vec<u8>,
+        register_index: u64,
+    ) -> Result<()> {
+        let ccmr = self.pcr_to_ccmr(register_index);
+        let mut csv_guest = CsvGuest::open()?;
+
+        csv_guest.req_rtmr_extend(ccmr as u8, &event_digest)?;
+        Ok(())
+    }
+
+    /// This function is used to get the runtime measurement registry value of
+    /// the given PCR register index. Different platforms have different mapping
+    /// relationship between PCR and platform RTMR.
+    async fn get_runtime_measurement(&self, pcr_index: u64) -> Result<Vec<u8>> {
+        let mut csv_guest = CsvGuest::open()?;
+        let ccmr_index = self.pcr_to_ccmr(pcr_index);
+        let bitmap = 1 << (ccmr_index);
+        let (_, rtmr_read) = csv_guest.req_rtmr_read(bitmap)?;
+        let reg_data = rtmr_read.get_read_reg(ccmr_index as usize);
+        Ok(reg_data.to_vec())
+    }
+
+    /// This function is used to get the CC measurement register value of
+    /// the given PCR register index. Different platforms have different mapping
+    /// relationship between PCR and platform RTMR.
+    fn pcr_to_ccmr(&self, pcr_index: u64) -> u64 {
+        match pcr_index {
+            0 => 0,
+            1 | 7 => 1,
+            2..=6 => 2,
+            8..=15 => 3,
+            _ => 4,
+        }
+    }
+
+    fn ccel_hash_algorithm(&self) -> HashAlgorithm {
+        HashAlgorithm::Sm3
     }
 }
 

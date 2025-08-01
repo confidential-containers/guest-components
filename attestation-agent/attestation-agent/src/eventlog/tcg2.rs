@@ -19,6 +19,9 @@ pub enum TcgAlgorithm {
 
     #[serde(rename = "SHA-512")]
     Sha512 = 0xD,
+
+    #[serde(rename = "SM3")]
+    Sm3 = 0x12,
 }
 
 impl From<HashAlgorithm> for TcgAlgorithm {
@@ -27,6 +30,7 @@ impl From<HashAlgorithm> for TcgAlgorithm {
             HashAlgorithm::Sha256 => TcgAlgorithm::Sha256,
             HashAlgorithm::Sha384 => TcgAlgorithm::Sha384,
             HashAlgorithm::Sha512 => TcgAlgorithm::Sha512,
+            HashAlgorithm::Sm3 => TcgAlgorithm::Sm3,
         }
     }
 }
