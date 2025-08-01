@@ -4,7 +4,7 @@
 //
 
 use anyhow::*;
-use kbs_types::Tee;
+use kbs_types::{HashAlgorithm, Tee};
 
 pub mod sample;
 pub mod sample_device;
@@ -115,6 +115,15 @@ pub trait Attester {
     ///
     /// Reference https://uefi.org/specs/UEFI/2.11/38_Confidential_Computing.html#vendor-specific-information
     fn pcr_to_ccmr(&self, _pcr_index: u64) -> u64 {
+        panic!("Unimplemented")
+    }
+
+    /// Returns the hash algorithm used by the Confidential Computing Event Log (CCEL).
+    /// The algorithm is defined by the platform.  
+    ///
+    /// If the platform does not support runtime measurement or the algorithm cannot
+    /// be determined, this function will panic.
+    fn ccel_hash_algorithm(&self) -> HashAlgorithm {
         panic!("Unimplemented")
     }
 }
