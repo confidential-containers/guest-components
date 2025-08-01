@@ -4,7 +4,6 @@
 //
 
 use anyhow::Result;
-use kbs_types::HashAlgorithm;
 use serde::Deserialize;
 
 /// Default PCR index used by AA. `17` is selected for its usage of dynamic root of trust for measurement.
@@ -45,9 +44,6 @@ impl Config {
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct EventlogConfig {
-    /// Hash algorithm used to extend runtime measurement for eventlog.
-    pub eventlog_algorithm: HashAlgorithm,
-
     /// PCR Register to extend INIT entry
     pub init_pcr: u64,
 
@@ -58,7 +54,6 @@ pub struct EventlogConfig {
 impl Default for EventlogConfig {
     fn default() -> Self {
         Self {
-            eventlog_algorithm: HashAlgorithm::Sha384,
             init_pcr: DEFAULT_PCR_INDEX,
             enable_eventlog: false,
         }
@@ -95,7 +90,6 @@ impl TryFrom<&str> for Config {
     fn try_from(config_path: &str) -> Result<Self, Self::Error> {
         let c = config::Config::builder()
             .add_source(config::File::with_name(config_path))
-            .set_default("eventlog_config.eventlog_algorithm", DEFAULT_EVENTLOG_HASH)?
             .set_default("eventlog_config.init_pcr", DEFAULT_PCR_INDEX)?
             .set_default("eventlog_config.enable_eventlog", "false")?
             .build()?;
@@ -107,8 +101,6 @@ impl TryFrom<&str> for Config {
 
 #[cfg(test)]
 mod tests {
-    use kbs_types::HashAlgorithm;
-
     use crate::config::{EventlogConfig, TokenConfigs};
 
     use super::Config;
@@ -150,7 +142,6 @@ M9QaC1mzQ/OStg==
             })
         },
         eventlog_config: EventlogConfig {
-            eventlog_algorithm: HashAlgorithm::Sha384,
             init_pcr: 17,
             enable_eventlog: false,
         }
@@ -191,7 +182,6 @@ M9QaC1mzQ/OStg==
             })
         },
         eventlog_config: EventlogConfig {
-            eventlog_algorithm: HashAlgorithm::Sha384,
             init_pcr: 17,
             enable_eventlog: false,
         }
@@ -211,7 +201,6 @@ M9QaC1mzQ/OStg==
             })
         },
         eventlog_config: EventlogConfig {
-            eventlog_algorithm: HashAlgorithm::Sha384,
             init_pcr: 17,
             enable_eventlog: false,
         }
@@ -229,7 +218,6 @@ M9QaC1mzQ/OStg==
             })
         },
         eventlog_config: EventlogConfig {
-            eventlog_algorithm: HashAlgorithm::Sha384,
             init_pcr: 17,
             enable_eventlog: false,
         }
@@ -249,7 +237,6 @@ M9QaC1mzQ/OStg==
             })
         },
         eventlog_config: EventlogConfig {
-            eventlog_algorithm: HashAlgorithm::Sha384,
             init_pcr: 17,
             enable_eventlog: false,
         }
@@ -264,7 +251,6 @@ M9QaC1mzQ/OStg==
             kbs: None,
         },
         eventlog_config: EventlogConfig {
-            eventlog_algorithm: HashAlgorithm::Sha384,
             init_pcr: 17,
             enable_eventlog: false,
         }
@@ -279,7 +265,6 @@ M9QaC1mzQ/OStg==
             kbs: None,
         },
         eventlog_config: EventlogConfig {
-            eventlog_algorithm: HashAlgorithm::Sha384,
             init_pcr: 17,
             enable_eventlog: false,
         }
@@ -294,7 +279,6 @@ M9QaC1mzQ/OStg==
                 kbs: None,
             },
             eventlog_config: EventlogConfig {
-                eventlog_algorithm: HashAlgorithm::Sha384,
                 init_pcr: 17,
                 enable_eventlog: false,
             }
