@@ -3434,12 +3434,13 @@ dependencies = [
 [[package]]
 name = "kbs-types"
 version = "0.12.0"
-source = "git+https://github.com/virtee/kbs-types.git?rev=e3cc706#e3cc706ec4c1a88565598c5ce224da06a03f2265"
+source = "git+https://github.com/virtee/kbs-types.git?rev=900aa8f#900aa8fd2fceb9dc07aa835091bf12076a899ec1"
 dependencies = [
  "base64 0.22.1",
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "sm3",
  "strum",
  "thiserror 2.0.12",
 ]
