@@ -4,11 +4,15 @@
 //
 
 use crate::router::ApiHandler;
-use crate::ttrpc_proto::attestation_agent::{GetEvidenceRequest, GetTokenRequest};
+use crate::ttrpc_proto::attestation_agent::{
+    ExtendRuntimeMeasurementRequest, GetEvidenceRequest, GetTokenRequest,
+};
 use crate::ttrpc_proto::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use anyhow::*;
 use async_trait::async_trait;
+use hyper::body::HttpBody;
 use hyper::{Body, Method, Request, Response};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 
@@ -20,10 +24,18 @@ pub const AA_ROOT: &str = "/aa";
 /// URL for querying CDH get resource API
 const AA_TOKEN_URL: &str = "/token";
 const AA_EVIDENCE_URL: &str = "/evidence";
+const AA_AAEL_URL: &str = "/aael";
 
 pub struct AAClient {
     client: AttestationAgentServiceClient,
     accepted_method: Vec<Method>,
+}
+
+#[derive(Deserialize)]
+pub struct AaelEvent {
+    pub domain: String,
+    pub operation: String,
+    pub content: String,
 }
 
 #[async_trait]
@@ -50,19 +62,16 @@ impl ApiHandler for AAClient {
             .map(|v| form_urlencoded::parse(v.as_bytes()).into_owned().collect())
             .unwrap_or_default();
 
-        if params.len() != 1 {
-            return self.not_allowed();
-        }
-
-        match url_path {
-            AA_TOKEN_URL => match params.get("token_type") {
+        let method = req.method();
+        match (url_path, method) {
+            (AA_TOKEN_URL, &Method::GET) => match params.get("token_type") {
                 Some(token_type) => match self.get_token(token_type).await {
                     std::result::Result::Ok(results) => return self.octet_stream_response(results),
                     Err(e) => return self.internal_error(e.to_string()),
                 },
                 None => return self.bad_request(),
             },
-            AA_EVIDENCE_URL => match params.get("runtime_data") {
+            (AA_EVIDENCE_URL, &Method::GET) => match params.get("runtime_data") {
                 Some(runtime_data) => {
                     match self.get_evidence(&runtime_data.clone().into_bytes()).await {
                         std::result::Result::Ok(results) => {
@@ -73,6 +82,31 @@ impl ApiHandler for AAClient {
                 }
                 None => return self.bad_request(),
             },
+            (AA_AAEL_URL, &Method::POST) => {
+                let aael_entry: AaelEvent = match req
+                    .into_body()
+                    .collect()
+                    .await
+                    .map_err(Error::from)
+                    .and_then(|data| {
+                        serde_json::from_slice(data.to_bytes().as_ref())
+                            .map_err(|e| anyhow!("Illegal AAEL eventry format: {e}"))
+                    }) {
+                    std::result::Result::Ok(aael_entry) => aael_entry,
+                    Err(e) => return self.internal_error(e.to_string()),
+                };
+                match self
+                    .extend_aael_entry(
+                        &aael_entry.domain,
+                        &aael_entry.operation,
+                        &aael_entry.content,
+                    )
+                    .await
+                {
+                    std::result::Result::Ok(_) => return self.empty_response(),
+                    Err(e) => return self.internal_error(e.to_string()),
+                }
+            }
 
             _ => {
                 return self.not_found();
@@ -115,5 +149,24 @@ impl AAClient {
             .get_evidence(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
             .await?;
         Ok(res.Evidence)
+    }
+
+    pub async fn extend_aael_entry(
+        &self,
+        domain: &str,
+        operation: &str,
+        content: &str,
+    ) -> Result<()> {
+        let req = ExtendRuntimeMeasurementRequest {
+            Domain: domain.into(),
+            Operation: operation.into(),
+            Content: content.into(),
+            ..Default::default()
+        };
+        let _ = self
+            .client
+            .extend_runtime_measurement(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
+            .await?;
+        Ok(())
     }
 }
