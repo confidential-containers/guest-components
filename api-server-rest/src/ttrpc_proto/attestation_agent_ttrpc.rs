@@ -40,6 +40,11 @@ impl AttestationAgentServiceClient {
         let mut cres = super::attestation_agent::GetTokenResponse::new();
         ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetToken", cres);
     }
+
+    pub async fn extend_runtime_measurement(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::ExtendRuntimeMeasurementRequest) -> ::ttrpc::Result<super::attestation_agent::ExtendRuntimeMeasurementResponse> {
+        let mut cres = super::attestation_agent::ExtendRuntimeMeasurementResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "ExtendRuntimeMeasurement", cres);
+    }
 }
 
 struct GetEvidenceMethod {
@@ -64,6 +69,17 @@ impl ::ttrpc::r#async::MethodHandler for GetTokenMethod {
     }
 }
 
+struct ExtendRuntimeMeasurementMethod {
+    service: Arc<dyn AttestationAgentService + Send + Sync>,
+}
+
+#[async_trait]
+impl ::ttrpc::r#async::MethodHandler for ExtendRuntimeMeasurementMethod {
+    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
+        ::ttrpc::async_request_handler!(self, ctx, req, attestation_agent, ExtendRuntimeMeasurementRequest, extend_runtime_measurement);
+    }
+}
+
 #[async_trait]
 pub trait AttestationAgentService: Sync {
     async fn get_evidence(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetEvidenceRequest) -> ::ttrpc::Result<super::attestation_agent::GetEvidenceResponse> {
@@ -71,6 +87,9 @@ pub trait AttestationAgentService: Sync {
     }
     async fn get_token(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetTokenRequest) -> ::ttrpc::Result<super::attestation_agent::GetTokenResponse> {
         Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/GetToken is not supported".to_string())))
+    }
+    async fn extend_runtime_measurement(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::ExtendRuntimeMeasurementRequest) -> ::ttrpc::Result<super::attestation_agent::ExtendRuntimeMeasurementResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/ExtendRuntimeMeasurement is not supported".to_string())))
     }
 }
 
@@ -84,6 +103,9 @@ pub fn create_attestation_agent_service(service: Arc<dyn AttestationAgentService
 
     methods.insert("GetToken".to_string(),
                     Box::new(GetTokenMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
+
+    methods.insert("ExtendRuntimeMeasurement".to_string(),
+                    Box::new(ExtendRuntimeMeasurementMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
 
     ret.insert("attestation_agent.AttestationAgentService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
     ret
