@@ -15,4 +15,7 @@ $ curl http://127.0.0.1:8006/aa/evidence\?runtime_data\=xxxx
 
 $ curl http://127.0.0.1:8006/aa/token\?token_type\=kbs
 {"token":"eyJhbGciOiJFi...","tee_keypair":"-----BEGIN... "}
+
+$ curl http://127.0.0.1:8006/aa/aael\?domain\=dGVzdAo\&operation\=dGVzdAo\&content=dGVzdAo
+
 ```
