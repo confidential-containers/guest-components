@@ -85,11 +85,7 @@ struct WalCache {
 }
 
 impl EventLog {
-    pub async fn new(
-        rtmr_extender: Arc<BoxedAttester>,
-        alg: HashAlgorithm,
-        pcr: u64,
-    ) -> Result<Self> {
+    pub async fn new(rtmr_extender: Arc<BoxedAttester>, pcr: u64) -> Result<Self> {
         tokio::fs::create_dir_all(EVENTLOG_PARENT_DIR_PATH)
             .await
             .context("create eventlog parent dir")?;
@@ -101,6 +97,7 @@ impl EventLog {
         let pos = file.stream_position()?;
 
         let mut writer = Box::new(FileWriter { file, pos });
+        let alg = rtmr_extender.ccel_hash_algorithm();
         // if any WAL cache file exists, we should handle recovering from crash
         match Self::read_wal_cache(alg.digest_len()) {
             Ok(Some(wal_cache)) => {
@@ -403,6 +400,8 @@ mod tests {
         assert_eq!(dig_hex, digest);
     }
 
+    // skip this test because it will depend/influence the underlying hardware
+    #[ignore]
     #[tokio::test]
     #[serial_test::serial]
     async fn test_eventlog_from_nothing() {
@@ -412,9 +411,7 @@ mod tests {
         let tee = detect_tee_type();
         let rtmr_extender =
             BoxedAttester::try_from(tee).expect("Failed to create BoxedAttester from Tee type");
-        let mut eventlog = EventLog::new(Arc::new(rtmr_extender), HashAlgorithm::Sha256, 17)
-            .await
-            .unwrap();
+        let mut eventlog = EventLog::new(Arc::new(rtmr_extender), 17).await.unwrap();
         eventlog
             .extend_entry(
                 Event {
@@ -430,6 +427,8 @@ mod tests {
         std::fs::remove_file(EVENTLOG_PATH).unwrap();
     }
 
+    // skip this test because it will depend/influence the underlying hardware
+    #[ignore]
     #[tokio::test]
     #[serial_test::serial]
     async fn test_eventlog_from_empty_file() {
@@ -448,9 +447,7 @@ mod tests {
         let tee = detect_tee_type();
         let rtmr_extender =
             BoxedAttester::try_from(tee).expect("Failed to create BoxedAttester from Tee type");
-        let mut eventlog = EventLog::new(Arc::new(rtmr_extender), HashAlgorithm::Sha256, 17)
-            .await
-            .unwrap();
+        let mut eventlog = EventLog::new(Arc::new(rtmr_extender), 17).await.unwrap();
         eventlog
             .extend_entry(
                 Event {

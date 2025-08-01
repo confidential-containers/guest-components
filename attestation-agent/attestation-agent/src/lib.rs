@@ -97,7 +97,6 @@ impl AttestationAgent {
         if config.eventlog_config.enable_eventlog {
             let eventlog = EventLog::new(
                 self.primary_attester.clone(),
-                config.eventlog_config.eventlog_algorithm,
                 config.eventlog_config.init_pcr,
             )
             .await?;
