@@ -5,6 +5,7 @@
 
 #[cfg(feature = "aliyun")]
 pub mod aliyun;
+#[cfg(feature = "luks2")]
 pub mod blockdevice;
 use std::{collections::HashMap, str::FromStr};
 
@@ -20,13 +21,16 @@ pub enum Volume {
     #[cfg(feature = "aliyun")]
     #[strum(serialize = "alibaba-cloud-oss")]
     AliOss,
+
+    #[cfg(feature = "luks2")]
+    #[strum(serialize = "block-device")]
     BlockDevice,
 }
 
 /// Indicating a mount point and its parameters.
 #[derive(PartialEq, Clone, Debug, Deserialize)]
 pub struct Storage {
-    /// Driver nameof the mount plugin.
+    /// Driver name of the mount plugin.
     pub volume_type: String,
 
     /// A key-value map to provide extra mount settings.
@@ -44,7 +48,7 @@ pub struct Storage {
 pub trait SecureMount {
     /// Mount the volume to `mount_point` due to the given options.
     async fn mount(
-        &self,
+        &mut self,
         options: &HashMap<String, String>,
         flags: &[String],
         mount_point: &str,
@@ -57,13 +61,14 @@ impl Storage {
         match volume_type {
             #[cfg(feature = "aliyun")]
             Volume::AliOss => {
-                let oss = aliyun::Oss {};
+                let mut oss = aliyun::Oss {};
                 oss.mount(&self.options, &self.flags, &self.mount_point)
                     .await?;
                 Ok(self.mount_point.clone())
             }
+            #[cfg(feature = "luks2")]
             Volume::BlockDevice => {
-                let bd = blockdevice::BlockDevice {};
+                let mut bd = blockdevice::BlockDevice::default();
                 bd.mount(&self.options, &self.flags, &self.mount_point)
                     .await?;
                 Ok(self.mount_point.clone())

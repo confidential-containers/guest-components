@@ -27,6 +27,7 @@ else
 endif
 RESOURCE_PROVIDER ?= kbs,sev
 KMS_PROVIDER ?= aliyun,ehsm
+STORAGE ?= luks2
 DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
 features ?=
@@ -57,6 +58,10 @@ endif
 
 ifneq ($(KMS_PROVIDER), none)
     features += $(KMS_PROVIDER)
+endif
+
+ifneq ($(STORAGE), none)
+    features += $(STORAGE)
 endif
 
 ifeq ($(LIBC), musl)
