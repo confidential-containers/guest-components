@@ -32,6 +32,5 @@ M9QaC1mzQ/OStg==
 
 [eventlog_config]
 
-eventlog_algorithm = "sha384"
 init_pcr = 17
 enable_eventlog = false
