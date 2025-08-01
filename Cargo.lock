@@ -191,6 +191,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "base64 0.22.1",
  "clap",
  "form_urlencoded",
  "hyper 0.14.32",
