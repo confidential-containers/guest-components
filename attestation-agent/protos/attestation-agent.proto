@@ -36,6 +36,7 @@ message ExtendRuntimeMeasurementRequest {
     string Content = 3;
 
     // Which PCR will be extended with the hash of this entry.
+    // If not specified, the PCR set by AA will be used.
     optional uint64 RegisterIndex = 4;
 }
 
