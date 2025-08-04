@@ -9,7 +9,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-az-snp-vtpm = { version = "0.7.1", default-features = false, features = [
+az-snp-vtpm = { version = "0.7.3", default-features = false, features = [
     "attester",
 ], optional = true }
 az-tdx-vtpm = { version = "0.7.3", default-features = false, features = [

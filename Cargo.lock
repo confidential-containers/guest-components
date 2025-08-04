@@ -533,15 +533,15 @@ dependencies = [
 
 [[package]]
 name = "az-snp-vtpm"
-version = "0.7.1"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c16506502dc64f7111f7241ca400f3ee0f54e69dfd1f4be5cef29b96332f22e"
+checksum = "a9bdcc320534338c850f7ad8e3b9c6cdd3b4f2771086146fb43823f7a8f28f51"
 dependencies = [
  "az-cvm-vtpm",
  "bincode",
  "clap",
  "serde",
- "sev 4.0.0",
+ "sev 6.2.1",
  "thiserror 2.0.12",
  "ureq",
 ]
