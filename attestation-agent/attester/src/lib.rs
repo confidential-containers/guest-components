@@ -90,6 +90,8 @@ pub trait Attester {
 
     /// Extend TEE specific dynamic measurement register
     /// to enable dynamic measurement capabilities for input data at runtime.
+    /// The input event_digest would be truncated or padded to the size of
+    /// the register.
     async fn extend_runtime_measurement(
         &self,
         _event_digest: Vec<u8>,
