@@ -71,7 +71,7 @@ dependencies = [
  "cfg-if",
  "once_cell",
  "version_check",
- "zerocopy 0.7.35",
+ "zerocopy",
 ]
 
 [[package]]
@@ -513,9 +513,9 @@ dependencies = [
 
 [[package]]
 name = "az-cvm-vtpm"
-version = "0.7.4"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b3d0900c6757c9674b05b0479236458297026e25fb505186dc8d7735091a21c"
+checksum = "3f7ef43d012a8cf77739366d7ccdb895fb284e03bb1579d8d1792644ef3e6148"
 dependencies = [
  "bincode",
  "jsonwebkey",
@@ -524,33 +524,33 @@ dependencies = [
  "serde",
  "serde-big-array",
  "serde_json",
- "sev 6.2.1",
+ "sev 4.0.0",
  "sha2 0.10.9",
  "thiserror 2.0.12",
  "tss-esapi",
- "zerocopy 0.8.26",
+ "zerocopy",
 ]
 
 [[package]]
 name = "az-snp-vtpm"
-version = "0.7.4"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e5f1a3838d56871fc7a37c1ffcaa892777fbebb246f7ddec18c12e14b6d6aa9"
+checksum = "7c16506502dc64f7111f7241ca400f3ee0f54e69dfd1f4be5cef29b96332f22e"
 dependencies = [
  "az-cvm-vtpm",
  "bincode",
  "clap",
  "serde",
- "sev 6.2.1",
+ "sev 4.0.0",
  "thiserror 2.0.12",
  "ureq",
 ]
 
 [[package]]
 name = "az-tdx-vtpm"
-version = "0.7.4"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04849677b3c0704d4593d89940cde0dc0caad2202bf9fb29352e153782b91ff8"
+checksum = "80875afa68553e2035bc45836d00101ab80c94ec386de66f2fb14af480514711"
 dependencies = [
  "az-cvm-vtpm",
  "base64-url",
@@ -559,7 +559,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.12",
  "ureq",
- "zerocopy 0.8.26",
+ "zerocopy",
 ]
 
 [[package]]
@@ -730,6 +730,12 @@ name = "bitfield"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d7e60934ceec538daadb9d8432424ed043a904d8e0243f3c6446bce549a46ac"
+
+[[package]]
+name = "bitfield"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c821a6e124197eb56d907ccc2188eab1038fb919c914f47976e64dd8dbc855d1"
 
 [[package]]
 name = "bitfield"
@@ -4758,7 +4764,7 @@ version = "0.2.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77957b295656769bb8ad2b6a6b09d897d94f05c41b069aede1fcdaa675eaea04"
 dependencies = [
- "zerocopy 0.7.35",
+ "zerocopy",
 ]
 
 [[package]]
@@ -5670,7 +5676,7 @@ dependencies = [
  "s390_pv_core",
  "serde",
  "thiserror 1.0.69",
- "zerocopy 0.7.35",
+ "zerocopy",
 ]
 
 [[package]]
@@ -5684,7 +5690,7 @@ dependencies = [
  "log",
  "serde",
  "thiserror 1.0.69",
- "zerocopy 0.7.35",
+ "zerocopy",
 ]
 
 [[package]]
@@ -6104,6 +6110,32 @@ dependencies = [
 
 [[package]]
 name = "sev"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a97bd0b2e2d937951add10c8512a2dacc6ad29b39e5c5f26565a3e443329857d"
+dependencies = [
+ "base64 0.22.1",
+ "bincode",
+ "bitfield 0.15.0",
+ "bitflags 1.3.2",
+ "byteorder",
+ "codicon",
+ "dirs 5.0.1",
+ "hex",
+ "iocuddle",
+ "lazy_static",
+ "libc",
+ "openssl",
+ "rdrand",
+ "serde",
+ "serde-big-array",
+ "serde_bytes",
+ "static_assertions",
+ "uuid",
+]
+
+[[package]]
+name = "sev"
 version = "6.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1750ba11a6a6bba3c220da714caa0226aa34e417dce3975d2953062240717dea"
@@ -6119,8 +6151,6 @@ dependencies = [
  "iocuddle",
  "lazy_static",
  "libc",
- "openssl",
- "rdrand",
  "serde",
  "serde-big-array",
  "serde_bytes",
@@ -7918,16 +7948,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b9b4fd18abc82b8136838da5d50bae7bdea537c574d8dc1a34ed098d6c166f0"
 dependencies = [
  "byteorder",
- "zerocopy-derive 0.7.35",
-]
-
-[[package]]
-name = "zerocopy"
-version = "0.8.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1039dd0d3c310cf05de012d8a39ff557cb0d23087fd44cad61df08fc31907a2f"
-dependencies = [
- "zerocopy-derive 0.8.26",
+ "zerocopy-derive",
 ]
 
 [[package]]
@@ -7935,17 +7956,6 @@ name = "zerocopy-derive"
 version = "0.7.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fa4f8080344d4671fb4e831a13ad1e68092748387dfc4f55e356242fae12ce3e"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.99",
-]
-
-[[package]]
-name = "zerocopy-derive"
-version = "0.8.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ecf5b4cc5364572d7f4c329661bcc82724222973f2cab6f050a4e5c22f75181"
 dependencies = [
  "proc-macro2",
  "quote",
