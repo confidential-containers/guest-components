@@ -395,13 +395,17 @@ dependencies = [
  "codicon",
  "crypto",
  "csv-rs",
+ "env_logger",
  "hex",
  "hyper 0.14.32",
  "hyper-tls 0.5.0",
  "iocuddle",
  "kbs-types",
  "log",
+ "num-traits",
  "occlum_dcap",
+ "openssl",
+ "rsa",
  "rstest",
  "s390_pv",
  "scroll",
@@ -415,6 +419,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.12",
  "tokio",
+ "tss-esapi",
 ]
 
 [[package]]
