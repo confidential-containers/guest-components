@@ -15,4 +15,9 @@ $ curl http://127.0.0.1:8006/aa/evidence\?runtime_data\=xxxx
 
 $ curl http://127.0.0.1:8006/aa/token\?token_type\=kbs
 {"token":"eyJhbGciOiJFi...","tee_keypair":"-----BEGIN... "}
+
+$ curl -X POST http://127.0.0.1:8006/aa/aael \
+     -H "Content-Type: application/json" \
+     -d '{"domain":"test","operation":"test","content":"test"}'
+
 ```

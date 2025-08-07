@@ -75,7 +75,10 @@ async fn main() -> Result<()> {
         "attestation" => {
             router.register_route(
                 AA_ROOT,
-                Box::new(AAClient::new(&args.aa_addr, vec![Method::GET])?),
+                Box::new(AAClient::new(
+                    &args.aa_addr,
+                    vec![Method::GET, Method::POST],
+                )?),
             );
         }
 
@@ -87,7 +90,10 @@ async fn main() -> Result<()> {
 
             router.register_route(
                 AA_ROOT,
-                Box::new(AAClient::new(&args.aa_addr, vec![Method::GET])?),
+                Box::new(AAClient::new(
+                    &args.aa_addr,
+                    vec![Method::GET, Method::POST],
+                )?),
             );
         }
 
