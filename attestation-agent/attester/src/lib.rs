@@ -40,6 +40,9 @@ pub mod tsm_report;
 #[cfg(feature = "se-attester")]
 pub mod se;
 
+#[cfg(feature = "tpm-attester")]
+pub mod tpm;
+
 pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
 
 impl TryFrom<Tee> for BoxedAttester {
@@ -67,6 +70,8 @@ impl TryFrom<Tee> for BoxedAttester {
             Tee::HygonDcu => Box::<hygon_dcu::DcuAttester>::default(),
             #[cfg(feature = "se-attester")]
             Tee::Se => Box::<se::SeAttester>::default(),
+            #[cfg(feature = "tpm-attester")]
+            Tee::Tpm => Box::new(tpm::TpmAttester::new()?),
             _ => bail!("TEE is not supported!"),
         };
 
@@ -170,6 +175,11 @@ pub fn detect_tee_type() -> Tee {
     #[cfg(feature = "se-attester")]
     if se::detect_platform() {
         return Tee::Se;
+    }
+
+    #[cfg(feature = "tpm-attester")]
+    if tpm::detect_platform() {
+        return Tee::Tpm;
     }
 
     log::warn!(
