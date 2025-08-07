@@ -46,6 +46,7 @@ az-tdx-vtpm-attester= ["kbs_protocol/az-tdx-vtpm-attester"]
 snp-attester = ["kbs_protocol/snp-attester"]
 cca-attester = ["kbs_protocol/cca-attester"]
 se-attester  = ["kbs_protocol/se-attester"]
+tpm-attester  = ["kbs_protocol/tpm-attester"]
 
 sample_kbc = []
 offline_fs_kbc = []

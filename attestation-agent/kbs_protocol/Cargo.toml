@@ -66,6 +66,7 @@ csv-attester = ["attester/csv-attester"]
 hygon-dcu-attester = ["attester/hygon-dcu-attester"]
 cca-attester = ["attester/cca-attester"]
 se-attester = ["attester/se-attester"]
+tpm-attester = ["attester/tpm-attester"]
 
 rust-crypto = ["reqwest/rustls-tls", "crypto/rust-crypto"]
 openssl = ["reqwest/native-tls-vendored", "crypto/openssl"]

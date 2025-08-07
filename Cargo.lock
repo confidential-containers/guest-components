@@ -397,13 +397,18 @@ dependencies = [
  "codicon",
  "crypto",
  "csv-rs",
+ "env_logger",
  "hex",
  "hyper 0.14.32",
  "hyper-tls 0.5.0",
  "iocuddle",
  "kbs-types",
  "log",
+ "num-traits",
  "occlum_dcap",
+ "picky-asn1 0.10.1",
+ "picky-asn1-der 0.5.2",
+ "picky-asn1-x509 0.14.5",
  "rstest",
  "s390_pv",
  "scroll",
@@ -417,6 +422,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.12",
  "tokio",
+ "tss-esapi",
 ]
 
 [[package]]
@@ -4618,12 +4624,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "picky-asn1"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ff038f9360b934342fb3c0a1d6e82c438a2624b51c3c6e3e6d7cf252b6f3ee3"
+dependencies = [
+ "oid",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
 name = "picky-asn1-der"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5df7873a9e36d42dadb393bea5e211fe83d793c172afad5fb4ec846ec582793f"
 dependencies = [
- "picky-asn1",
+ "picky-asn1 0.8.0",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
+name = "picky-asn1-der"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9dccb53c26f70c082e008818f524bd45d057069517b047bd0c0ee062d6d7d7f2"
+dependencies = [
+ "picky-asn1 0.10.1",
  "serde",
  "serde_bytes",
 ]
@@ -4636,8 +4664,21 @@ checksum = "2c5f20f71a68499ff32310f418a6fad8816eac1a2859ed3f0c5c741389dd6208"
 dependencies = [
  "base64 0.21.7",
  "oid",
- "picky-asn1",
- "picky-asn1-der",
+ "picky-asn1 0.8.0",
+ "picky-asn1-der 0.4.1",
+ "serde",
+]
+
+[[package]]
+name = "picky-asn1-x509"
+version = "0.14.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5444990fc9e53de47353c95e6521a5f669676da986a10482ff3708bdaa1a2a4b"
+dependencies = [
+ "base64 0.22.1",
+ "oid",
+ "picky-asn1 0.10.1",
+ "picky-asn1-der 0.5.2",
  "serde",
 ]
 
@@ -7094,8 +7135,8 @@ dependencies = [
  "num-derive",
  "num-traits",
  "oid",
- "picky-asn1",
- "picky-asn1-x509",
+ "picky-asn1 0.8.0",
+ "picky-asn1-x509 0.12.0",
  "regex",
  "serde",
  "tss-esapi-sys",
