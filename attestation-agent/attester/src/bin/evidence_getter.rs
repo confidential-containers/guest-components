@@ -25,6 +25,7 @@ enum Cli {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
+    env_logger::init();
     // report_data on all platforms is 64 bytes length.
     let mut report_data = vec![0u8; 64];
 
