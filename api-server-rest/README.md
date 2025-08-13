@@ -15,4 +15,11 @@ $ curl http://127.0.0.1:8006/aa/evidence\?runtime_data\=xxxx
 
 $ curl http://127.0.0.1:8006/aa/token\?token_type\=kbs
 {"token":"eyJhbGciOiJFi...","tee_keypair":"-----BEGIN... "}
+
+$ curl http://127.0.0.1:8006/aa/extend_runtime_measurement\?domain\=image-rs\&operation\=pull_image\&content\=docker.io\/library\/busybox@sha256:50aa4698fa6262977cff89181b2664b99d8a56dbca847bf62f2ef04854597cf8\&register_index=17
+runtime measurement extend success
+
+$ cat /run/attestation-agent/eventlog
+INIT sha384/000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+image-rs pull_image docker.io/library/busybox@sha256:50aa4698fa6262977cff89181b2664b99d8a56dbca847bf62f2ef04854597cf8
 ```
