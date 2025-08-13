@@ -26,7 +26,7 @@ else
     LIBC ?= musl
 endif
 RESOURCE_PROVIDER ?= kbs,sev
-KMS_PROVIDER ?= aliyun,ehsm
+KMS_PROVIDER ?= aliyun
 DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
 features ?=
