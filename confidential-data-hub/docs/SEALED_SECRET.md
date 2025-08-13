@@ -211,6 +211,6 @@ Your secret will be provisioned to the `PROTECTED_SECRET` environment variable.
 | Provider Name      | README                                                      			| Maintainer                |
 | ------------------ | -------------------------------------------------------------------- | ------------------------- |
 | aliyun       	     |  [aliyun](kms-providers/alibaba.md)                               	| Alibaba                   |
-| ehsm       	     |  [ehsm](kms-providers/ehsm-kms.md)                              		| Intel                   	|
+| ehsm       	     |  [ehsm](kms-providers/ehsm-kms.md)                              		| Unmaintained                   	|
 | kbs                |                                                                          | CoCo                  |
 
