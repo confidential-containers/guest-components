@@ -19,6 +19,36 @@
     }
   ],
   "paths": {
+    "/aa/aael": {
+      "post": {
+        "tags": [],
+        "operationId": "_aael",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AaelEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "success response"
+          },
+          "400": {
+            "description": "bad request for invalid body"
+          },
+          "403": {
+            "description": "forbid external access"
+          },
+          "405": {
+            "description": "only POST method allowed"
+          }
+        }
+      }
+    },
     "/aa/evidence": {
       "get": {
         "tags": [],
@@ -140,5 +170,30 @@
       }
     }
   },
-  "components": {}
+  "components": {
+    "schemas": {
+      "AaelEvent": {
+        "type": "object",
+        "required": [
+          "domain",
+          "operation",
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Attestation Agent Event Log Content"
+          },
+          "domain": {
+            "type": "string",
+            "description": "Attestation Agent Event Log Domain"
+          },
+          "operation": {
+            "type": "string",
+            "description": "Attestation Agent Event Log Operation"
+          }
+        }
+      }
+    }
+  }
 }
