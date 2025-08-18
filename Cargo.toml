@@ -49,7 +49,7 @@ reqwest = { version = "0.12", default-features = false }
 resource_uri = { path = "attestation-agent/deps/resource_uri" }
 ring = "0.17"
 rsa = "0.9.8"
-rstest = "0.17"
+rstest = "0.26"
 serde = { version = "1.0", features = ["derive"] }
 serde_with = { version = "3.14.0", features = ["base64"] }
 serde_json = "1.0"
