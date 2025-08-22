@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use attestation_agent::{AttestationAPIs, AttestationAgent};
 use log::{debug, error};
 
-use crate::ttrpc_dep::ttrpc_protocol::{
+use protos::ttrpc::aa::{
     attestation_agent::{
         ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse,
         GetAdditionalEvidenceRequest, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,

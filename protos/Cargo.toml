@@ -1,0 +1,20 @@
+[package]
+name = "protos"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait = { workspace = true, optional = true }
+prost = { workspace = true, optional = true }
+protobuf = { workspace = true, optional = true }
+tonic = { workspace = true, optional = true }
+ttrpc = { workspace = true, features = ["async"], optional = true }
+
+[build-dependencies]
+ttrpc-codegen = { workspace = true, optional = true }
+tonic-build = { workspace = true, optional = true }
+
+[features]
+default = ["ttrpc", "grpc"]
+ttrpc = ["dep:ttrpc-codegen", "dep:ttrpc", "protobuf", "async-trait"]
+grpc = ["dep:tonic-build", "tonic", "prost"]

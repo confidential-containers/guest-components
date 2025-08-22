@@ -4,14 +4,14 @@
 //
 
 use crate::router::ApiHandler;
-use crate::ttrpc_proto::attestation_agent::{
-    ExtendRuntimeMeasurementRequest, GetEvidenceRequest, GetTokenRequest,
-};
-use crate::ttrpc_proto::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use anyhow::*;
 use async_trait::async_trait;
 use hyper::body::HttpBody;
 use hyper::{Body, Method, Request, Response};
+use protos::ttrpc::aa::attestation_agent::{
+    ExtendRuntimeMeasurementRequest, GetEvidenceRequest, GetTokenRequest,
+};
+use protos::ttrpc::aa::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::net::SocketAddr;

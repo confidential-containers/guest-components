@@ -9,12 +9,10 @@ use kbs_types::Tee;
 use serde_json::json;
 use ttrpc::context;
 
-use crate::{
-    ttrpc_protos::{
-        attestation_agent::{GetAdditionalEvidenceRequest, GetEvidenceRequest, GetTeeTypeRequest},
-        attestation_agent_ttrpc::AttestationAgentServiceClient,
-    },
-    Error, Result,
+use crate::{Error, Result};
+use protos::ttrpc::aa::{
+    attestation_agent::{GetAdditionalEvidenceRequest, GetEvidenceRequest, GetTeeTypeRequest},
+    attestation_agent_ttrpc::AttestationAgentServiceClient,
 };
 
 use super::EvidenceProvider;

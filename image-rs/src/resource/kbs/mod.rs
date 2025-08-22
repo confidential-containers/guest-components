@@ -27,9 +27,6 @@ mod grpc;
 #[cfg(feature = "keywrap-ttrpc")]
 mod ttrpc;
 
-#[cfg(feature = "keywrap-ttrpc")]
-mod ttrpc_proto;
-
 #[cfg(feature = "keywrap-native")]
 mod native;
 

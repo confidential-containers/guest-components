@@ -38,15 +38,17 @@ async-trait.workspace = true
 attestation-agent = { path = "../../attestation-agent/attestation-agent", default-features = false, optional = true }
 base64.workspace = true
 cfg-if.workspace = true
-clap = { workspace = true, features = [ "derive" ], optional = true }
+clap = { workspace = true, features = ["derive"], optional = true }
 config = { workspace = true, optional = true }
 crypto.path = "../../attestation-agent/deps/crypto"
 env_logger = { workspace = true, optional = true }
-image-rs = { path = "../../image-rs", default-features = false, features = ["kata-cc-rustls-tls"] }
+image-rs = { path = "../../image-rs", default-features = false, features = [
+    "kata-cc-rustls-tls",
+] }
 kms = { path = "../kms", default-features = false }
 log.workspace = true
 prost = { workspace = true, optional = true }
-protobuf = { workspace = true, optional = true }
+protos = { path = "../../protos", default-features = false, optional = true }
 rand.workspace = true
 resource_uri.path = "../../attestation-agent/deps/resource_uri"
 serde = { workspace = true, optional = true }
@@ -96,9 +98,9 @@ sev = ["kms/sev"]
 ehsm = []
 
 # Binary RPC type
-bin = [ "anyhow", "attestation-agent", "clap", "config", "env_logger", "serde" ]
-ttrpc = ["dep:ttrpc", "protobuf", "ttrpc-codegen", "tokio/signal"]
-grpc = ["prost", "tonic", "tonic-build", "tokio/signal"]
+bin = ["anyhow", "attestation-agent", "clap", "config", "env_logger", "serde"]
+ttrpc = ["dep:ttrpc", "ttrpc-codegen", "tokio/signal", "protos/ttrpc"]
+grpc = ["prost", "tonic", "tonic-build", "tokio/signal", "protos/grpc"]
 
 # for secret_cli
 cli = ["clap/derive", "tokio/rt-multi-thread", "tokio/sync", "tokio/macros"]

@@ -7,13 +7,11 @@
 
 use anyhow::*;
 use async_trait::async_trait;
+use protos::ttrpc::cdh::{api::GetResourceRequest, api_ttrpc::GetResourceServiceClient};
 use tokio::sync::OnceCell;
 use ttrpc::context;
 
 use super::Client;
-
-use super::ttrpc_proto::getresource::GetResourceRequest;
-use super::ttrpc_proto::getresource_ttrpc::GetResourceServiceClient;
 
 const SOCKET_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
 
