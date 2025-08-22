@@ -14,8 +14,7 @@ use tokio::signal::unix::{signal, SignalKind};
 use ttrpc::asynchronous::{Server, Service};
 use ttrpc_dep::server::AA;
 
-use crate::ttrpc_dep::ttrpc_protocol::attestation_agent_ttrpc::create_attestation_agent_service;
-
+use protos::ttrpc::aa::attestation_agent_ttrpc::create_attestation_agent_service;
 mod ttrpc_dep;
 
 const DEFAULT_UNIX_SOCKET_DIR: &str = "/run/confidential-containers/attestation-agent/";

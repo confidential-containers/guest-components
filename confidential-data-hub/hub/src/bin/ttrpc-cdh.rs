@@ -9,7 +9,8 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use confidential_data_hub::CdhConfig;
 use log::info;
-use protos::{
+
+use protos::ttrpc::cdh::{
     api_ttrpc::{
         create_get_resource_service, create_image_pull_service, create_sealed_secret_service,
         create_secure_mount_service,
@@ -24,7 +25,6 @@ use ttrpc::r#async::Server as TtrpcServer;
 use ttrpc_server::Server;
 
 mod message;
-mod protos;
 mod ttrpc_server;
 
 const UNIX_SOCKET_PREFIX: &str = "unix://";

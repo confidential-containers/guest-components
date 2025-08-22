@@ -13,7 +13,6 @@ use std::sync::Arc;
 mod aa;
 mod cdh;
 mod router;
-mod ttrpc_proto;
 mod utils;
 
 use aa::{AAClient, AA_ROOT};
