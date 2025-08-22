@@ -170,12 +170,11 @@ dependencies = [
  "clap",
  "form_urlencoded",
  "hyper 0.14.32",
- "protobuf",
+ "protos",
  "serde",
  "serde_json",
  "tokio",
  "ttrpc",
- "ttrpc-codegen",
  "utoipa",
 ]
 
@@ -339,8 +338,7 @@ dependencies = [
  "kbs-types",
  "kbs_protocol",
  "log",
- "prost 0.13.5",
- "protobuf",
+ "protos",
  "reqwest 0.12.15",
  "rstest",
  "serde",
@@ -353,9 +351,7 @@ dependencies = [
  "tokio",
  "toml 0.8.23",
  "tonic",
- "tonic-build",
  "ttrpc",
- "ttrpc-codegen",
 ]
 
 [[package]]
@@ -1142,7 +1138,7 @@ dependencies = [
  "futures",
  "jwt-simple",
  "log",
- "prost 0.13.5",
+ "protos",
  "rand 0.9.2",
  "reqwest 0.12.15",
  "rstest",
@@ -1151,7 +1147,6 @@ dependencies = [
  "strum",
  "tokio",
  "tonic",
- "tonic-build",
  "uuid",
 ]
 
@@ -1196,7 +1191,7 @@ dependencies = [
  "log",
  "nix 0.30.1",
  "prost 0.13.5",
- "protobuf",
+ "protos",
  "rand 0.9.2",
  "resource_uri",
  "rstest",
@@ -3068,8 +3063,7 @@ dependencies = [
  "oci-client",
  "oci-spec",
  "ocicrypt-rs",
- "prost 0.13.5",
- "protobuf",
+ "protos",
  "reqwest 0.12.15",
  "resource_uri",
  "ring",
@@ -3091,9 +3085,7 @@ dependencies = [
  "tokio-util",
  "toml 0.8.23",
  "tonic",
- "tonic-build",
  "ttrpc",
- "ttrpc-codegen",
  "url",
  "walkdir",
  "xattr",
@@ -3422,6 +3414,7 @@ dependencies = [
  "kbs-types",
  "log",
  "protobuf",
+ "protos",
  "reqwest 0.12.15",
  "resource_uri",
  "rstest",
@@ -3434,7 +3427,6 @@ dependencies = [
  "thiserror 2.0.16",
  "tokio",
  "ttrpc",
- "ttrpc-codegen",
  "url",
  "zeroize",
 ]
@@ -3466,6 +3458,7 @@ dependencies = [
  "log",
  "p12",
  "prost 0.13.5",
+ "protos",
  "rand 0.9.2",
  "reqwest 0.12.15",
  "resource_uri",
@@ -4181,8 +4174,7 @@ dependencies = [
  "kbc",
  "openssl",
  "pin-project-lite",
- "prost 0.13.5",
- "protobuf",
+ "protos",
  "resource_uri",
  "ring",
  "serde",
@@ -4190,9 +4182,7 @@ dependencies = [
  "sha2 0.10.9",
  "tokio",
  "tonic",
- "tonic-build",
  "ttrpc",
- "ttrpc-codegen",
  "zeroize",
 ]
 
@@ -5032,6 +5022,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e36c2f31e0a47f9280fb347ef5e461ffcd2c52dd520d8e216b52f93b0b0d7d6"
 dependencies = [
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "protos"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "prost 0.13.5",
+ "protobuf",
+ "tonic",
+ "tonic-build",
+ "ttrpc",
+ "ttrpc-codegen",
 ]
 
 [[package]]

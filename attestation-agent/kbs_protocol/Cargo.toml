@@ -19,6 +19,7 @@ jwt-simple.workspace = true
 kbs-types.workspace = true
 log.workspace = true
 protobuf = { workspace = true, optional = true }
+protos = { path = "../../protos", default-features = false, optional = true }
 reqwest = { workspace = true, features = ["cookies", "json"], optional = true }
 resource_uri.path = "../deps/resource_uri"
 serde.workspace = true
@@ -38,7 +39,6 @@ testcontainers.workspace = true
 tokio = { workspace = true, features = ["rt", "macros", "fs", "process"] }
 
 [build-dependencies]
-ttrpc-codegen = { workspace = true, optional = true }
 
 [[bin]]
 name = "trustee-attester"
@@ -49,7 +49,7 @@ default = ["background_check", "passport", "rust-crypto", "all-attesters"]
 
 passport = []
 # Allow to connect Attestation-Agent with TTRPC to get evidence, token, etc.
-aa_ttrpc = ["ttrpc-codegen", "passport", "ttrpc/async", "protobuf"]
+aa_ttrpc = ["passport", "ttrpc/async", "protos/ttrpc"]
 
 background_check = ["tokio/time", "canon-json"]
 all-attesters = ["attester/all-attesters"]

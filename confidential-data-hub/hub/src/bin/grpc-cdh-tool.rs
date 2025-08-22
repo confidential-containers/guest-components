@@ -7,21 +7,20 @@
 
 #![allow(non_snake_case)]
 
-use api::{
-    get_resource_service_client::GetResourceServiceClient,
-    key_provider_service_client::KeyProviderServiceClient,
-    sealed_secret_service_client::SealedSecretServiceClient,
-    secure_mount_service_client::SecureMountServiceClient, GetResourceRequest,
-    KeyProviderKeyWrapProtocolInput, SecureMountRequest, UnsealSecretInput,
-};
 use base64::{engine::general_purpose::STANDARD, Engine};
 use clap::{Args, Parser, Subcommand};
 use confidential_data_hub::storage::volume_type::Storage;
-
-mod api {
-    tonic::include_proto!("api");
-    tonic::include_proto!("keyprovider");
-}
+use protos::grpc::cdh::{
+    api::{
+        get_resource_service_client::GetResourceServiceClient,
+        sealed_secret_service_client::SealedSecretServiceClient,
+        secure_mount_service_client::SecureMountServiceClient, GetResourceRequest,
+        SecureMountRequest, UnsealSecretInput,
+    },
+    keyprovider::{
+        key_provider_service_client::KeyProviderServiceClient, KeyProviderKeyWrapProtocolInput,
+    },
+};
 
 #[derive(Parser)]
 #[command(name = "cdh_client_grpc")]

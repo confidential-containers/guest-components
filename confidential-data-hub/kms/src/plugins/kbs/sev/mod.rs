@@ -7,8 +7,4 @@
 //! This is a KBS client implementation.
 
 mod client;
-
-#[rustfmt::skip]
-mod keybroker;
-
 pub use client::OnlineSevKbc;

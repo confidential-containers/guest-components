@@ -4,22 +4,16 @@
 //
 
 use anyhow::*;
-use attestation::attestation_agent_service_server::{
-    AttestationAgentService, AttestationAgentServiceServer,
-};
-use attestation::{
+use attestation_agent::{AttestationAPIs, AttestationAgent};
+use log::{debug, error};
+use protos::grpc::aa::attestation_agent::{
+    attestation_agent_service_server::{AttestationAgentService, AttestationAgentServiceServer},
     BindInitDataRequest, BindInitDataResponse, ExtendRuntimeMeasurementRequest,
     ExtendRuntimeMeasurementResponse, GetAdditionalEvidenceRequest, GetEvidenceRequest,
     GetEvidenceResponse, GetTeeTypeRequest, GetTeeTypeResponse, GetTokenRequest, GetTokenResponse,
 };
-use attestation_agent::{AttestationAPIs, AttestationAgent};
-use log::{debug, error};
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
-
-mod attestation {
-    tonic::include_proto!("attestation_agent");
-}
 
 pub const AGENT_NAME: &str = "attestation-agent";
 

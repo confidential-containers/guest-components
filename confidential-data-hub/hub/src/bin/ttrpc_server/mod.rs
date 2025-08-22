@@ -14,20 +14,19 @@ use confidential_data_hub::{
 use log::{debug, error};
 use ttrpc::{asynchronous::TtrpcContext, Code, Error, Status};
 
+use protos::ttrpc::cdh::{
+    api::{
+        GetResourceRequest, GetResourceResponse, ImagePullRequest, ImagePullResponse,
+        SecureMountRequest, SecureMountResponse, UnsealSecretInput, UnsealSecretOutput,
+    },
+    api_ttrpc::{GetResourceService, ImagePullService, SealedSecretService, SecureMountService},
+    keyprovider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput},
+    keyprovider_ttrpc::KeyProviderService,
+};
+
 use crate::{
     format_error,
     message::{KeyProviderInput, KeyUnwrapOutput, KeyUnwrapResults},
-    protos::{
-        api::{
-            GetResourceRequest, GetResourceResponse, ImagePullRequest, ImagePullResponse,
-            SecureMountRequest, SecureMountResponse, UnsealSecretInput, UnsealSecretOutput,
-        },
-        api_ttrpc::{
-            GetResourceService, ImagePullService, SealedSecretService, SecureMountService,
-        },
-        keyprovider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput},
-        keyprovider_ttrpc::KeyProviderService,
-    },
 };
 
 pub struct Server {

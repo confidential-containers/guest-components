@@ -88,11 +88,8 @@ impl KeyProviderKeyWrapProtocolOutput {
             .await
             .map_err(|e| anyhow!("keyprovider: error while creating channel: {e:?}"))?;
 
-        let mut client =
-            crate::utils::grpc::keyprovider::key_provider_service_client::KeyProviderServiceClient::new(
-                channel,
-            );
-        let msg = crate::utils::grpc::keyprovider::KeyProviderKeyWrapProtocolInput {
+        let mut client = protos::grpc::cdh::keyprovider::key_provider_service_client::KeyProviderServiceClient::new(channel);
+        let msg = protos::grpc::cdh::keyprovider::KeyProviderKeyWrapProtocolInput {
             key_provider_key_wrap_protocol_input: input,
         };
         let request = tonic::Request::new(msg);
@@ -131,9 +128,9 @@ impl KeyProviderKeyWrapProtocolOutput {
     fn from_ttrpc(input: Vec<u8>, conn: &str, operation: OpKey) -> Result<Self> {
         let c = ttrpc::Client::connect(conn)?;
 
-        let kc = crate::utils::ttrpc::keyprovider_ttrpc::KeyProviderServiceClient::new(c);
+        let kc = protos::ttrpc::cdh::sync::keyprovider_ttrpc::KeyProviderServiceClient::new(c);
         let kc1 = kc.clone();
-        let mut req = crate::utils::ttrpc::keyprovider::KeyProviderKeyWrapProtocolInput::new();
+        let mut req = protos::ttrpc::cdh::sync::keyprovider::KeyProviderKeyWrapProtocolInput::new();
         req.KeyProviderKeyWrapProtocolInput = input;
 
         let ttrpc_output = match operation {
@@ -615,9 +612,8 @@ mod tests {
     mod grpc {
         use super::cmd_grpc::{decrypt_key, encrypt_key, DEC_KEY, ENC_KEY};
         use super::*;
-        use crate::utils::grpc::keyprovider::key_provider_service_server::KeyProviderService;
-        use crate::utils::grpc::keyprovider::key_provider_service_server::KeyProviderServiceServer;
-        use crate::utils::grpc::keyprovider::{
+        use protos::grpc::cdh::keyprovider::{
+            key_provider_service_server::{KeyProviderService, KeyProviderServiceServer},
             KeyProviderKeyWrapProtocolInput as grpc_input,
             KeyProviderKeyWrapProtocolOutput as grpc_output,
         };
@@ -726,18 +722,17 @@ mod tests {
     mod ttrpc_test {
         use super::cmd_grpc::{decrypt_key, encrypt_key, DEC_KEY, ENC_KEY};
         use super::*;
-        use crate::utils::ttrpc::keyprovider::{
+        use async_trait::async_trait;
+        use protos::ttrpc::cdh::sync::keyprovider::{
             KeyProviderKeyWrapProtocolInput as ttrpc_input,
             KeyProviderKeyWrapProtocolOutput as ttrpc_output,
         };
-        use crate::utils::ttrpc::keyprovider_ttrpc;
-        use async_trait::async_trait;
         use std::fs;
         use std::path::Path;
         pub const SOCK_ADDR: &str = "unix:///tmp/ttrpc-test";
 
         #[async_trait]
-        impl keyprovider_ttrpc::KeyProviderService for TestServer {
+        impl protos::ttrpc::cdh::sync::keyprovider_ttrpc::KeyProviderService for TestServer {
             fn wrap_key(
                 &self,
                 _ctx: &::ttrpc::TtrpcContext,
@@ -826,8 +821,15 @@ mod tests {
         pub fn start_ttrpc_server() {
             tokio::spawn(async move {
                 let k = Box::<crate::keywrap::keyprovider::tests::TestServer>::default()
-                    as Box<dyn keyprovider_ttrpc::KeyProviderService + Send + Sync>;
-                let kp_service = keyprovider_ttrpc::create_key_provider_service(k.into());
+                    as Box<
+                        dyn protos::ttrpc::cdh::sync::keyprovider_ttrpc::KeyProviderService
+                            + Send
+                            + Sync,
+                    >;
+                let kp_service =
+                    protos::ttrpc::cdh::sync::keyprovider_ttrpc::create_key_provider_service(
+                        k.into(),
+                    );
 
                 remove_if_sock_exist(SOCK_ADDR).unwrap();
 

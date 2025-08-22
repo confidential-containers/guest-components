@@ -14,6 +14,7 @@ members = [
     "confidential-data-hub/kms",
     "image-rs",
     "ocicrypt-rs",
+    "protos",
 ]
 
 [workspace.dependencies]

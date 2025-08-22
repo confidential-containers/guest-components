@@ -10,6 +10,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use chrono::Utc;
 use log::{error, info};
 use prost::Message;
+use protos::grpc::cdh::dkms_api;
 use reqwest::{header::HeaderMap, Certificate, ClientBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -26,10 +27,6 @@ use super::super::annotations::*;
 use super::ALIYUN_IN_GUEST_DEFAULT_KEY_PATH;
 use config::*;
 use credential::*;
-
-pub mod dkms_api {
-    tonic::include_proto!("dkms_api");
-}
 
 /// Serialized [`crate::ProviderSettings`]
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -24,6 +24,7 @@ kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features
 log.workspace = true
 p12 = { version = "0.6.3", optional = true }
 prost = { workspace = true, optional = true }
+protos = { path = "../../protos", default-features = false, optional = true }
 rand = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true }
 resource_uri = { path = "../../attestation-agent/deps/resource_uri" }
@@ -53,7 +54,27 @@ tonic-build.workspace = true
 [features]
 default = ["aliyun", "kbs"]
 
-aliyun = ["chrono", "hex", "p12", "prost", "rand", "reqwest/rustls-tls", "sha2", "tonic", "url", "yasna"]
+aliyun = [
+    "chrono",
+    "hex",
+    "p12",
+    "rand",
+    "reqwest/rustls-tls",
+    "sha2",
+    "tonic",
+    "url",
+    "yasna",
+    "protos/grpc",
+    "prost",
+]
 kbs = ["kbs_protocol"]
 ehsm = ["ehsm_client"]
-sev = ["bincode", "crypto", "dep:sev", "prost", "tonic", "uuid", "zeroize"]
+sev = [
+    "bincode",
+    "crypto",
+    "dep:sev",
+    "tonic",
+    "uuid",
+    "zeroize",
+    "protos/grpc",
+]
