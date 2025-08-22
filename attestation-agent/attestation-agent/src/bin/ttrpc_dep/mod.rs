@@ -4,4 +4,3 @@
 //
 
 pub mod server;
-pub mod ttrpc_protocol;

@@ -9,11 +9,9 @@ use async_trait::async_trait;
 use serde::Deserialize;
 use ttrpc::context;
 
-use crate::{
-    ttrpc_protos::{
-        attestation_agent::GetTokenRequest, attestation_agent_ttrpc::AttestationAgentServiceClient,
-    },
-    Error, Result, TeeKeyPair, Token,
+use crate::{Error, Result, TeeKeyPair, Token};
+use protos::ttrpc::aa::{
+    attestation_agent::GetTokenRequest, attestation_agent_ttrpc::AttestationAgentServiceClient,
 };
 
 use super::TokenProvider;

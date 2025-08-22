@@ -10,6 +10,9 @@ use std::sync::LazyLock;
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use crypto::WrapType;
+use protos::grpc::aa::keybroker::{
+    key_broker_service_client::KeyBrokerServiceClient, OnlineSecretRequest, RequestDetails,
+};
 use resource_uri::ResourceUri;
 use serde::Deserialize;
 use tokio::{fs, sync::RwLock};
@@ -18,10 +21,6 @@ use uuid::Uuid;
 use zeroize::Zeroizing;
 
 use crate::{plugins::kbs::Kbc, Error, Result};
-
-use super::keybroker::{
-    key_broker_service_client::KeyBrokerServiceClient, OnlineSecretRequest, RequestDetails,
-};
 
 const KEYS_PATH: &str = "/sys/kernel/security/secrets/coco/1ee27366-0c87-43a6-af48-28543eaf7cb0";
 

@@ -8,23 +8,19 @@ use anyhow::*;
 use base64::Engine;
 use jwt_simple::prelude::Ed25519KeyPair;
 use log::*;
+use protos::grpc::cdh::keyprovider::{
+    key_provider_service_server::{KeyProviderService, KeyProviderServiceServer},
+    KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput,
+};
 use reqwest::Url;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use tokio::fs;
 use tonic::{transport::Server, Request, Response, Status};
 
-use key_provider::key_provider_service_server::{KeyProviderService, KeyProviderServiceServer};
-use key_provider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput};
 use protocol::keyprovider_structs::*;
 
 pub mod protocol;
-pub mod key_provider {
-    #![allow(unknown_lints)]
-    #![allow(clippy::derive_partial_eq_without_eq)]
-    #![allow(clippy::redundant_async_block)]
-    tonic::include_proto!("keyprovider");
-}
 
 pub struct KeyProvider {
     auth_private_key: Option<Ed25519KeyPair>,

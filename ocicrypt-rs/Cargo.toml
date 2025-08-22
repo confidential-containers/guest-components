@@ -22,10 +22,9 @@ josekit = { version = ">=0.7", optional = true }
 kbc = { path = "../attestation-agent/kbc", default-features = false, optional = true }
 openssl = { workspace = true, features = ["vendored"], optional = true }
 pin-project-lite = { version = "0.2.16", optional = true }
-protobuf = { workspace = true, optional = true }
-prost = { workspace = true, optional = true }
+protos = { path = "../protos", default-features = false, optional = true }
 resource_uri = { path = "../attestation-agent/deps/resource_uri", optional = true }
-ring = { workspace = true, optional = true}
+ring = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 sha2 = { workspace = true, optional = true }
@@ -35,13 +34,11 @@ ttrpc = { workspace = true, features = ["async"], optional = true }
 zeroize = { workspace = true, optional = true }
 
 [build-dependencies]
-tonic-build = { workspace = true, optional = true }
-ttrpc-codegen = { workspace = true, optional = true }
 
 [dev-dependencies]
 aes-gcm.workspace = true
 ctrlc = { version = "3.5", features = ["termination"] }
-openssl = { workspace = true, features = ["vendored"]}
+openssl = { workspace = true, features = ["vendored"] }
 tokio = { workspace = true, features = ["time", "signal"] }
 
 [features]
@@ -51,18 +48,57 @@ async-io = ["tokio"]
 
 block-cipher = []
 # Use ring as pseudo random number generator
-block-cipher-ring = ["aes", "base64-serde", "ctr", "hmac", "ring", "pin-project-lite", "sha2", "kbc?/rust-crypto", "block-cipher"]
+block-cipher-ring = [
+    "aes",
+    "base64-serde",
+    "ctr",
+    "hmac",
+    "ring",
+    "pin-project-lite",
+    "sha2",
+    "kbc?/rust-crypto",
+    "block-cipher",
+]
 # Use openssl as pseudo random number generator
-block-cipher-openssl = ["aes", "base64-serde", "ctr", "hmac", "openssl", "pin-project-lite", "sha2", "kbc?/openssl", "block-cipher"]
+block-cipher-openssl = [
+    "aes",
+    "base64-serde",
+    "ctr",
+    "hmac",
+    "openssl",
+    "pin-project-lite",
+    "sha2",
+    "kbc?/openssl",
+    "block-cipher",
+]
 
 keywrap-jwe = ["josekit"]
 keywrap-keyprovider = []
 keywrap-keyprovider-cmd = ["keywrap-keyprovider"]
-keywrap-keyprovider-grpc = ["keywrap-keyprovider", "prost", "tonic", "tokio/net"]
-keywrap-keyprovider-ttrpc = ["keywrap-keyprovider", "protobuf", "async-trait", "ttrpc", "tokio"]
+keywrap-keyprovider-grpc = [
+    "keywrap-keyprovider",
+    "tokio/net",
+    "tonic",
+    "protos/grpc",
+]
+keywrap-keyprovider-ttrpc = [
+    "keywrap-keyprovider",
+    "async-trait",
+    "ttrpc",
+    "tokio",
+    "protos/ttrpc",
+]
 
 # Use KBC to request KEK
-keywrap-keyprovider-native = ["keywrap-keyprovider", "tokio/net", "tokio/sync", "crypto/rust-crypto", "zeroize", "kbc/cc_kbc", "kbc/rust-crypto", "kbc/sample_kbc", "kbc/sgx-attester", "resource_uri"]
-
-gen-proto-grpc = ["tonic-build"]
-gen-proto-ttrpc = ["ttrpc-codegen"]
+keywrap-keyprovider-native = [
+    "keywrap-keyprovider",
+    "tokio/net",
+    "tokio/sync",
+    "crypto/rust-crypto",
+    "zeroize",
+    "kbc/cc_kbc",
+    "kbc/rust-crypto",
+    "kbc/sample_kbc",
+    "kbc/sgx-attester",
+    "resource_uri",
+]

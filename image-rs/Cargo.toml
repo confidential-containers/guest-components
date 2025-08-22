@@ -36,8 +36,7 @@ oci-spec = "0.8.1"
 ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = [
     "async-io",
 ], optional = true }
-prost = { workspace = true, optional = true }
-protobuf = { workspace = true, optional = true }
+protos = { path = "../protos", optional = true, default-features = false }
 reqwest = { workspace = true, features = ["json"], optional = true }
 resource_uri = { path = "../attestation-agent/deps/resource_uri", optional = true }
 sequoia-openpgp = { version = "2.0.0", default-features = false, features = [
@@ -70,8 +69,6 @@ nydus-service = { version = "0.3.0", features = ["coco"], optional = true }
 
 [build-dependencies]
 anyhow.workspace = true
-tonic-build = { workspace = true, optional = true }
-ttrpc-codegen = { workspace = true, optional = true }
 
 [dev-dependencies]
 cfg-if.workspace = true
@@ -152,12 +149,7 @@ encryption-openssl = [
 
 keywrap-cmd = ["ocicrypt-rs/keywrap-keyprovider-cmd"]
 
-keywrap-grpc = [
-    "ocicrypt-rs/keywrap-keyprovider-grpc",
-    "prost",
-    "tonic",
-    "tonic-build",
-]
+keywrap-grpc = ["ocicrypt-rs/keywrap-keyprovider-grpc", "tonic", "protos/grpc"]
 keywrap-native = [
     "ocicrypt-rs/keywrap-keyprovider-native",
     "kbc/cc_kbc",
@@ -168,8 +160,7 @@ keywrap-native = [
 keywrap-ttrpc = [
     "ocicrypt-rs/keywrap-keyprovider-ttrpc",
     "dep:ttrpc",
-    "dep:protobuf",
-    "ttrpc-codegen",
+    "protos/ttrpc",
 ]
 
 # Enable keywrap-jwe to decrypt image

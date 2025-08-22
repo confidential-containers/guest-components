@@ -12,13 +12,12 @@ base64.workspace = true
 clap = { workspace = true, features = ["derive"] }
 form_urlencoded = "1.2.0"
 hyper = { version = "0.14.27", features = ["server", "http1", "runtime"] }
-protobuf = { workspace = true }
 serde.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 ttrpc = { workspace = true, features = ["async"] }
+protos = { path = "../protos", default-features = false, features = ["ttrpc"] }
 
 [build-dependencies]
 serde_json = { workspace = true }
-ttrpc-codegen = { workspace = true }
 utoipa = "5"

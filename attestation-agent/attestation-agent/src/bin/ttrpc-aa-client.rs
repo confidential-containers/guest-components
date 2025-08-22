@@ -6,13 +6,13 @@
 use base64::Engine;
 use clap::{arg, command, Args, Parser, Subcommand};
 use const_format::concatcp;
-use ttrpc::context;
-use ttrpc_dep::ttrpc_protocol::{
+use protos::ttrpc::aa::{
     attestation_agent::{
         ExtendRuntimeMeasurementRequest, GetEvidenceRequest, GetTeeTypeRequest, GetTokenRequest,
     },
     attestation_agent_ttrpc::AttestationAgentServiceClient,
 };
+use ttrpc::context;
 
 mod ttrpc_dep;
 
