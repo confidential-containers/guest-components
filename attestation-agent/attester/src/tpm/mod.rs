@@ -16,7 +16,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 
 const PCR_SLOT_8: u64 = 8;
-const TPM_REPORT_DATA_SIZE: usize = 64;
+const TPM_REPORT_DATA_SIZE: usize = 32;
 const TPM_HASH_ALGORITHM: &str = "SHA256";
 
 /// Evidence structure for the TPM Attester.
