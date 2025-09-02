@@ -97,8 +97,9 @@ struct ExtendRuntimeMeasurementArgs {
 #[tokio::main]
 pub async fn main() {
     let args = Cli::parse();
-    let inner =
-        ttrpc::asynchronous::Client::connect(&args.attestation_sock).expect("connect ttrpc socket");
+    let inner = ttrpc::asynchronous::Client::connect(&args.attestation_sock)
+        .await
+        .expect("connect ttrpc socket");
     let client = AttestationAgentServiceClient::new(inner);
     match args.operation {
         Operation::GetTee => {

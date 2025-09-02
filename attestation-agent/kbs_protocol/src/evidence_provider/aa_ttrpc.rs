@@ -32,6 +32,7 @@ pub struct AAEvidenceProvider {
 impl AAEvidenceProvider {
     pub async fn new() -> Result<Self> {
         let c = ttrpc::r#async::Client::connect(AA_SOCKET_FILE)
+            .await
             .map_err(|e| Error::AATokenProvider(format!("ttrpc connect failed {e}")))?;
         let client = AttestationAgentServiceClient::new(c);
         Ok(Self { client })

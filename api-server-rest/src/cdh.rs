@@ -62,8 +62,9 @@ impl ApiHandler for CDHClient {
 }
 
 impl CDHClient {
-    pub fn new(cdh_addr: &str, accepted_method: Vec<Method>) -> Result<Self> {
+    pub async fn new(cdh_addr: &str, accepted_method: Vec<Method>) -> Result<Self> {
         let inner = ttrpc::asynchronous::Client::connect(cdh_addr)
+            .await
             .context(format!("ttrpc connect to CDH addr: {cdh_addr} failed!"))?;
         let client = GetResourceServiceClient::new(inner);
 
