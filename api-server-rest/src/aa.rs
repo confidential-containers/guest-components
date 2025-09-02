@@ -116,8 +116,9 @@ impl ApiHandler for AAClient {
 }
 
 impl AAClient {
-    pub fn new(aa_addr: &str, accepted_method: Vec<Method>) -> Result<Self> {
+    pub async fn new(aa_addr: &str, accepted_method: Vec<Method>) -> Result<Self> {
         let inner = ttrpc::asynchronous::Client::connect(aa_addr)
+            .await
             .context(format!("ttrpc connect to AA addr: {aa_addr} failed!"))?;
         let client = AttestationAgentServiceClient::new(inner);
 

@@ -22,7 +22,7 @@
 
 /// Generated files are compatible only with the same version
 /// of protobuf runtime.
-const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_3_7_1;
+const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_3_7_2;
 
 // @@protoc_insertion_point(message:keyprovider.KeyProviderKeyWrapProtocolInput)
 #[derive(PartialEq,Clone,Default,Debug)]

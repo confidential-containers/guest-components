@@ -108,7 +108,9 @@ struct PullImageArgs {
 #[tokio::main]
 async fn main() {
     let args = Cli::parse();
-    let inner = ttrpc::asynchronous::Client::connect(&args.socket).expect("connect ttrpc socket");
+    let inner = ttrpc::asynchronous::Client::connect(&args.socket)
+        .await
+        .expect("connect ttrpc socket");
 
     match args.operation {
         Operation::UnsealSecret(arg) => {
