@@ -42,11 +42,6 @@ message ExtendRuntimeMeasurementRequest {
 
 message ExtendRuntimeMeasurementResponse {}
 
-message InitDataPlaintext {
-    bytes Content = 1;
-    string Algorithm = 2; 
-}
-
 message BindInitDataRequest {
     bytes Digest = 1;
 }

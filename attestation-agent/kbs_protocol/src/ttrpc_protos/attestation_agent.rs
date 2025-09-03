@@ -913,146 +913,6 @@ impl ::protobuf::reflect::ProtobufValue for ExtendRuntimeMeasurementResponse {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
-// @@protoc_insertion_point(message:attestation_agent.InitDataPlaintext)
-#[derive(PartialEq,Clone,Default,Debug)]
-pub struct InitDataPlaintext {
-    // message fields
-    // @@protoc_insertion_point(field:attestation_agent.InitDataPlaintext.Content)
-    pub Content: ::std::vec::Vec<u8>,
-    // @@protoc_insertion_point(field:attestation_agent.InitDataPlaintext.Algorithm)
-    pub Algorithm: ::std::string::String,
-    // special fields
-    // @@protoc_insertion_point(special_field:attestation_agent.InitDataPlaintext.special_fields)
-    pub special_fields: ::protobuf::SpecialFields,
-}
-
-impl<'a> ::std::default::Default for &'a InitDataPlaintext {
-    fn default() -> &'a InitDataPlaintext {
-        <InitDataPlaintext as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl InitDataPlaintext {
-    pub fn new() -> InitDataPlaintext {
-        ::std::default::Default::default()
-    }
-
-    fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(2);
-        let mut oneofs = ::std::vec::Vec::with_capacity(0);
-        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
-            "Content",
-            |m: &InitDataPlaintext| { &m.Content },
-            |m: &mut InitDataPlaintext| { &mut m.Content },
-        ));
-        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
-            "Algorithm",
-            |m: &InitDataPlaintext| { &m.Algorithm },
-            |m: &mut InitDataPlaintext| { &mut m.Algorithm },
-        ));
-        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<InitDataPlaintext>(
-            "InitDataPlaintext",
-            fields,
-            oneofs,
-        )
-    }
-}
-
-impl ::protobuf::Message for InitDataPlaintext {
-    const NAME: &'static str = "InitDataPlaintext";
-
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
-        while let Some(tag) = is.read_raw_tag_or_eof()? {
-            match tag {
-                10 => {
-                    self.Content = is.read_bytes()?;
-                },
-                18 => {
-                    self.Algorithm = is.read_string()?;
-                },
-                tag => {
-                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u64 {
-        let mut my_size = 0;
-        if !self.Content.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.Content);
-        }
-        if !self.Algorithm.is_empty() {
-            my_size += ::protobuf::rt::string_size(2, &self.Algorithm);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
-        self.special_fields.cached_size().set(my_size as u32);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
-        if !self.Content.is_empty() {
-            os.write_bytes(1, &self.Content)?;
-        }
-        if !self.Algorithm.is_empty() {
-            os.write_string(2, &self.Algorithm)?;
-        }
-        os.write_unknown_fields(self.special_fields.unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn special_fields(&self) -> &::protobuf::SpecialFields {
-        &self.special_fields
-    }
-
-    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
-        &mut self.special_fields
-    }
-
-    fn new() -> InitDataPlaintext {
-        InitDataPlaintext::new()
-    }
-
-    fn clear(&mut self) {
-        self.Content.clear();
-        self.Algorithm.clear();
-        self.special_fields.clear();
-    }
-
-    fn default_instance() -> &'static InitDataPlaintext {
-        static instance: InitDataPlaintext = InitDataPlaintext {
-            Content: ::std::vec::Vec::new(),
-            Algorithm: ::std::string::String::new(),
-            special_fields: ::protobuf::SpecialFields::new(),
-        };
-        &instance
-    }
-}
-
-impl ::protobuf::MessageFull for InitDataPlaintext {
-    fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
-        static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
-        descriptor.get(|| file_descriptor().message_by_package_relative_name("InitDataPlaintext").unwrap()).clone()
-    }
-}
-
-impl ::std::fmt::Display for InitDataPlaintext {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for InitDataPlaintext {
-    type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
-}
-
 // @@protoc_insertion_point(message:attestation_agent.BindInitDataRequest)
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct BindInitDataRequest {
@@ -1515,22 +1375,20 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     main\x12\x1c\n\tOperation\x18\x02\x20\x01(\tR\tOperation\x12\x18\n\x07Co\
     ntent\x18\x03\x20\x01(\tR\x07Content\x12)\n\rRegisterIndex\x18\x04\x20\
     \x01(\x04H\0R\rRegisterIndex\x88\x01\x01B\x10\n\x0e_RegisterIndex\"\"\n\
-    \x20ExtendRuntimeMeasurementResponse\"K\n\x11InitDataPlaintext\x12\x18\n\
-    \x07Content\x18\x01\x20\x01(\x0cR\x07Content\x12\x1c\n\tAlgorithm\x18\
-    \x02\x20\x01(\tR\tAlgorithm\"-\n\x13BindInitDataRequest\x12\x16\n\x06Dig\
-    est\x18\x01\x20\x01(\x0cR\x06Digest\"\x16\n\x14BindInitDataResponse\"\
-    \x13\n\x11GetTeeTypeRequest\"&\n\x12GetTeeTypeResponse\x12\x10\n\x03tee\
-    \x18\x01\x20\x01(\tR\x03tee2\x80\x05\n\x17AttestationAgentService\x12\\\
-    \n\x0bGetEvidence\x12%.attestation_agent.GetEvidenceRequest\x1a&.attesta\
-    tion_agent.GetEvidenceResponse\x12p\n\x15GetAdditionalEvidence\x12/.atte\
-    station_agent.GetAdditionalEvidenceRequest\x1a&.attestation_agent.GetEvi\
-    denceResponse\x12S\n\x08GetToken\x12\".attestation_agent.GetTokenRequest\
-    \x1a#.attestation_agent.GetTokenResponse\x12\x83\x01\n\x18ExtendRuntimeM\
-    easurement\x122.attestation_agent.ExtendRuntimeMeasurementRequest\x1a3.a\
-    ttestation_agent.ExtendRuntimeMeasurementResponse\x12_\n\x0cBindInitData\
-    \x12&.attestation_agent.BindInitDataRequest\x1a'.attestation_agent.BindI\
-    nitDataResponse\x12Y\n\nGetTeeType\x12$.attestation_agent.GetTeeTypeRequ\
-    est\x1a%.attestation_agent.GetTeeTypeResponseb\x06proto3\
+    \x20ExtendRuntimeMeasurementResponse\"-\n\x13BindInitDataRequest\x12\x16\
+    \n\x06Digest\x18\x01\x20\x01(\x0cR\x06Digest\"\x16\n\x14BindInitDataResp\
+    onse\"\x13\n\x11GetTeeTypeRequest\"&\n\x12GetTeeTypeResponse\x12\x10\n\
+    \x03tee\x18\x01\x20\x01(\tR\x03tee2\x80\x05\n\x17AttestationAgentService\
+    \x12\\\n\x0bGetEvidence\x12%.attestation_agent.GetEvidenceRequest\x1a&.a\
+    ttestation_agent.GetEvidenceResponse\x12p\n\x15GetAdditionalEvidence\x12\
+    /.attestation_agent.GetAdditionalEvidenceRequest\x1a&.attestation_agent.\
+    GetEvidenceResponse\x12S\n\x08GetToken\x12\".attestation_agent.GetTokenR\
+    equest\x1a#.attestation_agent.GetTokenResponse\x12\x83\x01\n\x18ExtendRu\
+    ntimeMeasurement\x122.attestation_agent.ExtendRuntimeMeasurementRequest\
+    \x1a3.attestation_agent.ExtendRuntimeMeasurementResponse\x12_\n\x0cBindI\
+    nitData\x12&.attestation_agent.BindInitDataRequest\x1a'.attestation_agen\
+    t.BindInitDataResponse\x12Y\n\nGetTeeType\x12$.attestation_agent.GetTeeT\
+    ypeRequest\x1a%.attestation_agent.GetTeeTypeResponseb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
@@ -1548,7 +1406,7 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
     file_descriptor.get(|| {
         let generated_file_descriptor = generated_file_descriptor_lazy.get(|| {
             let mut deps = ::std::vec::Vec::with_capacity(0);
-            let mut messages = ::std::vec::Vec::with_capacity(12);
+            let mut messages = ::std::vec::Vec::with_capacity(11);
             messages.push(GetEvidenceRequest::generated_message_descriptor_data());
             messages.push(GetAdditionalEvidenceRequest::generated_message_descriptor_data());
             messages.push(GetEvidenceResponse::generated_message_descriptor_data());
@@ -1556,7 +1414,6 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
             messages.push(GetTokenResponse::generated_message_descriptor_data());
             messages.push(ExtendRuntimeMeasurementRequest::generated_message_descriptor_data());
             messages.push(ExtendRuntimeMeasurementResponse::generated_message_descriptor_data());
-            messages.push(InitDataPlaintext::generated_message_descriptor_data());
             messages.push(BindInitDataRequest::generated_message_descriptor_data());
             messages.push(BindInitDataResponse::generated_message_descriptor_data());
             messages.push(GetTeeTypeRequest::generated_message_descriptor_data());
