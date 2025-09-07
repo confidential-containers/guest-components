@@ -22,6 +22,7 @@ const TPM_HASH_ALGORITHM: &str = "SHA256";
 /// Evidence structure for the TPM Attester.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Evidence {
+    pub tpm_svn: String,
     pub tpm_quote: TpmQuote,
     pub ak_public: String,
 }
@@ -74,6 +75,7 @@ impl Attester for TpmAttester {
         )?;
 
         let evidence = Evidence {
+            tpm_svn: "1".to_string(),
             tpm_quote,
             ak_public: base64::engine::general_purpose::STANDARD.encode(ak_public_bytes),
         };
