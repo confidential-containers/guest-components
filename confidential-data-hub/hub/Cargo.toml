@@ -28,6 +28,10 @@ name = "cdh-oneshot"
 required-features = ["bin"]
 
 [[bin]]
+name = "guest-services"
+required-features = ["bin", "ttrpc"]
+
+[[bin]]
 name = "secret"
 path = "src/bin/secret_cli.rs"
 required-features = ["cli"]
@@ -44,6 +48,8 @@ crypto.path = "../../attestation-agent/deps/crypto"
 env_logger = { workspace = true, optional = true }
 image-rs = { path = "../../image-rs", default-features = false, features = ["kata-cc-rustls-tls"] }
 kms = { path = "../kms", default-features = false }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 log.workspace = true
 prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
