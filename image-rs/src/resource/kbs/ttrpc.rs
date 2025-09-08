@@ -33,7 +33,7 @@ impl Client for Ttrpc {
         let res = self
             .client
             .get_or_try_init(|| async {
-                let inner = ttrpc::asynchronous::Client::connect(SOCKET_ADDR)?;
+                let inner = ttrpc::asynchronous::Client::connect(SOCKET_ADDR).await?;
                 Ok(GetResourceServiceClient::new(inner))
             })
             .await?
