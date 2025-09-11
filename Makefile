@@ -1,5 +1,6 @@
 TEE_PLATFORM ?= fs
 ARCH ?= $(shell uname -m)
+SOURCE_ARCH := $(shell uname -m)
 
 DESTDIR ?= /usr/local/bin
 
@@ -53,6 +54,14 @@ else ifeq ($(TEE_PLATFORM), cca)
 endif
 # TODO: Add support for CSV
 
+ifeq ($(shell test -e /etc/debian_version && echo -n yes),yes)
+    DEBIANOS = true
+else
+    DEBIANOS = false
+endif
+
+$(info DEBIANOS is: $(DEBIANOS))
+
 ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
   $(info s390x/powerpc64le only supports gnu)
   LIBC = gnu
@@ -87,6 +96,19 @@ install: $(CDH_BINARY) $(ASR_BINARY) $(AA_BINARY)
 	install -D -m0755 $(CDH_BINARY) $(DESTDIR)/$(CDH)
 	install -D -m0755 $(AA_BINARY) $(DESTDIR)/$(AA)
 	install -D -m0755 $(ASR_BINARY) $(DESTDIR)/$(ASR)
+
+build-protos:
+	@if [ "$(DEBIANOS)" = "true" ]; then \
+	  if ! command -v protoc >/dev/null 2>&1; then \
+	    echo "Installing protoc..."; \
+	    sudo apt-get update && sudo apt-get install -y protobuf-compiler; \
+	  else \
+	    echo "protoc already installed"; \
+	  fi; \
+	else \
+	  echo "Not Debian OS, skip"; \
+  fi;
+	cargo build -p protos --features build
 
 clean:
 	rm -rf target
