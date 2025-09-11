@@ -28,7 +28,7 @@ futures = { version = "0.3.31", optional = true }
 futures-util = "0.3"
 hex = { workspace = true, optional = true }
 kbc = { path = "../attestation-agent/kbc", default-features = false, optional = true }
-log = "0.4.27"
+log = "0.4.28"
 loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27" }
 nix = { workspace = true, optional = true, features = ["mount", "fs"] }
 oci-client = { version = "0.15", default-features = false, optional = true }
