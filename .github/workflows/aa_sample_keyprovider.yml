@@ -40,10 +40,6 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Install protoc
-        run: |
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
-
       - name: Rust fmt check
         run: cargo fmt --check --manifest-path attestation-agent/coco_keyprovider/Cargo.toml
 

@@ -64,10 +64,6 @@ jobs:
           sudo apt-get install -y libtss2-dev
         if: matrix.instance == 'ubuntu-24.04'
 
-      - name: Install protoc
-        run: |
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
-
       - name: Build and install with ${{ matrix.attester }} feature
         run: |
           make ATTESTER=${{ matrix.attester }} && make install

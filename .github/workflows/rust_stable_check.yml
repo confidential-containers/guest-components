@@ -42,9 +42,6 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Install protoc
-        run: sudo apt update && sudo apt install -y protobuf-compiler
-
       - name: Install TPM dependencies
         run: sudo apt install -y libtss2-dev
 
