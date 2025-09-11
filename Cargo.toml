@@ -39,7 +39,7 @@ jwt-simple = { version = "0.12", default-features = false, features = [
     "pure-rust",
 ] }
 kbs-types = { "git" = "https://github.com/confidential-containers/kbs-types.git", rev = "900aa8f" }
-log = "0.4.27"
+log = "0.4.28"
 nix = "0.30"
 openssl = "0.10"
 prost = "0.13"
