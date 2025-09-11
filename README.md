@@ -70,5 +70,12 @@ default except for only builtin `offline-fs-kbc`, you can build with `NO_RESOURC
 make build TEE_PLATFORM=$(TEE_PLATFORM) NO_RESOURCE_PROVIDER=true
 ```
 
+### Optional build parameters
+
+The ttRPC and gRPC protos can be updated via run
+```shell
+make build-protos
+```
+
 ## License
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fconfidential-containers%2Fimage-rs.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fconfidential-containers%2Fimage-rs?ref=badge_large)
