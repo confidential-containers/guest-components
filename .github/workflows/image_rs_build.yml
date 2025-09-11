@@ -50,7 +50,7 @@ jobs:
       - name: Install nettle-sys building dependencies
         run: |
           sudo apt update
-          sudo apt install -y clang llvm pkg-config nettle-dev protobuf-compiler libprotobuf-dev
+          sudo apt install -y clang llvm pkg-config nettle-dev libprotobuf-dev
 
       - name: Install TPM dependencies
         run: |

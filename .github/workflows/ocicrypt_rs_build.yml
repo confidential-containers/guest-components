@@ -44,11 +44,6 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Install tonic's protoc dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y protobuf-compiler libprotobuf-dev
-
       - name: Run cargo build
         run: cargo build -p ocicrypt-rs --all-features
 
