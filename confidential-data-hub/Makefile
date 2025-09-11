@@ -85,12 +85,6 @@ ifneq ($(SOURCE_ARCH), $(ARCH))
     endif
 endif
 
-ifeq ($(SOURCE_ARCH), $(filter $(SOURCE_ARCH), s390x ppc64le))
-    ifeq ($(DEBIANOS), true)
-        PROTOC_BINARY_INSTALL := $(shell sudo apt-get install -y protobuf-compiler)  
-    endif
-endif
-
 LIBC_FLAG := --target $(ARCH)-unknown-linux-$(LIBC)
 TARGET_DIR := $(TARGET_DIR)/$(ARCH)-unknown-linux-$(LIBC)
 
