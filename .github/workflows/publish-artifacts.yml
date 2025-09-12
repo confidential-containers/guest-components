@@ -45,7 +45,7 @@ jobs:
         version: 1.2.0
       if: matrix.platform.arch != 's390x'
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
@@ -57,7 +57,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends libtss2-dev
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Build
       env:
@@ -141,7 +141,7 @@ jobs:
         sudo apt-get install -y --no-install-recommends \
           libdevmapper-dev
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Build CDH
       env:
