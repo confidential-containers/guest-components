@@ -211,6 +211,8 @@ pub fn detect_attestable_devices() -> Vec<Tee> {
         additional_devices.push(Tee::HygonDcu);
     }
 
+    // This relies on the TPM check being last in detect_tee_type() 
+    // so it only adds the TPM as an additional device if it is not the primary one.
     #[cfg(feature = "tpm-attester")]
     if detect_tee_type() != Tee::Tpm {
         
