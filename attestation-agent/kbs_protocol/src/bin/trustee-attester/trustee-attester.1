@@ -6,7 +6,7 @@ trustee-attester \- attest and fetch secrets from Trustee
 
 .SH SYNOPSIS
 .B trustee-attester
-\-\-url <URL-of-Trustee> [ OPTIONS ] get-resource \-\-path <resource-path>
+\-\-url <URL-of-Trustee> [ OPTIONS ] get-resource \-\-path <resource-path> [ RESOURCE-OPTIONS ]
 
 .SH DESCRIPTION
 trustee-attester is a simple client to easily attest and fetch secrets
@@ -27,7 +27,7 @@ Optional. When <protocol> is https, add a certificate to verify the Trustee serv
 
 .SH SUBCOMMAND
 .IR get-resource
-\-\-path <resource-path>
+\-\-path <resource-path> [\-\-initdata <initdata-string>]
 
 .RS
 Do attestation and get a secret from Trustee.
@@ -35,6 +35,11 @@ Do attestation and get a secret from Trustee.
 
 It is assumed that the secret was uploaded to Trustee, with the
 exact same <resource-path>, before trustee-attester runs.
+
+Plaintext initdata can optionally be passed as a string with the
+.B \-\-initdata
+flag. The verifier will generally expect its hash to be measured,
+e.g. in PCR8 when using the TPM attester.
 
 For more information look at
 https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md
@@ -44,6 +49,15 @@ trustee-attester --url http://10.0.0.4:50000 get-resource --path default/secrets
 
 trustee-attester --url https://10.0.0.4:50000 --cert-file /etc/trustee-attester/server_cert.pem
 get-resource --path myrepo/keys/mykey1
+
+trustee-attester --url http://10.0.0.4:50000 get-resource --path default/secrets/secret2
+--initdata 'version = "0.1.0"
+.br
+algorithm = "sha256"
+.br
+[data]
+.br
+key1 = "value1"'
 
 .SH NOTES
 .B trustee-attester

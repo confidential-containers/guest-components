@@ -23,7 +23,7 @@ cargo build -p kbs_protocol --bin trustee-attester --no-default-features
 ## Run: ##
 
 ```bash
-$ trustee-attester --url <Trustee-URL> [--cert-file <path>] get-resource --path <resource-path>
+$ trustee-attester --url <Trustee-URL> [--cert-file <path>] get-resource --path <resource-path> [--initdata <initdata>]
 ```
 
 ## Example: ##
