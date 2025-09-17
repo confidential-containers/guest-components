@@ -41,6 +41,10 @@ enum Commands {
         /// Document: https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md
         #[clap(long, value_parser)]
         path: String,
+
+        /// Initdata string
+        #[clap(long)]
+        initdata: Option<String>,
     },
 }
 
@@ -69,16 +73,19 @@ async fn main() -> Result<()> {
         client_builder = client_builder.add_kbs_cert(&cert)
     }
 
-    // Build the client. This client is used throughout the program
-    let mut client = client_builder.build()?;
-
     match cli.command {
-        Commands::GetResource { path } => {
+        Commands::GetResource { path, initdata } => {
             // resource_path should start with '/' but not with '//'
             let resource_path = match path.starts_with('/') {
                 false => format!("/{path}"),
                 true => path,
             };
+
+            if let Some(init) = initdata {
+                client_builder = client_builder.add_initdata(init);
+            }
+            let mut client = client_builder.build()?;
+
             let resource = ResourceUri::new("", &resource_path)?;
             let (_token, _key) = client.get_token().await?; // attest first
             let resource_bytes = client.get_resource(resource).await?;
