@@ -52,7 +52,7 @@ sha2.workspace = true
 sigstore = { version = "0.12.1", default-features = false, optional = true }
 strum.workspace = true
 strum_macros = "0.27"
-astral-tokio-tar = "0.5.1"
+astral-tokio-tar = "0.5.3"
 thiserror.workspace = true
 tokio.workspace = true
 tokio-util = "0.7.15"
