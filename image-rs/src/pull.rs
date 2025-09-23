@@ -172,7 +172,7 @@ impl<'a> PullClient<'a> {
         layer: OciDescriptor,
         diff_id: String,
         decrypt_config: &Option<&str>,
-        layer_reader: (impl tokio::io::AsyncRead + Unpin + Send),
+        layer_reader: impl tokio::io::AsyncRead + Unpin + Send,
         ms: Arc<RwLock<MetaStore>>,
     ) -> PullLayerResult<LayerMeta> {
         if let Some(layer_meta) = ms.read().await.layer_db.get(&layer.digest) {
@@ -236,7 +236,7 @@ impl<'a> PullClient<'a> {
     /// digest of the uncompressed layer.
     async fn async_decompress_unpack_layer(
         &self,
-        input_reader: (impl tokio::io::AsyncRead + Unpin + Send),
+        input_reader: impl tokio::io::AsyncRead + Unpin + Send,
         diff_id: &str,
         media_type: &str,
         destination: &Path,

@@ -94,7 +94,7 @@ pub async fn stream_processing(
 }
 
 async fn async_processing(
-    layer_reader: (impl AsyncRead + Unpin),
+    layer_reader: impl AsyncRead + Unpin,
     hasher: LayerDigestHasher,
     destination: PathBuf,
 ) -> StreamResult<String> {
