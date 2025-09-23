@@ -59,7 +59,7 @@ impl Compression {
     /// Create an `AsyncRead` to decode input stream.
     pub fn async_decompress<'a>(
         &self,
-        input: (impl AsyncRead + Unpin + 'a + Send),
+        input: impl AsyncRead + Unpin + 'a + Send,
     ) -> Box<dyn AsyncRead + Unpin + 'a + Send> {
         match self {
             Self::Gzip => {
@@ -76,12 +76,12 @@ impl Compression {
     }
 
     /// Create an `AsyncRead` to decode input gzip stream.
-    pub fn async_gzip_decompress(input: (impl AsyncRead + Unpin)) -> impl AsyncRead + Unpin {
+    pub fn async_gzip_decompress(input: impl AsyncRead + Unpin) -> impl AsyncRead + Unpin {
         async_compression::tokio::bufread::GzipDecoder::new(BufReader::new(input))
     }
 
     /// Create an `AsyncRead` to decode input zstd stream.
-    pub fn async_zstd_decompress(input: (impl AsyncRead + Unpin)) -> impl AsyncRead + Unpin {
+    pub fn async_zstd_decompress(input: impl AsyncRead + Unpin) -> impl AsyncRead + Unpin {
         async_compression::tokio::bufread::ZstdDecoder::new(BufReader::new(input))
     }
 }
