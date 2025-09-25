@@ -545,7 +545,6 @@ mod test {
             Tee::Cca,
             Tee::Csv,
             Tee::Se,
-            Tee::Sev,
             Tee::Sgx,
             Tee::Snp,
             Tee::Tdx,
