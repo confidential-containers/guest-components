@@ -31,6 +31,6 @@ For example, a KBS Resource URI `kbs://example.cckbs.org/alice/decryption-key/1`
 
 Both KBCs will use the `<repository>/<type>/<tag>` as key/resource id in their requests.
 
-### Offline KBCs (e.g FS KBC & Offline SEV KBC)
+### Offline KBCs (e.g FS KBC)
 
 Offline KBCs should ignore the `<kbs_host>:<kbs_port>` host part of the URI, and use the resource path (`<repository>/<type>/<tag>`) to locally fetch the resource.
