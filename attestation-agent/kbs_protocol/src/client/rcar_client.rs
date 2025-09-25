@@ -7,10 +7,12 @@ use std::time::Duration;
 
 use anyhow::{bail, Context};
 use async_trait::async_trait;
-use attester::TeeEvidence;
 use canon_json::CanonicalFormatter;
 use kbs_types::HashAlgorithm;
-use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response, Tee, TeePubKey};
+use kbs_types::{
+    Attestation, Challenge, CompositeEvidence, ErrorInformation, InitData, Request, Response,
+    RuntimeData, Tee,
+};
 use log::{debug, warn};
 use resource_uri::ResourceUri;
 use serde::{Deserialize, Serialize};
@@ -44,30 +46,13 @@ const SELECTED_HASH_ALGORITHM_JSON_KEY: &str = "selected-hash-algorithm";
 /// Hash algorithm to use by default.
 const DEFAULT_HASH_ALGORITHM: HashAlgorithm = HashAlgorithm::Sha384;
 
+/// The format of the init data sent to KBS.
+const INIT_DATA_FORMAT: &str = "toml";
+
 #[derive(Deserialize, Debug, Clone)]
 struct AttestationResponseData {
     // Attestation token in JWT format
     token: String,
-}
-
-/// CompositeEvidence is the combined evidence from all the TEEs
-/// that represent the guest.
-#[derive(Serialize, Deserialize)]
-pub struct CompositeEvidence {
-    pub primary_evidence: TeeEvidence,
-    // The additional evidence is a map of Tee -> evidence,
-    // but we convert it to a string to avoid any inconsistencies
-    // with serialization. The string in this struct is exactly
-    // what is used to calculate the runtime data.
-    pub additional_evidence: String,
-}
-
-#[derive(Serialize)]
-pub struct RuntimeData {
-    pub nonce: String,
-
-    #[serde(rename = "tee-pubkey")]
-    pub tee_pubkey: TeePubKey,
 }
 
 async fn get_request_extra_params() -> serde_json::Value {
@@ -273,24 +258,21 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             tee_pubkey,
         };
 
-        let runtime_data_json = serde_json::to_value(&runtime_data)?;
         let tee_evidence = self
-            .get_composite_evidence(runtime_data, algorithm, tee)
+            .get_composite_evidence(runtime_data.clone(), algorithm, tee)
             .await
             .context("get composite evidence failed")?;
 
-        let tee_evidence_json = serde_json::to_value(tee_evidence)?;
         let attest_endpoint = format!("{}/{KBS_PREFIX}/attest", self.kbs_host_url);
-        let init_data = self._initdata.as_ref().map(|initdata| {
-            json!({
-                "format": "toml",
-                "body": initdata,
-            })
+        let init_data = self._initdata.as_ref().map(|initdata| InitData {
+            format: INIT_DATA_FORMAT.into(),
+            body: initdata.into(),
         });
+
         let attest = Attestation {
             init_data,
-            runtime_data: runtime_data_json,
-            tee_evidence: tee_evidence_json,
+            runtime_data,
+            tee_evidence,
         };
 
         debug!("send attest request.");
