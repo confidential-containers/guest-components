@@ -50,7 +50,6 @@ tpm-attester  = ["kbs_protocol/tpm-attester"]
 
 sample_kbc = []
 offline_fs_kbc = []
-offline_sev_kbc = []
 online_sev_kbc = ["tonic", "sev", "prost", "uuid", "bincode", "tokio"]
 gen-proto = ["tonic-build"]
 
