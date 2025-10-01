@@ -131,6 +131,8 @@ jobs:
         version: 1.2.0
       if: matrix.arch != 's390x'
 
+    - uses: actions/checkout@v4
+
     - uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
         target: ${{ env.RUST_TARGET }}
@@ -140,8 +142,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
           libdevmapper-dev
-
-    - uses: actions/checkout@v4
 
     - name: Build CDH
       env:
