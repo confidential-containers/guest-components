@@ -80,7 +80,7 @@ impl GetResourceService for Cdh {
             .map_err(|e| {
                 let detailed_error = format_error!(e);
                 error!("[gRPC CDH] Call CDH to get resource failed:\n{detailed_error}");
-                Status::internal(format!("[CDH] [ERROR]: {e}"))
+                Status::internal(format!("[CDH] [ERROR]: {detailed_error}"))
             })?;
 
         debug!("[gRPC CDH] Get resource successfully!");
