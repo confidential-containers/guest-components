@@ -58,9 +58,11 @@ impl Secret {
             return Err(SecretError::ParseFailed("malformed input sealed secret"));
         }
 
-        let secret_json = b64
-            .decode(sections[2])
-            .map_err(|_| SecretError::ParseFailed("base64 decode Secret body"))?;
+        let secret_json = b64.decode(sections[2]).map_err(|_| {
+            SecretError::ParseFailed(
+                "failed to decode secret body as base64 (URL-safe without padding)",
+            )
+        })?;
 
         let secret: Secret = serde_json::from_slice(&secret_json).map_err(|_| {
             SecretError::ParseFailed(
