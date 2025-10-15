@@ -16,12 +16,14 @@ use log::info;
 use serde::{Deserialize, Serialize};
 
 const PCR_SLOT_8: u64 = 8;
-const TPM_REPORT_DATA_SIZE: usize = 64;
+const TPM_REPORT_DATA_SIZE: usize = 32;
 const TPM_HASH_ALGORITHM: &str = "SHA256";
 
 /// Evidence structure for the TPM Attester.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Evidence {
+    pub svn: String,
+    pub report_data: String,
     pub tpm_quote: TpmQuote,
     pub ak_public: String,
 }
@@ -74,6 +76,8 @@ impl Attester for TpmAttester {
         )?;
 
         let evidence = Evidence {
+            svn: "1".to_string(),
+            report_data: base64::engine::general_purpose::STANDARD.encode(&report_data),
             tpm_quote,
             ak_public: base64::engine::general_purpose::STANDARD.encode(ak_public_bytes),
         };
