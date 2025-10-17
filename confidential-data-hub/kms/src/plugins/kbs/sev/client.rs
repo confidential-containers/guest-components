@@ -9,6 +9,7 @@ use std::sync::LazyLock;
 
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
+use bincode::{config::legacy, decode_from_slice};
 use crypto::WrapType;
 use protos::grpc::aa::keybroker::{
     key_broker_service_client::KeyBrokerServiceClient, OnlineSecretRequest, RequestDetails,
@@ -142,12 +143,15 @@ impl OnlineSevKbc {
             Error::KbsClientError(format!("online-sev-kbc: decrypt payload failed: {e:?}"))
         })?;
 
-        let payload_dict: HashMap<String, Vec<u8>> = bincode::deserialize(&decrypted_payload)
-            .map_err(|e| {
-                Error::KbsClientError(format!(
-                    "online-sev-kbc: deserailize payload dictionary failed: {e:?}"
-                ))
-            })?;
+        let (payload_dict, _) = decode_from_slice::<HashMap<std::string::String, Vec<u8>>, _>(
+            &decrypted_payload,
+            legacy(),
+        )
+        .map_err(|e| {
+            Error::KbsClientError(format!(
+                "online-sev-kbc: deserailize payload dictionary failed: {e:?}"
+            ))
+        })?;
         let res = payload_dict
             .get(&guid)
             .ok_or(Error::KbsClientError(format!(
