@@ -377,7 +377,7 @@ dependencies = [
  "nvml-wrapper",
  "occlum_dcap",
  "picky-asn1 0.10.1",
- "picky-asn1-der 0.5.2",
+ "picky-asn1-der 0.5.3",
  "picky-asn1-x509 0.15.1",
  "rstest",
  "s390_pv",
@@ -4899,9 +4899,9 @@ dependencies = [
 
 [[package]]
 name = "picky-asn1-der"
-version = "0.5.2"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dccb53c26f70c082e008818f524bd45d057069517b047bd0c0ee062d6d7d7f2"
+checksum = "f1c9c33310628f2e1758bbde11b16713505e188a859ab7990f98eb015b943bf5"
 dependencies = [
  "picky-asn1 0.10.1",
  "serde",
@@ -4930,7 +4930,7 @@ dependencies = [
  "base64 0.22.1",
  "oid",
  "picky-asn1 0.10.1",
- "picky-asn1-der 0.5.2",
+ "picky-asn1-der 0.5.3",
  "serde",
 ]
 
