@@ -81,10 +81,7 @@ impl Attester for NvAttester {
             device_evidence_list.push(NvDeviceReportAndCert {
                 arch: dev_arch,
                 uuid: dev_uuid,
-                // NRAS expects hex as the encoding for the report so it's used
-                // here instead of base64. With that, the relying parties that
-                // use this evidence with NRAS do not have to re-encode it.
-                evidence: hex::encode(report.attestation_report),
+                evidence: STANDARD.encode(report.attestation_report),
                 certificate: STANDARD.encode(certificate.attestation_cert_chain),
             });
 
