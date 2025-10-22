@@ -12,3 +12,13 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+
+  - package-ecosystem: gomod
+    directory: /confidential-data-hub/golang
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /image-rs/test_data
+    schedule:
+      interval: daily
