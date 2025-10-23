@@ -57,7 +57,7 @@ serde_json = "1.0"
 serial_test = "3"
 sha2 = "0.10.9"
 strum = { version = "0.27", features = ["derive"] }
-tempfile = "3.20"
+tempfile = "3.23"
 testcontainers = "0.25"
 thiserror = "2.0"
 tokio = "1.47"
