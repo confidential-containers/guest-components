@@ -223,6 +223,7 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
                 source: anyhow!("GID too large"),
             })?;
         let mode = file.header().mode().ok();
+        let kind = file.header().entry_type();
 
         if attr_available && is_whiteout(entry_name) {
             convert_whiteout(entry_name, &entry_path, uid, gid, mode, destination)
@@ -231,9 +232,21 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
             continue;
         }
 
-        file.unpack_in(destination)
-            .await
-            .map_err(|source| UnpackError::UnpackFailed { source })?;
+        match file.unpack_in(destination).await {
+            Ok(_) => {}
+            Err(e) => match try_hardlink_fallback(&kind, &mut file, destination).await {
+                Ok(true) => {}
+                Ok(false) => return Err(UnpackError::UnpackFailed { source: e }),
+                Err(f) => {
+                    return Err(UnpackError::UnpackFailed {
+                        source: io::Error::new(
+                            io::ErrorKind::Other,
+                            format!("Fallback failed, {f:?}, after original unpack error: {e:?}"),
+                        ),
+                    })
+                }
+            },
+        }
 
         let path = format!(
             "{}/{}",
@@ -247,7 +260,6 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
 
         let file_path = path_cstring.to_str().expect("must be utf8");
 
-        let kind = file.header().entry_type();
         let mtime = file
             .header()
             .mtime()
@@ -364,6 +376,68 @@ async fn set_perms_ownerships(
     Ok(())
 }
 
+// Fallback for hard links whose linkname is absolute. Returns true if it handled the entry.
+async fn try_hardlink_fallback<R: AsyncRead + Unpin>(
+    kind: &tokio_tar::EntryType,
+    file: &mut tokio_tar::Entry<R>,
+    destination: &Path,
+) -> UnpackResult<bool> {
+    if !kind.is_hard_link() {
+        return Ok(false);
+    }
+
+    let linkname = match file
+        .link_name()
+        .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?
+    {
+        Some(cow) => cow.into_owned(),
+        None => return Ok(false),
+    };
+    if !linkname.is_absolute() {
+        return Ok(false);
+    }
+
+    let entry_rel = file
+        .path()
+        .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?;
+
+    // Resolve the final destination path for this entry and ensure parent exists.
+    let dst_entry_abs = destination.join(&entry_rel);
+    if let Some(parent) = dst_entry_abs.parent() {
+        fs::create_dir_all(parent)
+            .await
+            .map_err(|source| UnpackError::UnpackFailed { source })?;
+    }
+
+    // Drop the leading root from linkname
+    let stripped = linkname
+        .strip_prefix(Path::new("/"))
+        .unwrap_or(linkname.as_path());
+    let anchored_src = destination.join(stripped);
+
+    // Resolve symlinks according to the actual FS
+    let dst_canon = fs::canonicalize(destination)
+        .await
+        .map_err(|source| UnpackError::UnpackFailed { source })?;
+    let src_canon = fs::canonicalize(&anchored_src)
+        .await
+        .map_err(|source| UnpackError::UnpackFailed { source })?;
+
+    if !src_canon.starts_with(&dst_canon) {
+        return Err(UnpackError::UnpackFailed {
+            source: std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "hardlink target escapes destination",
+            ),
+        });
+    }
+
+    match fs::hard_link(&src_canon, &dst_entry_abs).await {
+        Ok(()) => Ok(true),
+        Err(e) => Err(UnpackError::UnpackFailed { source: e }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::os::unix::fs::{chown, lchown, MetadataExt};
@@ -371,9 +445,9 @@ mod tests {
     use std::os::unix::fs::FileTypeExt;
     use tokio::{
         fs::{self, File},
-        io::AsyncWriteExt,
+        io::{empty, AsyncWriteExt},
     };
-    use tokio_tar::Builder;
+    use tokio_tar::{Builder, EntryType, Header};
 
     use super::*;
 
@@ -436,6 +510,33 @@ mod tests {
             .await
             .unwrap();
 
+        // A file inside usr/bin which the hard link will point to.
+        let test_src_fs = tempdir.path().join("usr/bin/test_binary");
+        fs::create_dir_all(test_src_fs.parent().unwrap())
+            .await
+            .unwrap();
+        let mut fu = File::create(&test_src_fs).await.unwrap();
+        fu.write_all(b"unzip-data").await.unwrap();
+        fu.flush().await.unwrap();
+        ar.append_file(
+            "usr/bin/test_binary",
+            &mut File::open(&test_src_fs).await.unwrap(),
+        )
+        .await
+        .unwrap();
+
+        let mut hdr = Header::new_gnu();
+        hdr.set_entry_type(EntryType::Link); // hard link
+        hdr.set_link_name("/usr/bin/test_binary").unwrap(); // absolute linkname
+        hdr.set_path("usr/bin/test_binary_hardlink").unwrap(); // entry path inside the archive
+        hdr.set_size(0);
+        hdr.set_mode(0o644);
+        hdr.set_uid(0);
+        hdr.set_gid(0);
+        hdr.set_mtime(20_000);
+        hdr.set_cksum();
+        ar.append(&hdr, empty()).await.unwrap();
+
         // TODO: Add more file types like symlink, char, block devices.
         let data = ar.into_inner().await.unwrap();
         tempdir.close().unwrap();
@@ -479,8 +580,64 @@ mod tests {
             assert_eq!(opaque, b"y");
         }
 
+        // Validate absolute hard link has been anchored inside destination by fallback.
+        let test_binary = destination.join("usr/bin/test_binary");
+        let test_binary_hardlink = destination.join("usr/bin/test_binary_hardlink");
+        let meta_test_binary = fs::metadata(&test_binary).await.unwrap();
+        let meta_test_binary_hardlink = fs::metadata(&test_binary_hardlink).await.unwrap();
+        assert!(meta_test_binary.is_file() && meta_test_binary_hardlink.is_file());
+        // On Unix, hard links share the same inode and usually nlink >= 2.
+        assert_eq!(meta_test_binary.ino(), meta_test_binary_hardlink.ino());
+
         // though destination already exists, it will be deleted
         // and rewrite
         assert!(unpack(data.as_slice(), destination).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_unpack_rejects_escaping_absolute_hardlink() {
+        let td = tempfile::tempdir().unwrap();
+        let outside_file = td.path().join("outside_file");
+        let mut f = File::create(&outside_file).await.unwrap();
+        f.write_all(b"outside-data").await.unwrap();
+        f.flush().await.unwrap();
+
+        // linkname = "/../outside_file" will be anchored in fallback mode as
+        // destination/../outside_file, which points to the parent directory of the destination.
+        let mut ar = Builder::new(Vec::new());
+        let mut hdr = Header::new_gnu();
+        hdr.set_entry_type(EntryType::Link);
+        hdr.set_link_name("/../outside_file").unwrap();
+        hdr.set_path("subdir/evil_hardlink").unwrap();
+        hdr.set_size(0);
+        hdr.set_mode(0o644);
+        hdr.set_uid(0);
+        hdr.set_gid(0);
+        hdr.set_mtime(20_000);
+        hdr.set_cksum();
+        ar.append(&hdr, empty()).await.unwrap();
+
+        let data = ar.into_inner().await.unwrap();
+
+        let destination = td.path().join("dest");
+        let res = unpack(data.as_slice(), &destination).await;
+
+        // Expectation: unpacking should fail due to anti-escape check
+        match res {
+            Err(UnpackError::UnpackFailed { source }) => {
+                assert!(
+                    source
+                        .to_string()
+                        .contains("hardlink target escapes destination"),
+                    "unexpected error: {source}"
+                );
+            }
+            Ok(_) => panic!("unpack unexpectedly succeeded; anti-escape check failed"),
+            Err(e) => panic!("unexpected error variant: {e:?}"),
+        }
+
+        // Confirm that the escaping hardlink was not created
+        let evil_path = destination.join("subdir/evil_hardlink");
+        assert!(fs::metadata(&evil_path).await.is_err());
     }
 }
