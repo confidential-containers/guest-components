@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/containerd/ttrpc v1.2.4
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.11.1
 	google.golang.org/grpc v1.64.1
 )
 
