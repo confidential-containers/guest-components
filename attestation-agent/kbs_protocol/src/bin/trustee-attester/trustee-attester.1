@@ -6,35 +6,38 @@ trustee-attester \- attest and fetch secrets from Trustee
 
 .SH SYNOPSIS
 .B trustee-attester
-.RB    OPTIONS
-.RB    get-resource  \-\-path  <RESOURCE_PATH>
+\-\-url <URL-of-Trustee> [ OPTIONS ] get-resource \-\-path <resource-path>
 
 .SH DESCRIPTION
 trustee-attester is a simple client to easily attest and fetch secrets
 (a.k.a confidential resources) from Trustee.
 
-.IR get-resource
-Do attestation and get a secret from Trustee.
-RESOURCE_PATH is a of format <repo>/<type>/<name>
-
-It is assumed that the secret was uploaded to Trustee, with the
-exact same RESOURCE_PATH, before trustee-attester runs.
-
-For more information look at
-https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md
-
 .SH OPTIONS
-.RB    \-\-url  <URL-of-Trustee>   [\-\-cert-file  <path-to-certificate>]
+.B    \-\-url  <URL-of-Trustee>   [\-\-cert-file  <path-to-certificate>]
 
-.RB    \-\-url  <URL-of-Trustee>
+.B    \-\-url  <URL-of-Trustee>
 Format of <URL-of-Trustee> is <protocol>://<host>:<port>
 where <protocol> is
 .B http
 or
 .B https
 
-.RB    \-\-cert-file  <path-to-certificate>
+.B    \-\-cert-file  <path-to-certificate>
 Optional. When <protocol> is https, add a certificate to verify the Trustee server.
+
+.SH SUBCOMMAND
+.IR get-resource
+\-\-path <resource-path>
+
+.RS
+Do attestation and get a secret from Trustee.
+<resource-path> is a of format <repo>/<type>/<name>
+
+It is assumed that the secret was uploaded to Trustee, with the
+exact same <resource-path>, before trustee-attester runs.
+
+For more information look at
+https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md
 
 .SH EXAMPLES
 trustee-attester --url http://10.0.0.4:50000 get-resource --path default/secrets/secret1
