@@ -20,6 +20,11 @@ SOURCE_ARCH := $(shell uname -m)
 RPC ?= ttrpc
 ARCH ?= $(shell uname -m)
 DEBUG ?=
+
+ifeq ($(SOURCE_ARCH), ppc64le)
+  ARCH=powerpc64le
+endif
+
 ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
     LIBC ?= gnu
 else
@@ -45,10 +50,6 @@ else
     binary = --bin grpc-cdh
     features += bin,grpc
     binary_name = grpc-cdh
-endif
-
-ifeq ($(SOURCE_ARCH), ppc64le)
-  ARCH=powerpc64le
 endif
 
 ifneq ($(RESOURCE_PROVIDER), none)

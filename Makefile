@@ -16,6 +16,10 @@ else
   RESOURCE_PROVIDER ?= kbs
 endif
 
+ifeq ($(ARCH), ppc64le)
+  ARCH=powerpc64le
+endif
+
 ifeq ($(TEE_PLATFORM), none)
   ATTESTER = none
 else ifeq ($(TEE_PLATFORM), fs)
