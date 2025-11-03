@@ -239,10 +239,9 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
                 Ok(false) => return Err(UnpackError::UnpackFailed { source: e }),
                 Err(f) => {
                     return Err(UnpackError::UnpackFailed {
-                        source: io::Error::new(
-                            io::ErrorKind::Other,
-                            format!("Fallback failed, {f:?}, after original unpack error: {e:?}"),
-                        ),
+                        source: io::Error::other(format!(
+                            "Fallback failed, {f:?}, after original unpack error: {e:?}"
+                        )),
                     })
                 }
             },
@@ -425,10 +424,7 @@ async fn try_hardlink_fallback<R: AsyncRead + Unpin>(
 
     if !src_canon.starts_with(&dst_canon) {
         return Err(UnpackError::UnpackFailed {
-            source: std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "hardlink target escapes destination",
-            ),
+            source: std::io::Error::other("hardlink target escapes destination"),
         });
     }
 
