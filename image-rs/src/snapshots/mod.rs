@@ -21,6 +21,7 @@ pub enum SnapshotType {
     OcclumUnionfs,
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for SnapshotType {
     fn default() -> Self {
         cfg_if::cfg_if! {
