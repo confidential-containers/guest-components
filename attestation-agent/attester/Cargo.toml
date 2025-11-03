@@ -67,7 +67,6 @@ required-features = ["bin"]
 default = ["all-attesters"]
 all-attesters = [
     "tdx-attester",
-    "sgx-attester",
     "az-snp-vtpm-attester",
     "az-tdx-vtpm-attester",
     "snp-attester",
