@@ -78,16 +78,6 @@ pub struct Dc {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct KeyWrapOutput {
-    pub keywrapresults: KeyWrapResults,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct KeyWrapResults {
-    pub annotation: Vec<u8>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub struct KeyUnwrapOutput {
     pub keyunwrapresults: KeyUnwrapResults,
 }
