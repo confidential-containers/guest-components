@@ -21,7 +21,7 @@ type = "BuiltIn"
 store_type = "LocalFs"
 
 [admin]
-insecure_api = true
+type = "InsecureAllowAll"
 
 [[plugins]]
 name = "resource"
