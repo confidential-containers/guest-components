@@ -20,7 +20,7 @@ kbs-types.workspace = true
 log.workspace = true
 protobuf = { workspace = true, optional = true }
 protos = { path = "../../protos", default-features = false, optional = true }
-reqwest = { workspace = true, features = ["cookies", "json"], optional = true }
+reqwest = { workspace = true, default-features = false, features = ["cookies", "json"] }
 resource_uri.path = "../deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
