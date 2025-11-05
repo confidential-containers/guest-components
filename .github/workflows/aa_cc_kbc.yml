@@ -71,6 +71,7 @@ jobs:
 
       - name: Build and install with ${{ matrix.attester }} feature
         run: |
+          sudo apt-get update
           make ATTESTER=${{ matrix.attester }} && make install
 
       - name: Run rust lint check

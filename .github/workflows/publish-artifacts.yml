@@ -70,7 +70,9 @@ jobs:
     - name: Build
       env:
         ARCH: ${{ matrix.platform.arch }}
-      run: make ./target/${{ env.RUST_TARGET }}/release/attestation-agent
+      run: |
+        sudo apt-get update
+        make ./target/${{ env.RUST_TARGET }}/release/attestation-agent
 
     - name: Publish with ORAS
       id: publish

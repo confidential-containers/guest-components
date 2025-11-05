@@ -57,6 +57,7 @@ jobs:
 
       - name: Build and install with ${{ matrix.kbc }} feature
         run: |
+          sudo apt-get update
           make KBC=${{ matrix.kbc }} && make install
 
       - name: Musl build with ${{ matrix.kbc }} feature
