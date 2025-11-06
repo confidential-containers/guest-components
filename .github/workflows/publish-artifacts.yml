@@ -59,10 +59,13 @@ jobs:
       with:
         target: ${{ env.RUST_TARGET }}
 
+    - name: Update apt source list
+      run: |
+        sudo apt-get update
+
     - name: Install tpm dependencies
       if: matrix.platform.tee == 'az-cvm-vtpm'
       run: |
-        sudo apt-get update
         sudo apt-get install -y --no-install-recommends libtss2-dev
 
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -71,7 +74,6 @@ jobs:
       env:
         ARCH: ${{ matrix.platform.arch }}
       run: |
-        sudo apt-get update
         make ./target/${{ env.RUST_TARGET }}/release/attestation-agent
 
     - name: Publish with ORAS
