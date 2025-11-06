@@ -63,15 +63,17 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Install TPM dependencies
+      - name: Update apt source list
         run: |
           sudo apt-get update
+
+      - name: Install TPM dependencies
+        run: |
           sudo apt-get install -y libtss2-dev
         if: matrix.instance == 'ubuntu-24.04'
 
       - name: Build and install with ${{ matrix.attester }} feature
         run: |
-          sudo apt-get update
           make ATTESTER=${{ matrix.attester }} && make install
 
       - name: Run rust lint check
