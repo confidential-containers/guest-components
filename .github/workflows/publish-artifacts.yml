@@ -86,7 +86,10 @@ jobs:
         cd oras
         cp ../target/${{ env.RUST_TARGET }}/release/attestation-agent .
         tar cJf attestation-agent.tar.xz attestation-agent
-        arch_tag="${{ github.sha }}-${{ matrix.platform.tee }}_${{ matrix.platform.arch }}"
+        arch="${{ matrix.platform.arch }}"
+        # After building for target powerpc64le, tag and push the image as ppc64le to match standard arch naming.
+        [ "$arch" = "powerpc64le" ] && arch="ppc64le"
+        arch_tag="${{ github.sha }}-${{ matrix.platform.tee }}_${arch}"
         image="${REGISTRY}/${IMAGE_NAME}/attestation-agent"
         tag="${{ github.sha }}-${{ matrix.platform.tee }}"
         oras push "${image}:${arch_tag}" attestation-agent.tar.xz
@@ -126,7 +129,7 @@ jobs:
           libc: gnu
         - arch: aarch64
           libc: gnu
-        - arch: ppc64le
+        - arch: powerpc64le
           libc: gnu
     runs-on: ${{ matrix.arch == 's390x' && 's390x' || matrix.arch == 'ppc64le' && 'ubuntu-24.04-ppc64le' || 'ubuntu-24.04' }}
     env:
@@ -177,7 +180,10 @@ jobs:
     - name: Publish CDH + ASR with ORAS
       id: publish
       run: |
-        tag="${{ github.sha }}-${{ matrix.arch }}"
+        arch="${{ matrix.arch }}"
+        # After building for target powerpc64le, tag and push the image as ppc64le to match standard arch naming.
+        [ "$arch" = "powerpc64le" ] && arch="ppc64le"
+        tag="${{ github.sha }}-${arch}"
         mkdir oras
         cd oras
         cp ../target/${{ env.RUST_TARGET }}/release/{confidential-data-hub,api-server-rest} .
