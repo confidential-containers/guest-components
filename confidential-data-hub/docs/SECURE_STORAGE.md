@@ -65,11 +65,11 @@ For more details, please refer to [the guide](use-cases/secure-mount-with-aliyun
 
 ### Block Device
 
-The [plugin](../hub/src/storage/volume_type/blockdevice) provides ways to encrypt a block device and mount it to a specific mount point. Currently only support LUKS in [cryptsetup](https://gitlab.com/cryptsetup/cryptsetup/) for block device encryption.
+The [plugin](../hub/src/storage/volume_type/blockdevice) provides ways to encrypt a block device and mount it to a specific mount point. Currently only support LUKS2 in [cryptsetup](https://gitlab.com/cryptsetup/cryptsetup/) for block device encryption.
 
 #### LUKS Encryption
 
-In this mode, the device would be encrypted as LUKS device first, and then mount it to a target path to store the data to protect the confidentiality and integrity of the data.
+In this mode, the device would be encrypted as LUKS2 device first, and then mount it to a target path to store the data to protect the confidentiality and integrity of the data.
 
 The architecture diagram is
 
