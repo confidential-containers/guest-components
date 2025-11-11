@@ -166,7 +166,9 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
           libdevmapper-dev
-        [ "${{ matrix.arch }}" = "powerpc64le" ] && sudo apt-get install -y libclang-dev cmake protobuf-compiler
+        if [ "${{ matrix.arch }}" = "powerpc64le" ]; then
+          sudo apt-get install -y libclang-dev cmake protobuf-compiler
+        fi
 
     - name: Build CDH
       env:
