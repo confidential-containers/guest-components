@@ -48,7 +48,7 @@ fn main() {
             .run()
             .expect("ttrpc proto files build");
 
-        tonic_build::configure()
+        tonic_prost_build::configure()
             .build_server(true)
             .protoc_arg("--experimental_allow_proto3_optional")
             .out_dir("src/grpc/aa")
@@ -61,7 +61,7 @@ fn main() {
             )
             .expect("grpc proto files build");
 
-        tonic_build::configure()
+        tonic_prost_build::configure()
             .build_server(true)
             .protoc_arg("--experimental_allow_proto3_optional")
             .out_dir("src/grpc/cdh")
