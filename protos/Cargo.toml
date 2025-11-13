@@ -8,14 +8,15 @@ async-trait = { workspace = true, optional = true }
 prost = { workspace = true, optional = true }
 protobuf = { workspace = true, optional = true }
 tonic = { workspace = true, optional = true }
+tonic-prost = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 
 [build-dependencies]
 ttrpc-codegen = { workspace = true, optional = true }
-tonic-build = { workspace = true, optional = true }
+tonic-prost-build = { workspace = true, optional = true }
 
 [features]
 default = ["grpc", "ttrpc"]
 ttrpc = ["dep:ttrpc", "protobuf", "async-trait"]
-grpc = ["tonic", "prost"]
-build = ["dep:ttrpc-codegen", "dep:tonic-build"]
+grpc = ["tonic", "prost", "tonic-prost"]
+build = ["dep:ttrpc-codegen", "dep:tonic-prost-build"]
