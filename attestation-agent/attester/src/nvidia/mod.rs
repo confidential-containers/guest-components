@@ -78,11 +78,15 @@ impl Attester for NvAttester {
                 .uuid()
                 .context("Failed to get UUID for device {index}")?;
 
+            let evidence = &report.attestation_report[..report.attestation_report_size as usize];
+            let cert_chain = &certificate.attestation_cert_chain
+                [..certificate.attestation_cert_chain_size as usize];
+
             device_evidence_list.push(NvDeviceReportAndCert {
                 arch: dev_arch,
                 uuid: dev_uuid,
-                evidence: STANDARD.encode(report.attestation_report),
-                certificate: STANDARD.encode(certificate.attestation_cert_chain),
+                evidence: STANDARD.encode(evidence),
+                certificate: STANDARD.encode(cert_chain),
             });
 
             device
