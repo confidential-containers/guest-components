@@ -6898,7 +6898,7 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 [[package]]
 name = "tdx-attest-rs"
 version = "0.1.2"
-source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.23#e880e54c8f35d44a4763e08dff32a046c8ef2230"
+source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.23#e880e54c8f35d44a4763e08dff32a046c8ef2230"
 dependencies = [
  "tdx-attest-sys",
 ]
@@ -6906,7 +6906,7 @@ dependencies = [
 [[package]]
 name = "tdx-attest-sys"
 version = "0.1.0"
-source = "git+https://github.com/intel/SGXDataCenterAttestationPrimitives?tag=DCAP_1.23#e880e54c8f35d44a4763e08dff32a046c8ef2230"
+source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.23#e880e54c8f35d44a4763e08dff32a046c8ef2230"
 dependencies = [
  "bindgen 0.70.1",
 ]
