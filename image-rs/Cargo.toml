@@ -65,7 +65,7 @@ xattr = "1"
 zstd = "0.13"
 
 nydus-api = { version = "0.3.0", optional = true }
-nydus-service = { version = "0.3.0", features = ["coco"], optional = true }
+nydus-service = { version = "0.4.0", features = ["coco"], optional = true }
 
 [build-dependencies]
 anyhow.workspace = true
