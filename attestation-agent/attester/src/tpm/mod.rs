@@ -80,6 +80,10 @@ impl Attester for TpmAttester {
         Ok(serde_json::to_value(&evidence)?)
     }
 
+    fn supports_runtime_measurement(&self) -> bool {
+        true
+    }
+
     /// Extend runtime measurement for the TPM attester.
     async fn extend_runtime_measurement(
         &self,
@@ -88,7 +92,8 @@ impl Attester for TpmAttester {
     ) -> Result<()> {
         // Use the stored tpm_device path.
         extend_pcr(&self.tpm_device, event_digest, register_index)
-            .map_err(|e| anyhow!("Failed to extend PCR: {e}"))
+            .map_err(|e| anyhow!("Failed to extend PCR: {e}"))?;
+        Ok(())
     }
 
     /// Bind init data for the TPM attester (extends PCR 8).

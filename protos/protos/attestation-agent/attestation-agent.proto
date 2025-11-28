@@ -39,7 +39,15 @@ message ExtendRuntimeMeasurementRequest {
     optional uint64 RegisterIndex = 4;
 }
 
-message ExtendRuntimeMeasurementResponse {}
+enum RuntimeMeasurementResult {
+    OK = 0;
+    NOT_SUPPORTED = 1;
+    NOT_ENABLED = 2;
+}
+
+message ExtendRuntimeMeasurementResponse {
+    RuntimeMeasurementResult Result = 1;
+}
 
 message BindInitDataRequest {
     bytes Digest = 1;

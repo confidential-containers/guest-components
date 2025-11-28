@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use attester::{detect_attestable_devices, detect_tee_type, BoxedAttester};
 use kbs_types::Tee;
@@ -22,6 +22,17 @@ use log::{debug, info, warn};
 use token::*;
 
 use crate::{config::Config, eventlog::Event};
+
+pub enum RuntimeMeasurement {
+    /// The runtime measurement is extended successfully.
+    Ok,
+
+    /// The runtime measurement is not supported by the attester.
+    NotSupported,
+
+    /// The runtime measurement is not enabled by the attestation agent configuration.
+    NotEnabled,
+}
 
 /// Attestation Agent (AA for short) is a rust library crate for attestation procedure
 /// in confidential containers. It provides kinds of service APIs related to attestation,
@@ -73,7 +84,7 @@ pub trait AttestationAPIs {
         operation: &str,
         content: &str,
         register_index: Option<u64>,
-    ) -> Result<()>;
+    ) -> Result<RuntimeMeasurement>;
 
     /// Bind initdata
     async fn bind_init_data(&self, init_data: &[u8]) -> Result<InitDataResult>;
@@ -229,10 +240,14 @@ impl AttestationAPIs for AttestationAgent {
         operation: &str,
         content: &str,
         register_index: Option<u64>,
-    ) -> Result<()> {
+    ) -> Result<RuntimeMeasurement> {
         let Some(ref eventlog) = self.eventlog else {
-            bail!("Extend eventlog not enabled when launching!");
+            return Ok(RuntimeMeasurement::NotEnabled);
         };
+
+        if !self.primary_attester.supports_runtime_measurement() {
+            return Ok(RuntimeMeasurement::NotSupported);
+        }
 
         let (pcr, log_entry) = {
             let config = self.config.read().await;
@@ -250,7 +265,7 @@ impl AttestationAPIs for AttestationAgent {
 
         eventlog.lock().await.extend_entry(log_entry, pcr).await?;
 
-        Ok(())
+        Ok(RuntimeMeasurement::Ok)
     }
 
     /// Perform the initdata binding. If current platform does not support initdata
