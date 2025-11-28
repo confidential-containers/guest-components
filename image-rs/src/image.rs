@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Context};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use oci_client::{
     client::{Certificate, CertificateEncoding, ClientConfig, ClientProtocol},
     manifest::{OciDescriptor, OciImageManifest},
@@ -153,6 +153,22 @@ pub struct ImageMeta {
     pub layer_metas: Vec<LayerMeta>,
 }
 
+/// The information of the pulled image.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImageInfo {
+    /// The digest of the image configuration.
+    ///
+    /// See `config` of <https://github.com/opencontainers/image-spec/blob/main/manifest.md>
+    ///
+    /// Usually in form `sha256:xxxxxx`
+    pub config_digest: String,
+
+    /// The digest of the [image manifest](https://github.com/opencontainers/image-spec/blob/main/manifest.md)
+    ///
+    /// Usually in form `sha256:xxxxxx`
+    pub manifest_digest: String,
+}
+
 /// The`image-rs` client will support OCI image
 /// pulling, image signing verfication, image layer
 /// decryption/unpack/store and management.
@@ -260,7 +276,7 @@ impl ImageClient {
         bundle_dir: &Path,
         auth_info: &Option<&str>,
         decrypt_config: &Option<&str>,
-    ) -> PullImageResult<String> {
+    ) -> PullImageResult<ImageInfo> {
         let reference = Reference::try_from(image_url)
             .map_err(|source| PullImageError::IllegalImageReference { source })?;
 
@@ -303,7 +319,7 @@ impl ImageClient {
         bundle_dir: &Path,
         decrypt_config: &Option<&str>,
         image_url: &str,
-    ) -> PullImageResult<String> {
+    ) -> PullImageResult<ImageInfo> {
         // Try to find a valid registry auth. Logic order
         // 1. the input parameter
         // 2. from self.registry_auth
@@ -393,8 +409,12 @@ impl ImageClient {
         {
             let m = self.meta_store.read().await;
             if let Some(image_data) = &m.image_db.get(&id) {
-                return create_bundle(image_data, bundle_dir, &mut self.snapshot)
-                    .map_err(|source| PullImageError::FailedToCreateBundle { source });
+                let image_id = create_bundle(image_data, bundle_dir, &mut self.snapshot)
+                    .map_err(|source| PullImageError::FailedToCreateBundle { source })?;
+                return Ok(ImageInfo {
+                    config_digest: image_id.clone(),
+                    manifest_digest: image_digest.clone(),
+                });
             }
         }
 
@@ -441,6 +461,7 @@ impl ImageClient {
         let image_id = create_bundle(&image_data, bundle_dir, &mut self.snapshot)
             .map_err(|source| PullImageError::FailedToCreateBundle { source })?;
 
+        debug!("image id: {image_id}");
         self.meta_store
             .write()
             .await
@@ -459,7 +480,10 @@ impl ImageClient {
             .write_to_file(&meta_file)
             .context("update meta store failed")
             .map_err(|source| PullImageError::Internal { source })?;
-        Ok(image_id)
+        Ok(ImageInfo {
+            config_digest: image_id.clone(),
+            manifest_digest: image_digest.clone(),
+        })
     }
 }
 
