@@ -43,7 +43,10 @@ pub struct ExtendRuntimeMeasurementRequest {
     pub register_index: ::core::option::Option<u64>,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct ExtendRuntimeMeasurementResponse {}
+pub struct ExtendRuntimeMeasurementResponse {
+    #[prost(enumeration = "RuntimeMeasurementResult", tag = "1")]
+    pub result: i32,
+}
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BindInitDataRequest {
     #[prost(bytes = "vec", tag = "1")]
@@ -57,6 +60,35 @@ pub struct GetTeeTypeRequest {}
 pub struct GetTeeTypeResponse {
     #[prost(string, tag = "1")]
     pub tee: ::prost::alloc::string::String,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum RuntimeMeasurementResult {
+    Ok = 0,
+    NotSupported = 1,
+    NotEnabled = 2,
+}
+impl RuntimeMeasurementResult {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Ok => "OK",
+            Self::NotSupported => "NOT_SUPPORTED",
+            Self::NotEnabled => "NOT_ENABLED",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "OK" => Some(Self::Ok),
+            "NOT_SUPPORTED" => Some(Self::NotSupported),
+            "NOT_ENABLED" => Some(Self::NotEnabled),
+            _ => None,
+        }
+    }
 }
 /// Generated client implementations.
 pub mod attestation_agent_service_client {

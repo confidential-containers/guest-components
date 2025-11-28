@@ -6,6 +6,7 @@
 use super::{Attester, InitDataResult, TeeEvidence};
 use anyhow::{bail, Context, Result};
 use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
+use kbs_types::HashAlgorithm;
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 
@@ -46,6 +47,10 @@ impl Attester for AzSnpVtpmAttester {
         Ok(serde_json::to_value(&evidence)?)
     }
 
+    fn supports_runtime_measurement(&self) -> bool {
+        true
+    }
+
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> anyhow::Result<InitDataResult> {
         utils::extend_pcr(init_data_digest, utils::INIT_DATA_PCR)?;
         Ok(InitDataResult::Ok)
@@ -59,6 +64,17 @@ impl Attester for AzSnpVtpmAttester {
         utils::extend_pcr(&event_digest, register_index as u8)?;
         Ok(())
     }
+
+    fn pcr_to_ccmr(&self, pcr_index: u64) -> u64 {
+        pcr_index
+    }
+
+    fn ccel_hash_algorithm(&self) -> HashAlgorithm {
+        HashAlgorithm::Sha256
+    }
+
+    // TODO: add get_runtime_measurement function
+    // See https://github.com/confidential-containers/guest-components/issues/1201
 }
 
 pub(crate) mod utils {

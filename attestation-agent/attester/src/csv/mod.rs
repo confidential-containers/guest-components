@@ -131,6 +131,10 @@ impl Attester for CsvAttester {
         serde_json::to_value(&evidence).context("Serialize CSV evidence failed")
     }
 
+    fn supports_runtime_measurement(&self) -> bool {
+        true
+    }
+
     /// Extend TEE specific dynamic measurement register
     /// to enable dynamic measurement capabilities for input data at runtime.
     async fn extend_runtime_measurement(

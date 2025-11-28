@@ -8,6 +8,7 @@ use crate::az_snp_vtpm::utils;
 use anyhow::*;
 use az_tdx_vtpm::vtpm::Quote as TpmQuote;
 use az_tdx_vtpm::{hcl, imds, is_tdx_cvm, vtpm};
+use kbs_types::HashAlgorithm;
 use log::debug;
 use serde::{Deserialize, Serialize};
 use std::result::Result::Ok;
@@ -55,6 +56,10 @@ impl Attester for AzTdxVtpmAttester {
         Ok(InitDataResult::Ok)
     }
 
+    fn supports_runtime_measurement(&self) -> bool {
+        true
+    }
+
     async fn extend_runtime_measurement(
         &self,
         event_digest: Vec<u8>,
@@ -63,4 +68,15 @@ impl Attester for AzTdxVtpmAttester {
         utils::extend_pcr(&event_digest, register_index as u8)?;
         Ok(())
     }
+
+    fn pcr_to_ccmr(&self, pcr_index: u64) -> u64 {
+        pcr_index
+    }
+
+    fn ccel_hash_algorithm(&self) -> HashAlgorithm {
+        HashAlgorithm::Sha256
+    }
+
+    // TODO: add get_runtime_measurement function
+    // See https://github.com/confidential-containers/guest-components/issues/1201
 }

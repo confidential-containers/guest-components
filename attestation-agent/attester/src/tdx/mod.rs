@@ -147,13 +147,17 @@ impl Attester for TdxAttester {
         serde_json::to_value(&evidence).context("Serialize TDX evidence failed")
     }
 
+    fn supports_runtime_measurement(&self) -> bool {
+        true
+    }
+
     async fn extend_runtime_measurement(
         &self,
         event_digest: Vec<u8>,
         register_index: u64,
     ) -> Result<()> {
         if !runtime_measurement_extend_available() {
-            bail!("TDX Attester: Cannot extend runtime measurement on this system");
+            bail!("TDX Attester: runtime measurement extend is not available");
         }
 
         let ccmr_index = self.pcr_to_ccmr(register_index);

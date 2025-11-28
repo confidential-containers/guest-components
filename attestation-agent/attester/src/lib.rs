@@ -98,6 +98,11 @@ pub trait Attester {
     /// evidence to avoid reply attack.
     async fn get_evidence(&self, report_data: Vec<u8>) -> Result<TeeEvidence>;
 
+    /// Whether the Attester supports extending runtime measurement.
+    fn supports_runtime_measurement(&self) -> bool {
+        false
+    }
+
     /// Extend TEE specific dynamic measurement register
     /// to enable dynamic measurement capabilities for input data at runtime.
     /// The input event_digest would be truncated or padded to the size of
@@ -107,7 +112,7 @@ pub trait Attester {
         _event_digest: Vec<u8>,
         _register_index: u64,
     ) -> Result<()> {
-        bail!("Unimplemented")
+        bail!("The Attester does not support extending runtime measurement")
     }
 
     async fn bind_init_data(&self, _init_data_digest: &[u8]) -> Result<InitDataResult> {
@@ -118,7 +123,7 @@ pub trait Attester {
     /// the given PCR register index. Different platforms have different mapping
     /// relationship between PCR and platform RTMR.
     async fn get_runtime_measurement(&self, _pcr_index: u64) -> Result<Vec<u8>> {
-        bail!("Unimplemented")
+        bail!("The Attester does not support getting runtime measurement")
     }
 
     /// This function is used to get the CC measurement register value of

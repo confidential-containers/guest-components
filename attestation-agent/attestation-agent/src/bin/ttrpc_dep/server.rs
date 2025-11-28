@@ -5,14 +5,15 @@
 
 use ::ttrpc::proto::Code;
 use async_trait::async_trait;
-use attestation_agent::{AttestationAPIs, AttestationAgent};
+use attestation_agent::{AttestationAPIs, AttestationAgent, RuntimeMeasurement};
+
 use log::{debug, error};
 
 use protos::ttrpc::aa::{
     attestation_agent::{
         ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse,
         GetAdditionalEvidenceRequest, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
-        GetTeeTypeResponse, GetTokenRequest, GetTokenResponse,
+        GetTeeTypeResponse, GetTokenRequest, GetTokenResponse, RuntimeMeasurementResult,
     },
     attestation_agent_ttrpc::AttestationAgentService,
 };
@@ -113,7 +114,8 @@ impl AttestationAgentService for AA {
     ) -> ::ttrpc::Result<ExtendRuntimeMeasurementResponse> {
         debug!("AA (ttrpc): extend runtime measurement ...");
 
-        self.inner
+        let res = self
+            .inner
             .extend_runtime_measurement(
                 &req.Domain,
                 &req.Operation,
@@ -132,7 +134,12 @@ impl AttestationAgentService for AA {
             })?;
 
         debug!("AA (ttrpc): extend runtime measurement succeeded.");
-        let reply = ExtendRuntimeMeasurementResponse::new();
+        let mut reply = ExtendRuntimeMeasurementResponse::new();
+        reply.Result = match res {
+            RuntimeMeasurement::Ok => RuntimeMeasurementResult::OK.into(),
+            RuntimeMeasurement::NotSupported => RuntimeMeasurementResult::NOT_SUPPORTED.into(),
+            RuntimeMeasurement::NotEnabled => RuntimeMeasurementResult::NOT_ENABLED.into(),
+        };
         ::ttrpc::Result::Ok(reply)
     }
 

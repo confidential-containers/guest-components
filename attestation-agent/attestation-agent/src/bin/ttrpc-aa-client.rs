@@ -9,6 +9,7 @@ use const_format::concatcp;
 use protos::ttrpc::aa::{
     attestation_agent::{
         ExtendRuntimeMeasurementRequest, GetEvidenceRequest, GetTeeTypeRequest, GetTokenRequest,
+        RuntimeMeasurementResult,
     },
     attestation_agent_ttrpc::AttestationAgentServiceClient,
 };
@@ -148,11 +149,23 @@ pub async fn main() {
                 ..Default::default()
             };
 
-            client
+            let res = client
                 .extend_runtime_measurement(context::with_timeout(TIMEOUT), &req)
                 .await
                 .expect("request to AA");
-            println!("Extended.");
+            match res
+                .Result
+                .enum_value()
+                .expect("failed to get runtime measurement result")
+            {
+                RuntimeMeasurementResult::OK => println!("Extended."),
+                RuntimeMeasurementResult::NOT_SUPPORTED => {
+                    println!("Current platform does not support runtime measurement.")
+                }
+                RuntimeMeasurementResult::NOT_ENABLED => println!(
+                    "Runtime measurement is not enabled in Attestation Agent configuration."
+                ),
+            }
         }
     }
 }

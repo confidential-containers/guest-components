@@ -4,13 +4,14 @@
 //
 
 use anyhow::*;
-use attestation_agent::{AttestationAPIs, AttestationAgent};
+use attestation_agent::{AttestationAPIs, AttestationAgent, RuntimeMeasurement};
 use log::{debug, error};
 use protos::grpc::aa::attestation_agent::{
     attestation_agent_service_server::{AttestationAgentService, AttestationAgentServiceServer},
     BindInitDataRequest, BindInitDataResponse, ExtendRuntimeMeasurementRequest,
     ExtendRuntimeMeasurementResponse, GetAdditionalEvidenceRequest, GetEvidenceRequest,
     GetEvidenceResponse, GetTeeTypeRequest, GetTeeTypeResponse, GetTokenRequest, GetTokenResponse,
+    RuntimeMeasurementResult,
 };
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
@@ -105,7 +106,8 @@ impl AttestationAgentService for AA {
 
         debug!("AA (grpc): extend runtime measurement ...");
 
-        self.inner
+        let res = self
+            .inner
             .extend_runtime_measurement(
                 &request.domain,
                 &request.operation,
@@ -122,7 +124,13 @@ impl AttestationAgentService for AA {
 
         debug!("AA (grpc): extend runtime measurement succeeded.");
 
-        let reply = ExtendRuntimeMeasurementResponse {};
+        let reply = ExtendRuntimeMeasurementResponse {
+            result: match res {
+                RuntimeMeasurement::Ok => RuntimeMeasurementResult::Ok.into(),
+                RuntimeMeasurement::NotSupported => RuntimeMeasurementResult::NotSupported.into(),
+                RuntimeMeasurement::NotEnabled => RuntimeMeasurementResult::NotEnabled.into(),
+            },
+        };
 
         Result::Ok(Response::new(reply))
     }
