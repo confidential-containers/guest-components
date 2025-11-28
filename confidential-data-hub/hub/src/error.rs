@@ -39,6 +39,12 @@ pub enum Error {
 
     #[error("Image Client error: {0}")]
     ImageClient(#[from] image_rs::builder::BuilderError),
+
+    #[error("Attestation Agent client error: {source}")]
+    AttestationAgentClientError {
+        #[source]
+        source: anyhow::Error,
+    },
 }
 #[cfg(test)]
 mod tests {
