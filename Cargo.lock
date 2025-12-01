@@ -6357,9 +6357,9 @@ dependencies = [
 
 [[package]]
 name = "sigstore"
-version = "0.12.1"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43427f0d642cfed11bd596608148ee4476dd75f938888aa13a9c4e176fe14225"
+checksum = "52bba786054331bdc89e90f74373b68a6c3b63c9754cf20e3a4a629d0165fe38"
 dependencies = [
  "async-trait",
  "aws-lc-rs",
