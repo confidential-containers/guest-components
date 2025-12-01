@@ -70,8 +70,6 @@ zeroize.workspace = true
 
 [build-dependencies]
 anyhow.workspace = true
-tonic-build = { workspace = true, optional = true }
-ttrpc-codegen = { workspace = true, optional = true }
 
 [dev-dependencies]
 assert_cmd.workspace = true
@@ -99,8 +97,8 @@ ehsm = []
 
 # Binary RPC type
 bin = ["anyhow", "attestation-agent", "clap", "config", "env_logger", "serde"]
-ttrpc = ["dep:ttrpc", "ttrpc-codegen", "tokio/signal", "protos/ttrpc"]
-grpc = ["prost", "tonic", "tonic-build", "tokio/signal", "protos/grpc"]
+ttrpc = ["dep:ttrpc", "tokio/signal", "protos/ttrpc"]
+grpc = ["prost", "tonic", "tokio/signal", "protos/grpc"]
 
 # for secret_cli
 cli = ["clap/derive", "tokio/rt-multi-thread", "tokio/sync", "tokio/macros"]
