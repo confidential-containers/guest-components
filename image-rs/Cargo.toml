@@ -49,7 +49,7 @@ serde = { workspace = true, features = ["serde_derive", "rc"] }
 serde_json.workspace = true
 serde_yaml = { version = "0.9", optional = true }
 sha2.workspace = true
-sigstore = { version = "0.12.1", default-features = false, optional = true }
+sigstore = { version = "0.13.0", default-features = false, optional = true }
 strum.workspace = true
 strum_macros = "0.27"
 astral-tokio-tar = "0.5.6"
