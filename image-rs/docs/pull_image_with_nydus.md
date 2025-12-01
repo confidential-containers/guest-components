@@ -1,4 +1,7 @@
-# Pull image with Nydus
+# Pull image with Nydus (Deprecated)
+
+> [!NOTE]
+> Nydus is not supported in image-rs anymore. This document will be deleted soon.
 
 ## Prepare the environments
 
