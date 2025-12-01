@@ -113,23 +113,6 @@ impl<'a> PullClient<'a> {
             .map_err(|source| PullLayerError::PullManifestError { source })
     }
 
-    /// pull_bootstrap pulls a nydus image's bootstrap layer.
-    pub async fn pull_bootstrap(
-        &self,
-        bootstrap_desc: OciDescriptor,
-        diff_id: String,
-        decrypt_config: &Option<&str>,
-        meta_store: Arc<RwLock<MetaStore>>,
-    ) -> PullLayerResult<LayerMeta> {
-        let layer_metas = self
-            .async_pull_layers(vec![bootstrap_desc], &[diff_id], decrypt_config, meta_store)
-            .await?;
-        match layer_metas.first() {
-            Some(b) => Ok(b.clone()),
-            None => Err(PullLayerError::PullBootstrapLayerError),
-        }
-    }
-
     /// async_pull_layers pulls an image layers and do ondemand decrypt/decompress.
     /// It returns the layer metadata for layer db to track.
     pub async fn async_pull_layers(
@@ -511,44 +494,6 @@ mod tests {
             let msg = format!("{msg}: result: {result:?}");
 
             assert_result!(d.result, result, msg);
-        }
-    }
-
-    #[cfg(feature = "nydus")]
-    #[tokio::test]
-    async fn test_pull_nydus_bootstrap() {
-        let nydus_images =
-            ["eci-nydus-registry.cn-hangzhou.cr.aliyuncs.com/v6/java:latest-test_nydus"];
-
-        for image_url in nydus_images.iter() {
-            let tempdir = tempfile::tempdir().unwrap();
-            let image = Reference::try_from(*image_url).expect("create reference failed");
-            let layer_store =
-                LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
-            let client_config = oci_client::client::ClientConfig::default();
-            let mut client = PullClient::new(
-                image,
-                layer_store,
-                &RegistryAuth::Anonymous,
-                DEFAULT_MAX_CONCURRENT_DOWNLOAD,
-                client_config,
-            )
-            .unwrap();
-            let (image_manifest, _image_digest, image_config) =
-                client.pull_manifest().await.unwrap();
-
-            let image_config = ImageConfiguration::from_reader(image_config.as_bytes()).unwrap();
-            let diff_ids = image_config.rootfs().diff_ids();
-
-            assert!(client
-                .pull_bootstrap(
-                    crate::nydus::utils::get_nydus_bootstrap_desc(&image_manifest).unwrap(),
-                    diff_ids[diff_ids.len() - 1].to_string(),
-                    &None,
-                    Arc::new(RwLock::new(MetaStore::default())),
-                )
-                .await
-                .is_ok());
         }
     }
 }

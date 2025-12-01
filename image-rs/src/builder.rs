@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 
 use crate::{
     auth::{Auth, AuthError},
-    config::{ImageConfig, NydusConfig},
+    config::ImageConfig,
     image::ImageClient,
     layer_store::LayerStore,
     meta_store::{MetaStore, METAFILE},
@@ -88,7 +88,6 @@ impl ClientBuilder {
     );
 
     __impl_config!(max_concurrent_layer_downloads_per_image, usize);
-    __impl_config!(nydus_config, Some(nydus_config), NydusConfig);
 
     #[cfg(feature = "keywrap-native")]
     __impl_config!(kbc, String);
