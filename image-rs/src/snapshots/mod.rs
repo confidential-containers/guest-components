@@ -6,47 +6,13 @@ use anyhow::Result;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
-#[cfg(feature = "snapshot-unionfs")]
-pub mod occlum;
-#[cfg(feature = "snapshot-overlayfs")]
 pub mod overlay;
 
 /// Snapshot types.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash)]
-#[serde(rename_all = "lowercase")]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash, Default)]
 pub enum SnapshotType {
-    #[cfg(feature = "snapshot-overlayfs")]
+    #[default]
     Overlay,
-    #[cfg(feature = "snapshot-unionfs")]
-    OcclumUnionfs,
-}
-
-#[allow(clippy::derivable_impls)]
-impl Default for SnapshotType {
-    fn default() -> Self {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "snapshot-overlayfs")] {
-                Self::Overlay
-            } else if #[cfg(feature = "snapshot-unionfs")] {
-                Self::OcclumUnionfs
-            } else {
-                compile_error!("Either 'snapshot-overlayfs' or 'snapshot-unionfs' must be enabled to have at least one usable snapshot type.");
-            }
-        }
-    }
-}
-
-impl std::fmt::Display for SnapshotType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let out = match self {
-            #[cfg(feature = "snapshot-overlayfs")]
-            Self::Overlay => "overlay",
-            #[cfg(feature = "snapshot-unionfs")]
-            Self::OcclumUnionfs => "occlum_unionfs",
-        };
-
-        write!(f, "{out}")
-    }
 }
 
 /// A MountPoint contains the info to represents a mount point.

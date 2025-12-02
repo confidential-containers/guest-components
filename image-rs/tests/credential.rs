@@ -43,12 +43,8 @@ async fn test_use_credential(#[case] image_ref: &str, #[case] auth_file_uri: &st
             &Some(common::AA_PARAMETER),
         )
         .await;
-    if cfg!(all(feature = "snapshot-overlayfs",)) {
-        assert!(res.is_ok(), "{res:?}");
-        common::umount_bundle(&bundle_dir);
-    } else {
-        assert!(res.is_err());
-    }
+    assert!(res.is_ok(), "{res:?}");
+    common::umount_bundle(&bundle_dir);
 
     common::clean().await;
 }
