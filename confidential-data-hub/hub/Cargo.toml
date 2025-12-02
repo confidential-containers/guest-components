@@ -33,13 +33,13 @@ path = "src/bin/secret_cli.rs"
 required-features = ["cli"]
 
 [dependencies]
-anyhow = { workspace = true, optional = true }
+anyhow.workspace = true
 async-trait.workspace = true
-attestation-agent = { path = "../../attestation-agent/attestation-agent", default-features = false, optional = true }
+attestation-agent = { path = "../../attestation-agent/attestation-agent", default-features = false }
 base64.workspace = true
 cfg-if.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
-config = { workspace = true, optional = true }
+config = { workspace = true }
 crypto.path = "../../attestation-agent/deps/crypto"
 env_logger = { workspace = true, optional = true }
 image-rs = { path = "../../image-rs", default-features = false, features = [
@@ -51,7 +51,7 @@ prost = { workspace = true, optional = true }
 protos = { path = "../../protos", default-features = false, optional = true }
 rand.workspace = true
 resource_uri.path = "../../attestation-agent/deps/resource_uri"
-serde = { workspace = true, optional = true }
+serde.workspace = true
 serde_json.workspace = true
 strum = { workspace = true, features = ["derive"] }
 tempfile = { workspace = true, optional = true }
@@ -96,7 +96,7 @@ sev = ["kms/sev"]
 ehsm = []
 
 # Binary RPC type
-bin = ["anyhow", "attestation-agent", "clap", "config", "env_logger", "serde"]
+bin = ["clap", "env_logger"]
 ttrpc = ["dep:ttrpc", "tokio/signal", "protos/ttrpc"]
 grpc = ["prost", "tonic", "tokio/signal", "protos/grpc"]
 
