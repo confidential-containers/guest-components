@@ -35,9 +35,6 @@ use crate::{
     signature::SignatureError,
 };
 
-#[cfg(feature = "snapshot-unionfs")]
-use crate::snapshots::occlum::unionfs::Unionfs;
-#[cfg(feature = "snapshot-overlayfs")]
 use crate::snapshots::overlay::OverlayFs;
 
 pub type PullImageResult<T> = std::result::Result<T, PullImageError>;
@@ -197,25 +194,8 @@ impl ImageClient {
         _meta_store: &MetaStore,
     ) -> Box<dyn Snapshotter> {
         match snapshot {
-            #[cfg(feature = "snapshot-overlayfs")]
             SnapshotType::Overlay => {
-                let data_dir = work_dir.join(SnapshotType::Overlay.to_string());
-                let overlayfs = OverlayFs::new(data_dir);
-
-                Box::new(overlayfs) as Box<dyn Snapshotter>
-            }
-            #[cfg(feature = "snapshot-unionfs")]
-            SnapshotType::OcclumUnionfs => {
-                let occlum_unionfs_index = _meta_store
-                    .snapshot_db
-                    .get(&SnapshotType::OcclumUnionfs.to_string())
-                    .unwrap_or(&0);
-                let occlum_unionfs = Unionfs {
-                    data_dir: work_dir.join(SnapshotType::OcclumUnionfs.to_string()),
-                    index: std::sync::atomic::AtomicUsize::new(*occlum_unionfs_index),
-                };
-
-                Box::new(occlum_unionfs) as Box<dyn Snapshotter>
+                Box::new(OverlayFs::new(work_dir.to_path_buf())) as Box<dyn Snapshotter>
             }
         }
     }
@@ -244,7 +224,7 @@ impl ImageClient {
 
     /// pull_image pulls an image with optional auth info and decrypt config
     /// and store the pulled data under user defined work_dir/layers.
-    /// It will return the image ID with prepeared bundle: a rootfs directory,
+    /// It will return the image ID with prepared bundle: a rootfs directory,
     /// and config.json will be ready in the bundle_dir passed by user.
     ///
     /// If at least one of `security_validate` and `auth` in self.config is
@@ -537,7 +517,6 @@ fn create_bundle(
 }
 
 #[cfg(not(target_arch = "s390x"))]
-#[cfg(feature = "snapshot-overlayfs")]
 #[cfg(test)]
 mod tests {
     use super::*;

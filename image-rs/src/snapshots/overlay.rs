@@ -10,7 +10,7 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use crate::snapshots::{MountPoint, SnapshotType, Snapshotter};
+use crate::snapshots::{MountPoint, Snapshotter};
 
 #[derive(Debug)]
 pub struct OverlayFs {
@@ -19,14 +19,16 @@ pub struct OverlayFs {
 
 impl OverlayFs {
     /// Create a new instance of [OverlayFs].
-    pub fn new(data_dir: PathBuf) -> Self {
+    pub fn new(work_dir: PathBuf) -> Self {
+        let data_dir = work_dir.join(OVERLAYFS_FS_TYPE);
         OverlayFs { data_dir }
     }
 }
 
+const OVERLAYFS_FS_TYPE: &str = "overlay";
+
 impl Snapshotter for OverlayFs {
     fn mount(&mut self, layer_path: &[&str], mount_path: &Path) -> Result<MountPoint> {
-        let fs_type = SnapshotType::Overlay.to_string();
         let overlay_lowerdir = layer_path.join(":");
 
         // derive an index path from the mount materials and current time
@@ -64,7 +66,7 @@ impl Snapshotter for OverlayFs {
             fs::create_dir_all(mount_path)?;
         }
 
-        let source = Path::new(&fs_type);
+        let source = Path::new(OVERLAYFS_FS_TYPE);
         let flags = MsFlags::empty();
         let options = format!(
             "lowerdir={},upperdir={},workdir={}",
@@ -76,7 +78,7 @@ impl Snapshotter for OverlayFs {
         nix::mount::mount(
             Some(source),
             mount_path,
-            Some(fs_type.as_str()),
+            Some(OVERLAYFS_FS_TYPE),
             flags,
             Some(options.as_str()),
         )
@@ -90,7 +92,7 @@ impl Snapshotter for OverlayFs {
         })?;
 
         Ok(MountPoint {
-            r#type: fs_type,
+            r#type: String::from(OVERLAYFS_FS_TYPE),
             mount_path: mount_path.to_path_buf(),
             work_dir,
         })
