@@ -122,7 +122,12 @@ fn is_whiteout(name: &str) -> bool {
     name.starts_with(WHITEOUT_PREFIX)
 }
 
-/// Converts a whiteout file or opaque directory. See OverlayFS and Aufs documentation for details
+/// Converts a whiteout file or opaque directory.
+///
+/// Regular deletion whiteouts only need mknod() and work without xattr.
+/// Opaque directory whiteouts require xattr to set trusted.overlay.opaque.
+///
+/// See OverlayFS and Aufs documentation for details:
 /// https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt
 /// https://aufs.sourceforge.net/aufs.html
 async fn convert_whiteout(
@@ -132,6 +137,7 @@ async fn convert_whiteout(
     gid: u32,
     mode: Option<u32>,
     destination: &Path,
+    attr_available: bool,
 ) -> Result<()> {
     let parent = path
         .parent()
@@ -139,6 +145,15 @@ async fn convert_whiteout(
 
     // Handle opaque directories
     if name == WHITEOUT_OPAQUE_DIR {
+        // Opaque directory whiteout requires xattr support
+        if !attr_available {
+            debug!(
+                "Skipping opaque directory whiteout (xattr unavailable) for: {:?}",
+                destination.join(parent)
+            );
+            return Ok(());
+        }
+
         let destination_parent = destination.join(parent);
         xattr::set(destination_parent, "trusted.overlay.opaque", b"y")?;
         return Ok(());
@@ -225,10 +240,18 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
         let mode = file.header().mode().ok();
         let kind = file.header().entry_type();
 
-        if attr_available && is_whiteout(entry_name) {
-            convert_whiteout(entry_name, &entry_path, uid, gid, mode, destination)
-                .await
-                .map_err(|source| UnpackError::ConvertWhiteoutFailed { source })?;
+        if is_whiteout(entry_name) {
+            convert_whiteout(
+                entry_name,
+                &entry_path,
+                uid,
+                gid,
+                mode,
+                destination,
+                attr_available,
+            )
+            .await
+            .map_err(|source| UnpackError::ConvertWhiteoutFailed { source })?;
             continue;
         }
 
