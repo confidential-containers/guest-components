@@ -50,8 +50,7 @@ async fn test_pull_image(#[case] image_ref: &str) {
         .unwrap();
 
     tokio::time::sleep(Duration::from_secs(2)).await;
-    assert_cmd::Command::cargo_bin("ttrpc-cdh-tool")
-        .unwrap()
+    assert_cmd::cargo::cargo_bin_cmd!("ttrpc-cdh-tool")
         .arg("pull-image")
         .arg("--image-url")
         .arg(image_ref)
