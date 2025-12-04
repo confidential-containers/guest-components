@@ -100,10 +100,7 @@ impl SignatureValidator {
     ) -> Result<()> {
         match req {
             PolicyReqType::Accept => Ok(()),
-            PolicyReqType::Reject => bail!(
-                "Policy `reject` rejects image {}",
-                image.reference.to_string()
-            ),
+            PolicyReqType::Reject => bail!("Policy `reject` rejects image {}", image.reference),
             PolicyReqType::SimpleSigning(inner) => self
                 .simple_signing_allows_image(inner, image, auth)
                 .await

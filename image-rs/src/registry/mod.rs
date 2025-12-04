@@ -326,10 +326,7 @@ impl RegistryHandler {
         let final_tasks = self.handle_registry_tasks(tasks)?;
 
         if final_tasks.is_empty() {
-            bail!(
-                "Image {} is blocked by registry rule.",
-                image_reference.to_string()
-            );
+            bail!("Image {} is blocked by registry rule.", image_reference);
         }
         Ok(final_tasks)
     }
