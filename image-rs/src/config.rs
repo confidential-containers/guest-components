@@ -249,8 +249,8 @@ impl TryFrom<&Path> for ImageConfig {
     ///    }
     type Error = anyhow::Error;
     fn try_from(config_path: &Path) -> Result<Self, Self::Error> {
-        let file = File::open(config_path)
-            .map_err(|e| anyhow!("failed to open config file {}", e.to_string()))?;
+        let file =
+            File::open(config_path).map_err(|e| anyhow!("failed to open config file {}", e))?;
 
         let image_config = serde_json::from_reader::<File, ImageConfig>(file)
             .context("failed to parse config file")?;

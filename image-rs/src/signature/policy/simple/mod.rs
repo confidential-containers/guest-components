@@ -71,7 +71,7 @@ impl SignatureValidator {
         if parameters.key_type != KeyType::Gpg.to_string() {
             bail!(
                 "Unknown key type in policy config: only support {} now.",
-                KeyType::Gpg.to_string()
+                KeyType::Gpg
             );
         }
 
