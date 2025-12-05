@@ -225,7 +225,8 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
         let mode = file.header().mode().ok();
         let kind = file.header().entry_type();
 
-        if attr_available && is_whiteout(entry_name) {
+        // Regular whiteouts only need mknod(), not xattrs; opaque dirs need xattrs
+        if is_whiteout(entry_name) && (entry_name != WHITEOUT_OPAQUE_DIR || attr_available) {
             convert_whiteout(entry_name, &entry_path, uid, gid, mode, destination)
                 .await
                 .map_err(|source| UnpackError::ConvertWhiteoutFailed { source })?;
