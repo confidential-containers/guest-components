@@ -200,16 +200,14 @@ async fn do_signature_verification_tests(
                 &Some(common::AA_PARAMETER),
             )
             .await;
-        if cfg!(all(feature = "snapshot-overlayfs",)) {
-            assert_eq!(
-                _res.is_ok(),
-                test.allow,
-                "Test: {}, Signing scheme: {}, {:?}",
-                test.description,
-                test.signing_scheme,
-                _res
-            );
-        }
+        assert_eq!(
+            _res.is_ok(),
+            test.allow,
+            "Test: {}, Signing scheme: {}, {:?}",
+            test.description,
+            test.signing_scheme,
+            _res
+        );
     }
 
     common::clean().await;

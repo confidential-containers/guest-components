@@ -71,8 +71,7 @@ pub struct ImageConfig {
     #[serde(default = "default_work_dir")]
     pub work_dir: PathBuf,
 
-    /// The default snapshot for `image-rs` to use.
-    #[serde(default = "SnapshotType::default")]
+    #[serde(skip)]
     pub default_snapshot: SnapshotType,
 
     /// An image security policy regulates which images can be pulled by image-rs
@@ -244,8 +243,7 @@ impl KernelParameterConfigs {
 impl TryFrom<&Path> for ImageConfig {
     /// Load `ImageConfig` from a configuration file like:
     ///    {
-    ///        "work_dir": "/var/lib/image-rs/",
-    ///        "default_snapshot": "overlay"
+    ///        "work_dir": "/var/lib/image-rs/"
     ///    }
     type Error = anyhow::Error;
     fn try_from(config_path: &Path) -> Result<Self, Self::Error> {
@@ -315,7 +313,6 @@ impl ImageConfig {
     }
 }
 
-#[cfg(feature = "snapshot-overlayfs")]
 #[cfg(test)]
 mod tests {
     use rstest::rstest;

@@ -92,7 +92,7 @@ async fn test_use_registry_configuration(#[case] image_ref: &str, #[case] succes
             &Some(common::AA_PARAMETER),
         )
         .await;
-    if cfg!(feature = "snapshot-overlayfs") && res.is_ok() {
+    if res.is_ok() {
         common::umount_bundle(&bundle_dir);
     }
 
