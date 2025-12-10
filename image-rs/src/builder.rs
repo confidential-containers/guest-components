@@ -75,7 +75,9 @@ impl ClientBuilder {
         Some(image_security_policy_uri),
         String
     );
+    __impl_config!(image_security_policy, Some(image_security_policy), String);
     __impl_config!(sigstore_config_uri, Some(sigstore_config_uri), String);
+    __impl_config!(sigstore_config, Some(sigstore_config), String);
     __impl_config!(
         authenticated_registry_credentials_uri,
         Some(authenticated_registry_credentials_uri),
@@ -121,15 +123,30 @@ impl ClientBuilder {
                 let cfg_bytes = resource_provider.get_resource(uri).await?;
                 Some(cfg_bytes)
             }
-            None => None,
+            None => self
+                .config
+                .sigstore_config
+                .as_ref()
+                .map(|cfg| cfg.as_bytes().to_vec()),
         };
 
-        let signature_validator = match &self.config.image_security_policy_uri {
+        let policy_bytes = match &self.config.image_security_policy_uri {
             Some(uri) => {
                 info!("getting image security policy from {uri} ...");
-                let policy_bytes = resource_provider.get_resource(uri).await?;
+                let cfg_bytes = resource_provider.get_resource(uri).await?;
+                Some(cfg_bytes)
+            }
+            None => self
+                .config
+                .image_security_policy
+                .as_ref()
+                .map(|cfg| cfg.as_bytes().to_vec()),
+        };
+
+        let signature_validator = match policy_bytes {
+            Some(policy) => {
                 let signature_validator = SignatureValidator::new(
-                    &policy_bytes,
+                    &policy,
                     sigstore_config,
                     &self.config.work_dir,
                     self.config.image_pull_proxy.clone(),
@@ -140,7 +157,7 @@ impl ClientBuilder {
                 Some(signature_validator)
             }
             None => {
-                warn!("No `image_security_policy_uri` given, thus all images can be pulled by the image client without filtering.");
+                warn!("No `image_security_policy` given, thus all images can be pulled by the image client without filtering.");
                 None
             }
         };
