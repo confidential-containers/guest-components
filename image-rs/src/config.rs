@@ -98,6 +98,12 @@ pub struct ImageConfig {
     #[serde(default = "Option::default")]
     pub image_security_policy_uri: Option<String>,
 
+    /// The image security policy (see above) can also be specified directly
+    /// as a string. If the policy URI and this field are both set,
+    /// the policy URI will be used.
+    #[serde(default = "Option::default")]
+    pub image_security_policy: Option<String>,
+
     /// Sigstore config file URI for simple signing scheme.
     ///
     /// When `image_security_policy_uri` is set and `SimpleSigning` (signedBy) is
@@ -109,6 +115,12 @@ pub struct ImageConfig {
     /// This value defaults to `None`.
     #[serde(default = "Option::default")]
     pub sigstore_config_uri: Option<String>,
+
+    /// The sigstore config policy (see above) can be specified directly in the
+    /// config file as a string. If the config URI and this field are both
+    /// set, the config URI will be used.
+    #[serde(default = "Option::default")]
+    pub sigstore_config: Option<String>,
 
     /// To pull an image from an authenticated/private registry, credentials
     /// must be provided to image-rs. This field points to a credential file,
@@ -189,7 +201,9 @@ impl Default for ImageConfig {
             default_snapshot: SnapshotType::default(),
             max_concurrent_layer_downloads_per_image: DEFAULT_MAX_CONCURRENT_DOWNLOAD,
             image_security_policy_uri: None,
+            image_security_policy: None,
             sigstore_config_uri: None,
+            sigstore_config: None,
             authenticated_registry_credentials_uri: None,
             registry_configuration_uri: None,
             registry_config: None,
@@ -264,7 +278,9 @@ impl ImageConfig {
             default_snapshot: SnapshotType::default(),
             max_concurrent_layer_downloads_per_image: DEFAULT_MAX_CONCURRENT_DOWNLOAD,
             image_security_policy_uri: None,
+            image_security_policy: None,
             sigstore_config_uri: None,
+            sigstore_config: None,
             authenticated_registry_credentials_uri: None,
             registry_configuration_uri: None,
             registry_config: None,
