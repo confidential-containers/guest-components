@@ -4,7 +4,7 @@
 //
 
 use anyhow::*;
-use clap::{arg, command, Parser};
+use clap::Parser;
 use daemonize::Daemonize;
 use log::*;
 use std::{fs::File, net::SocketAddr, path::PathBuf};
