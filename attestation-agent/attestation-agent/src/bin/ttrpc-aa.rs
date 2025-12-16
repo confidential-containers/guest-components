@@ -6,7 +6,7 @@
 use anyhow::*;
 use attestation_agent::{initdata::Initdata, AttestationAPIs, AttestationAgent};
 use base64::Engine;
-use clap::{arg, command, Parser};
+use clap::Parser;
 use const_format::concatcp;
 use log::{debug, info};
 use std::{collections::HashMap, path::Path, sync::Arc};

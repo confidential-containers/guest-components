@@ -4,7 +4,7 @@
 //
 
 use base64::Engine;
-use clap::{arg, command, Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use const_format::concatcp;
 use protos::ttrpc::aa::{
     attestation_agent::{
