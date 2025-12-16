@@ -6,7 +6,7 @@
 use std::{env, path::Path};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
-use clap::{command, Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use confidential_data_hub::secret::{
     layout::{envelope::EnvelopeSecret, vault::VaultSecret},
     Secret, SecretContent, VERSION,
