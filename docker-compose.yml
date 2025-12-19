@@ -1,0 +1,28 @@
+services:
+  attestation-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.aa
+    image: attestation-agent:local
+    ports:
+      - "50005:50005"
+    # Privileged mode is often required to access /dev/tpm0 or /dev/tdx-guest
+    # If testing on a standard machine (Sample mode), this is optional but recommended for compatibility.
+    privileged: true
+    devices:
+      # Map TPM device if available (comment out if not present on host)
+      - "/dev/tpm0:/dev/tpm0"
+      # Map TDX device if available
+      # - "/dev/tdx_guest:/dev/tdx_guest"
+      # Map SEV device if available
+      # - "/dev/sev-guest:/dev/sev-guest"
+    environment:
+      - RUST_LOG=info
+    restart: unless-stopped
+
+  # (Optional) A client utility to easily talk to the agent
+  client-tool:
+    image: fullstorydev/grpcurl:latest
+    depends_on:
+      - attestation-agent
+    command: ["-help"]

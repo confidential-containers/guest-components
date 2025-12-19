@@ -1,0 +1,40 @@
+# Stage 1: Builder
+FROM rust:1.85-bookworm as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    protobuf-compiler \
+    libtss2-dev \
+    libssl-dev \
+    pkg-config \
+    build-essential \
+    git
+
+WORKDIR /usr/src/guest-components
+
+COPY . .
+
+# Build the gRPC version
+WORKDIR /usr/src/guest-components/attestation-agent
+RUN cargo build --release --bin grpc-aa --no-default-features --features "bin,grpc,all-attesters"
+
+# Stage 2: Runtime
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+# Added libcurl4 here to fix the missing shared library error
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    libcurl4 \
+    libtss2-esys-3.0.2-0 \
+    libtss2-tctildr0 \
+    libtss2-rc0 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/src/guest-components/target/release/grpc-aa /usr/local/bin/grpc-aa
+
+EXPOSE 50005
+
+# FIXED: Changed --attestation-sock to --attestation_sock
+CMD ["grpc-aa", "--attestation_sock", "0.0.0.0:50005"]
