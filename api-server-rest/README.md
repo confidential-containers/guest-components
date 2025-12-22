@@ -1,6 +1,6 @@
-# CoCo Restful API Server
+# CoCo RESTful API Server
 
-CoCo guest components use lightweight ttRPC for internal communication to reduce the memory footprint and dependency. But many internal services also needed by containers like `get_resource`, `get_evidence` and `get_token`, we export these services with restful API, now CoCo containers can easy access these API with http client. Here are some examples, for detail info, please refer [rest API](./openapi/api.json)
+CoCo guest components use lightweight ttRPC for internal communication to reduce the memory footprint and dependency. But many internal services also needed by containers like `get_resource`, `get_evidence` and `get_token`, we export these services with RESTful API, now CoCo containers can easily access these API with http client. Here are some examples, for detailed info, please refer [rest API](./openapi/api.json)
 
 ```bash
 $ ./api-server-rest --features=all

@@ -17,7 +17,7 @@ Rust implementation of the container image management library.
 Rust implementation of the OCI image encryption library.
 
 [api-server-rest](api-server-rest)
-CoCo Restful API server.
+CoCo RESTful API server.
 
 [confidential-data-hub](confidential-data-hub)
 Confidential Data Hub.

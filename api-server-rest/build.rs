@@ -89,11 +89,11 @@ fn generate_openapi_document() -> std::io::Result<()> {
     #[derive(OpenApi)]
     #[openapi(
     info(
-        title = "CoCo Restful API",
+        title = "CoCo RESTful API",
         description = "HTTP based API for CoCo containers to get resource/evidence/token from confidential-data-hub and attestation-agent."),
 
     servers(
-        (url = "http://127.0.0.1:8006", description = "CoCo Restful API")
+        (url = "http://127.0.0.1:8006", description = "CoCo RESTful API")
      ),
 
     paths(_token, _evidence, _aael, _resource)
@@ -106,7 +106,7 @@ fn generate_openapi_document() -> std::io::Result<()> {
 }
 
 fn main() -> std::io::Result<()> {
-    generate_openapi_document().expect("Generate restful OpenAPI yaml failed.");
+    generate_openapi_document().expect("Generate RESTful OpenAPI yaml failed.");
 
     Ok(())
 }
