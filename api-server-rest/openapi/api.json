@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "CoCo Restful API",
+    "title": "CoCo RESTful API",
     "description": "HTTP based API for CoCo containers to get resource/evidence/token from confidential-data-hub and attestation-agent.",
     "contact": {
       "name": "The Confidential Container Authors"
@@ -15,7 +15,7 @@
   "servers": [
     {
       "url": "http://127.0.0.1:8006",
-      "description": "CoCo Restful API"
+      "description": "CoCo RESTful API"
     }
   ],
   "paths": {

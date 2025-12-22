@@ -17,7 +17,7 @@ For more information about configuring CDH, please refer to [this section](../RE
 
 ## Usage
 
-Users are recommended to access CDH services via the [CoCo Restful API Server](../../api-server-rest/README.md), so 
+Users are recommended to access CDH services via the [CoCo RESTful API Server](../../api-server-rest/README.md), so 
 ensure that both API server and CDH process are running on the local host. By default the API server listen on
 port `8006`, whereas resources are HTTP-served from the `cdh/resource` endpoint.
 
