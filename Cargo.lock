@@ -592,6 +592,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bincode"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd6a120d2e16b3e1b4a24bd70f23b12d3e16b81f113364a26935f8db7245452d"
+
+[[package]]
 name = "bincode_derive"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3528,7 +3534,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.22.1",
- "bincode 2.0.1",
+ "bincode 3.0.0",
  "crypto",
  "kbs_protocol",
  "log",
@@ -3613,7 +3619,7 @@ dependencies = [
  "async-trait",
  "attestation-agent",
  "base64 0.22.1",
- "bincode 2.0.1",
+ "bincode 3.0.0",
  "chrono",
  "const_format",
  "crypto",
