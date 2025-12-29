@@ -47,6 +47,9 @@ jobs:
           override: true
           components: rustfmt, clippy
 
+      - name: Update apt repositories
+        run: sudo apt update
+
       - name: Install TPM dependencies
         run: sudo apt install -y libtss2-dev
 
