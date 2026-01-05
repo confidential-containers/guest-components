@@ -71,7 +71,7 @@ impl Compression {
             Self::Zstd => Box::new(async_compression::tokio::bufread::ZstdDecoder::new(
                 BufReader::new(input),
             )),
-            Self::Uncompressed => Box::new(BufReader::new(input)),
+            Self::Uncompressed => Box::new(input),
         }
     }
 

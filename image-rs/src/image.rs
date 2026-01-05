@@ -553,8 +553,9 @@ mod tests {
 
         // TODO test with more OCI image registries and fix broken registries.
         let oci_images = [
-            // Test for uncompressed layer support - see issue about quay.io/curl failing
-            // "quay.io/curl/curl@sha256:f6710cb71617689b9e3522bde531a1a59f3d39e848be4cb450c9f87c5d15c3a5",
+            // KNOWN ISSUE: Uncompressed layer images fail due to astral-tokio-tar bug
+            // See: https://github.com/astral-sh/tokio-tar/issues/...
+            // "ghcr.io/mkulke/confidential-containers/faulty-image:1",
             // image with duplicated layers
             "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master",
             // Alibaba Container Registry
