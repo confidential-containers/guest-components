@@ -554,20 +554,20 @@ mod tests {
         // TODO test with more OCI image registries and fix broken registries.
         let oci_images = [
             // Test for uncompressed layer support - see issue about quay.io/curl failing
-            "quay.io/curl/curl@sha256:f6710cb71617689b9e3522bde531a1a59f3d39e848be4cb450c9f87c5d15c3a5",
+            // "quay.io/curl/curl@sha256:f6710cb71617689b9e3522bde531a1a59f3d39e848be4cb450c9f87c5d15c3a5",
             // image with duplicated layers
-            // "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master",
+            "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master",
             // Alibaba Container Registry
-            // "registry.cn-hangzhou.aliyuncs.com/acs/busybox:v1.29.2",
+            "registry.cn-hangzhou.aliyuncs.com/acs/busybox:v1.29.2",
             // Amazon Elastic Container Registry
             // "public.ecr.aws/docker/library/hello-world:linux"
 
             // Azure Container Registry
-            // "mcr.microsoft.com/hello-world",
+            "mcr.microsoft.com/hello-world",
             // Docker container Registry
-            // "docker.io/busybox",
+            "docker.io/busybox",
             // Google Container Registry
-            // "gcr.io/google-containers/busybox:1.27.2",
+            "gcr.io/google-containers/busybox:1.27.2",
             // JFrog Container Registry
             // "releases-docker.jfrog.io/reg2/busybox:1.33.1"
         ];

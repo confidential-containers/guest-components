@@ -666,25 +666,20 @@ mod tests {
         // This matches the layer format seen in quay.io/curl/curl@sha256:f6710cb71617689b9e3522bde531a1a59f3d39e848be4cb450c9f87c5d15c3a5
         let empty_tar = vec![0u8; 1024];
         
-        let destination = Path::new("/tmp/image_test_empty_tar");
-        if destination.exists() {
-            fs::remove_dir_all(destination).await.unwrap();
-        }
+        let tempdir = tempfile::tempdir().unwrap();
+        let destination = tempdir.path().join("empty_layer");
 
         // This should succeed - an empty tar is valid and should create an empty directory
-        let result = unpack(empty_tar.as_slice(), destination).await;
+        let result = unpack(empty_tar.as_slice(), &destination).await;
         assert!(result.is_ok(), "Failed to unpack empty tar: {:?}", result);
         
         // Verify the destination directory was created and is empty
         assert!(destination.exists());
-        let mut read_dir = fs::read_dir(destination).await.unwrap();
+        let mut read_dir = fs::read_dir(&destination).await.unwrap();
         let mut count = 0;
         while let Some(_entry) = read_dir.next_entry().await.unwrap() {
             count += 1;
         }
         assert_eq!(count, 0, "Empty tar should result in empty directory");
-        
-        // Cleanup
-        fs::remove_dir_all(destination).await.unwrap();
     }
 }
