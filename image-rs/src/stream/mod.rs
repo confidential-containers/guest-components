@@ -8,6 +8,7 @@ pub use unpack::{unpack, UnpackError};
 use log::error;
 use sha2::Digest;
 use std::{
+    io,
     path::{Path, PathBuf},
     pin::Pin,
     task::Poll,
@@ -77,7 +78,7 @@ where
 /// stream_processing will handle async uncompressed layer data and
 /// unpack to the destination, returns layer digest for verification.
 pub async fn stream_processing(
-    layer_reader: impl AsyncRead + Unpin,
+    layer_reader: impl AsyncRead + Unpin + Send + 'static,
     diff_id: &str,
     destination: &Path,
 ) -> StreamResult<String> {
@@ -94,20 +95,29 @@ pub async fn stream_processing(
 }
 
 async fn async_processing(
-    layer_reader: impl AsyncRead + Unpin,
+    layer_reader: impl AsyncRead + Unpin + Send + 'static,
     hasher: LayerDigestHasher,
     destination: PathBuf,
 ) -> StreamResult<String> {
+    // SPIKE: Use standard tar crate instead of astral-tokio-tar
+    // We need to read all data first before passing to spawn_blocking
+    let mut buffer = Vec::new();
     let mut hash_reader = HashReader::new(layer_reader, hasher);
-    if let Err(e) = unpack(&mut hash_reader, destination.as_path()).await {
-        error!("failed to unpack layer: {e:?}");
-        tokio::fs::remove_dir_all(destination.as_path())
-            .await
-            .map_err(|source| StreamError::FailedToRollBack { source })?;
-        return Err(e.into());
-    }
+    tokio::io::copy(&mut hash_reader, &mut buffer)
+        .await
+        .map_err(|source| StreamError::FailedToRollBack { source })?;
+    
+    let hasher = hash_reader.hasher;
+    
+    tokio::task::spawn_blocking(move || {
+        unpack::unpack_sync_from_buffer(&buffer, &destination)
+    })
+    .await
+    .map_err(|e| StreamError::FailedToRollBack {
+        source: io::Error::other(format!("spawn_blocking failed: {}", e)),
+    })??;
 
-    Ok(hash_reader.hasher.digest_finalize())
+    Ok(hasher.digest_finalize())
 }
 
 #[cfg(test)]
