@@ -106,9 +106,8 @@ async fn async_processing(
         .await
         .map_err(|source| StreamError::FailedToRollBack { source })?;
     
-    // Now unpack from the buffer using a Cursor over a slice, matching @mkulke's pattern
-    let cursor = std::io::Cursor::new(buffer.as_slice());
-    if let Err(e) = unpack(cursor, destination.as_path()).await {
+    // Now unpack from the buffer as a slice - &[u8] implements AsyncRead in tokio
+    if let Err(e) = unpack(buffer.as_slice(), destination.as_path()).await {
         error!("failed to unpack layer: {e:?}");
         tokio::fs::remove_dir_all(destination.as_path())
             .await
