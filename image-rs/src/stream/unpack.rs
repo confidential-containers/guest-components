@@ -23,7 +23,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tokio::{fs, io::AsyncRead};
-use tokio_tar::ArchiveBuilder;
+use tokio_tar::Archive;
 use xattr::FileExt;
 
 pub type UnpackResult<T> = std::result::Result<T, UnpackError>;
@@ -197,11 +197,7 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
         .map_err(|source| UnpackError::CreateLayerDirectoryFailed { source })?;
 
     let attr_available = is_attr_available(destination);
-    let mut archive = ArchiveBuilder::new(input)
-        .set_ignore_zeros(true)
-        .set_unpack_xattrs(attr_available)
-        .set_preserve_permissions(true)
-        .build();
+    let mut archive = Archive::new(input);
 
     let mut entries = archive
         .entries()
@@ -337,158 +333,6 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
     }
 
     // Directory timestamps need update after all files are extracted.
-    for (k, v) in dirs.iter() {
-        let ret = unsafe { nix::libc::utimes(k.as_ptr(), v.as_ptr()) };
-        if ret != 0 {
-            return Err(UnpackError::SetMTimeFailed {
-                source: anyhow!(
-                    "change directory utime error: {:?}",
-                    io::Error::last_os_error(),
-                ),
-                path: k.to_string_lossy().to_string(),
-            });
-        }
-    }
-
-    Ok(())
-}
-
-/// SPIKE: Unpack using standard tar crate with blocking I/O
-/// This is a simplified synchronous version that works with a buffer.
-pub fn unpack_sync_from_buffer(
-    buffer: &[u8],
-    destination: &Path,
-) -> UnpackResult<()> {
-    use std::io::Cursor;
-
-    // Delete existing destination if it exists
-    if destination.exists() {
-        std::fs::remove_dir_all(destination)
-            .map_err(|source| UnpackError::DeleteExistingLayerFailed { source })?;
-    }
-
-    std::fs::create_dir_all(destination)
-        .map_err(|source| UnpackError::CreateLayerDirectoryFailed { source })?;
-
-    let attr_available = is_attr_available(destination);
-    let cursor = Cursor::new(buffer);
-    let mut archive = tar::Archive::new(cursor);
-    
-    // Configure archive
-    archive.set_ignore_zeros(true);
-    archive.set_preserve_permissions(true);
-    archive.set_unpack_xattrs(attr_available);
-
-    let mut dirs: HashMap<CString, [timeval; 2]> = HashMap::default();
-
-    for entry_result in archive.entries().map_err(|e| UnpackError::ReadTarEntriesFailed {
-        source: io::Error::other(format!("Failed to get tar entries: {}", e)),
-    })? {
-        let mut entry = entry_result.map_err(|e| UnpackError::ReadTarEntriesFailed {
-            source: io::Error::other(format!("Failed to read tar entry: {}", e)),
-        })?;
-
-        let entry_path = entry.path().map_err(|e| UnpackError::ReadTarEntriesFailed {
-            source: io::Error::other(format!("Failed to get entry path: {}", e)),
-        })?.into_owned();
-        
-        let entry_name = entry_path.file_name().unwrap_or_default().to_str().ok_or(
-            UnpackError::IllegalEntryName(entry_path.to_string_lossy().to_string()),
-        )?;
-
-        let uid: u32 = entry.header().uid().map_err(|e| UnpackError::IllegalUid {
-            source: anyhow!("corrupted UID in header: {e:?}"),
-        })?.try_into().map_err(|_| UnpackError::IllegalUid {
-            source: anyhow!("UID too large"),
-        })?;
-
-        let gid: u32 = entry.header().gid().map_err(|e| UnpackError::IllegalGid {
-            source: anyhow!("corrupted GID in header: {e:?}"),
-        })?.try_into().map_err(|_| UnpackError::IllegalGid {
-            source: anyhow!("GID too large"),
-        })?;
-
-        let mode = entry.header().mode().ok();
-        let kind = entry.header().entry_type();
-
-        // Handle whiteouts
-        if is_whiteout(entry_name) {
-            // For spike, we'll skip whiteout handling - this would need async conversion
-            debug!("Skipping whiteout file in spike: {}", entry_name);
-            continue;
-        }
-
-        // Unpack the entry
-        entry.unpack_in(destination).map_err(|e| UnpackError::UnpackFailed {
-            source: io::Error::other(format!("Failed to unpack entry: {}", e)),
-        })?;
-
-        let path = format!("{}/{}", destination.display(), entry_path.display());
-        let path_cstring = CString::new(path.clone())
-            .map_err(|_| UnpackError::IllegalEntryName(path.clone()))?;
-
-        let mtime = entry.header().mtime().map_err(|e| UnpackError::IllegalMtime {
-            source: io::Error::other(format!("Failed to get mtime: {}", e)),
-        })? as i64;
-
-        // Handle directories
-        if kind.is_dir() {
-            // Set ownership using lchown
-            let ret = unsafe { nix::libc::lchown(path_cstring.as_ptr(), uid, gid) };
-            if ret != 0 {
-                return Err(UnpackError::SetOwnershipsFailed {
-                    source: anyhow!("lchown failed: {:?}", io::Error::last_os_error()),
-                    path: path.clone(),
-                });
-            }
-
-            // Set permissions if available
-            if let Some(mode) = mode {
-                let perm = Permissions::from_mode(mode as _);
-                std::fs::set_permissions(&path, perm).map_err(|e| {
-                    UnpackError::SetOwnershipsFailed {
-                        source: anyhow!("failed to set permissions: {e}"),
-                        path: path.clone(),
-                    }
-                })?;
-            }
-
-            let atime = timeval {
-                tv_sec: mtime,
-                tv_usec: 0,
-            };
-            dirs.insert(path_cstring, [atime, atime]);
-        } else if !kind.is_symlink() && !kind.is_hard_link() {
-            // For regular files, set ownership and mtime
-            let ret = unsafe { nix::libc::lchown(path_cstring.as_ptr(), uid, gid) };
-            if ret != 0 {
-                return Err(UnpackError::SetOwnershipsFailed {
-                    source: anyhow!("lchown failed: {:?}", io::Error::last_os_error()),
-                    path: path.clone(),
-                });
-            }
-
-            if let Some(mode) = mode {
-                let perm = Permissions::from_mode(mode as _);
-                std::fs::set_permissions(&path, perm).map_err(|e| {
-                    UnpackError::SetOwnershipsFailed {
-                        source: anyhow!("failed to set permissions: {e}"),
-                        path: path.clone(),
-                    }
-                })?;
-            }
-
-            let mtime_ft = FileTime::from_unix_time(mtime, 0);
-            filetime::set_file_times(&path, mtime_ft, mtime_ft).map_err(|e| {
-                UnpackError::SetMTimeFailed {
-                    source: e.into(),
-                    path,
-                }
-            })?;
-        }
-    }
-
-    // Update directory timestamps
     for (k, v) in dirs.iter() {
         let ret = unsafe { nix::libc::utimes(k.as_ptr(), v.as_ptr()) };
         if ret != 0 {

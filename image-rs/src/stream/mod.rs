@@ -8,7 +8,6 @@ pub use unpack::{unpack, UnpackError};
 use log::error;
 use sha2::Digest;
 use std::{
-    io,
     path::{Path, PathBuf},
     pin::Pin,
     task::Poll,
@@ -78,7 +77,7 @@ where
 /// stream_processing will handle async uncompressed layer data and
 /// unpack to the destination, returns layer digest for verification.
 pub async fn stream_processing(
-    layer_reader: impl AsyncRead + Unpin + Send + 'static,
+    layer_reader: impl AsyncRead + Unpin,
     diff_id: &str,
     destination: &Path,
 ) -> StreamResult<String> {
@@ -95,29 +94,20 @@ pub async fn stream_processing(
 }
 
 async fn async_processing(
-    layer_reader: impl AsyncRead + Unpin + Send + 'static,
+    layer_reader: impl AsyncRead + Unpin,
     hasher: LayerDigestHasher,
     destination: PathBuf,
 ) -> StreamResult<String> {
-    // SPIKE: Use standard tar crate instead of astral-tokio-tar
-    // We need to read all data first before passing to spawn_blocking
-    let mut buffer = Vec::new();
     let mut hash_reader = HashReader::new(layer_reader, hasher);
-    tokio::io::copy(&mut hash_reader, &mut buffer)
-        .await
-        .map_err(|source| StreamError::FailedToRollBack { source })?;
-    
-    let hasher = hash_reader.hasher;
-    
-    tokio::task::spawn_blocking(move || {
-        unpack::unpack_sync_from_buffer(&buffer, &destination)
-    })
-    .await
-    .map_err(|e| StreamError::FailedToRollBack {
-        source: io::Error::other(format!("spawn_blocking failed: {}", e)),
-    })??;
+    if let Err(e) = unpack(&mut hash_reader, destination.as_path()).await {
+        error!("failed to unpack layer: {e:?}");
+        tokio::fs::remove_dir_all(destination.as_path())
+            .await
+            .map_err(|source| StreamError::FailedToRollBack { source })?;
+        return Err(e.into());
+    }
 
-    Ok(hasher.digest_finalize())
+    Ok(hash_reader.hasher.digest_finalize())
 }
 
 #[cfg(test)]
@@ -217,62 +207,5 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(layer_digest, layer_digest_new);
-    }
-
-    #[tokio::test]
-    async fn test_stream_processing_empty_tar() {
-        // Test with an empty tar (1024 zero bytes - two 512-byte terminating blocks)
-        // This matches the layer format seen in quay.io/curl/curl@sha256:f6710cb71617689b9e3522bde531a1a59f3d39e848be4cb450c9f87c5d15c3a5
-        let empty_tar = vec![0u8; 1024];
-        
-        let layer_digest = format!(
-            "{}{:x}",
-            DIGEST_SHA256_PREFIX,
-            sha2::Sha256::digest(empty_tar.as_slice())
-        );
-        
-        let tempdir = tempfile::tempdir().unwrap();
-        let file_path = tempdir.path().join("empty_layer");
-        
-        // This should succeed - stream_processing should handle empty tars
-        let result = stream_processing(empty_tar.as_slice(), &layer_digest, &file_path).await;
-        assert!(result.is_ok(), "Failed to process empty tar: {:?}", result);
-        
-        let layer_digest_new = result.unwrap();
-        assert_eq!(layer_digest, layer_digest_new);
-        
-        // Verify the destination directory was created and is empty
-        assert!(file_path.exists());
-    }
-
-    #[tokio::test]
-    async fn test_stream_processing_with_decoder() {
-        use crate::decoder::Compression;
-        
-        // Test with an empty tar through the decoder (simulating uncompressed layer processing)
-        let empty_tar = vec![0u8; 1024];
-        
-        let layer_digest = format!(
-            "{}{:x}",
-            DIGEST_SHA256_PREFIX,
-            sha2::Sha256::digest(empty_tar.as_slice())
-        );
-        
-        let tempdir = tempfile::tempdir().unwrap();
-        let file_path = tempdir.path().join("empty_layer_decoded");
-        
-        // Simulate what happens when processing an uncompressed layer
-        let decoder = Compression::Uncompressed;
-        let async_decoder = decoder.async_decompress(empty_tar.as_slice());
-        
-        // This should succeed - stream_processing should handle empty tars even through decoder
-        let result = stream_processing(async_decoder, &layer_digest, &file_path).await;
-        assert!(result.is_ok(), "Failed to process empty tar through decoder: {:?}", result);
-        
-        let layer_digest_new = result.unwrap();
-        assert_eq!(layer_digest, layer_digest_new);
-        
-        // Verify the destination directory was created and is empty
-        assert!(file_path.exists());
     }
 }

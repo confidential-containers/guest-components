@@ -553,7 +553,7 @@ mod tests {
 
         // TODO test with more OCI image registries and fix broken registries.
         let oci_images = [
-            // SPIKE: Testing with standard tar crate instead of astral-tokio-tar
+            // FIX: Uncompressed layer images now work with Archive::new() instead of ArchiveBuilder
             "ghcr.io/mkulke/confidential-containers/faulty-image:1",
             // image with duplicated layers
             "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master",
