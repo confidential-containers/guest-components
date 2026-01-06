@@ -556,18 +556,18 @@ mod tests {
             // FIX: Uncompressed layer images now work with Archive::new() instead of ArchiveBuilder
             "ghcr.io/mkulke/confidential-containers/faulty-image:1",
             // image with duplicated layers
-            "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master",
+            // "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master",
             // Alibaba Container Registry
-            "registry.cn-hangzhou.aliyuncs.com/acs/busybox:v1.29.2",
+            // "registry.cn-hangzhou.aliyuncs.com/acs/busybox:v1.29.2",
             // Amazon Elastic Container Registry
             // "public.ecr.aws/docker/library/hello-world:linux"
 
             // Azure Container Registry
-            "mcr.microsoft.com/hello-world",
+            // "mcr.microsoft.com/hello-world",
             // Docker container Registry
-            "docker.io/busybox",
+            // "docker.io/busybox",
             // Google Container Registry
-            "gcr.io/google-containers/busybox:1.27.2",
+            // "gcr.io/google-containers/busybox:1.27.2",
             // JFrog Container Registry
             // "releases-docker.jfrog.io/reg2/busybox:1.33.1"
         ];

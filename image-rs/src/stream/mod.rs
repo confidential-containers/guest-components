@@ -8,6 +8,7 @@ pub use unpack::{unpack, UnpackError};
 use log::error;
 use sha2::Digest;
 use std::{
+    io::Cursor,
     path::{Path, PathBuf},
     pin::Pin,
     task::Poll,
@@ -106,8 +107,9 @@ async fn async_processing(
         .await
         .map_err(|source| StreamError::FailedToRollBack { source })?;
     
-    // Now unpack from the buffer as a slice - &[u8] implements AsyncRead in tokio
-    if let Err(e) = unpack(buffer.as_slice(), destination.as_path()).await {
+    // Use Cursor like @mkulke's implementation - Cursor<&[u8]> implements AsyncRead
+    let cursor = Cursor::new(buffer.as_slice());
+    if let Err(e) = unpack(cursor, destination.as_path()).await {
         error!("failed to unpack layer: {e:?}");
         tokio::fs::remove_dir_all(destination.as_path())
             .await
