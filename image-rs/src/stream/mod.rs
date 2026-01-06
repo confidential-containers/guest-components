@@ -98,8 +98,17 @@ async fn async_processing(
     hasher: LayerDigestHasher,
     destination: PathBuf,
 ) -> StreamResult<String> {
+    // Read the entire stream into memory first, like @mkulke's working implementation
+    // This matches the pattern from https://github.com/mkulke/pull-image-async
+    let mut buffer = Vec::new();
     let mut hash_reader = HashReader::new(layer_reader, hasher);
-    if let Err(e) = unpack(&mut hash_reader, destination.as_path()).await {
+    tokio::io::copy(&mut hash_reader, &mut buffer)
+        .await
+        .map_err(|source| StreamError::FailedToRollBack { source })?;
+    
+    // Now unpack from the buffer using a Cursor, matching @mkulke's pattern
+    let cursor = std::io::Cursor::new(buffer);
+    if let Err(e) = unpack(cursor, destination.as_path()).await {
         error!("failed to unpack layer: {e:?}");
         tokio::fs::remove_dir_all(destination.as_path())
             .await
