@@ -30,7 +30,7 @@ pub enum StreamError {
     #[error("Unsupported uncompressed digest format: {0}")]
     UnsupportedDigestFormat(String),
 
-    #[error("Failed to unpack layer")]
+    #[error("Failed to unpack layer: {0}")]
     UnPackLayerFailed(#[from] UnpackError),
 }
 
