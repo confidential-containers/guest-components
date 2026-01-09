@@ -652,7 +652,7 @@ dependencies = [
  "bitflags 2.9.0",
  "cexpr",
  "clang-sys",
- "itertools 0.13.0",
+ "itertools 0.10.5",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -3703,7 +3703,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -6649,7 +6649,7 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 [[package]]
 name = "tdx-attest-rs"
 version = "0.1.2"
-source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.23#e880e54c8f35d44a4763e08dff32a046c8ef2230"
+source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.24#717f2a91ca732c3309b0c59d21757463133eb440"
 dependencies = [
  "tdx-attest-sys",
 ]
@@ -6657,7 +6657,7 @@ dependencies = [
 [[package]]
 name = "tdx-attest-sys"
 version = "0.1.0"
-source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.23#e880e54c8f35d44a4763e08dff32a046c8ef2230"
+source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.24#717f2a91ca732c3309b0c59d21757463133eb440"
 dependencies = [
  "bindgen 0.70.1",
 ]
