@@ -350,6 +350,7 @@ dependencies = [
  "num-traits",
  "nvml-wrapper",
  "occlum_dcap",
+ "pem-rfc7468 1.0.0",
  "picky-asn1 0.10.1",
  "picky-asn1-der 0.5.4",
  "picky-asn1-x509 0.15.2",
@@ -461,18 +462,17 @@ dependencies = [
 
 [[package]]
 name = "az-cvm-vtpm"
-version = "0.7.4"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b3d0900c6757c9674b05b0479236458297026e25fb505186dc8d7735091a21c"
+checksum = "460ceb8aa4047d086c6d1c1273015b0f19c2303d1502ee918e8e4b0a136b5a4e"
 dependencies = [
- "bincode 1.3.3",
  "jsonwebkey",
  "memoffset 0.9.1",
  "openssl",
  "serde",
  "serde-big-array",
  "serde_json",
- "sev 6.3.1",
+ "sev 7.1.0",
  "sha2 0.10.9",
  "thiserror 2.0.17",
  "tss-esapi",
@@ -481,28 +481,26 @@ dependencies = [
 
 [[package]]
 name = "az-snp-vtpm"
-version = "0.7.4"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e5f1a3838d56871fc7a37c1ffcaa892777fbebb246f7ddec18c12e14b6d6aa9"
+checksum = "c2fc021c171823a2cc58ce7af52154714464ce01ac0abe745d3cb8a8308a033e"
 dependencies = [
  "az-cvm-vtpm",
- "bincode 1.3.3",
  "clap",
  "serde",
- "sev 6.3.1",
+ "sev 7.1.0",
  "thiserror 2.0.17",
  "ureq",
 ]
 
 [[package]]
 name = "az-tdx-vtpm"
-version = "0.7.4"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04849677b3c0704d4593d89940cde0dc0caad2202bf9fb29352e153782b91ff8"
+checksum = "8b0b931862c6ea56cb89e8d345d757f06aec6f4530e9813dc7cd35fd5b8dad70"
 dependencies = [
  "az-cvm-vtpm",
  "base64-url",
- "bincode 1.3.3",
  "serde",
  "serde_json",
  "thiserror 2.0.17",
@@ -1802,7 +1800,7 @@ dependencies = [
  "const-oid",
  "der_derive",
  "flagset",
- "pem-rfc7468",
+ "pem-rfc7468 0.7.0",
  "zeroize",
 ]
 
@@ -2207,7 +2205,7 @@ dependencies = [
  "generic-array",
  "group",
  "hkdf",
- "pem-rfc7468",
+ "pem-rfc7468 0.7.0",
  "pkcs8",
  "rand_core 0.6.4",
  "sec1",
@@ -4540,6 +4538,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pem-rfc7468"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6305423e0e7738146434843d1694d621cce767262b2a86910beab705e4493d9"
+dependencies = [
+ "base64ct",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6257,11 +6264,30 @@ dependencies = [
  "iocuddle",
  "lazy_static",
  "libc",
- "openssl",
- "rdrand",
  "serde",
  "serde-big-array",
  "serde_bytes",
+ "static_assertions",
+ "uuid",
+]
+
+[[package]]
+name = "sev"
+version = "7.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2ff74d7e7d1cc172f3a45adec74fbeee928d71df095b85aaaf66eb84e1e31e6"
+dependencies = [
+ "base64 0.22.1",
+ "bitfield 0.19.1",
+ "bitflags 2.9.0",
+ "byteorder",
+ "dirs 6.0.0",
+ "hex",
+ "iocuddle",
+ "lazy_static",
+ "libc",
+ "openssl",
+ "rdrand",
  "static_assertions",
  "uuid",
 ]
