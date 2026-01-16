@@ -45,10 +45,15 @@ env_logger = { workspace = true, optional = true }
 image-rs = { path = "../../image-rs", default-features = false, features = [
     "kata-cc-rustls-tls",
 ] }
+jose-b64 = "0.1.2"
+jose-jwa = "0.1.2"
+jose-jwk = "0.1.2"
+jose-jws = "0.1.2"
 kms = { path = "../kms", default-features = false }
 libcryptsetup-rs = { version = "0.13.1", optional = true, features = ["mutex"] }
 log.workspace = true
 nix.workspace = true
+p256 = "0.13.2"
 prost = { workspace = true, optional = true }
 protos = { path = "../../protos", default-features = false, optional = true }
 rand.workspace = true

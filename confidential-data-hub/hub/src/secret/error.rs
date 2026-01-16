@@ -25,4 +25,19 @@ pub enum SecretError {
 
     #[error("parse SealedSecret failed: {0}")]
     ParseFailed(&'static str),
+
+    #[error("Signature Error: {0}")]
+    SignatureError(#[from] p256::ecdsa::Error),
+
+    #[error("JSON Parsing Error: {0}")]
+    JsonError(#[from] serde_json::Error),
+
+    #[error("Signing key error: {0}")]
+    BadSigningKey(&'static str),
+
+    #[error("Failed to get key from KMS: {0}")]
+    KmsError(#[from] kms::Error),
+
+    #[error("IO Operation Failed: {0}")]
+    IoError(#[from] std::io::Error),
 }
