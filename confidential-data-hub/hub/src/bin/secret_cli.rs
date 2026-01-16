@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use jose_jwk::Jwk;
 use std::{env, path::Path};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -41,6 +42,16 @@ struct SealArgs {
     /// Type of the Secret, i.e. `vault` or `envelope`
     #[command(subcommand)]
     r#type: TypeArgs,
+
+    /// The kid of the signing key. This will be used when unsealing
+    /// to find the key.
+    #[arg(long)]
+    signing_kid: String,
+
+    /// A path to a file containing a JWK (with a private component)
+    /// for signing the sealed secret.
+    #[arg(long)]
+    signing_jwk_path: String,
 }
 
 #[derive(Args)]
@@ -57,6 +68,10 @@ struct UnsealArgs {
     /// configuration for connecting to KBS provider
     #[arg(short, long)]
     aa_kbc_params: Option<String>,
+
+    /// Skip validating the signature of the sealed secret.
+    #[arg(short, long)]
+    skip_verification: bool,
 }
 
 #[derive(Subcommand)]
@@ -163,8 +178,13 @@ async fn main() {
 async fn unseal_secret(unseal_args: &UnsealArgs) {
     let secret_string = fs::read_to_string(&unseal_args.file_path)
         .await
-        .expect("failed to read sealed secret");
-    let secret = Secret::from_signed_base64_string(secret_string).expect("Failed to parse secret.");
+        .expect("failed to read sealed secret")
+        .trim()
+        .to_string();
+
+    let secret = Secret::from_signed_base64_string(secret_string, unseal_args.skip_verification)
+        .await
+        .expect("Failed to parse secret.");
 
     // Setup secret provider
     let secret_provider = match secret.r#type {
@@ -277,12 +297,16 @@ async fn seal_secret(seal_args: &SealArgs) {
         }
     };
 
+    let signing_jwk =
+        std::fs::read_to_string(&seal_args.signing_jwk_path).expect("Could not find signing JWK");
+    let signing_jwk: Jwk = serde_json::from_str(&signing_jwk).expect("Could not parse signing JWK");
+
     let secret = Secret {
         version: VERSION.into(),
         r#type: sc,
     };
     let secret_string = secret
-        .to_signed_base64_string()
+        .to_signed_base64_string(signing_jwk, seal_args.signing_kid.clone())
         .expect("failed to serialize secret");
     println!("{secret_string}");
 }
