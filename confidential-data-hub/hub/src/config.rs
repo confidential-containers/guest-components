@@ -65,6 +65,15 @@ pub struct CdhConfig {
     pub image: ImageConfig,
 
     pub socket: String,
+
+    /// Sealed Secrets use JWS integrity protection to ensure
+    /// that the secret cannot be modified while it is stored
+    /// by the untrusted control plane.
+    /// If needed, this check can be skipped.
+    /// The integrity protection applies only to the sealed secret
+    /// itself, not to the unsealed secret.
+    #[serde(default)]
+    pub skip_sealed_secret_verification: bool,
 }
 
 impl CdhConfig {
@@ -93,6 +102,7 @@ impl CdhConfig {
                     credentials: Vec::new(),
                     socket: DEFAULT_CDH_SOCKET_ADDR.into(),
                     image: ImageConfig::from_kernel_cmdline(),
+                    skip_sealed_secret_verification: false,
                 }
             }
         };
@@ -168,6 +178,10 @@ impl CdhConfig {
         // KBS configurations
         if let Some(kbs_cert) = &self.kbc.kbs_cert {
             env::set_var("KBS_CERT", kbs_cert);
+        }
+
+        if self.skip_sealed_secret_verification {
+            env::set_var("SKIP_SEALED_SECRET_VERIFICATION", "true");
         }
     }
 }
@@ -256,6 +270,7 @@ https_proxy = "http://127.0.0.1:8080"
                 ..Default::default()
             },
             socket: "unix:///run/confidential-containers/cdh.sock".to_string(),
+            skip_sealed_secret_verification: false,
         })
     )]
     #[case(
@@ -291,6 +306,7 @@ name = "offline_fs_kbc"
                 ..Default::default()
         },
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
+        skip_sealed_secret_verification: false,
     })
     )]
     #[case(
@@ -316,6 +332,7 @@ some_undefined_field = "unknown value"
                 ..Default::default()
         },
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
+        skip_sealed_secret_verification: false,
     })
     )]
     #[serial]
@@ -349,6 +366,7 @@ some_undefined_field = "unknown value"
             credentials: Vec::new(),
             socket: DEFAULT_CDH_SOCKET_ADDR.into(),
             image: ImageConfig::from_kernel_cmdline(),
+            skip_sealed_secret_verification: false,
         };
         assert_eq!(config, expected);
 
