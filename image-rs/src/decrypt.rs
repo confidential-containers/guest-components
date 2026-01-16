@@ -74,7 +74,7 @@ mod encryption {
     use ocicrypt_rs::helpers::create_decrypt_config;
     use ocicrypt_rs::spec::{
         MEDIA_TYPE_LAYER_ENC, MEDIA_TYPE_LAYER_GZIP_ENC, MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_ENC,
-        MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_GZIP_ENC,
+        MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_GZIP_ENC, MEDIA_TYPE_WASM_ENC,
     };
     use std::io::Read;
 
@@ -88,6 +88,7 @@ mod encryption {
                 MEDIA_TYPE_LAYER_GZIP_ENC | MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_GZIP_ENC => {
                     (manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE.to_string(), true)
                 }
+                MEDIA_TYPE_WASM_ENC => (manifest::WASM_LAYER_MEDIA_TYPE.to_string(), true),
                 _ => ("".to_string(), false),
             };
 
@@ -385,6 +386,9 @@ impl Decryptor {
             "application/vnd.oci.image.layer.v1.tar+gzip+encrypted"
             | "application/vnd.oci.image.layer.nondistributable.v1.tar+gzip+encrypted" => {
                 (manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE.to_string(), true)
+            }
+            "application/vnd.wasm.content.layer.v1+wasm+encrypted" => {
+                (manifest::WASM_LAYER_MEDIA_TYPE.to_string(), true)
             }
             _ => ("".to_string(), false),
         };
