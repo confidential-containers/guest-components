@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y \
 	libbtrfs-dev \
 	libdevmapper-dev \
 	pkg-config
-RUN git clone https://github.com/containers/skopeo $GOPATH/src/github.com/containers/skopeo 
+RUN git clone https://github.com/containers/skopeo $GOPATH/src/github.com/containers/skopeo
 WORKDIR $GOPATH/src/github.com/containers/skopeo
 # The dependency on skopeo is quite fragile as there are several versions of
 # the project that would generate an encrypted image with a gzip header that

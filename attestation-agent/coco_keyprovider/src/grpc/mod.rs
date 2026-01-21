@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::enc_mods;
+use crate::enc_mods::{crypto::Algorithm, enc_optsdata_gen_anno, kbs::get_kek, AnnotationPacket};
 use anyhow::*;
 use base64::Engine;
 use jwt_simple::prelude::Ed25519KeyPair;
@@ -89,7 +89,7 @@ impl KeyProviderService for KeyProvider {
             })
             .collect();
 
-        let annotation: String = enc_mods::enc_optsdata_gen_anno(
+        let annotation: String = enc_optsdata_gen_anno(
             (&self.kbs, &self.auth_private_key),
             &engine
                 .decode(optsdata)
@@ -123,13 +123,94 @@ impl KeyProviderService for KeyProvider {
 
     async fn un_wrap_key(
         &self,
-        _request: Request<KeyProviderKeyWrapProtocolInput>,
+        request: Request<KeyProviderKeyWrapProtocolInput>,
     ) -> Result<Response<KeyProviderKeyWrapProtocolOutput>, Status> {
-        debug!("The UnWrapKey API is called...");
-        debug!("UnWrapKey API is unimplemented!");
-        Err(Status::unimplemented(
-            "UnWrapKey API of sample-kbs is unimplemented!",
-        ))
+        let input_string = String::from_utf8(
+            request.into_inner().key_provider_key_wrap_protocol_input,
+        )
+        .map_err(|e| {
+            Status::invalid_argument(format!(
+                "key_provider_key_wrap_protocol_input is not legal utf8 string: {e:?}"
+            ))
+        })?;
+
+        let input: KeyProviderInput = serde_json::from_str::<KeyProviderInput>(&input_string)
+            .map_err(|e| {
+                Status::invalid_argument(format!("parse key provider input failed: {e:?}"))
+            })?;
+
+        let annotation_base64 = input.keyunwrapparams.annotation.ok_or_else(|| {
+            Status::invalid_argument("illegal keyunwrapparams without annotation")
+        })?;
+
+        let engine = base64::engine::general_purpose::STANDARD;
+        let annotation_bytes = engine.decode(annotation_base64).map_err(|e| {
+            Status::invalid_argument(format!("base64 decode annotation failed: {e:?}"))
+        })?;
+
+        let annotation: AnnotationPacket =
+            serde_json::from_slice(&annotation_bytes).map_err(|e| {
+                Status::invalid_argument(format!("parse annotation packet failed: {e:?}"))
+            })?;
+
+        let kbs_url = self.kbs.as_ref().ok_or_else(|| {
+            Status::internal("KBS URL not configured. Please provide KBS URL to keyprovider.")
+        })?;
+
+        let (kbs_addr, kbs_path) = crate::enc_mods::normalize_path(&annotation.kid)
+            .map_err(|e| Status::internal(format!("Failed to normalize key path: {:?}", e)))?;
+
+        let kbs_url_with_addr = if kbs_addr.is_empty() {
+            kbs_url.clone()
+        } else {
+            kbs_addr
+                .parse::<Url>()
+                .or_else(|_| format!("{}://{}", kbs_url.scheme(), kbs_addr).parse::<Url>())
+                .map_err(|_| {
+                    Status::internal(format!("Failed to parse KBS address: {}", kbs_addr))
+                })?
+        };
+
+        let kek = get_kek(&kbs_url_with_addr, &kbs_path).await.map_err(|e| {
+            error!(
+                "Failed to get KEK from KBS for kid={}: {:?}",
+                annotation.kid, e
+            );
+            Status::internal("Failed to get KEK from KBS")
+        })?;
+
+        let wrapped_data = engine
+            .decode(&annotation.wrapped_data)
+            .map_err(|e| Status::internal(format!("base64 decode wrapped_data failed: {e:?}")))?;
+
+        let iv = engine
+            .decode(&annotation.iv)
+            .map_err(|e| Status::internal(format!("base64 decode iv failed: {e:?}")))?;
+
+        let wrap_type: Algorithm = annotation
+            .wrap_type
+            .parse()
+            .map_err(|e| Status::internal(format!("Failed to parse wrap_type: {:?}", e)))?;
+
+        let optsdata = crate::enc_mods::crypto::decrypt(&wrapped_data, &kek, &iv, &wrap_type)
+            .map_err(|e| {
+                error!("Failed to decrypt key for kid={}: {:?}", annotation.kid, e);
+                Status::internal("Failed to decrypt key")
+            })?;
+
+        let output_struct = KeyUnwrapOutput {
+            keyunwrapresults: KeyUnwrapResults { optsdata },
+        };
+        let output = serde_json::to_string(&output_struct)
+            .map_err(|e| Status::internal(format!("serde json failed: {e:?}")))?
+            .as_bytes()
+            .to_vec();
+
+        let reply = KeyProviderKeyWrapProtocolOutput {
+            key_provider_key_wrap_protocol_output: output,
+        };
+
+        Result::Ok(Response::new(reply))
     }
 }
 

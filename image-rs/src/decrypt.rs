@@ -81,15 +81,18 @@ mod encryption {
     impl Decryptor {
         /// Construct Decryptor from media_type.
         pub fn from_media_type(media_type: &str) -> Self {
-            let (media_type, encrypted) = match media_type {
-                MEDIA_TYPE_LAYER_ENC | MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_ENC => {
-                    (manifest::IMAGE_LAYER_MEDIA_TYPE.to_string(), true)
+            let (media_type, encrypted) = if media_type == MEDIA_TYPE_WASM_ENC {
+                (manifest::WASM_LAYER_MEDIA_TYPE.to_string(), true)
+            } else {
+                match media_type {
+                    MEDIA_TYPE_LAYER_ENC | MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_ENC => {
+                        (manifest::IMAGE_LAYER_MEDIA_TYPE.to_string(), true)
+                    }
+                    MEDIA_TYPE_LAYER_GZIP_ENC | MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_GZIP_ENC => {
+                        (manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE.to_string(), true)
+                    }
+                    _ => ("".to_string(), false),
                 }
-                MEDIA_TYPE_LAYER_GZIP_ENC | MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_GZIP_ENC => {
-                    (manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE.to_string(), true)
-                }
-                MEDIA_TYPE_WASM_ENC => (manifest::WASM_LAYER_MEDIA_TYPE.to_string(), true),
-                _ => ("".to_string(), false),
             };
 
             Decryptor {
@@ -379,6 +382,9 @@ impl Decryptor {
     /// Construct Decryptor from media_type.
     pub fn from_media_type(media_type: &str) -> Self {
         let (media_type, encrypted) = match media_type {
+            "application/vnd.wasm.content.layer.v1+wasm+encrypted" => {
+                (manifest::WASM_LAYER_MEDIA_TYPE.to_string(), true)
+            }
             "application/vnd.oci.image.layer.v1.tar+encrypted"
             | "application/vnd.oci.image.layer.nondistributable.v1.tar+encrypted" => {
                 (manifest::IMAGE_LAYER_MEDIA_TYPE.to_string(), true)
@@ -386,9 +392,6 @@ impl Decryptor {
             "application/vnd.oci.image.layer.v1.tar+gzip+encrypted"
             | "application/vnd.oci.image.layer.nondistributable.v1.tar+gzip+encrypted" => {
                 (manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE.to_string(), true)
-            }
-            "application/vnd.wasm.content.layer.v1+wasm+encrypted" => {
-                (manifest::WASM_LAYER_MEDIA_TYPE.to_string(), true)
             }
             _ => ("".to_string(), false),
         };
