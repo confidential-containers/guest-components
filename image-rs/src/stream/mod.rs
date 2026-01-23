@@ -119,13 +119,12 @@ pub async fn wasm_stream_processing(
         .await
         .map_err(|source| StreamError::FailedToRollBack { source })?;
 
-    match tokio::io::copy(&mut hash_reader, &mut wasm_file).await {
-        Ok(_) => Ok(hash_reader.hasher.digest_finalize()),
-        Err(e) => {
-            tokio::fs::remove_dir_all(destination).await.ok();
-            Err(StreamError::FailedToRollBack { source: e })
-        }
+    if let Err(source) = tokio::io::copy(&mut hash_reader, &mut wasm_file).await {
+        tokio::fs::remove_dir_all(destination).await.ok();
+        return Err(StreamError::FailedToRollBack { source });
     }
+
+    Ok(hash_reader.hasher.digest_finalize())
 }
 
 async fn async_processing(
