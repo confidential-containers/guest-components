@@ -559,7 +559,7 @@ mod tests {
 
     ///Mock annotation packet, which goes into container image manifest
     #[derive(Serialize, Deserialize, Debug)]
-    struct AnnotationPacket {
+    struct _AnnotationPacket {
         pub key_url: String,
         pub wrapped_key: Vec<u8>,
         pub wrap_type: String,
@@ -639,7 +639,7 @@ mod tests {
                         .unwrap(),
                     unsafe { ENC_KEY },
                 ) {
-                    let ap = AnnotationPacket {
+                    let ap = _AnnotationPacket {
                         key_url: "https://key-provider/key-uuid".to_string(),
                         wrapped_key: wrapped_key_result,
                         wrap_type: "AES".to_string(),
@@ -675,7 +675,7 @@ mod tests {
                     .decode(base64_annotation)
                     .unwrap();
                 let str_annotation: &str = std::str::from_utf8(&vec_annotation).unwrap();
-                let annotation_packet: AnnotationPacket =
+                let annotation_packet: _AnnotationPacket =
                     serde_json::from_str(str_annotation).unwrap();
                 let wrapped_key = annotation_packet.wrapped_key;
                 if let Ok(unwrapped_key_result) = decrypt_key(&wrapped_key, unsafe { DEC_KEY }) {
@@ -747,7 +747,7 @@ mod tests {
                         .unwrap(),
                     unsafe { ENC_KEY },
                 ) {
-                    let ap = AnnotationPacket {
+                    let ap = _AnnotationPacket {
                         key_url: "https://key-provider/key-uuid".to_string(),
                         wrapped_key: wrapped_key_result,
                         wrap_type: "AES".to_string(),
@@ -783,7 +783,7 @@ mod tests {
                     .decode(base64_annotation)
                     .unwrap();
                 let str_annotation: &str = std::str::from_utf8(&vec_annotation).unwrap();
-                let annotation_packet: AnnotationPacket =
+                let annotation_packet: _AnnotationPacket =
                     serde_json::from_str(str_annotation).unwrap();
                 let wrapped_key = annotation_packet.wrapped_key;
                 if let Ok(unwrapped_key_result) = decrypt_key(&wrapped_key, unsafe { DEC_KEY }) {
@@ -879,7 +879,7 @@ mod tests {
                         unsafe { self::cmd_grpc::ENC_KEY },
                     )
                     .map_err(|e| std::io::Error::other(e.to_string()))?;
-                    let ap = AnnotationPacket {
+                    let ap = _AnnotationPacket {
                         key_url: "https://key-provider/key-uuid".to_string(),
                         wrapped_key,
                         wrap_type: "AES".to_string(),
@@ -899,7 +899,7 @@ mod tests {
                         .decode(base64_annotation)
                         .unwrap();
                     let str_annotation: &str = std::str::from_utf8(&vec_annotation).unwrap();
-                    let annotation_packet: AnnotationPacket =
+                    let annotation_packet: _AnnotationPacket =
                         serde_json::from_str(str_annotation).unwrap();
                     let wrapped_key = annotation_packet.wrapped_key;
                     let unwrapped_key = super::cmd_grpc::decrypt_key(&wrapped_key, unsafe {
@@ -1053,7 +1053,7 @@ mod tests {
         let wrapped_key =
             self::cmd_grpc::encrypt_key(opts_data.as_ref(), unsafe { self::cmd_grpc::ENC_KEY })
                 .unwrap();
-        let ap = AnnotationPacket {
+        let ap = _AnnotationPacket {
             key_url: "https://key-provider/key-uuid".to_string(),
             wrapped_key,
             wrap_type: "AES".to_string(),
