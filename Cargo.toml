@@ -58,7 +58,7 @@ serial_test = "3"
 sha2 = "0.10.9"
 strum = { version = "0.27", features = ["derive"] }
 tempfile = "3.24"
-testcontainers = "0.25"
+testcontainers = "0.26"
 thiserror = "2.0"
 tokio = "1.49"
 toml = "0.9.11"
