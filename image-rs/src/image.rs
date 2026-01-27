@@ -554,8 +554,19 @@ mod tests {
     use std::fs;
     use test_utils::assert_retry;
 
+    fn is_root() -> bool {
+        unsafe { nix::libc::getuid() == 0 }
+    }
+
     #[tokio::test]
     async fn test_pull_image() {
+        if !is_root() {
+            eprintln!(
+                "Skipping test_pull_image: requires root privileges for file ownership operations"
+            );
+            return;
+        }
+
         let work_dir = tempfile::tempdir().unwrap();
 
         // TODO test with more OCI image registries and fix broken registries.
@@ -601,6 +612,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_image_reuse() {
+        if !is_root() {
+            eprintln!(
+                "Skipping test_image_reuse: requires root privileges for file ownership operations"
+            );
+            return;
+        }
+
         let work_dir = tempfile::tempdir().unwrap();
 
         let image = "mcr.microsoft.com/hello-world";
@@ -638,6 +656,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_meta_store_reuse() {
+        if !is_root() {
+            eprintln!("Skipping test_meta_store_reuse: requires root privileges for file ownership operations");
+            return;
+        }
+
         let work_dir = tempfile::tempdir().unwrap();
 
         let image = "mcr.microsoft.com/hello-world";

@@ -30,8 +30,9 @@ impl EvidenceProvider for MockedEvidenceProvider {
             report_data: base64::engine::general_purpose::STANDARD.encode(runtime_data),
         };
 
-        serde_json::to_value(&evidence)
-            .map_err(|e| crate::Error::GetEvidence(format!("Serialize sample evidence failed: {e}")))
+        serde_json::to_value(&evidence).map_err(|e| {
+            crate::Error::GetEvidence(format!("Serialize sample evidence failed: {e}"))
+        })
     }
 
     async fn get_additional_evidence(&self, _runtime_data: Vec<u8>) -> Result<String> {
