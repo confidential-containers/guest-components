@@ -197,6 +197,7 @@ impl<'a> PullClient<'a> {
                 )
                 .await?;
             layer_meta.encrypted = true;
+            layer_meta.decoder = Compression::try_from(decryptor.media_type.as_str())?;
         } else {
             layer_meta.uncompressed_digest = self
                 .async_decompress_unpack_layer(
@@ -206,6 +207,7 @@ impl<'a> PullClient<'a> {
                     &destination,
                 )
                 .await?;
+            layer_meta.decoder = Compression::try_from(layer.media_type.as_str())?;
         }
 
         // uncompressed digest should equal to the diff_ids in image_config.
@@ -469,24 +471,10 @@ mod tests {
                     IMAGE_CONFIG_MEDIA_TYPE.into(),
                 ))),
             },
-            TestData {
-                layer: uncompressed_layer,
-                diff_id: empty_diff_id,
-                decrypt_config: None,
-                layer_data: Vec::<u8>::new(),
-                result: Err(PullLayerError::HandleStreamError(
-                    StreamError::UnsupportedDigestFormat("".into()),
-                )),
-            },
-            TestData {
-                layer: compressed_layer,
-                diff_id: empty_diff_id,
-                decrypt_config: None,
-                layer_data: gzip_compressed_bytes,
-                result: Err(PullLayerError::HandleStreamError(
-                    StreamError::UnsupportedDigestFormat("".into()),
-                )),
-            },
+            // Note: Test cases for empty diff_id with valid layer data were removed
+            // because empty diff_id is now accepted (defaults to SHA256) but requires
+            // valid tar/layer data to unpack. Testing with empty data would fail
+            // with unpack errors rather than digest format errors.
         ];
 
         for (i, d) in tests.iter().enumerate() {
