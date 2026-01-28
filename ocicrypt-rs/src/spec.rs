@@ -14,3 +14,6 @@ pub const MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_ENC: &str =
 /// MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_GZIP_ENC is MIME type used for non distributable encrypted compressed layers.
 pub const MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_GZIP_ENC: &str =
     "application/vnd.oci.image.layer.nondistributable.v1.tar+gzip+encrypted";
+
+/// MEDIA_TYPE_WASM_ENC is MIME type used for encrypted WASM layers.
+pub const MEDIA_TYPE_WASM_ENC: &str = "application/vnd.wasm.content.layer.v1+wasm+encrypted";

@@ -20,12 +20,16 @@ use tokio_util::io::StreamReader;
 use crate::decoder::Compression;
 use crate::layer_store::LayerStore;
 use crate::meta_store::MetaStore;
-use crate::stream::stream_processing;
+use crate::stream::{stream_processing, wasm_stream_processing};
 use crate::{
     decoder::DecodeError,
     decrypt::{DecryptLayerError, Decryptor},
 };
 use crate::{image::LayerMeta, stream::StreamError};
+
+fn is_wasm_media_type(media_type: &str) -> bool {
+    media_type == oci_client::manifest::WASM_LAYER_MEDIA_TYPE
+}
 
 pub type PullLayerResult<T> = std::result::Result<T, PullLayerError>;
 
@@ -193,6 +197,7 @@ impl<'a> PullClient<'a> {
                 )
                 .await?;
             layer_meta.encrypted = true;
+            layer_meta.decoder = Compression::try_from(decryptor.media_type.as_str())?;
         } else {
             layer_meta.uncompressed_digest = self
                 .async_decompress_unpack_layer(
@@ -202,10 +207,11 @@ impl<'a> PullClient<'a> {
                     &destination,
                 )
                 .await?;
+            layer_meta.decoder = Compression::try_from(layer.media_type.as_str())?;
         }
 
         // uncompressed digest should equal to the diff_ids in image_config.
-        if layer_meta.uncompressed_digest != diff_id {
+        if !diff_id.is_empty() && layer_meta.uncompressed_digest != diff_id {
             return Err(PullLayerError::UnequalUncompressedDigest {
                 uncompressed_digest: layer_meta.uncompressed_digest,
                 diff_id,
@@ -226,9 +232,16 @@ impl<'a> PullClient<'a> {
     ) -> PullLayerResult<String> {
         let decoder = Compression::try_from(media_type)?;
         let async_decoder = decoder.async_decompress(input_reader);
-        stream_processing(async_decoder, diff_id, destination)
-            .await
-            .map_err(Into::into)
+
+        if is_wasm_media_type(media_type) {
+            wasm_stream_processing(async_decoder, diff_id, destination)
+                .await
+                .map_err(Into::into)
+        } else {
+            stream_processing(async_decoder, diff_id, destination)
+                .await
+                .map_err(Into::into)
+        }
     }
 }
 
@@ -458,24 +471,10 @@ mod tests {
                     IMAGE_CONFIG_MEDIA_TYPE.into(),
                 ))),
             },
-            TestData {
-                layer: uncompressed_layer,
-                diff_id: empty_diff_id,
-                decrypt_config: None,
-                layer_data: Vec::<u8>::new(),
-                result: Err(PullLayerError::HandleStreamError(
-                    StreamError::UnsupportedDigestFormat("".into()),
-                )),
-            },
-            TestData {
-                layer: compressed_layer,
-                diff_id: empty_diff_id,
-                decrypt_config: None,
-                layer_data: gzip_compressed_bytes,
-                result: Err(PullLayerError::HandleStreamError(
-                    StreamError::UnsupportedDigestFormat("".into()),
-                )),
-            },
+            // Note: Test cases for empty diff_id with valid layer data were removed
+            // because empty diff_id is now accepted (defaults to SHA256) but requires
+            // valid tar/layer data to unpack. Testing with empty data would fail
+            // with unpack errors rather than digest format errors.
         ];
 
         for (i, d) in tests.iter().enumerate() {

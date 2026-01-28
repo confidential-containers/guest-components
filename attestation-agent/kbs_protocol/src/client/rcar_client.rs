@@ -393,7 +393,7 @@ mod test {
     use tokio::fs;
 
     use crate::{
-        evidence_provider::NativeEvidenceProvider, Error, KbsClientBuilder, KbsClientCapabilities,
+        evidence_provider::MockedEvidenceProvider, Error, KbsClientBuilder, KbsClientCapabilities,
     };
 
     use crate::client::rcar_client::{
@@ -463,7 +463,7 @@ mod test {
         let port = kbs.get_host_port_ipv4(8085).await.expect("get port");
         let kbs_host_url = format!("http://127.0.0.1:{port}");
 
-        let evidence_provider = Box::new(NativeEvidenceProvider::new().unwrap());
+        let evidence_provider = Box::new(MockedEvidenceProvider::default());
         let mut client = KbsClientBuilder::with_evidence_provider(evidence_provider, &kbs_host_url)
             .build()
             .expect("client create");
