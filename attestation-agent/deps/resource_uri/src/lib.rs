@@ -160,10 +160,10 @@ mod tests {
     #[rstest]
     #[case("kbs:///alice/cosign-key/213", "alice", "cosign-key", "213", None)]
     #[case(
-        "kbs:///plugin/plugname/resourcename?param1=value1&param2=value2",
-        "plugin",
-        "plugname",
-        "resourcename",
+        "kbs:///a/b/c?param1=value1&param2=value2",
+        "a",
+        "b",
+        "c",
         Some("param1=value1&param2=value2")
     )]
     fn test_resource_uri_serialization_conversion(
