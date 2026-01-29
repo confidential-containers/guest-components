@@ -30,7 +30,10 @@ impl KbcInterface for Kbc {
     }
 
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
-        let key_data = self.kbs_client.get_resource(annotation_packet.kid).await?;
+        let key_data = self
+            .kbs_client
+            .get_resource(annotation_packet.kid, "resource".to_string())
+            .await?;
         let key = Zeroizing::new(key_data);
 
         let wrap_type = WrapType::try_from(&annotation_packet.wrap_type[..])?;
@@ -43,7 +46,10 @@ impl KbcInterface for Kbc {
     }
 
     async fn get_resource(&mut self, desc: ResourceUri) -> Result<Vec<u8>> {
-        let data = self.kbs_client.get_resource(desc).await?;
+        let data = self
+            .kbs_client
+            .get_resource(desc, "resource".to_string())
+            .await?;
 
         Ok(data)
     }

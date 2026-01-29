@@ -45,6 +45,12 @@ enum Commands {
         /// Initdata string
         #[clap(long)]
         initdata: Option<String>,
+
+        /// The Trustee plugin to use for the resource.
+        /// The default is the resource plugin
+
+        #[clap(long)]
+        plugin: Option<String>,
     },
 }
 
@@ -74,7 +80,11 @@ async fn main() -> Result<()> {
     }
 
     match cli.command {
-        Commands::GetResource { path, initdata } => {
+        Commands::GetResource {
+            path,
+            initdata,
+            plugin,
+        } => {
             // resource_path should start with '/' but not with '//'
             let resource_path = match path.starts_with('/') {
                 false => format!("/{path}"),
@@ -87,8 +97,9 @@ async fn main() -> Result<()> {
             let mut client = client_builder.build()?;
 
             let resource = ResourceUri::new("", &resource_path)?;
+            let plugin = plugin.unwrap_or("resource".to_string());
             let (_token, _key) = client.get_token().await?; // attest first
-            let resource_bytes = client.get_resource(resource).await?;
+            let resource_bytes = client.get_resource(resource, plugin).await?;
 
             println!("{}", STANDARD.encode(resource_bytes));
         }
