@@ -71,7 +71,7 @@ criterion = "0.8.1"
 nix = { workspace = true, features = ["user"] }
 ring.workspace = true
 rstest.workspace = true
-serial_test = "3.2.0"
+serial_test = "3.3.1"
 strum.workspace = true
 tempfile.workspace = true
 testcontainers.workspace = true
