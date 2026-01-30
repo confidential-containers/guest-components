@@ -161,7 +161,7 @@ impl SecureMountService for Server {
             flags: req.flags,
             mount_point: req.mount_point,
         };
-        let resource = self.hub.secure_mount(storage).await.map_err(|e| {
+        let _ = self.hub.secure_mount(storage).await.map_err(|e| {
             let detailed_error = format_error!(e);
             error!("[ttRPC CDH] Secure Mount :\n{detailed_error}");
             let mut status = Status::new();
@@ -170,8 +170,7 @@ impl SecureMountService for Server {
             Error::RpcStatus(status)
         })?;
 
-        let mut reply = SecureMountResponse::new();
-        reply.mount_path = resource;
+        let reply = SecureMountResponse::new();
         debug!("[ttRPC CDH] secure mount succeeded.");
         Ok(reply)
     }

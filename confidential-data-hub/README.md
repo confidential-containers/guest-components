@@ -77,6 +77,15 @@ RPC plugins (flag `RPC`)
 | grpc                | Use grpc API to serve for requests (TCP/IP socket).                |
 | ttrpc               | Use ttrpc API to serve for requests (Unix socket).                 |
 
+Secure mount plugins (flag `STORAGE`)
+
+Note:
+- If no `STORAGE` flag is given, then all the STORAGE plugins will be enabled by default.
+
+| Feature name        |           Note                                                     |
+| ------------------- | -----------------------------------------------------------------  |
+| luks2               | Support secure mount with [luks2 encrypted block device](./docs/use-cases/secure-mount-with-block-device.md) |
+
 ### Configuration file
 
 CDH will be launched by a configuration file by
