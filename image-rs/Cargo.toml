@@ -19,7 +19,7 @@ async-compression = { version = "0.4.37", features = [
 async-trait.workspace = true
 base64.workspace = true
 cfg-if.workspace = true
-devicemapper = { version = "0.34.5", optional = true }
+devicemapper = { version = "0.34.6", optional = true }
 filetime = "0.2"
 flate2 = "1.1"
 futures = { version = "0.3.31", optional = true }
