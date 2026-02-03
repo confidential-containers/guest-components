@@ -32,12 +32,12 @@ dependencies = [
 
 [[package]]
 name = "aes"
-version = "0.9.0-rc.2"
+version = "0.9.0-rc.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd9e1c818b25efb32214df89b0ec22f01aa397aaeb718d1022bf0635a3bfd1a8"
+checksum = "04097e08a47d9ad181c2e1f4a5fabc9ae06ce8839a333ba9a949bcb0d31fd2a3"
 dependencies = [
- "cfg-if",
- "cipher 0.5.0-rc.6",
+ "cipher 0.5.0-rc.8",
+ "cpubits",
  "cpufeatures",
 ]
 
@@ -61,7 +61,7 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "10b6f24a1f796bc46415a1d0d18dc0a8203ccba088acf5def3291c4f61225522"
 dependencies = [
- "aes 0.9.0-rc.2",
+ "aes 0.9.0-rc.4",
  "byteorder",
 ]
 
@@ -1087,11 +1087,11 @@ dependencies = [
 
 [[package]]
 name = "cipher"
-version = "0.5.0-rc.6"
+version = "0.5.0-rc.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eba4d87abf4032a6d927f84b71af5086128a3349b929b4501c51a0fe0981a937"
+checksum = "9002c8edb9b1e21938663da3489c9c4403bba2393997fb2ecbd401386c0e71dc"
 dependencies = [
- "crypto-common 0.2.0-rc.13",
+ "crypto-common 0.2.0-rc.15",
  "inout 0.2.2",
 ]
 
@@ -1427,6 +1427,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cpubits"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ef0c543070d296ea414df2dd7625d1b24866ce206709d8a4a424f28377f5861"
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1590,9 +1596,9 @@ dependencies = [
 
 [[package]]
 name = "crypto-common"
-version = "0.2.0-rc.13"
+version = "0.2.0-rc.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7722afd27468475c9b6063dc03a57ef2ca833816981619f8ebe64d38d207eef"
+checksum = "6f8441110cea75afde0b89a8d796e2bc67b23432f5a9566cb15d9d365d91a2b0"
 dependencies = [
  "hybrid-array",
 ]
@@ -4248,7 +4254,7 @@ dependencies = [
 name = "ocicrypt-rs"
 version = "0.1.0"
 dependencies = [
- "aes 0.8.4",
+ "aes 0.9.0-rc.4",
  "aes-gcm",
  "anyhow",
  "async-trait",
