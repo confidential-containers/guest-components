@@ -94,6 +94,37 @@
         }
       }
     },
+    "/aa/tee-type": {
+      "get": {
+        "tags": [],
+        "operationId": "_tee_type",
+        "responses": {
+          "200": {
+            "description": "success response",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "tdx"
+              }
+            }
+          },
+          "400": {
+            "description": "bad request for invalid query param"
+          },
+          "403": {
+            "description": "forbid external access"
+          },
+          "404": {
+            "description": "resource not found"
+          },
+          "405": {
+            "description": "only Get method allowed"
+          }
+        }
+      }
+    },
     "/aa/token": {
       "get": {
         "tags": [],
@@ -153,6 +184,33 @@
                 },
                 "example": {
                   "123456": "value"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbid external access"
+          },
+          "404": {
+            "description": "resource not found"
+          },
+          "405": {
+            "description": "only Get method allowed"
+          }
+        }
+      }
+    },
+    "/version": {
+      "get": {
+        "tags": [],
+        "operationId": "_version",
+        "responses": {
+          "200": {
+            "description": "success response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }

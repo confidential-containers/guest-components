@@ -102,7 +102,15 @@ impl Router {
         remote_addr: SocketAddr,
         req: Request<Body>,
     ) -> Result<Response<Body>> {
-        if let Some((root_path, url_path)) = split_nth_slash(req.uri().path(), 2) {
+        let path = req.uri().path();
+
+        // First, try to match the full path (for single-level paths like /version)
+        if let Some(handler) = self.routes.get(path) {
+            return handler.handle_request(remote_addr, "", req).await;
+        }
+
+        // Then, try to match multi-level paths (like /cdh/... or /aa/...)
+        if let Some((root_path, url_path)) = split_nth_slash(path, 2) {
             println!("root_path {root_path}, url_path {url_path}");
             let local_url = url_path.to_string();
             match self.routes.get(root_path) {
