@@ -199,6 +199,33 @@
           }
         }
       }
+    },
+    "/version": {
+      "get": {
+        "tags": [],
+        "operationId": "_version",
+        "responses": {
+          "200": {
+            "description": "success response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbid external access"
+          },
+          "404": {
+            "description": "resource not found"
+          },
+          "405": {
+            "description": "only Get method allowed"
+          }
+        }
+      }
     }
   },
   "components": {

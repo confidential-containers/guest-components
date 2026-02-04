@@ -14,10 +14,13 @@ mod aa;
 mod cdh;
 mod router;
 mod utils;
+mod version;
 
 use aa::{AAClient, AA_ROOT};
 use cdh::{CDHClient, CDH_ROOT};
 use router::Router;
+
+use crate::version::VersionClient;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
 type Result<T> = std::result::Result<T, GenericError>;
@@ -29,9 +32,11 @@ const CDH_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
 const AA_ADDR: &str =
     "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock";
 
+const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/guest_components_version"));
+
 /// API Server arguments info.
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version = Some(VERSION), about, long_about = None)]
 struct Args {
     /// Bind address for API Server
     #[arg(default_value_t = DEFAULT_BIND.to_string(), short, long = "bind")]
@@ -63,6 +68,7 @@ async fn main() -> Result<()> {
 
     let mut router = Router::new();
 
+    router.register_route("/version", Box::new(VersionClient::new(VERSION)));
     match args.features.as_str() {
         "resource" => {
             router.register_route(
