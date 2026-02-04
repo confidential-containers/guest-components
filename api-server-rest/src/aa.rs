@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use hyper::body::HttpBody;
 use hyper::{Body, Method, Request, Response};
 use protos::ttrpc::aa::attestation_agent::{
-    ExtendRuntimeMeasurementRequest, GetEvidenceRequest, GetTokenRequest,
+    ExtendRuntimeMeasurementRequest, GetEvidenceRequest, GetTeeTypeRequest, GetTokenRequest,
 };
 use protos::ttrpc::aa::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use serde::Deserialize;
@@ -25,6 +25,7 @@ pub const AA_ROOT: &str = "/aa";
 const AA_TOKEN_URL: &str = "/token";
 const AA_EVIDENCE_URL: &str = "/evidence";
 const AA_AAEL_URL: &str = "/aael";
+const AA_TEE_TYPE_URL: &str = "/tee-type";
 
 pub struct AAClient {
     client: AttestationAgentServiceClient,
@@ -107,6 +108,10 @@ impl ApiHandler for AAClient {
                     Err(e) => return self.internal_error(e.to_string()),
                 }
             }
+            (AA_TEE_TYPE_URL, &Method::GET) => match self.get_tee_type().await {
+                std::result::Result::Ok(results) => return self.json_response(results),
+                Err(e) => return self.internal_error(e.to_string()),
+            },
 
             _ => {
                 return self.not_found();
@@ -169,5 +174,16 @@ impl AAClient {
             .extend_runtime_measurement(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
             .await?;
         Ok(())
+    }
+
+    pub async fn get_tee_type(&self) -> Result<String> {
+        let req = GetTeeTypeRequest {
+            ..Default::default()
+        };
+        let res = self
+            .client
+            .get_tee_type(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
+            .await?;
+        Ok(res.tee)
     }
 }

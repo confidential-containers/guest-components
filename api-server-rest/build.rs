@@ -45,6 +45,22 @@ fn _token() {}
 )]
 fn _evidence() {}
 
+#[utoipa::path(
+    get,
+    path = "/aa/tee-type",
+    responses(
+        (status = 200, description = "success response",
+                content_type = "application/octet-stream",
+                body = String,
+                example = "tdx"),
+        (status = 400, description = "bad request for invalid query param"),
+        (status = 403, description = "forbid external access"),
+        (status = 404, description = "resource not found"),
+        (status = 405, description = "only Get method allowed")
+    )
+)]
+fn _tee_type() {}
+
 #[derive(ToSchema)]
 pub struct AaelEvent {
     /// Attestation Agent Event Log Domain
@@ -96,7 +112,7 @@ fn generate_openapi_document() -> std::io::Result<()> {
         (url = "http://127.0.0.1:8006", description = "CoCo RESTful API")
      ),
 
-    paths(_token, _evidence, _aael, _resource)
+    paths(_token, _evidence, _tee_type, _aael, _resource)
  )]
     struct ApiDoc;
     let mut file = File::create("openapi/api.json")?;
