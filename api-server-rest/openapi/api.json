@@ -168,6 +168,39 @@
           }
         }
       }
+    },
+    "/info": {
+      "get": {
+        "tags": [],
+        "operationId": "_version",
+        "responses": {
+          "200": {
+            "description": "success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionInfo"
+                },
+                "example": {
+                  "additional_tees": [],
+                  "feature": "resource",
+                  "tee": "tdx",
+                  "version": "v1.0.0"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbid external access"
+          },
+          "404": {
+            "description": "resource not found"
+          },
+          "405": {
+            "description": "only Get method allowed"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -191,6 +224,38 @@
           "operation": {
             "type": "string",
             "description": "Attestation Agent Event Log Operation"
+          }
+        }
+      },
+      "VersionInfo": {
+        "type": "object",
+        "required": [
+          "version",
+          "additional_tees",
+          "feature"
+        ],
+        "properties": {
+          "additional_tees": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Additional TEE types"
+          },
+          "feature": {
+            "type": "string",
+            "description": "Feature string when launching the API server"
+          },
+          "tee": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "TEE type (optional)"
+          },
+          "version": {
+            "type": "string",
+            "description": "Version string"
           }
         }
       }
