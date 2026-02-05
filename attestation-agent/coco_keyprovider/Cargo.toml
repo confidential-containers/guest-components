@@ -16,6 +16,7 @@ daemonize = "0.5.0"
 env_logger.workspace = true
 futures = "0.3.31"
 jwt-simple.workspace = true
+kbs_protocol = { path = "../kbs_protocol" }
 log.workspace = true
 protos = { path = "../../protos", default-features = false, features = [
     "grpc",

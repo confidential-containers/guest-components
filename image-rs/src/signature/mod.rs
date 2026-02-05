@@ -196,6 +196,7 @@ impl SignatureValidator {
             policy,
             resource_provider,
             proxy_config,
+            #[cfg(feature = "signature-cosign")]
             certificates,
             #[cfg(feature = "signature-simple")]
             simple_signing_sigstore_config,
