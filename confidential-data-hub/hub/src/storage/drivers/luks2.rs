@@ -12,7 +12,7 @@
 
 use std::path::Path;
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use libcryptsetup_rs::consts::flags::{CryptActivate, CryptDeactivate, CryptVolumeKey};
 use libcryptsetup_rs::consts::vals::EncryptionFormat;
 use libcryptsetup_rs::{CryptInit, CryptParamsLuks2, CryptParamsLuks2Ref};
@@ -43,11 +43,11 @@ impl Luks2Formatter {
 
     pub fn encrypt_device(
         &self,
-        device_path: &str,
+        device_path: &Path,
+        header_path: Option<&Path>,
         passphrase: Zeroizing<Vec<u8>>,
     ) -> anyhow::Result<()> {
-        let path = Path::new(device_path);
-        let mut device = CryptInit::init(path)?;
+        let mut device = init_device(device_path, header_path)?;
         let mut volume_key_length = LUKS2_VOLUME_KEY_SIZE_BIT_WITHOUT_INTEGRITY / 8;
         let mut params = CryptParamsLuks2 {
             pbkdf: None,
@@ -81,12 +81,12 @@ impl Luks2Formatter {
 
     pub fn open_device(
         &self,
-        device_path: &str,
+        device_path: &Path,
+        header_path: Option<&Path>,
         name: &str,
         passphrase: Zeroizing<Vec<u8>>,
     ) -> anyhow::Result<()> {
-        let path = Path::new(device_path);
-        let mut device = CryptInit::init(path)?;
+        let mut device = init_device(device_path, header_path)?;
 
         let mut params = CryptParamsLuks2 {
             pbkdf: None,
@@ -130,17 +130,44 @@ impl Luks2Formatter {
     }
 }
 
+fn init_device(
+    device_path: &Path,
+    header_path: Option<&Path>,
+) -> anyhow::Result<libcryptsetup_rs::CryptDevice> {
+    let device_paths = match header_path {
+        Some(header_path) => {
+            if !header_path.exists() {
+                bail!("LUKS header file not found: {}", header_path.display());
+            }
+            libcryptsetup_rs::Either::Right((header_path, device_path))
+        }
+        None => libcryptsetup_rs::Either::Left(device_path),
+    };
+
+    Ok(CryptInit::init_with_data_device(device_paths)?)
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Write;
+    use std::path::PathBuf;
 
     use serial_test::serial;
     use zeroize::Zeroizing;
 
     use crate::storage::drivers::luks2::Luks2Formatter;
+    use crate::storage::volume_type::blockdevice::prepare_luks_header_file;
 
     const TEST_PASSPHRASE: &[u8] = b"test";
     const NAME: &str = "test";
+
+    /// Removes the LUKS header file on drop so tests don't leave files behind on panic.
+    struct RemoveHeaderOnDrop(PathBuf);
+    impl Drop for RemoveHeaderOnDrop {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.0);
+        }
+    }
 
     #[test]
     #[serial]
@@ -151,15 +178,17 @@ mod tests {
             .as_file_mut()
             .write_all(&vec![0; 20 * 1024 * 1024])
             .unwrap();
-        let path = bin_file.path().to_str().unwrap();
+        let path = bin_file.path();
 
         let passphrase = Zeroizing::new(TEST_PASSPHRASE.to_vec());
         let luks2_formatter = Luks2Formatter { integrity: false };
         luks2_formatter
-            .encrypt_device(path, passphrase.clone())
+            .encrypt_device(path, None, passphrase.clone())
             .unwrap();
 
-        luks2_formatter.open_device(path, NAME, passphrase).unwrap();
+        luks2_formatter
+            .open_device(path, None, NAME, passphrase)
+            .unwrap();
 
         luks2_formatter.close_device(NAME).unwrap();
     }
@@ -173,17 +202,111 @@ mod tests {
             .as_file_mut()
             .write_all(&vec![0; 20 * 1024 * 1024])
             .unwrap();
-        let path = bin_file.path().to_str().unwrap();
+        let path = bin_file.path();
 
         let passphrase = Zeroizing::new(TEST_PASSPHRASE.to_vec());
         let luks2_formatter = Luks2Formatter { integrity: true };
         luks2_formatter
-            .encrypt_device(path, passphrase.clone())
+            .encrypt_device(path, None, passphrase.clone())
             .unwrap();
 
-        luks2_formatter.open_device(path, NAME, passphrase).unwrap();
+        luks2_formatter
+            .open_device(path, None, NAME, passphrase)
+            .unwrap();
 
         luks2_formatter.close_device(NAME).unwrap();
+    }
+
+    #[test]
+    #[serial]
+    fn encrypt_open_device_no_integrity_with_header() {
+        let mut bin_file = tempfile::NamedTempFile::new().unwrap();
+        bin_file
+            .as_file_mut()
+            .write_all(&vec![0; 20 * 1024 * 1024])
+            .unwrap();
+        let path = bin_file.path();
+        let header_path = prepare_luks_header_file(None, path).unwrap();
+        let _guard = RemoveHeaderOnDrop(header_path.clone());
+
+        let passphrase = Zeroizing::new(TEST_PASSPHRASE.to_vec());
+        let luks2_formatter = Luks2Formatter { integrity: false };
+        luks2_formatter
+            .encrypt_device(path, Some(&header_path), passphrase.clone())
+            .unwrap();
+
+        luks2_formatter
+            .open_device(path, Some(&header_path), NAME, passphrase)
+            .unwrap();
+
+        luks2_formatter.close_device(NAME).unwrap();
+    }
+
+    #[test]
+    #[serial]
+    fn encrypt_open_device_integrity_with_header() {
+        let mut bin_file = tempfile::NamedTempFile::new().unwrap();
+        bin_file
+            .as_file_mut()
+            .write_all(&vec![0; 20 * 1024 * 1024])
+            .unwrap();
+        let path = bin_file.path();
+        let header_path = prepare_luks_header_file(None, path).unwrap();
+        let _guard = RemoveHeaderOnDrop(header_path.clone());
+
+        let passphrase = Zeroizing::new(TEST_PASSPHRASE.to_vec());
+        let luks2_formatter = Luks2Formatter { integrity: true };
+        luks2_formatter
+            .encrypt_device(path, Some(&header_path), passphrase.clone())
+            .unwrap();
+
+        luks2_formatter
+            .open_device(path, Some(&header_path), NAME, passphrase)
+            .unwrap();
+
+        luks2_formatter.close_device(NAME).unwrap();
+    }
+
+    #[test]
+    #[serial]
+    fn encrypt_with_existing_header_file() {
+        let mut bin_file = tempfile::NamedTempFile::new().unwrap();
+        bin_file
+            .as_file_mut()
+            .write_all(&vec![0; 20 * 1024 * 1024])
+            .unwrap();
+        let path = bin_file.path();
+        let header_path = prepare_luks_header_file(None, path).unwrap();
+        let _guard = RemoveHeaderOnDrop(header_path.clone());
+
+        let passphrase = Zeroizing::new(TEST_PASSPHRASE.to_vec());
+        let luks2_formatter = Luks2Formatter { integrity: false };
+        let result = luks2_formatter.encrypt_device(path, Some(&header_path), passphrase);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    #[serial]
+    fn open_device_missing_header_file_fails() {
+        let mut bin_file = tempfile::NamedTempFile::new().unwrap();
+        bin_file
+            .as_file_mut()
+            .write_all(&vec![0; 20 * 1024 * 1024])
+            .unwrap();
+        let path = bin_file.path();
+        let header_path = prepare_luks_header_file(None, path).unwrap();
+        let _guard = RemoveHeaderOnDrop(header_path.clone());
+
+        let passphrase = Zeroizing::new(TEST_PASSPHRASE.to_vec());
+        let luks2_formatter = Luks2Formatter { integrity: false };
+        luks2_formatter
+            .encrypt_device(path, Some(&header_path), passphrase.clone())
+            .unwrap();
+
+        std::fs::remove_file(&header_path).unwrap();
+
+        let result = luks2_formatter.open_device(path, Some(&header_path), NAME, passphrase);
+        assert!(result.is_err());
     }
 
     /// This test can be used to clean useless devices under /dev/mapper/
