@@ -9,7 +9,7 @@ use strum::{AsRefStr, EnumString};
 
 use crate::{Decrypter, Error, Getter, ProviderSettings, Result};
 
-const _IN_GUEST_DEFAULT_KEY_PATH: &str = "/run/confidential-containers/cdh/kms-credential";
+const _IN_GUEST_DEFAULT_KEY_PATH: &str = "/run/confidential-containers/cdh/kbs/kms-credential";
 
 #[cfg(feature = "aliyun")]
 pub mod aliyun;

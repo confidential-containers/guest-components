@@ -142,7 +142,7 @@ impl CdhConfig {
     /// ```
     ///
     /// It is supposed that all the `target path` should be with prefix
-    /// `/run/confidential-containers/cdh` or it will be treated as dangerous
+    /// `/run/confidential-containers/cdh/kbs` or it will be treated as dangerous
     /// path.
     ///
     /// TODO: delete this way after initdata mechanism could cover CDH's launch config.

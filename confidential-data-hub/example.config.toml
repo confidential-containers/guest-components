@@ -53,14 +53,14 @@ oLSG2dLCK9mjjraPjau34Q==
 # credentials are items that will be retrieved from KBS when CDH
 # is launched. `resource_uri` refers to the KBS resource uri and
 # `path` is where to place the file.
-# `path` must be with prefix `/run/confidential-containers/cdh`,
+# `path` must be with prefix `/run/confidential-containers/cdh/kbs`,
 # or it will be blocked by CDH.
 [[credentials]]
-path = "/run/confidential-containers/cdh/kms-credential/aliyun/ecsRamRole.json"
+path = "/run/confidential-containers/cdh/kbs/kms-credential/aliyun/ecsRamRole.json"
 resource_uri = "kbs:///default/aliyun/ecs_ram_role"
 
 [[credentials]]
-path = "/run/confidential-containers/cdh/test/file"
+path = "/run/confidential-containers/cdh/kbs/test/file"
 resource_uri = "kbs:///default/test/file"
 
 [image]
