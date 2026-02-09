@@ -8,15 +8,16 @@
 
 use std::path::PathBuf;
 
+use const_format::concatcp;
 use kms::{plugins::kbs::KbcClient, Annotations, Getter};
 use tokio::fs;
 use tracing::debug;
 
-use crate::{hub::Hub, Error, Result};
+use crate::{hub::Hub, hub::CDH_BASE_DIR, Error, Result};
 
-/// This directory is used to store all the kbs resources get by CDH's init
-/// function, s.t. `[[Credential]]` sections in the config.toml file.
-pub const KBS_RESOURCE_STORAGE_DIR: &str = "/run/confidential-containers/cdh";
+/// Directory for KBS resources (credentials, etc.) fetched at init, see the `[[credentials]]`
+/// sections in CDH's `config.toml` file, for an example, see `example.config.toml`.
+const KBS_RESOURCE_STORAGE_DIR: &str = concatcp!(CDH_BASE_DIR, "/kbs");
 
 impl Hub {
     pub(crate) async fn init_kbs_resources(&self) -> Result<()> {
@@ -86,11 +87,11 @@ fn is_path_valid(path: &str) -> bool {
 mod tests {
     use rstest::rstest;
 
-    use crate::auth::kbs::{is_path_valid, KBS_RESOURCE_STORAGE_DIR};
+    use super::{is_path_valid, KBS_RESOURCE_STORAGE_DIR};
 
     #[rstest]
     #[case("/etc/config.toml".into(), false)]
-    #[case(format!("{KBS_RESOURCE_STORAGE_DIR}/../../config.toml"), false)]
+    #[case(format!("{KBS_RESOURCE_STORAGE_DIR}/../../config.toml",), false)]
     #[case(format!("{KBS_RESOURCE_STORAGE_DIR}/kms-credential/../../../config.toml"), false)]
     #[case(format!("{KBS_RESOURCE_STORAGE_DIR}/kms-credential/./config.toml"), false)]
     #[case(format!("{KBS_RESOURCE_STORAGE_DIR}/kms-credential/aliyun/config.toml"), true)]

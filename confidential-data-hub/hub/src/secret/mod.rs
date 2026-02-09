@@ -7,6 +7,7 @@ pub mod error;
 pub mod layout;
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD as b64, Engine};
+use const_format::concatcp;
 use jose_jwa::Signing;
 use jose_jwk::{EcCurves, Jwk};
 use jose_jws::{Flattened, Protected, Unprotected};
@@ -19,9 +20,12 @@ use self::layout::{envelope::EnvelopeSecret, vault::VaultSecret};
 
 use kms::{Annotations, ProviderSettings};
 
+use crate::hub::CDH_BASE_DIR;
+
 pub use error::{Result, SecretError};
 
-pub const SIGNING_CREDENTIALS_PATH: &str = "/run/confidential-containers/cdh/sealed-secret";
+/// Path to the directory containing sealed-secret signing credentials.
+pub const SIGNING_CREDENTIALS_PATH: &str = concatcp!(CDH_BASE_DIR, "/sealed-secret");
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(tag = "type", rename_all = "lowercase")]

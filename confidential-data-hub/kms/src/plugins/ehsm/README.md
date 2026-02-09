@@ -125,7 +125,7 @@ Congratulations! eHSM-KMS service should be ready by now.
 
 # eHSM-KMS Client
 
-eHSM-KMS client requires a credential file to run. The file name of the credential file is `credential.{your_app_id}.json`. The credential file need to be placed in `/run/confidential-containers/cdh/kms-credential/ehsm/`. And the structure of the credential file is shown in `ehsm/example_credential/` folder.
+eHSM-KMS client requires a credential file to run. The file name of the credential file is `credential.{your_app_id}.json`. The credential file need to be placed in `/run/confidential-containers/cdh/kbs/kms-credential/ehsm/`. And the structure of the credential file is shown in `ehsm/example_credential/` folder.
 
 To test eHSM-KMS client, run
 ``` shell

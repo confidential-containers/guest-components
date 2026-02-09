@@ -78,7 +78,7 @@ More details about accessing via EcsRamRole can be seen at [Access KMS from an E
 The client `AliyunKmsClient` supports `Encrypter`, `Decrypter`, and `Getter` api. When at the
 user side, the credential files can be directly given by the user.
 
-When in Tee, the credential files is supposed to be placed under `/run/confidential-containers/cdh/kms-credential/aliyun` directory.
+When in Tee, the credential files is supposed to be placed under `/run/confidential-containers/cdh/kbs/kms-credential/aliyun` directory.
 
 ## Sealed Secrets
 

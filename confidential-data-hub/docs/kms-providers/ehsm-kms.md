@@ -39,7 +39,7 @@ For more details please see the [`Enroll` operation of ehsm](https://github.com/
 The client `EhsmKmsClient` supports `Encrypter` and `Decrypter` api. When at the
 user side, the credential files can be directly given by the user.
 
-When in Tee, the credential files is supposed to be placed under `/run/confidential-containers/cdh/kms-credential/ehsm` directory.
+When in Tee, the credential files is supposed to be placed under `/run/confidential-containers/cdh/kbs/kms-credential/ehsm` directory.
 
 ## Sealed Secrets
 

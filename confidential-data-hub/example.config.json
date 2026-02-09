@@ -7,11 +7,11 @@
     },
     "credentials": [
         {
-            "path": "/run/confidential-containers/cdh/kms-credential/aliyun/ecsRamRole.json",
+            "path": "/run/confidential-containers/cdh/kbs/kms-credential/aliyun/ecsRamRole.json",
             "resource_uri": "kbs:///default/aliyun/ecs_ram_role"
         },
         {
-            "path": "/run/confidential-containers/cdh/test/file",
+            "path": "/run/confidential-containers/cdh/kbs/test/file",
             "resource_uri": "kbs:///default/test/file"
         }
     ],
