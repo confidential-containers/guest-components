@@ -10,7 +10,7 @@ in conjunction with an attestation.
 The Confidential Data Hub provides an API for unsealing secrets inside
 of a confidential guest.
 
-You can also use the secret cli tool to generate a sealed secret:
+You can use the secret cli tool to generate a sealed secret:
 
 ```bash
 cargo run -p confidential-data-hub --bin secret
@@ -140,57 +140,47 @@ BASE64URL(UTF8(JWS Protected Header)) || '.
 We can leverage the ["kid"](https://datatracker.ietf.org/doc/html/rfc7515#section-4.1.4)
 field to specify the public key used to verify this signature.
 
-Signatures for secrets are not yet implemented, but sealed secrets are
-required to have a header and signature. A sealed secret should be of the form
-
-`sealed`.`JWS header`.`JWS body (secret content)`.`signature`
-
-Since signature verification is not yet supported, dummy values
-can be used for the header and signature. A sealed secret could look like this.
-
-```
-secret=sealed.fakejwsheader.ewogICAgInZlcnNpb24iOiAiMC4xLjAiLAogICAgInR5cGUiOiAidmF1bHQiLAogICAgIm5hbWUiOiAia2JzOi8vL2RlZmF1bHQvc2VhbGVkLXNlY3JldC90ZXN0IiwKICAgICJwcm92aWRlciI6ICJrYnMiLAogICAgInByb3ZpZGVyX3NldHRpbmdzIjoge30sCiAgICAiYW5ub3RhdGlvbnMiOiB7fQp9Cg.fakesignature
-```
+A public key, identified by a `kid`, must be provided to verify the secret.
+The public key can either be provisioned as a CDH credential or retrieved
+directly from Trustee. In the latter case the `kid` should be a resource URI.
 
 ## Usage in CoCo
 
-You can create a Kubernetes secret from a sealed secret
-and Kata will automatically expose it to your workload.
+The easiest way to create a sealed secret is with the secret CLI tool
 
-Start with a sealed secret such as
-```json
-{
-	"version": "0.1.0",
-	"type": "envelope",
-	"provider": "xxx",
-	"key_id": "xxx",
-	"encrypted_key": "ab27dc=",
-	"encrypted_data": "xxx",
-	"wrap_type": "A256GCM",
-	"iv": "xxx",
-	"provider_settings": {
-		...
-	},
-	"annotations": {
-		...
-	}
-}
-```
-
-Encode the payload in BASE64URL
-```
-ewoJInZlcnNpb24iOiAiMC4xLjAiLAoJInR5cGUiOiAiZW52ZWxvcGUiLAoJInByb3ZpZGVyIjogInh4eCIsCgkia2V5X2lkIjogInh4eCIsCgkiZW5jcnlwdGVkX2tleSI6ICJhYjI3ZGM9IiwgCgkiZW5jcnlwdGVkX2RhdGEiOiAieHh4IiwKCSJ3cmFwX3R5cGUiOiAiQTI1NkdDTSIsCgkiaXYiOiAieHh4IiwKCSJhbm5vdGF0aW9ucyI6IHsKCQkiY3J5cHRvX2NvbnRleHQiOiB7CgkJCSJhbGdvcml0aG0iOiAiQTI1NkdDTSIKCQl9LAoJCSJwcm92aWRlcl9zZXR0aW5nIjogewoJCQkia21zX2luc3RhbmNlX2lkIjogInh4eCIKCQl9Cgl9Cn0
-```
-Then add a prefix `sealed.` and JWS header and signature.
-
-```
-sealed.fakejwsheader.ewoJInZlcnNpb24iOiAiMC4xLjAiLAoJInR5cGUiOiAiZW52ZWxvcGUiLAoJInByb3ZpZGVyIjogInh4eCIsCgkia2V5X2lkIjogInh4eCIsCgkiZW5jcnlwdGVkX2tleSI6ICJhYjI3ZGM9IiwgCgkiZW5jcnlwdGVkX2RhdGEiOiAieHh4IiwKCSJ3cmFwX3R5cGUiOiAiQTI1NkdDTSIsCgkiaXYiOiAieHh4IiwKCSJhbm5vdGF0aW9ucyI6IHsKCQkiY3J5cHRvX2NvbnRleHQiOiB7CgkJCSJhbGdvcml0aG0iOiAiQTI1NkdDTSIKCQl9LAoJCSJwcm92aWRlcl9zZXR0aW5nIjogewoJCQkia21zX2luc3RhbmNlX2lkIjogInh4eCIKCQl9Cgl9Cn0.fakesignature
-```
-
-Create a Kubernetes secret
+You can create a vault secret with the following command.
 
 ```bash
-kubectl create secret generic sealed-secret --from-literal='secret=sealed.fakejwsheader.ewoJInZlcnNpb24i...'
+cargo run -p confidential-data-hub --bin secret seal \
+    --signing-kid kbs://signing/key/uri --signing-jwk-path ./path/to/jwk \
+    vault \
+    --resource-uri kbs://secret/key/uri --provider kbs
+```
+
+This will create a sealed secret that points to the resource `secret/key/uri` in Trustee.
+The secret will be validated with a public key stored in Trustee.
+The public/private keypair should be a JWK with a P256 EC key.
+
+This key should look like this.
+```json
+{
+    "kty": "EC",
+    "d": "_z0AOMG12p1lt...",
+    "use": "sig",
+    "crv": "P-256",
+    "kid": "test",
+    "x": "wjCZnuv_tLKiCt...",
+    "y": "gsSc2YE_O2kmHx...",
+    "alg": "ES256"
+}
+```
+This includes the public and private keypair. Only the public component
+needs to be provisioned to Trustee.
+
+### Create a Kubernetes secret
+
+```bash
+kubectl create secret generic sealed-secret --from-literal='secret=<sealed-secret>'
 ```
 
 Use this secret in a workload
