@@ -459,6 +459,7 @@ mod tests {
         assert!(device_path.len() > 4); // "/dev/" is 4 characters long
     }
 
+    #[cfg(feature = "luks2")]
     #[tokio::test]
     #[rstest]
     #[serial]
