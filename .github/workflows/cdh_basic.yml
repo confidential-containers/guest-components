@@ -72,4 +72,4 @@ jobs:
 
       - name: Run cargo test
         run: |
-          sudo -E PATH=$PATH -s cargo test --features kbs,aliyun,sev,bin -p kms -p confidential-data-hub
+          sudo -E PATH=$PATH -s cargo test --features kbs,aliyun,sev,bin,luks2 -p kms -p confidential-data-hub
