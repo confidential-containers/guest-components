@@ -125,7 +125,7 @@ jobs:
         - powerpc64le
         include:
         - arch: x86_64
-          libc: musl
+          libc: gnu
         - arch: s390x
           libc: gnu
         - arch: aarch64
