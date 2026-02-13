@@ -19,6 +19,8 @@ use crate::{
     },
 };
 use async_trait::async_trait;
+#[cfg(feature = "luks2")]
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD as b64, Engine};
 use crypto::rand::random_bytes;
 use error::{BlockDeviceError, Result};
 use kms::{Annotations, ProviderSettings};
@@ -26,12 +28,19 @@ use log::{debug, info, warn};
 use nix::mount::{mount, MsFlags};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::Path;
 use strum::{Display, EnumString};
 use tokio::{
     fs::{symlink, File},
     io::{AsyncBufReadExt, BufReader},
 };
 use zeroize::Zeroizing;
+
+use crate::config::KBS_RESOURCE_STORAGE_DIR;
+#[cfg(feature = "luks2")]
+const LUKS_HEADERS_DIR: &str = "luks-headers";
+#[cfg(feature = "luks2")]
+const LUKS2_HEADER_MIN_SIZE_BYTES: u64 = 16 * 1024 * 1024;
 
 #[derive(EnumString, Serialize, Deserialize, Display, Debug, PartialEq, Eq)]
 #[serde(tag = "encryptionType")]
@@ -116,6 +125,44 @@ pub enum TargetType {
     },
 }
 
+#[cfg(feature = "luks2")]
+pub(crate) fn luks_header_path(device_id: Option<&str>, device_path: &Path) -> std::path::PathBuf {
+    let id_bytes: Vec<u8> = device_id
+        .map(|s| s.as_bytes().to_vec())
+        .unwrap_or_else(|| device_path.to_string_lossy().into_owned().into_bytes());
+    let name = b64.encode(&id_bytes);
+    std::path::PathBuf::from(format!(
+        "{}/{}/{}",
+        KBS_RESOURCE_STORAGE_DIR, LUKS_HEADERS_DIR, name
+    ))
+}
+
+#[cfg(feature = "luks2")]
+pub(crate) fn prepare_luks_header_file(
+    device_id: Option<&str>,
+    device_path: &Path,
+) -> Result<std::path::PathBuf> {
+    let header_path = luks_header_path(device_id, device_path);
+    if header_path.exists() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::AlreadyExists,
+            format!("LUKS header file already exists: {}", header_path.display()),
+        )
+        .into());
+    }
+    if let Some(parent) = header_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    // error "LUKS header file not found: <path/to/header>" from libcryptsetup if header file doesn't exist.
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(&header_path)?;
+    // error "Device ... is too small" / OS error 5" from libcryptsetup if header isn't sized.
+    file.set_len(LUKS2_HEADER_MIN_SIZE_BYTES)?;
+    Ok(header_path)
+}
+
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct BlockDeviceParameters {
     /// The device number, formatted as "MAJ:MIN".
@@ -187,12 +234,15 @@ impl BlockDevice {
         let parameters: BlockDeviceParameters = serde_json::from_str(&parameters)?;
 
         // 1. get the source device path
-        let device_path = match (parameters.device_id, parameters.device_path) {
+        let device_path = match (
+            parameters.device_id.as_deref(),
+            parameters.device_path.as_deref(),
+        ) {
             (Some(device_id), _) => {
-                let (maj, min) = parse_device_id(&device_id)?;
+                let (maj, min) = parse_device_id(device_id)?;
                 get_device_path(maj, min).await?
             }
-            (_, Some(device_path)) => device_path,
+            (_, Some(device_path)) => device_path.to_string(),
             _ => {
                 return Err(BlockDeviceError::NoDeviceSpecified);
             }
@@ -214,13 +264,25 @@ impl BlockDevice {
                 data_integrity,
                 mapper_name,
             } => {
+                if parameters.source_type == SourceType::Empty && parameters.key.is_some() {
+                    return Err(BlockDeviceError::KeyNotAllowedForEphemeralLuksHeader);
+                }
                 let integrity = data_integrity.map_or(false, |e| e.parse().unwrap_or(false));
                 let formatter = Luks2Formatter::default().with_integrity(integrity);
+                let mut header_path: Option<std::path::PathBuf> = None;
                 // 3.1 if the source type is empty, encrypt the device
                 if parameters.source_type == SourceType::Empty {
                     warn!("encrypting the device. This will wipe original data on the disk.");
+                    header_path = Some(prepare_luks_header_file(
+                        parameters.device_id.as_deref(),
+                        Path::new(&device_path),
+                    )?);
                     formatter
-                        .encrypt_device(&device_path, key.clone())
+                        .encrypt_device(
+                            Path::new(&device_path),
+                            header_path.as_deref(),
+                            key.clone(),
+                        )
                         .map_err(|source| BlockDeviceError::Luks2Error { source })?;
                 }
 
@@ -231,7 +293,12 @@ impl BlockDevice {
 
                 debug!("luks2 opening device: {}", device_path);
                 formatter
-                    .open_device(&device_path, &devmapper_name, key)
+                    .open_device(
+                        Path::new(&device_path),
+                        header_path.as_deref(),
+                        &devmapper_name,
+                        key,
+                    )
                     .map_err(|source| BlockDeviceError::Luks2Error { source })?;
 
                 let dev_path = format!("/dev/mapper/{}", devmapper_name);
@@ -434,6 +501,16 @@ mod tests {
 
     use super::*;
 
+    /// Removes the LUKS header file on drop so tests don't leave files behind on panic.
+    #[cfg(feature = "luks2")]
+    struct RemoveHeaderOnDrop(std::path::PathBuf);
+    #[cfg(feature = "luks2")]
+    impl Drop for RemoveHeaderOnDrop {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.0);
+        }
+    }
+
     #[test]
     fn test_parse_device_id() {
         assert_eq!(parse_device_id("8:0").unwrap(), (8, 0));
@@ -454,6 +531,7 @@ mod tests {
         assert!(device_path.len() > 4); // "/dev/" is 4 characters long
     }
 
+    #[cfg(feature = "luks2")]
     #[tokio::test]
     #[rstest]
     #[serial]
@@ -468,17 +546,13 @@ mod tests {
             .write_all(&vec![0; 512 * 1024 * 1024])
             .unwrap();
         let mut bd = BlockDevice::default();
-        let device_path = temp_device_file.path().to_string_lossy().to_string();
+        let path = temp_device_file.path();
 
         let options = HashMap::from([
             ("sourceType".to_string(), "empty".to_string()),
             ("targetType".to_string(), "fileSystem".to_string()),
-            ("devicePath".to_string(), device_path.clone()),
+            ("devicePath".to_string(), path.to_string_lossy().to_string()),
             ("encryptionType".to_string(), "luks2".to_string()),
-            (
-                "key".to_string(),
-                "file://./test_files/luks2-disk-passphrase".to_string(),
-            ),
             ("dataIntegrity".to_string(), integrity.to_string()),
             ("filesystemType".to_string(), "ext4".to_string()),
         ]);
@@ -487,40 +561,12 @@ mod tests {
         bd.real_mount(&options, &[], tempdir.path().to_str().unwrap())
             .await
             .unwrap();
+        let _guard = RemoveHeaderOnDrop(luks_header_path(None, path));
 
         // Try to write a file in the directory
         tokio::fs::write(tempdir.path().join("test-file"), b"some data")
             .await
             .unwrap();
-
-        bd.umount().await.unwrap();
-        drop(bd);
-
-        // Then try open the device
-        let tempdir = tempfile::TempDir::new().unwrap();
-        let mut bd = BlockDevice::default();
-        let options = HashMap::from([
-            ("sourceType".to_string(), "encrypted".to_string()),
-            ("targetType".to_string(), "fileSystem".to_string()),
-            ("devicePath".to_string(), device_path.clone()),
-            ("encryptionType".to_string(), "luks2".to_string()),
-            ("dataIntegrity".to_string(), integrity.to_string()),
-            (
-                "key".to_string(),
-                "file://./test_files/luks2-disk-passphrase".to_string(),
-            ),
-            ("filesystemType".to_string(), "ext4".to_string()),
-        ]);
-
-        bd.real_mount(&options, &[], tempdir.path().to_str().unwrap())
-            .await
-            .unwrap();
-
-        assert!(tempdir.path().join("test-file").exists());
-        let content = tokio::fs::read_to_string(tempdir.path().join("test-file"))
-            .await
-            .unwrap();
-        assert_eq!(content, "some data");
 
         bd.umount().await.unwrap();
     }
@@ -543,11 +589,59 @@ mod tests {
             .write_all(&vec![0; 20 * 1024 * 1024])
             .unwrap();
         let mut bd = BlockDevice::default();
-        let device_path = temp_device_file.path().to_string_lossy().to_string();
+        let path = temp_device_file.path();
         let options = HashMap::from([
             ("sourceType".to_string(), "empty".to_string()),
             ("targetType".to_string(), "device".to_string()),
-            ("devicePath".to_string(), device_path.clone()),
+            ("devicePath".to_string(), path.to_string_lossy().to_string()),
+            ("encryptionType".to_string(), "luks2".to_string()),
+            ("dataIntegrity".to_string(), "false".to_string()),
+        ]);
+
+        bd.real_mount(&options, &[], &target_device_name)
+            .await
+            .unwrap();
+        let _guard = RemoveHeaderOnDrop(luks_header_path(None, path));
+
+        if !Path::new(&target_device_name).exists() {
+            panic!("target device not exist");
+        }
+
+        bd.umount().await.unwrap();
+    }
+
+    #[cfg(feature = "luks2")]
+    #[tokio::test]
+    #[serial]
+    async fn open_pre_encrypted_device_using_luks2_with_key() {
+        use crate::storage::drivers::luks2::Luks2Formatter;
+        use zeroize::Zeroizing;
+
+        let target_device_name = format!(
+            "/dev/{}",
+            rng()
+                .sample_iter(&Alphanumeric)
+                .take(16)
+                .map(char::from)
+                .collect::<String>()
+        );
+        let mut temp_device_file = tempfile::NamedTempFile::new().unwrap();
+        temp_device_file
+            .as_file_mut()
+            .write_all(&vec![0; 20 * 1024 * 1024])
+            .unwrap();
+        let path = temp_device_file.path();
+
+        let passphrase =
+            Zeroizing::new(std::fs::read("./test_files/luks2-disk-passphrase").unwrap());
+        let formatter = Luks2Formatter { integrity: false };
+        formatter.encrypt_device(path, None, passphrase).unwrap();
+
+        let mut bd = BlockDevice::default();
+        let options = HashMap::from([
+            ("sourceType".to_string(), "encrypted".to_string()),
+            ("targetType".to_string(), "device".to_string()),
+            ("devicePath".to_string(), path.to_string_lossy().to_string()),
             ("encryptionType".to_string(), "luks2".to_string()),
             ("dataIntegrity".to_string(), "false".to_string()),
             (
@@ -565,17 +659,22 @@ mod tests {
         }
 
         bd.umount().await.unwrap();
-        let target_device_name = format!(
-            "/dev/{}",
-            rng()
-                .sample_iter(&Alphanumeric)
-                .take(16)
-                .map(char::from)
-                .collect::<String>()
-        );
+    }
+
+    #[cfg(feature = "luks2")]
+    #[tokio::test]
+    #[serial]
+    async fn encrypt_empty_device_with_key_is_rejected() {
+        let mut temp_device_file = tempfile::NamedTempFile::new().unwrap();
+        temp_device_file
+            .as_file_mut()
+            .write_all(&vec![0; 20 * 1024 * 1024])
+            .unwrap();
+        let device_path = temp_device_file.path().to_string_lossy().to_string();
+
         let mut bd = BlockDevice::default();
         let options = HashMap::from([
-            ("sourceType".to_string(), "encrypted".to_string()),
+            ("sourceType".to_string(), "empty".to_string()),
             ("targetType".to_string(), "device".to_string()),
             ("devicePath".to_string(), device_path),
             ("encryptionType".to_string(), "luks2".to_string()),
@@ -586,14 +685,35 @@ mod tests {
             ),
         ]);
 
-        bd.real_mount(&options, &[], &target_device_name)
-            .await
-            .unwrap();
+        let res = bd.real_mount(&options, &[], "/tmp/unused").await;
+        assert!(matches!(
+            res,
+            Err(BlockDeviceError::KeyNotAllowedForEphemeralLuksHeader)
+        ));
+    }
 
-        if !Path::new(&target_device_name).exists() {
-            panic!("target device not exist");
+    #[cfg(feature = "luks2")]
+    #[test]
+    fn prepare_luks_header_file_rejects_existing_path() {
+        let path_str = format!(
+            "/dev/{}",
+            rng()
+                .sample_iter(&Alphanumeric)
+                .take(16)
+                .map(char::from)
+                .collect::<String>()
+        );
+        let path = Path::new(&path_str);
+
+        let header_path = prepare_luks_header_file(None, path).unwrap();
+        let _guard = RemoveHeaderOnDrop(header_path.clone());
+        let result = prepare_luks_header_file(None, path);
+
+        match result {
+            Err(BlockDeviceError::IOError(err)) => {
+                assert_eq!(err.kind(), std::io::ErrorKind::AlreadyExists);
+            }
+            other => panic!("unexpected result: {other:?}"),
         }
-
-        bd.umount().await.unwrap();
     }
 }
