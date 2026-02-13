@@ -166,7 +166,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
-          libdevmapper-dev
+          libdevmapper-dev libcryptsetup-dev pkg-config
         if [ "${{ matrix.arch }}" = "powerpc64le" ]; then
           sudo apt-get install -y libclang-dev cmake protobuf-compiler
         fi
