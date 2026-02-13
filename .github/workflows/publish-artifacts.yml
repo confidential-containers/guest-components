@@ -71,9 +71,10 @@ jobs:
 
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-    - name: Build
+    - name: Build AA
       env:
         ARCH: ${{ matrix.platform.arch }}
+        LIBC: ${{ matrix.platform.libc }}
       run: |
         make ./target/${{ env.RUST_TARGET }}/release/attestation-agent
 
@@ -173,11 +174,13 @@ jobs:
     - name: Build CDH
       env:
         ARCH: ${{ matrix.arch }}
+        LIBC: ${{ matrix.libc }}
       run: make ./target/${{ env.RUST_TARGET }}/release/confidential-data-hub
 
     - name: Build ASR
       env:
         ARCH: ${{ matrix.arch }}
+        LIBC: ${{ matrix.libc }}
       run: make ./target/${{ env.RUST_TARGET }}/release/api-server-rest
 
     - name: Publish CDH + ASR with ORAS
