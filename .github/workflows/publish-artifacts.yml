@@ -126,13 +126,17 @@ jobs:
         include:
         - arch: x86_64
           libc: gnu
+          instance: ubuntu-24.04
         - arch: s390x
           libc: gnu
+          instance: s390x
         - arch: aarch64
           libc: gnu
+          instance: ubuntu-24.04-arm
         - arch: powerpc64le
           libc: gnu
-    runs-on: ${{ matrix.arch == 's390x' && 's390x' || matrix.arch == 'powerpc64le' && 'ubuntu-24.04-ppc64le' || 'ubuntu-24.04' }}
+          instance: ubuntu-24.04-ppc64le
+    runs-on: ${{ matrix.instance }}
     env:
       LIBC: ${{ matrix.libc }}
       REGISTRY: ghcr.io
