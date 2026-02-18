@@ -143,19 +143,12 @@ pub(crate) fn prepare_luks_header_file(
     device_path: &Path,
 ) -> Result<std::path::PathBuf> {
     let header_path = luks_header_path(device_id, device_path);
-    if header_path.exists() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::AlreadyExists,
-            format!("LUKS header file already exists: {}", header_path.display()),
-        )
-        .into());
-    }
     if let Some(parent) = header_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
     // error "LUKS header file not found: <path/to/header>" from libcryptsetup if header file doesn't exist.
     let file = std::fs::OpenOptions::new()
-        .create(true)
+        .create_new(true)
         .write(true)
         .open(&header_path)?;
     // error "Device ... is too small" / OS error 5" from libcryptsetup if header isn't sized.

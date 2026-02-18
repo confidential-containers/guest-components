@@ -12,7 +12,7 @@
 
 use std::path::Path;
 
-use anyhow::{bail, Context};
+use anyhow::Context;
 use libcryptsetup_rs::consts::flags::{CryptActivate, CryptDeactivate, CryptVolumeKey};
 use libcryptsetup_rs::consts::vals::EncryptionFormat;
 use libcryptsetup_rs::{CryptInit, CryptParamsLuks2, CryptParamsLuks2Ref};
@@ -135,12 +135,7 @@ fn init_device(
     header_path: Option<&Path>,
 ) -> anyhow::Result<libcryptsetup_rs::CryptDevice> {
     let device_paths = match header_path {
-        Some(header_path) => {
-            if !header_path.exists() {
-                bail!("LUKS header file not found: {}", header_path.display());
-            }
-            libcryptsetup_rs::Either::Right((header_path, device_path))
-        }
+        Some(header_path) => libcryptsetup_rs::Either::Right((header_path, device_path)),
         None => libcryptsetup_rs::Either::Left(device_path),
     };
 
