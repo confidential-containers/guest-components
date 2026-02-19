@@ -37,7 +37,7 @@
 //!         .unwrap();
 //!
 //!     // the get_resource call will perform attestation
-//!     let resource = client.get_resource("kbs:///default/key/1".try_into().unwrap()).await.unwrap();
+//!     let resource = client.get_resource("kbs:///default/key/1".try_into().unwrap(), "resource".to_string()).await.unwrap();
 //!
 //!     // the client can also generate a token
 //!     let (token, tee_key) = client.get_token().await.unwrap();
@@ -63,7 +63,7 @@
 //!         .build()
 //!         .unwrap();
 //!
-//!     let resource = client.get_resource("kbs:///default/key/1".try_into().unwrap()).await.unwrap();
+//!     let resource = client.get_resource("kbs:///default/key/1".try_into().unwrap(), "resource".to_string()).await.unwrap();
 //! }
 //! ```
 //!
