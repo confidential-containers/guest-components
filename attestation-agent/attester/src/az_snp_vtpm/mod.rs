@@ -45,13 +45,15 @@ pub(crate) struct TpmQuote {
     pcrs: Vec<Vec<u8>>,
 }
 
-impl TryFrom<vtpm::Quote> for TpmQuote {
-    type Error = serde_json::Error;
+impl From<vtpm::Quote> for TpmQuote {
+    fn from(quote: vtpm::Quote) -> Self {
+        let pcrs = quote.pcrs_sha256().map(|p| p.to_vec()).collect();
 
-    fn try_from(q: vtpm::Quote) -> Result<Self, Self::Error> {
-        // Re-serialize through JSON to access private fields
-        let json = serde_json::to_value(&q)?;
-        serde_json::from_value(json)
+        TpmQuote {
+            signature: quote.signature(),
+            message: quote.message(),
+            pcrs,
+        }
     }
 }
 
@@ -92,8 +94,7 @@ fn pem_to_der(pem: &str) -> Result<Vec<u8>> {
 impl Attester for AzSnpVtpmAttester {
     async fn get_evidence(&self, report_data: Vec<u8>) -> anyhow::Result<TeeEvidence> {
         let hcl_report = vtpm::get_report()?;
-        let quote = vtpm::get_quote(&report_data)?;
-        let tpm_quote = TpmQuote::try_from(quote)?;
+        let tpm_quote = vtpm::get_quote(&report_data)?.into();
         let certs = imds::get_certs()?;
         let vcek = pem_to_der(&certs.vcek)?;
 
