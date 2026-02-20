@@ -20,6 +20,10 @@ cfg_if::cfg_if! {
     }
 }
 
+/// This directory is used to store all the kbs resources get by CDH's init
+/// function, s.t. `[[Credential]]` sections in the config.toml file.
+pub const KBS_RESOURCE_STORAGE_DIR: &str = "/run/confidential-containers/cdh";
+
 const CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS: &str =
     "CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS";
 
