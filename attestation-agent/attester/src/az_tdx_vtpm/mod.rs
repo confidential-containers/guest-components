@@ -58,9 +58,7 @@ impl Attester for AzTdxVtpmAttester {
         let hcl_report = hcl::HclReport::new(hcl_report_bytes.clone())?;
         let td_report = hcl_report.try_into()?;
         let td_quote = imds::get_td_quote(&td_report)?;
-
-        let quote = vtpm::get_quote(&report_data)?;
-        let tpm_quote = TpmQuote::try_from(quote)?;
+        let tpm_quote = vtpm::get_quote(&report_data)?.into();
 
         let evidence = Evidence {
             version: EVIDENCE_VERSION,
