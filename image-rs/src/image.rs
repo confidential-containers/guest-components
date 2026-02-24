@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Context};
-use log::{debug, error, info, warn};
 use oci_client::{
     client::{Certificate, CertificateEncoding, ClientConfig, ClientProtocol},
     manifest::{OciDescriptor, OciImageManifest},
@@ -16,6 +15,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use thiserror::Error;
+use tracing::{debug, error, info, warn};
 
 use tokio::sync::RwLock;
 

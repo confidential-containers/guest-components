@@ -5,10 +5,10 @@
 use anyhow::{anyhow, bail, Context, Result};
 use filetime::FileTime;
 use futures::StreamExt;
-use log::{debug, warn};
 use nix::libc::timeval;
 use nix::sys::stat::{mknod, Mode, SFlag};
 use thiserror::Error;
+use tracing::{debug, warn};
 
 use std::{
     collections::HashMap,

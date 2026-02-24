@@ -5,7 +5,6 @@
 pub mod unpack;
 pub use unpack::{unpack, UnpackError};
 
-use log::error;
 use sha2::Digest;
 use std::{
     path::{Path, PathBuf},
@@ -14,6 +13,7 @@ use std::{
 };
 use thiserror::Error;
 use tokio::io::{AsyncRead, ReadBuf};
+use tracing::error;
 
 use crate::digest::{DigestHasher, LayerDigestHasher, DIGEST_SHA256_PREFIX, DIGEST_SHA512_PREFIX};
 

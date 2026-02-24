@@ -5,9 +5,9 @@
 
 use std::{path::PathBuf, sync::Arc};
 
-use log::{info, warn};
 use thiserror::Error;
 use tokio::sync::RwLock;
+use tracing::{info, warn};
 
 use crate::{
     auth::{Auth, AuthError},
