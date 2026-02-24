@@ -20,7 +20,12 @@ const HARDCODED_KEY: &[u8] = &[
     245, 20, 202, 139, 155, 167, 240, 163, 55, 17, 218, 234,
 ];
 
+fn make_error(_: &str) -> Error {
+    Error::msg("Invalid resource type")
+}
+
 #[derive(AsRefStr, EnumString, Display, Debug, PartialEq, Eq)]
+#[strum(parse_err_ty = anyhow::Error, parse_err_fn = make_error)]
 pub enum ResourceType {
     #[strum(serialize = "security-policy")]
     /// image security policy, used to define whether a specific

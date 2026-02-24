@@ -9,5 +9,6 @@ pub use api::*;
 pub mod error;
 pub use error::*;
 
+#[allow(unreachable_code)]
 pub mod plugins;
 pub use plugins::{new_decryptor, new_getter};

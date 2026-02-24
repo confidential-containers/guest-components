@@ -15,6 +15,8 @@ pub use attester::InitDataResult;
 pub mod config;
 mod eventlog;
 pub mod initdata;
+
+#[allow(unreachable_code)]
 pub mod token;
 
 use eventlog::EventLog;
