@@ -22,7 +22,7 @@ cfg-if.workspace = true
 devicemapper = { version = "0.34.6", optional = true }
 filetime = "0.2"
 flate2 = "1.1"
-futures = { version = "0.3.31", optional = true }
+futures = { version = "0.3.32", optional = true }
 futures-util = "0.3"
 hex = { workspace = true, optional = true }
 kbc = { path = "../attestation-agent/kbc", default-features = false, optional = true }
