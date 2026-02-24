@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use hyper::{header, Body, Request, Response, StatusCode};
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use tracing::debug;
 
 use crate::utils::split_nth_slash;
 
@@ -103,7 +104,7 @@ impl Router {
         req: Request<Body>,
     ) -> Result<Response<Body>> {
         if let Some((root_path, url_path)) = split_nth_slash(req.uri().path(), 2) {
-            println!("root_path {root_path}, url_path {url_path}");
+            debug!("root_path {root_path}, url_path {url_path}");
             let local_url = url_path.to_string();
             match self.routes.get(root_path) {
                 Some(handler) => return handler.handle_request(remote_addr, &local_url, req).await,
