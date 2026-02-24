@@ -15,7 +15,12 @@ pub const HARDCODED_KEY: &[u8] = &[
     245, 20, 202, 139, 155, 167, 240, 163, 55, 17, 218, 234,
 ];
 
+fn make_error(_: &str) -> Error {
+    Error::msg("Invalid algorithm")
+}
+
 #[derive(Default, EnumString)]
+#[strum(parse_err_ty = anyhow::Error, parse_err_fn = make_error)]
 pub enum Algorithm {
     #[default]
     A256GCM,
