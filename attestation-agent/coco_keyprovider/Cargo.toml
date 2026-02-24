@@ -14,7 +14,7 @@ clap = { workspace = true, features = ["derive"] }
 ctr.workspace = true
 daemonize = "0.5.0"
 env_logger.workspace = true
-futures = "0.3.31"
+futures = "0.3.32"
 jwt-simple.workspace = true
 log.workspace = true
 protos = { path = "../../protos", default-features = false, features = [
