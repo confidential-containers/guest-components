@@ -42,4 +42,4 @@ jobs:
 
       - name: Run Occlum instance
         run: |
-          docker run --rm -i --device /dev/sgx_enclave --device /dev/sgx_provision -v /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf -v $(pwd):/home occlum/occlum:latest-ubuntu20.04 bash -c "cd /home/attestation-agent/ci && ./occlum.sh"
+          docker run --rm -i --device /dev/sgx_enclave --device /dev/sgx_provision -v ~/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf -v $(pwd):/home occlum/occlum:latest-ubuntu20.04 bash -c "cd /home/attestation-agent/ci && ./occlum.sh"
