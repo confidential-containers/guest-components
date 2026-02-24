@@ -16,7 +16,7 @@ use anyhow::Context;
 use libcryptsetup_rs::consts::flags::{CryptActivate, CryptDeactivate, CryptVolumeKey};
 use libcryptsetup_rs::consts::vals::EncryptionFormat;
 use libcryptsetup_rs::{CryptInit, CryptParamsLuks2, CryptParamsLuks2Ref};
-use log::debug;
+use tracing::debug;
 use zeroize::Zeroizing;
 
 /// Algorithm of the integrity hash

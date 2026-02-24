@@ -9,9 +9,9 @@ use confidential_data_hub::{
     storage::volume_type::Storage,
     {hub::Hub, DataHub},
 };
-use log::{debug, error};
 use std::{error::Error as _, net::SocketAddr, sync::Arc};
 use tonic::{transport::Server, Request, Response, Status};
+use tracing::{debug, error};
 
 use crate::{
     format_error,

@@ -11,7 +11,7 @@ use kbs_protocol::{
     token_provider::{AATokenProvider, TokenProvider},
     KbsClientCapabilities, ResourceUri,
 };
-use log::{info, warn};
+use tracing::{info, warn};
 
 use crate::{Error, Result};
 

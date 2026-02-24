@@ -12,6 +12,8 @@ fn main() {
         use std::path::Path;
         use std::process::Command;
 
+        use shadow_rs::{BuildPattern, ShadowBuilder};
+
         // generate an `intro` file that includes the feature information of the build
         fn feature_list(features: Vec<&str>) -> String {
             let enabled_features: Vec<&str> = features
@@ -56,5 +58,9 @@ fn main() {
         writeln!(f, "Socket Type: {socket_type}").unwrap();
 
         writeln!(f, "KMS plugins: {kms}").unwrap();
+        let _ = ShadowBuilder::builder()
+            .build_pattern(BuildPattern::RealTime)
+            .build()
+            .unwrap();
     }
 }

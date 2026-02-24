@@ -41,7 +41,8 @@ cfg-if.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
 config = { workspace = true }
 crypto.path = "../../attestation-agent/deps/crypto"
-env_logger = { workspace = true, optional = true }
+tracing.workspace = true
+tracing-subscriber = { workspace = true, optional = true }
 image-rs = { path = "../../image-rs", default-features = false, features = [
     "kata-cc-rustls-tls",
 ] }
@@ -51,7 +52,6 @@ jose-jwk = "0.1.2"
 jose-jws = "0.1.2"
 kms = { path = "../kms", default-features = false }
 libcryptsetup-rs = { version = "0.13.1", optional = true, features = ["mutex"] }
-log.workspace = true
 nix.workspace = true
 p256 = "0.13.2"
 prost = { workspace = true, optional = true }
@@ -60,6 +60,7 @@ rand.workspace = true
 resource_uri.path = "../../attestation-agent/deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
+shadow-rs = { workspace = true, optional = true }
 strum = { workspace = true, features = ["derive"] }
 tempfile = { workspace = true, optional = true }
 thiserror.workspace = true
@@ -78,6 +79,7 @@ zeroize.workspace = true
 
 [build-dependencies]
 anyhow.workspace = true
+shadow-rs.workspace = true
 
 [dev-dependencies]
 assert_cmd.workspace = true
@@ -108,7 +110,7 @@ ehsm = []
 luks2 = ["libcryptsetup-rs"]
 
 # Binary RPC type
-bin = ["clap", "env_logger"]
+bin = ["clap", "shadow-rs", "tracing-subscriber"]
 ttrpc = ["dep:ttrpc", "tokio/signal", "protos/ttrpc"]
 grpc = ["prost", "tonic", "tokio/signal", "protos/grpc"]
 

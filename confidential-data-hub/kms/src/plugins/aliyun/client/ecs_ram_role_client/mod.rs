@@ -6,10 +6,10 @@
 use std::env;
 
 use anyhow::bail;
-use log::info;
 use serde::Deserialize;
 use serde_json::Value;
 use tokio::fs;
+use tracing::info;
 
 use crate::{Annotations, ProviderSettings};
 use crate::{Error, Result};

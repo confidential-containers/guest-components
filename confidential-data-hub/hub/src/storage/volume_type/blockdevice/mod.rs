@@ -22,7 +22,6 @@ use async_trait::async_trait;
 use crypto::rand::random_bytes;
 use error::{BlockDeviceError, Result};
 use kms::{Annotations, ProviderSettings};
-use log::{debug, info, warn};
 use nix::mount::{mount, MsFlags};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -31,6 +30,7 @@ use tokio::{
     fs::{symlink, File},
     io::{AsyncBufReadExt, BufReader},
 };
+use tracing::{debug, info, warn};
 use zeroize::Zeroizing;
 
 #[derive(EnumString, Serialize, Deserialize, Display, Debug, PartialEq, Eq)]

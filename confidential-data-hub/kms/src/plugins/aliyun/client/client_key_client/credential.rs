@@ -7,10 +7,10 @@
 
 use anyhow::*;
 use base64::{engine::general_purpose::STANDARD, Engine};
-use log::debug;
 use p12::{CertBag, ContentInfo, MacData, SafeBagKind, PFX};
 use ring::{rand::SystemRandom, rsa::KeyPair, signature::RSA_PKCS1_SHA256};
 use serde::Deserialize;
+use tracing::debug;
 use yasna::ASN1Result;
 
 #[derive(Clone, Debug)]

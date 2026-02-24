@@ -14,14 +14,13 @@ bincode = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 const_format.workspace = true
 crypto = { path = "../../attestation-agent/deps/crypto", optional = true }
-ehsm_client = {git = "https://github.com/intel/ehsm", rev = "3454cac66b968a593c3edc43410c0b52416bbd3e", optional = true }
+ehsm_client = { git = "https://github.com/intel/ehsm", rev = "3454cac66b968a593c3edc43410c0b52416bbd3e", optional = true }
 hex = { workspace = true, optional = true }
 kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = [
     "passport",
     "aa_ttrpc",
     "openssl",
 ], optional = true }
-log.workspace = true
 p12 = { version = "0.6.3", optional = true }
 prost = { workspace = true, optional = true }
 protos = { path = "../../protos", default-features = false, optional = true }
@@ -38,6 +37,7 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 toml.workspace = true
 tonic = { workspace = true, optional = true }
+tracing.workspace = true
 url = { workspace = true, optional = true }
 uuid = { workspace = true, features = ["serde", "v4"], optional = true }
 yasna = { version = "0.5.2", optional = true }
@@ -45,7 +45,7 @@ zeroize = { workspace = true, optional = true }
 
 [dev-dependencies]
 rstest.workspace = true
-tokio = { workspace = true, features = ["rt", "macros" ] }
+tokio = { workspace = true, features = ["rt", "macros"] }
 
 [build-dependencies]
 anyhow.workspace = true

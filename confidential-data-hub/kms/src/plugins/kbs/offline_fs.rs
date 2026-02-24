@@ -8,9 +8,9 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
-use log::warn;
 use resource_uri::ResourceUri;
 use tokio::fs;
+use tracing::warn;
 
 use crate::{Error, Result};
 

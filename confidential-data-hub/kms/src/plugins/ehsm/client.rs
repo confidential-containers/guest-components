@@ -11,9 +11,9 @@ use async_trait::async_trait;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use const_format::concatcp;
-use log::info;
 use serde_json::Value;
 use tokio::fs;
+use tracing::info;
 
 use crate::plugins::_IN_GUEST_DEFAULT_KEY_PATH;
 use crate::{Annotations, Decrypter, Encrypter, ProviderSettings};

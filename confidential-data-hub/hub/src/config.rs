@@ -9,8 +9,8 @@ use anyhow::*;
 use attestation_agent::config::aa_kbc_params::AaKbcParams;
 use config::{Config, File};
 use image_rs::config::ImageConfig;
-use log::{debug, info};
 use serde::Deserialize;
+use tracing::{debug, info};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "ttrpc")] {

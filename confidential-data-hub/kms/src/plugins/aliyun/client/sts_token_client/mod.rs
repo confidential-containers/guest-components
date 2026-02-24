@@ -13,12 +13,12 @@ use std::{
 use anyhow::bail;
 use chrono::Utc;
 use credential::StsCredential;
-use log::error;
 use rand::{distr::Alphanumeric, Rng};
 use reqwest::{header::HeaderMap, ClientBuilder};
 use serde::Deserialize;
 use serde_json::Value;
 use tokio::fs;
+use tracing::error;
 
 use crate::{
     error::{Error, Result},
