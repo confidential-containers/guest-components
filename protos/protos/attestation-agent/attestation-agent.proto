@@ -61,6 +61,12 @@ message GetTeeTypeResponse {
     string tee = 1;
 }
 
+message GetAdditionalTeesRequest {}
+
+message GetAdditionalTeesResponse {
+    repeated string additional_tees = 1;
+}
+
 service AttestationAgentService {
     rpc GetEvidence(GetEvidenceRequest) returns (GetEvidenceResponse) {};
     rpc GetAdditionalEvidence(GetAdditionalEvidenceRequest) returns (GetEvidenceResponse) {};
@@ -68,4 +74,5 @@ service AttestationAgentService {
     rpc ExtendRuntimeMeasurement(ExtendRuntimeMeasurementRequest) returns (ExtendRuntimeMeasurementResponse) {};
     rpc BindInitData(BindInitDataRequest) returns (BindInitDataResponse) {};
     rpc GetTeeType(GetTeeTypeRequest) returns (GetTeeTypeResponse) {};
+    rpc GetAdditionalTees(GetAdditionalTeesRequest) returns (GetAdditionalTeesResponse) {};
 }
