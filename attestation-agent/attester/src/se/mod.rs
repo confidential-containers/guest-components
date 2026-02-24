@@ -5,7 +5,6 @@
 
 use super::{Attester, TeeEvidence};
 use anyhow::*;
-use log::debug;
 use pv::{
     misc,
     request::BootHdrTags,
@@ -14,6 +13,7 @@ use pv::{
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use std::fs;
+use tracing::debug;
 
 const DIGEST_FILE: &str = "/run/peerpod/initdata.digest";
 

@@ -18,7 +18,7 @@ use attester::BoxedAttester;
 use const_format::concatcp;
 
 use kbs_types::HashAlgorithm;
-use log::warn;
+use tracing::warn;
 
 use crate::eventlog::tcg2::Tcg2EventEntry;
 

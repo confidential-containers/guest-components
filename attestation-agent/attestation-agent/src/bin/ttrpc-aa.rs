@@ -8,13 +8,18 @@ use attestation_agent::{initdata::Initdata, AttestationAPIs, AttestationAgent};
 use base64::Engine;
 use clap::Parser;
 use const_format::concatcp;
-use log::{debug, info};
+use shadow_rs::shadow;
 use std::{collections::HashMap, path::Path, sync::Arc};
 use tokio::signal::unix::{signal, SignalKind};
+use tracing::{debug, info};
+use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 use ttrpc::asynchronous::{Server, Service};
 use ttrpc_dep::server::AA;
 
 use protos::ttrpc::aa::attestation_agent_ttrpc::create_attestation_agent_service;
+
+shadow!(build);
+
 mod ttrpc_dep;
 
 const DEFAULT_UNIX_SOCKET_DIR: &str = "/run/confidential-containers/attestation-agent/";
@@ -82,7 +87,35 @@ pub fn start_ttrpc_service(aa: AttestationAgent) -> Result<HashMap<String, Servi
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    let env_filter = match std::env::var_os("RUST_LOG") {
+        Some(_) => EnvFilter::try_from_default_env().expect("RUST_LOG is present but invalid"),
+        None => EnvFilter::new("info"),
+    };
+
+    let version = format!(
+        r"
+  ___   _    _              _          _    _                     ___                       _   
+ / _ \ | |  | |            | |        | |  (_)                   / _ \                     | |  
+/ /_\ \| |_ | |_  ___  ___ | |_  __ _ | |_  _   ___   _ __      / /_\ \  __ _   ___  _ __  | |_ 
+|  _  || __|| __|/ _ \/ __|| __|/ _` || __|| | / _ \ | '_ \     |  _  | / _` | / _ \| '_ \ | __|
+| | | || |_ | |_|  __/\__ \| |_| (_| || |_ | || (_) || | | |    | | | || (_| ||  __/| | | || |_ 
+\_| |_/ \__| \__|\___||___/ \__|\__,_| \__||_| \___/ |_| |_|    \_| |_/ \__, | \___||_| |_| \__|
+                                                                         __/ |                  
+                                                                        |___/                                                                  
+version: v{}
+commit: {}
+buildtime: {}
+loglevel: {env_filter}
+rpc: ttrpc
+",
+        build::PKG_VERSION,
+        build::COMMIT_HASH,
+        build::BUILD_TIME,
+    );
+
+    Subscriber::builder().with_env_filter(env_filter).init();
+
+    info!("Welcome to Confidential Containers Attestation Agent (ttRPC version)!\n\n{version}");
     let cli = Cli::parse();
 
     if !Path::new(DEFAULT_UNIX_SOCKET_DIR).exists() {

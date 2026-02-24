@@ -6,9 +6,9 @@
 use super::{Attester, TeeEvidence};
 use anyhow::{Context, Result};
 use csv_rs::api::dcu::{AttestationReport, DcuDevice};
-use log::warn;
 use serde::{Deserialize, Serialize};
 use std::{cmp::min, fs, path::Path};
+use tracing::warn;
 
 const DCU_NODES_DIR: &str = "/sys/devices/virtual/kfd/kfd/topology/nodes";
 

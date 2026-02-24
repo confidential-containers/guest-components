@@ -8,10 +8,10 @@ use crate::az_snp_vtpm::{utils, TpmQuote};
 use anyhow::*;
 use az_tdx_vtpm::{hcl, imds, is_tdx_cvm, vtpm};
 use kbs_types::HashAlgorithm;
-use log::debug;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use std::result::Result::Ok;
+use tracing::debug;
 
 type UrlSafeBase64 = Base64<serde_with::base64::UrlSafe>;
 

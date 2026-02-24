@@ -11,7 +11,7 @@ use crypto::{
     rsa::{PaddingMode, RSAKeyPair},
 };
 use kbs_types::{ProtectedHeader, Response, TeePubKey};
-use log::warn;
+use tracing::warn;
 use zeroize::Zeroizing;
 
 #[derive(Clone, Debug)]

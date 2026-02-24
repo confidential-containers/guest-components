@@ -7,9 +7,9 @@ use super::{Attester, InitDataResult, TeeEvidence};
 use anyhow::{bail, Context, Result};
 use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
 use kbs_types::HashAlgorithm;
-use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, hex::Hex, serde_as};
+use tracing::{debug, info};
 
 type UrlSafeBase64 = Base64<serde_with::base64::UrlSafe>;
 

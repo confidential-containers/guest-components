@@ -14,19 +14,22 @@ base64.workspace = true
 canon-json = { version = "0.2.1", optional = true }
 clap = { workspace = true, features = ["derive"], optional = true }
 crypto = { path = "../deps/crypto", default-features = false }
-env_logger = { workspace = true, optional = true }
 jwt-simple.workspace = true
 kbs-types.workspace = true
-log.workspace = true
 protobuf = { workspace = true, optional = true }
 protos = { path = "../../protos", default-features = false, optional = true }
-reqwest = { workspace = true, default-features = false, features = ["cookies", "json"] }
+reqwest = { workspace = true, default-features = false, features = [
+    "cookies",
+    "json",
+] }
 resource_uri.path = "../deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true, optional = true }
 ttrpc = { workspace = true, optional = true }
 url.workspace = true
 zeroize.workspace = true
@@ -72,4 +75,4 @@ nvidia-attester = ["attester/nvidia-attester"]
 rust-crypto = ["reqwest/rustls-tls", "crypto/rust-crypto"]
 openssl = ["reqwest/native-tls-vendored", "crypto/openssl"]
 
-bin = ["tokio/rt", "tokio/macros", "clap", "env_logger"]
+bin = ["tokio/rt", "tokio/macros", "clap", "tracing-subscriber"]

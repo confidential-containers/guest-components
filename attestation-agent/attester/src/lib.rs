@@ -192,7 +192,7 @@ pub fn detect_tee_type() -> Tee {
         return Tee::Tpm;
     }
 
-    log::warn!(
+    tracing::warn!(
         "No TEE platform detected. Sample Attester will be used.
          If you are expecting to collect evidence from inside a confidential guest,
          either your guest is not configured correctly, or your attestation client
@@ -230,7 +230,7 @@ pub fn detect_attestable_devices() -> Vec<Tee> {
     // so it only adds the TPM as an additional device if it is not the primary one.
     #[cfg(feature = "tpm-attester")]
     if detect_tee_type() != Tee::Tpm && tpm::detect_platform() {
-        log::warn!("The TPM device was detected as an additional device, but please note that it is not bound to the TEE, so there may be security risks.");
+        tracing::warn!("The TPM device was detected as an additional device, but please note that it is not bound to the TEE, so there may be security risks.");
         additional_devices.push(Tee::Tpm);
     }
 

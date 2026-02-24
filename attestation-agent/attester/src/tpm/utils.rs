@@ -68,7 +68,7 @@ const TPM_QUOTE_PCR_SLOTS: [PcrSlot; 24] = [
 
 /// Creates a TCTI configuration from a device path string.
 pub fn create_tcti(tpm_device: &str) -> Result<TctiNameConf> {
-    log::info!("Creating TCTI configuration for device: {}", tpm_device);
+    tracing::info!("Creating TCTI configuration for device: {}", tpm_device);
     let tcti_conf_str = format!("device:{}", tpm_device);
     TctiNameConf::from_str(&tcti_conf_str).context(format!(
         "Failed to create TCTI config from: {}",
@@ -245,7 +245,7 @@ pub fn detect_tpm_device() -> Option<String> {
     if let Ok(dev) = env::var(AA_TPM_DEVICE_ENV) {
         return match std::path::Path::new(&dev).exists() {
             true => {
-                log::info!(
+                tracing::info!(
                     "TPM device detected from {} env var: {}",
                     AA_TPM_DEVICE_ENV,
                     dev
@@ -253,7 +253,7 @@ pub fn detect_tpm_device() -> Option<String> {
                 Some(dev)
             }
             false => {
-                log::warn!(
+                tracing::warn!(
                     "{} env set to '{}', but device does not exist",
                     AA_TPM_DEVICE_ENV,
                     dev
@@ -266,12 +266,12 @@ pub fn detect_tpm_device() -> Option<String> {
     // Check predefined TPM device paths
     for &dev in &["/dev/tpm0", "/dev/tpm1", "/dev/tpm2"] {
         if std::path::Path::new(dev).exists() {
-            log::info!("TPM device detected: {}", dev);
+            tracing::info!("TPM device detected: {}", dev);
             return Some(dev.to_string());
         }
     }
 
-    log::warn!("No TPM device (/dev/tpm[0..2]) detected");
+    tracing::warn!("No TPM device (/dev/tpm[0..2]) detected");
     None
 }
 
@@ -283,7 +283,7 @@ pub fn get_ak_handle() -> Option<u32> {
     let env_val = match env::var(AA_TPM_AK_HANDLE_ENV) {
         Ok(val) => val,
         Err(_) => {
-            log::info!(
+            tracing::info!(
                 "{} not set, using default handle: {:#X}",
                 AA_TPM_AK_HANDLE_ENV,
                 TPM_DEFAULT_AK_HANDLE
@@ -295,11 +295,11 @@ pub fn get_ak_handle() -> Option<u32> {
     let stripped = env_val.trim_start_matches("0x");
     match u32::from_str_radix(stripped, 16) {
         Ok(handle) => {
-            log::info!("AK handle detected from env: {:#X}", handle);
+            tracing::info!("AK handle detected from env: {:#X}", handle);
             Some(handle)
         }
         Err(e) => {
-            log::warn!("Invalid AK handle '{}': {}", env_val, e);
+            tracing::warn!("Invalid AK handle '{}': {}", env_val, e);
             None
         }
     }

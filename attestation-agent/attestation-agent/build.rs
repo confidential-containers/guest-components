@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use shadow_rs::{BuildPattern, ShadowBuilder};
+
 fn main() -> std::io::Result<()> {
     #[cfg(feature = "bin")]
     {
@@ -62,5 +64,9 @@ fn main() -> std::io::Result<()> {
         writeln!(f, "Token plugins: {token_plugins}").unwrap();
     }
 
+    let _ = ShadowBuilder::builder()
+        .build_pattern(BuildPattern::RealTime)
+        .build()
+        .unwrap();
     Ok(())
 }
