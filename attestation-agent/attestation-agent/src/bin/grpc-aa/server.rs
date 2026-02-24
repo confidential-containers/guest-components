@@ -8,9 +8,9 @@ use attestation_agent::{AttestationAPIs, AttestationAgent, RuntimeMeasurement};
 use protos::grpc::aa::attestation_agent::{
     attestation_agent_service_server::{AttestationAgentService, AttestationAgentServiceServer},
     BindInitDataRequest, BindInitDataResponse, ExtendRuntimeMeasurementRequest,
-    ExtendRuntimeMeasurementResponse, GetAdditionalEvidenceRequest, GetEvidenceRequest,
-    GetEvidenceResponse, GetTeeTypeRequest, GetTeeTypeResponse, GetTokenRequest, GetTokenResponse,
-    RuntimeMeasurementResult,
+    ExtendRuntimeMeasurementResponse, GetAdditionalEvidenceRequest, GetAdditionalTeesRequest,
+    GetAdditionalTeesResponse, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
+    GetTeeTypeResponse, GetTokenRequest, GetTokenResponse, RuntimeMeasurementResult,
 };
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
@@ -178,6 +178,34 @@ impl AttestationAgentService for AA {
 
         let reply = GetTeeTypeResponse { tee };
 
+        Result::Ok(Response::new(reply))
+    }
+
+    async fn get_additional_tees(
+        &self,
+        _request: Request<GetAdditionalTeesRequest>,
+    ) -> Result<Response<GetAdditionalTeesResponse>, Status> {
+        debug!("AA (grpc): get additional tees ...");
+
+        let additional_tee = self.inner.get_additional_tees();
+
+        let mut reply = GetAdditionalTeesResponse {
+            additional_tees: vec![],
+        };
+        for tee in additional_tee {
+            let tee = serde_json::to_string(&tee)
+                .map_err(|e| {
+                    error!("AA (grpc): get additional tees failed:\n{e:?}");
+                    Status::internal(format!(
+                        "[ERROR:{AGENT_NAME}] AA get additional tees failed"
+                    ))
+                })?
+                .trim_end_matches('"')
+                .trim_start_matches('"')
+                .to_string();
+            reply.additional_tees.push(tee);
+        }
+        debug!("AA (grpc): get additional tees succeeded.");
         Result::Ok(Response::new(reply))
     }
 }

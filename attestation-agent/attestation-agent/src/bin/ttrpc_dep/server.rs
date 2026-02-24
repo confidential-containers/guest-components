@@ -12,8 +12,9 @@ use tracing::{debug, error};
 use protos::ttrpc::aa::{
     attestation_agent::{
         ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse,
-        GetAdditionalEvidenceRequest, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
-        GetTeeTypeResponse, GetTokenRequest, GetTokenResponse, RuntimeMeasurementResult,
+        GetAdditionalEvidenceRequest, GetAdditionalTeesRequest, GetAdditionalTeesResponse,
+        GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest, GetTeeTypeResponse,
+        GetTokenRequest, GetTokenResponse, RuntimeMeasurementResult,
     },
     attestation_agent_ttrpc::AttestationAgentService,
 };
@@ -168,5 +169,34 @@ impl AttestationAgentService for AA {
         let mut reply = GetTeeTypeResponse::new();
         reply.tee = res;
         ::ttrpc::Result::Ok(reply)
+    }
+
+    async fn get_additional_tees(
+        &self,
+        _ctx: &::ttrpc::r#async::TtrpcContext,
+        _req: GetAdditionalTeesRequest,
+    ) -> ::ttrpc::Result<GetAdditionalTeesResponse> {
+        debug!("AA (ttrpc): get additional tees ...");
+
+        let additional_tee = self.inner.get_additional_tees();
+
+        let mut res = GetAdditionalTeesResponse::new();
+        for tee in additional_tee {
+            let tee = serde_json::to_string(&tee)
+                .map_err(|e| {
+                    error!("AA (ttrpc): get tee type failed:\n {e:?}");
+                    let mut error_status = ::ttrpc::proto::Status::new();
+                    error_status.set_code(Code::INTERNAL);
+                    error_status
+                        .set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get tee type failed"));
+                    ::ttrpc::Error::RpcStatus(error_status)
+                })?
+                .trim_end_matches('"')
+                .trim_start_matches('"')
+                .to_string();
+            res.additional_tees.push(tee);
+        }
+        debug!("AA (ttrpc): get additional tees succeeded.");
+        ::ttrpc::Result::Ok(res)
     }
 }

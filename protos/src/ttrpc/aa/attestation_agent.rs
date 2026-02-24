@@ -1382,6 +1382,231 @@ impl ::protobuf::reflect::ProtobufValue for GetTeeTypeResponse {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
+// @@protoc_insertion_point(message:attestation_agent.GetAdditionalTeesRequest)
+#[derive(PartialEq,Clone,Default,Debug)]
+pub struct GetAdditionalTeesRequest {
+    // special fields
+    // @@protoc_insertion_point(special_field:attestation_agent.GetAdditionalTeesRequest.special_fields)
+    pub special_fields: ::protobuf::SpecialFields,
+}
+
+impl<'a> ::std::default::Default for &'a GetAdditionalTeesRequest {
+    fn default() -> &'a GetAdditionalTeesRequest {
+        <GetAdditionalTeesRequest as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl GetAdditionalTeesRequest {
+    pub fn new() -> GetAdditionalTeesRequest {
+        ::std::default::Default::default()
+    }
+
+    fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
+        let mut fields = ::std::vec::Vec::with_capacity(0);
+        let mut oneofs = ::std::vec::Vec::with_capacity(0);
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<GetAdditionalTeesRequest>(
+            "GetAdditionalTeesRequest",
+            fields,
+            oneofs,
+        )
+    }
+}
+
+impl ::protobuf::Message for GetAdditionalTeesRequest {
+    const NAME: &'static str = "GetAdditionalTeesRequest";
+
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
+        while let Some(tag) = is.read_raw_tag_or_eof()? {
+            match tag {
+                tag => {
+                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u64 {
+        let mut my_size = 0;
+        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
+        self.special_fields.cached_size().set(my_size as u32);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
+        os.write_unknown_fields(self.special_fields.unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn special_fields(&self) -> &::protobuf::SpecialFields {
+        &self.special_fields
+    }
+
+    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
+        &mut self.special_fields
+    }
+
+    fn new() -> GetAdditionalTeesRequest {
+        GetAdditionalTeesRequest::new()
+    }
+
+    fn clear(&mut self) {
+        self.special_fields.clear();
+    }
+
+    fn default_instance() -> &'static GetAdditionalTeesRequest {
+        static instance: GetAdditionalTeesRequest = GetAdditionalTeesRequest {
+            special_fields: ::protobuf::SpecialFields::new(),
+        };
+        &instance
+    }
+}
+
+impl ::protobuf::MessageFull for GetAdditionalTeesRequest {
+    fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("GetAdditionalTeesRequest").unwrap()).clone()
+    }
+}
+
+impl ::std::fmt::Display for GetAdditionalTeesRequest {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for GetAdditionalTeesRequest {
+    type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
+}
+
+// @@protoc_insertion_point(message:attestation_agent.GetAdditionalTeesResponse)
+#[derive(PartialEq,Clone,Default,Debug)]
+pub struct GetAdditionalTeesResponse {
+    // message fields
+    // @@protoc_insertion_point(field:attestation_agent.GetAdditionalTeesResponse.additional_tees)
+    pub additional_tees: ::std::vec::Vec<::std::string::String>,
+    // special fields
+    // @@protoc_insertion_point(special_field:attestation_agent.GetAdditionalTeesResponse.special_fields)
+    pub special_fields: ::protobuf::SpecialFields,
+}
+
+impl<'a> ::std::default::Default for &'a GetAdditionalTeesResponse {
+    fn default() -> &'a GetAdditionalTeesResponse {
+        <GetAdditionalTeesResponse as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl GetAdditionalTeesResponse {
+    pub fn new() -> GetAdditionalTeesResponse {
+        ::std::default::Default::default()
+    }
+
+    fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
+        let mut fields = ::std::vec::Vec::with_capacity(1);
+        let mut oneofs = ::std::vec::Vec::with_capacity(0);
+        fields.push(::protobuf::reflect::rt::v2::make_vec_simpler_accessor::<_, _>(
+            "additional_tees",
+            |m: &GetAdditionalTeesResponse| { &m.additional_tees },
+            |m: &mut GetAdditionalTeesResponse| { &mut m.additional_tees },
+        ));
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<GetAdditionalTeesResponse>(
+            "GetAdditionalTeesResponse",
+            fields,
+            oneofs,
+        )
+    }
+}
+
+impl ::protobuf::Message for GetAdditionalTeesResponse {
+    const NAME: &'static str = "GetAdditionalTeesResponse";
+
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
+        while let Some(tag) = is.read_raw_tag_or_eof()? {
+            match tag {
+                10 => {
+                    self.additional_tees.push(is.read_string()?);
+                },
+                tag => {
+                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u64 {
+        let mut my_size = 0;
+        for value in &self.additional_tees {
+            my_size += ::protobuf::rt::string_size(1, &value);
+        };
+        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
+        self.special_fields.cached_size().set(my_size as u32);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
+        for v in &self.additional_tees {
+            os.write_string(1, &v)?;
+        };
+        os.write_unknown_fields(self.special_fields.unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn special_fields(&self) -> &::protobuf::SpecialFields {
+        &self.special_fields
+    }
+
+    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
+        &mut self.special_fields
+    }
+
+    fn new() -> GetAdditionalTeesResponse {
+        GetAdditionalTeesResponse::new()
+    }
+
+    fn clear(&mut self) {
+        self.additional_tees.clear();
+        self.special_fields.clear();
+    }
+
+    fn default_instance() -> &'static GetAdditionalTeesResponse {
+        static instance: GetAdditionalTeesResponse = GetAdditionalTeesResponse {
+            additional_tees: ::std::vec::Vec::new(),
+            special_fields: ::protobuf::SpecialFields::new(),
+        };
+        &instance
+    }
+}
+
+impl ::protobuf::MessageFull for GetAdditionalTeesResponse {
+    fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("GetAdditionalTeesResponse").unwrap()).clone()
+    }
+}
+
+impl ::std::fmt::Display for GetAdditionalTeesResponse {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for GetAdditionalTeesResponse {
+    type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
+}
+
 #[derive(Clone,Copy,PartialEq,Eq,Debug,Hash)]
 // @@protoc_insertion_point(enum:attestation_agent.RuntimeMeasurementResult)
 pub enum RuntimeMeasurementResult {
@@ -1465,19 +1690,23 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x0e2+.attestation_agent.RuntimeMeasurementResultR\x06Result\"-\n\x13Bin\
     dInitDataRequest\x12\x16\n\x06Digest\x18\x01\x20\x01(\x0cR\x06Digest\"\
     \x16\n\x14BindInitDataResponse\"\x13\n\x11GetTeeTypeRequest\"&\n\x12GetT\
-    eeTypeResponse\x12\x10\n\x03tee\x18\x01\x20\x01(\tR\x03tee*F\n\x18Runtim\
-    eMeasurementResult\x12\x06\n\x02OK\x10\0\x12\x11\n\rNOT_SUPPORTED\x10\
-    \x01\x12\x0f\n\x0bNOT_ENABLED\x10\x022\x80\x05\n\x17AttestationAgentServ\
-    ice\x12\\\n\x0bGetEvidence\x12%.attestation_agent.GetEvidenceRequest\x1a\
-    &.attestation_agent.GetEvidenceResponse\x12p\n\x15GetAdditionalEvidence\
-    \x12/.attestation_agent.GetAdditionalEvidenceRequest\x1a&.attestation_ag\
-    ent.GetEvidenceResponse\x12S\n\x08GetToken\x12\".attestation_agent.GetTo\
-    kenRequest\x1a#.attestation_agent.GetTokenResponse\x12\x83\x01\n\x18Exte\
-    ndRuntimeMeasurement\x122.attestation_agent.ExtendRuntimeMeasurementRequ\
-    est\x1a3.attestation_agent.ExtendRuntimeMeasurementResponse\x12_\n\x0cBi\
-    ndInitData\x12&.attestation_agent.BindInitDataRequest\x1a'.attestation_a\
-    gent.BindInitDataResponse\x12Y\n\nGetTeeType\x12$.attestation_agent.GetT\
-    eeTypeRequest\x1a%.attestation_agent.GetTeeTypeResponseb\x06proto3\
+    eeTypeResponse\x12\x10\n\x03tee\x18\x01\x20\x01(\tR\x03tee\"\x1a\n\x18Ge\
+    tAdditionalTeesRequest\"D\n\x19GetAdditionalTeesResponse\x12'\n\x0faddit\
+    ional_tees\x18\x01\x20\x03(\tR\x0eadditionalTees*F\n\x18RuntimeMeasureme\
+    ntResult\x12\x06\n\x02OK\x10\0\x12\x11\n\rNOT_SUPPORTED\x10\x01\x12\x0f\
+    \n\x0bNOT_ENABLED\x10\x022\xf0\x05\n\x17AttestationAgentService\x12\\\n\
+    \x0bGetEvidence\x12%.attestation_agent.GetEvidenceRequest\x1a&.attestati\
+    on_agent.GetEvidenceResponse\x12p\n\x15GetAdditionalEvidence\x12/.attest\
+    ation_agent.GetAdditionalEvidenceRequest\x1a&.attestation_agent.GetEvide\
+    nceResponse\x12S\n\x08GetToken\x12\".attestation_agent.GetTokenRequest\
+    \x1a#.attestation_agent.GetTokenResponse\x12\x83\x01\n\x18ExtendRuntimeM\
+    easurement\x122.attestation_agent.ExtendRuntimeMeasurementRequest\x1a3.a\
+    ttestation_agent.ExtendRuntimeMeasurementResponse\x12_\n\x0cBindInitData\
+    \x12&.attestation_agent.BindInitDataRequest\x1a'.attestation_agent.BindI\
+    nitDataResponse\x12Y\n\nGetTeeType\x12$.attestation_agent.GetTeeTypeRequ\
+    est\x1a%.attestation_agent.GetTeeTypeResponse\x12n\n\x11GetAdditionalTee\
+    s\x12+.attestation_agent.GetAdditionalTeesRequest\x1a,.attestation_agent\
+    .GetAdditionalTeesResponseb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
@@ -1495,7 +1724,7 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
     file_descriptor.get(|| {
         let generated_file_descriptor = generated_file_descriptor_lazy.get(|| {
             let mut deps = ::std::vec::Vec::with_capacity(0);
-            let mut messages = ::std::vec::Vec::with_capacity(11);
+            let mut messages = ::std::vec::Vec::with_capacity(13);
             messages.push(GetEvidenceRequest::generated_message_descriptor_data());
             messages.push(GetAdditionalEvidenceRequest::generated_message_descriptor_data());
             messages.push(GetEvidenceResponse::generated_message_descriptor_data());
@@ -1507,6 +1736,8 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
             messages.push(BindInitDataResponse::generated_message_descriptor_data());
             messages.push(GetTeeTypeRequest::generated_message_descriptor_data());
             messages.push(GetTeeTypeResponse::generated_message_descriptor_data());
+            messages.push(GetAdditionalTeesRequest::generated_message_descriptor_data());
+            messages.push(GetAdditionalTeesResponse::generated_message_descriptor_data());
             let mut enums = ::std::vec::Vec::with_capacity(1);
             enums.push(RuntimeMeasurementResult::generated_enum_descriptor_data());
             ::protobuf::reflect::GeneratedFileDescriptor::new_generated(
