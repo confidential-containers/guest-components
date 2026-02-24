@@ -1089,8 +1089,7 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     est\x1a\x18.api.GetResourceResponse2V\n\x12SecureMountService\x12@\n\x0b\
     SecureMount\x12\x17.api.SecureMountRequest\x1a\x18.api.SecureMountRespon\
     se2N\n\x10ImagePullService\x12:\n\tPullImage\x12\x15.api.ImagePullReques\
-    t\x1a\x16.api.ImagePullResponseBaZ_github.com/confidential-containers/gu\
-    est-components/confidential-data-hub/golang/pkg/api/cdhapib\x06proto3\
+    t\x1a\x16.api.ImagePullResponseb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
