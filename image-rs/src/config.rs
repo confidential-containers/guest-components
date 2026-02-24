@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, Context, Result};
-use log::debug;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
+use tracing::debug;
 
 use crate::registry::Config as RegistryConfig;
 use crate::snapshots::SnapshotType;

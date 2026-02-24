@@ -17,9 +17,9 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use async_trait::async_trait;
-use log::info;
 use sha2::{Digest, Sha256};
 use tokio::fs;
+use tracing::info;
 
 #[cfg(feature = "keywrap-grpc")]
 mod grpc;

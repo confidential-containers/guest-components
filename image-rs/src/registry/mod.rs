@@ -11,9 +11,9 @@
 use std::str::FromStr;
 
 use anyhow::{bail, Result};
-use log::debug;
 use oci_client::Reference;
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 
 use crate::image::{ImagePullTask, TaskType};
 
