@@ -20,8 +20,8 @@ pub mod initdata;
 pub mod token;
 
 use eventlog::EventLog;
-use log::{debug, info, warn};
 use token::*;
+use tracing::{debug, info, warn};
 
 use crate::{config::Config, eventlog::Event};
 

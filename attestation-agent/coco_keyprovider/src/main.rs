@@ -6,9 +6,13 @@
 use anyhow::*;
 use clap::Parser;
 use daemonize::Daemonize;
-use log::*;
+use shadow_rs::shadow;
 use std::{fs::File, net::SocketAddr, path::PathBuf};
 use tokio::fs;
+use tracing::{debug, info};
+use tracing_subscriber::{fmt::Subscriber, EnvFilter};
+
+shadow!(build);
 
 pub mod enc_mods;
 pub mod grpc;
@@ -45,7 +49,41 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    let env_filter = match std::env::var_os("RUST_LOG") {
+        Some(_) => EnvFilter::try_from_default_env().expect("RUST_LOG is present but invalid"),
+        None => EnvFilter::new("info"),
+    };
+
+    let version = format!(
+        r"
+ _____         _____                                              
+/  __ \       /  __ \                                             
+| /  \/  ___  | /  \/  ___                                        
+| |     / _ \ | |     / _ \                                       
+| \__/\| (_) || \__/\| (_) |                                      
+ \____/ \___/  \____/ \___/                                       
+ _   __             ______                   _      _             
+| | / /             | ___ \                 (_)    | |            
+| |/ /   ___  _   _ | |_/ /_ __  ___ __   __ _   __| |  ___  _ __ 
+|    \  / _ \| | | ||  __/| '__|/ _ \\ \ / /| | / _` | / _ \| '__|
+| |\  \|  __/| |_| || |   | |  | (_) |\ V / | || (_| ||  __/| |   
+\_| \_/ \___| \__, |\_|   |_|   \___/  \_/  |_| \__,_| \___||_|   
+               __/ |                                              
+              |___/                                               
+                                                                                    
+version: v{}
+commit: {}
+buildtime: {}
+loglevel: {env_filter}
+",
+        build::PKG_VERSION,
+        build::COMMIT_HASH,
+        build::BUILD_TIME,
+    );
+
+    Subscriber::builder().with_env_filter(env_filter).init();
+
+    info!("Welcome to Confidential Containers Key Provider!\n\n{version}");
 
     let cli = Cli::parse();
 

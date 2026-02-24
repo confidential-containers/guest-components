@@ -28,16 +28,17 @@ byteorder = "1.5.0"
 clap = { workspace = true, features = ["derive"], optional = true }
 config.workspace = true
 const_format.workspace = true
-env_logger = { workspace = true, optional = true }
+tracing.workspace = true
+tracing-subscriber = { workspace = true, optional = true }
 hex.workspace = true
 kbs_protocol = { path = "../kbs_protocol", default-features = false, optional = true }
 kbs-types.workspace = true
-log.workspace = true
 protos = { path = "../../protos", default-features = false, optional = true }
 reqwest = { workspace = true, features = ["json"], optional = true }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+shadow-rs = { workspace = true, optional = true }
 strum.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
@@ -52,6 +53,7 @@ serial_test.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
+shadow-rs.workspace = true
 
 [features]
 default = ["rust-crypto", "ttrpc", "grpc"]
@@ -107,6 +109,6 @@ rust-crypto = ["kbs_protocol?/rust-crypto"]
 openssl = ["kbs_protocol?/openssl"]
 
 # Binary RPC type
-bin = ["clap", "env_logger", "tokio/rt-multi-thread"]
+bin = ["clap", "shadow-rs", "tracing-subscriber", "tokio/rt-multi-thread"]
 grpc = ["tokio/signal", "tonic", "protos/grpc"]
 ttrpc = ["dep:ttrpc", "tokio/signal", "protos/ttrpc"]

@@ -7,7 +7,7 @@ use ::ttrpc::proto::Code;
 use async_trait::async_trait;
 use attestation_agent::{AttestationAPIs, AttestationAgent, RuntimeMeasurement};
 
-use log::{debug, error};
+use tracing::{debug, error};
 
 use protos::ttrpc::aa::{
     attestation_agent::{

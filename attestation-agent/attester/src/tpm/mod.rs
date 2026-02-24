@@ -12,8 +12,8 @@ use self::utils::{
 };
 use anyhow::{anyhow, Result};
 use base64::Engine;
-use log::info;
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 const PCR_SLOT_8: u64 = 8;
 const TPM_REPORT_DATA_SIZE: usize = 32;

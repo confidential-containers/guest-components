@@ -165,7 +165,7 @@ impl Attester for TdxAttester {
 
         let extend_data: [u8; 48] = pad(&event_digest);
 
-        log::debug!(
+        tracing::debug!(
             "TDX Attester: extend RTMR{rtmr_index}: {}",
             hex::encode(extend_data)
         );
@@ -186,7 +186,7 @@ impl Attester for TdxAttester {
         #[cfg(feature = "tdx-attest-dcap-ioctls")]
         match tdx_attest_rs::tdx_att_extend(&event) {
             tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
-                log::debug!("TDX extend runtime measurement succeeded.")
+                tracing::debug!("TDX extend runtime measurement succeeded.")
             }
             error_code => {
                 bail!(

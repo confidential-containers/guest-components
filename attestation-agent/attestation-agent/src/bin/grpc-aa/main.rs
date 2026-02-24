@@ -9,10 +9,13 @@ use anyhow::*;
 use attestation_agent::{initdata::Initdata, AttestationAPIs, AttestationAgent};
 use base64::Engine;
 use clap::Parser;
-use log::{debug, info};
-use tokio::signal::unix::{signal, SignalKind};
-
+use shadow_rs::shadow;
 use std::net::SocketAddr;
+use tokio::signal::unix::{signal, SignalKind};
+use tracing::{debug, info};
+use tracing_subscriber::{fmt::Subscriber, EnvFilter};
+
+shadow!(build);
 
 const DEFAULT_ATTESTATION_AGENT_ADDR: &str = "127.0.0.1:50002";
 
@@ -66,7 +69,35 @@ struct Cli {
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    let env_filter = match std::env::var_os("RUST_LOG") {
+        Some(_) => EnvFilter::try_from_default_env().expect("RUST_LOG is present but invalid"),
+        None => EnvFilter::new("info"),
+    };
+
+    let version = format!(
+        r"
+  ___   _    _              _          _    _                     ___                       _   
+ / _ \ | |  | |            | |        | |  (_)                   / _ \                     | |  
+/ /_\ \| |_ | |_  ___  ___ | |_  __ _ | |_  _   ___   _ __      / /_\ \  __ _   ___  _ __  | |_ 
+|  _  || __|| __|/ _ \/ __|| __|/ _` || __|| | / _ \ | '_ \     |  _  | / _` | / _ \| '_ \ | __|
+| | | || |_ | |_|  __/\__ \| |_| (_| || |_ | || (_) || | | |    | | | || (_| ||  __/| | | || |_ 
+\_| |_/ \__| \__|\___||___/ \__|\__,_| \__||_| \___/ |_| |_|    \_| |_/ \__, | \___||_| |_| \__|
+                                                                         __/ |                  
+                                                                        |___/                                                                  
+version: v{}
+commit: {}
+buildtime: {}
+loglevel: {env_filter}
+rpc: grpc
+",
+        build::PKG_VERSION,
+        build::COMMIT_HASH,
+        build::BUILD_TIME,
+    );
+
+    Subscriber::builder().with_env_filter(env_filter).init();
+
+    info!("Welcome to Confidential Containers Attestation Agent (gRPC version)!\n\n{version}");
     let cli = Cli::parse();
 
     let attestation_socket = cli.attestation_sock.parse::<SocketAddr>()?;

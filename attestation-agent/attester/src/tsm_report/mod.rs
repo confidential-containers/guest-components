@@ -58,7 +58,7 @@ pub struct TsmReportPath {
 impl Drop for TsmReportPath {
     fn drop(&mut self) {
         let _ = std::fs::remove_dir(self.path.as_path())
-            .map_err(|e| log::error!("Failed to remove TSM Report directory: {e}"));
+            .map_err(|e| tracing::error!("Failed to remove TSM Report directory: {e}"));
     }
 }
 

@@ -5,7 +5,6 @@
 
 use anyhow::*;
 use attestation_agent::{AttestationAPIs, AttestationAgent, RuntimeMeasurement};
-use log::{debug, error};
 use protos::grpc::aa::attestation_agent::{
     attestation_agent_service_server::{AttestationAgentService, AttestationAgentServiceServer},
     BindInitDataRequest, BindInitDataResponse, ExtendRuntimeMeasurementRequest,
@@ -15,6 +14,7 @@ use protos::grpc::aa::attestation_agent::{
 };
 use std::net::SocketAddr;
 use tonic::{transport::Server, Request, Response, Status};
+use tracing::{debug, error};
 
 pub const AGENT_NAME: &str = "attestation-agent";
 

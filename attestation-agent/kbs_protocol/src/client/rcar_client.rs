@@ -13,10 +13,10 @@ use kbs_types::{
     Attestation, Challenge, CompositeEvidence, ErrorInformation, InitData, Request, Response,
     RuntimeData, Tee,
 };
-use log::{debug, warn};
 use resource_uri::ResourceUri;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use tracing::{debug, warn};
 
 use crate::{
     api::KbsClientCapabilities,

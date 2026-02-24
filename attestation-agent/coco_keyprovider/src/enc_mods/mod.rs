@@ -8,11 +8,11 @@ use std::collections::HashMap;
 use anyhow::*;
 use base64::Engine;
 use jwt_simple::prelude::Ed25519KeyPair;
-use log::{debug, info};
 use rand::TryRngCore;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
+use tracing::{debug, info};
 
 use self::{crypto::Algorithm, kbs::register_kek};
 

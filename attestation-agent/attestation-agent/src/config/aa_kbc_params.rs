@@ -1,6 +1,6 @@
-use log::debug;
 use std::env;
 use thiserror::Error;
+use tracing::debug;
 
 #[derive(Error, Debug)]
 pub enum ParamError {

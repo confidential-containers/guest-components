@@ -5,8 +5,8 @@
 
 use async_trait::async_trait;
 use kbs_types::{ErrorInformation, Response};
-use log::{debug, warn};
 use resource_uri::ResourceUri;
+use tracing::{debug, warn};
 
 use crate::{
     api::KbsClientCapabilities,

@@ -5,8 +5,8 @@
 
 use anyhow::*;
 use jwt_simple::prelude::{Claims, Duration, Ed25519KeyPair, EdDSAKeyPairLike};
-use log::debug;
 use reqwest::Url;
+use tracing::debug;
 
 const KBS_URL_PATH_PREFIX: &str = "kbs/v0/resource";
 

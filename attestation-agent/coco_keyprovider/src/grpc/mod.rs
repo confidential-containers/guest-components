@@ -7,7 +7,6 @@ use crate::enc_mods;
 use anyhow::*;
 use base64::Engine;
 use jwt_simple::prelude::Ed25519KeyPair;
-use log::*;
 use protos::grpc::cdh::keyprovider::{
     key_provider_service_server::{KeyProviderService, KeyProviderServiceServer},
     KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput,
@@ -17,6 +16,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use tokio::fs;
 use tonic::{transport::Server, Request, Response, Status};
+use tracing::debug;
 
 use protocol::keyprovider_structs::*;
 
