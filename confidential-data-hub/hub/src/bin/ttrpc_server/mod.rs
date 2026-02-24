@@ -11,7 +11,7 @@ use confidential_data_hub::{
     storage::volume_type::Storage,
     {hub::Hub, CdhConfig, DataHub},
 };
-use log::{debug, error};
+use tracing::{debug, error};
 use ttrpc::{asynchronous::TtrpcContext, Code, Error, Status};
 
 use protos::ttrpc::cdh::{

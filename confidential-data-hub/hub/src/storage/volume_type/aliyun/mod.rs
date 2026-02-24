@@ -10,7 +10,6 @@ use std::{collections::HashMap, os::unix::fs::PermissionsExt};
 
 use anyhow::Context;
 use async_trait::async_trait;
-use log::{debug, error};
 use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -18,6 +17,7 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     process::Command,
 };
+use tracing::{debug, error};
 
 use crate::secret;
 use error::{AliyunError, Result};

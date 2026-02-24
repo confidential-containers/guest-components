@@ -8,8 +8,8 @@ use std::{collections::HashMap, path::Path};
 use async_trait::async_trait;
 use image_rs::{builder::ClientBuilder, config::ImageConfig, image::ImageClient};
 use kms::{Annotations, ProviderSettings};
-use log::{debug, info, warn};
 use tokio::sync::{Mutex, OnceCell};
+use tracing::{debug, info, warn};
 
 #[cfg(feature = "ttrpc")]
 use protos::ttrpc::aa::attestation_agent::{

@@ -9,8 +9,8 @@
 use std::path::PathBuf;
 
 use kms::{plugins::kbs::KbcClient, Annotations, Getter};
-use log::debug;
 use tokio::fs;
+use tracing::debug;
 
 use crate::{hub::Hub, Error, Result};
 

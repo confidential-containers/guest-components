@@ -10,7 +10,7 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use clap::{Args, Parser, Subcommand};
 use confidential_data_hub::{hub::Hub, storage::volume_type::Storage, CdhConfig, DataHub};
-use log::warn;
+use tracing::warn;
 
 #[derive(Parser)]
 #[command(name = "cdh_oneshot")]

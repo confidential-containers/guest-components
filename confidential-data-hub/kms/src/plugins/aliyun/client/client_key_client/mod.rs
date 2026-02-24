@@ -8,7 +8,6 @@ use std::{collections::BTreeMap, env};
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use chrono::Utc;
-use log::{error, info};
 use prost::Message;
 use protos::grpc::cdh::dkms_api;
 use reqwest::{header::HeaderMap, Certificate, ClientBuilder};
@@ -16,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tokio::fs;
+use tracing::{error, info};
 
 mod config;
 mod credential;
