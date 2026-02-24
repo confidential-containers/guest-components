@@ -7,8 +7,13 @@ use clap::Parser;
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Method, Server};
+use shadow_rs::shadow;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tracing::{error, info};
+use tracing_subscriber::{fmt::Subscriber, EnvFilter};
+
+shadow!(build);
 
 mod aa;
 mod cdh;
@@ -31,7 +36,7 @@ const AA_ADDR: &str =
 
 /// API Server arguments info.
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(author, about, long_about = None)]
 struct Args {
     /// Bind address for API Server
     #[arg(default_value_t = DEFAULT_BIND.to_string(), short, long = "bind")]
@@ -52,9 +57,16 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let env_filter = match std::env::var_os("RUST_LOG") {
+        Some(_) => EnvFilter::try_from_default_env().expect("RUST_LOG is present but invalid"),
+        None => EnvFilter::new("info"),
+    };
+
+    Subscriber::builder().with_env_filter(env_filter).init();
+
     let args = Args::parse();
 
-    println!(
+    info!(
         "Starting API server on {} with features {}",
         args.bind, args.features
     );
@@ -91,7 +103,7 @@ async fn main() -> Result<()> {
         }
 
         _ => {
-            eprintln!("Unknown features. Supported features are: resource, attestation, all.");
+            error!("Unknown features. Supported features are: resource, attestation, all.");
             std::process::exit(1);
         }
     }
@@ -112,10 +124,10 @@ async fn main() -> Result<()> {
 
     let server = Server::bind(&address).serve(api_service);
 
-    println!("API Server listening on http://{}", args.bind);
+    info!("API Server listening on http://{}", args.bind);
 
     if let Err(e) = server.await {
-        eprintln!("API server error: {e}");
+        error!("API server error: {e}");
     }
 
     Ok(())

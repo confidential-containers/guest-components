@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use shadow_rs::{BuildPattern, ShadowBuilder};
 use std::fs::File;
 use std::io::Write;
 use utoipa::{OpenApi, ToSchema};
@@ -108,5 +109,9 @@ fn generate_openapi_document() -> std::io::Result<()> {
 fn main() -> std::io::Result<()> {
     generate_openapi_document().expect("Generate RESTful OpenAPI yaml failed.");
 
+    let _ = ShadowBuilder::builder()
+        .build_pattern(BuildPattern::RealTime)
+        .build()
+        .expect("Build shadow failed.");
     Ok(())
 }

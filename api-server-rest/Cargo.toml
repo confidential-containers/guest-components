@@ -14,10 +14,14 @@ form_urlencoded = "1.2.2"
 hyper = { version = "0.14.27", features = ["server", "http1", "runtime"] }
 serde.workspace = true
 serde_json.workspace = true
+shadow-rs.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tracing.workspace = true
+tracing-subscriber.workspace = true
 ttrpc = { workspace = true, features = ["async"] }
 protos = { path = "../protos", default-features = false, features = ["ttrpc"] }
 
 [build-dependencies]
 serde_json = { workspace = true }
+shadow-rs.workspace = true
 utoipa = "5"
