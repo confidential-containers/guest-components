@@ -9,9 +9,9 @@ use oci_client::Reference;
 pub mod digest;
 
 use digest::Digest;
-use strum::{Display, EnumString};
+use strum::Display;
 
-#[derive(EnumString, Display, Debug, PartialEq, Eq)]
+#[derive(Display, Debug, PartialEq, Eq)]
 pub enum TransportName {
     #[strum(to_string = "docker")]
     Docker,

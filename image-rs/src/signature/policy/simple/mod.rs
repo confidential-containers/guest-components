@@ -7,7 +7,6 @@ use anyhow::*;
 use oci_client::secrets::RegistryAuth;
 use serde::*;
 use strum_macros::Display;
-use strum_macros::EnumString;
 
 use base64::Engine;
 
@@ -26,7 +25,7 @@ use super::SimpleParameters;
 /// the `/run` directory is mounted in `tmpfs`, which is located in the encrypted memory protected by HW-TEE.
 pub const SIG_STORE_CONFIG_SUB_DIR: &str = "image-security/simple_signing/sigstore_config";
 
-#[derive(Deserialize, EnumString, Display, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Display, Debug, PartialEq, Eq, Clone)]
 pub enum KeyType {
     #[strum(to_string = "GPGKeys")]
     Gpg,
