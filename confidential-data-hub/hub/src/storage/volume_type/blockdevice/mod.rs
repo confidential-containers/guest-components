@@ -527,6 +527,50 @@ mod tests {
 
     #[cfg(feature = "luks2")]
     #[tokio::test]
+    #[rstest]
+    #[serial]
+    #[case::integrity("true")]
+    #[case::no_integrity("false")]
+    async fn encrypt_an_empty_device_with_mkfs_opts_using_luks2(#[case] integrity: &str) {
+        let mut temp_device_file = tempfile::NamedTempFile::new().unwrap();
+        temp_device_file
+            .as_file_mut()
+            .write_all(&vec![0; 512 * 1024 * 1024])
+            .unwrap();
+        let mut bd = BlockDevice::default();
+        let device_path = temp_device_file.path().to_string_lossy().to_string();
+
+        let options = HashMap::from([
+            ("sourceType".to_string(), "empty".to_string()),
+            ("targetType".to_string(), "fileSystem".to_string()),
+            ("devicePath".to_string(), device_path.clone()),
+            ("encryptionType".to_string(), "luks2".to_string()),
+            (
+                "key".to_string(),
+                "file://./test_files/luks2-disk-passphrase".to_string(),
+            ),
+            ("dataIntegrity".to_string(), integrity.to_string()),
+            ("filesystemType".to_string(), "ext4".to_string()),
+            (
+                "mkfsOpts".to_string(),
+                "-O ^has_journal -m 0 -i 163840 -I 128".to_string(),
+            ),
+        ]);
+
+        let tempdir = tempfile::TempDir::new().unwrap();
+        bd.real_mount(&options, &[], tempdir.path().to_str().unwrap())
+            .await
+            .unwrap();
+
+        tokio::fs::write(tempdir.path().join("test-file"), b"some data")
+            .await
+            .unwrap();
+
+        bd.umount().await.unwrap();
+    }
+
+    #[cfg(feature = "luks2")]
+    #[tokio::test]
     #[serial]
     async fn encrypt_an_empty_device_using_luks2() {
         let target_device_name = format!(
