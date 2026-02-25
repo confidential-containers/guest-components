@@ -94,7 +94,7 @@ kata-cc-rustls-tls = [
     "signature-simple",
     "kbs",
     "oci-client/rustls-tls",
-    "reqwest?/rustls-tls",
+    "reqwest?/rustls",
 ]
 # This will be based on `openssl` dependency
 kata-cc-native-tls = [
@@ -104,7 +104,7 @@ kata-cc-native-tls = [
     "signature-simple",
     "kbs",
     "oci-client/native-tls",
-    "reqwest?/default-tls",
+    "reqwest?/native-tls",
 ]
 
 encryption = ["ocicrypt-rs/block-cipher"]
@@ -158,7 +158,7 @@ oci-client-rustls = [
 ]
 oci-client-native = ["oci-client/native-tls"]
 
-signature-simple-xrss = ["signature-simple", "dep:reqwest"]
+signature-simple-xrss = ["signature-simple", "reqwest/query"]
 signature-simple = ["signature", "sequoia-openpgp", "serde_yaml"]
 
 # This features controls whether kbs uri scheme is supported in resource location, s.t. `kbs://...`
