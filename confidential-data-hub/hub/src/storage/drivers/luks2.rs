@@ -188,11 +188,18 @@ mod tests {
     const NAME: &str = "test";
 
     /// Removes the LUKS header file on drop so tests don't leave files behind on panic.
-    /// TODO: Similarly, clean dm-crypt devices when a panic occurs.
     struct RemoveHeaderOnDrop(String);
     impl Drop for RemoveHeaderOnDrop {
         fn drop(&mut self) {
             let _ = std::fs::remove_file(&self.0);
+        }
+    }
+
+    /// Closes the dm-crypt device on drop so tests don't leave mapper devices behind.
+    struct CloseDeviceOnDrop(String);
+    impl Drop for CloseDeviceOnDrop {
+        fn drop(&mut self) {
+            let _ = Luks2Formatter::default().close_device(&self.0);
         }
     }
 
@@ -216,8 +223,7 @@ mod tests {
         luks2_formatter
             .open_device(path, None, NAME, passphrase)
             .unwrap();
-
-        luks2_formatter.close_device(NAME).unwrap();
+        let _device_guard = CloseDeviceOnDrop(NAME.to_string());
     }
 
     #[test]
@@ -240,8 +246,7 @@ mod tests {
         luks2_formatter
             .open_device(path, None, NAME, passphrase)
             .unwrap();
-
-        luks2_formatter.close_device(NAME).unwrap();
+        let _device_guard = CloseDeviceOnDrop(NAME.to_string());
     }
 
     #[test]
@@ -266,8 +271,7 @@ mod tests {
         luks2_formatter
             .open_device(path, Some(&header_path), NAME, passphrase)
             .unwrap();
-
-        luks2_formatter.close_device(NAME).unwrap();
+        let _device_guard = CloseDeviceOnDrop(NAME.to_string());
     }
 
     #[test]
@@ -292,8 +296,7 @@ mod tests {
         luks2_formatter
             .open_device(path, Some(&header_path), NAME, passphrase)
             .unwrap();
-
-        luks2_formatter.close_device(NAME).unwrap();
+        let _device_guard = CloseDeviceOnDrop(NAME.to_string());
     }
 
     #[test]
