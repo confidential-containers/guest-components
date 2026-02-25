@@ -59,7 +59,7 @@ aliyun = [
     "hex",
     "p12",
     "rand",
-    "reqwest/rustls-tls",
+    "reqwest/rustls",
     "sha2",
     "tonic",
     "url",

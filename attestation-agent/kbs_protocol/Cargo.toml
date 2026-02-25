@@ -72,7 +72,7 @@ se-attester = ["attester/se-attester"]
 tpm-attester = ["attester/tpm-attester"]
 nvidia-attester = ["attester/nvidia-attester"]
 
-rust-crypto = ["reqwest/rustls-tls", "crypto/rust-crypto"]
+rust-crypto = ["reqwest/rustls", "crypto/rust-crypto"]
 openssl = ["reqwest/native-tls-vendored", "crypto/openssl"]
 
 bin = ["tokio/rt", "tokio/macros", "clap", "tracing-subscriber"]
