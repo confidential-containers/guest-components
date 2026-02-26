@@ -74,4 +74,10 @@ pub enum BlockDeviceError {
 
     #[error("No encryption feature is supported. Please enable feature\n1. 'luks2' to use LUKS2 encryption.")]
     NoEncryptionFeatureEnabled,
+
+    #[error("Error when doing zfs operation: {source}")]
+    ZfsError {
+        #[source]
+        source: anyhow::Error,
+    },
 }
