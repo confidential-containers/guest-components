@@ -219,7 +219,7 @@ impl BlockDevice {
 
         // 2. get key if the parameter is set
         let key = match &parameters.key {
-            Some(key) => get_plaintext_key(&key).await?,
+            Some(key) => get_plaintext_key(key).await?,
             None => {
                 debug!("generate a random key. All data on the device will be overwritten.");
                 Zeroizing::new(random_bytes::<4096>())
@@ -497,8 +497,8 @@ async fn get_device_path(major: u32, minor: u32) -> Result<String> {
     let reader = BufReader::new(file);
     let mut lines = reader.lines();
     while let Ok(Some(line)) = lines.next_line().await {
-        if line.starts_with("DEVNAME=") {
-            return Ok(format!("/dev/{}", &line["DEVNAME=".len()..]));
+        if let Some(line) = line.strip_prefix("DEVNAME=") {
+            return Ok(format!("/dev/{}", line));
         }
     }
     Err(BlockDeviceError::NoDeviceFound { major, minor })
