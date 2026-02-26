@@ -51,7 +51,7 @@ jose-jwa = "0.1.2"
 jose-jwk = "0.1.2"
 jose-jws = "0.1.2"
 kms = { path = "../kms", default-features = false }
-libcryptsetup-rs = { version = "0.13.1", optional = true, features = ["mutex"] }
+libcryptsetup-rs = { version = "0.15.0", optional = true, features = ["mutex"] }
 nix.workspace = true
 p256 = "0.13.2"
 prost = { workspace = true, optional = true }
