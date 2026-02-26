@@ -3,12 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::process::Stdio;
-
 use anyhow::{anyhow, bail, Result};
 use serde::{Deserialize, Serialize};
 use strum::AsRefStr;
-use tokio::process::Command;
+
+use crate::storage::drivers::run_command;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy, AsRefStr)]
 pub enum FsType {
@@ -51,12 +50,12 @@ impl FsFormatter {
     /// ```
     ///
     /// Thus we need to get the block numbers and write to those blocks before hand.
-    pub async fn format_integrity_compatible(&self, device_path: &str) -> Result<()> {
+    pub fn format_integrity_compatible(&self, device_path: &str) -> Result<()> {
         let command = match self.fs_type {
             FsType::Ext4 => "mkfs.ext4",
         };
         let args = vec!["-F", "-n", device_path];
-        let (stdout, stderr) = run_command(command, &args).await?;
+        let (stdout, stderr) = run_command(command, &args, None)?;
 
         // Get the block numbers
         let delimiter = "Superblock backups stored on blocks:";
@@ -96,17 +95,17 @@ impl FsFormatter {
                     "oflag=direct",
                     &format!("seek={num}"),
                 ],
-            )
-            .await?;
+                None,
+            )?;
         }
 
         // then do original format command
-        self.format(device_path).await?;
+        self.format(device_path)?;
 
         Ok(())
     }
 
-    pub async fn format(&self, device_path: &str) -> Result<()> {
+    pub fn format(&self, device_path: &str) -> Result<()> {
         let command = match self.fs_type {
             FsType::Ext4 => "mkfs.ext4",
         };
@@ -119,30 +118,8 @@ impl FsFormatter {
             args.push(arg);
         }
 
-        let _ = run_command(command, &args).await?;
+        let _ = run_command(command, &args, None)?;
 
         Ok(())
     }
-}
-
-/// Run a command and return the stdout and stderr.
-async fn run_command(command: &str, args: &[&str]) -> Result<(String, String)> {
-    let status = Command::new(command)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .kill_on_drop(true)
-        .args(args)
-        .spawn()?;
-
-    let output = status.wait_with_output().await?;
-    let stdout = String::from_utf8_lossy(&output.stdout).replace("\n", "\n\t");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace("\n", "\n\t");
-
-    if !output.status.success() {
-        bail!(
-            "Failed to run command {command} with args: {args:#?}\nstdout: {stdout}\nstderr: {stderr}",
-        );
-    }
-
-    Ok((stdout, stderr))
 }

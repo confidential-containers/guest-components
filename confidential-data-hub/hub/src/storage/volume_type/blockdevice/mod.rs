@@ -321,7 +321,6 @@ impl BlockDevice {
 
                         fs_formatter
                             .format_integrity_compatible(&dev_path)
-                            .await
                             .map_err(|source| BlockDeviceError::MakeFileSystemFailed {
                                 fs: filesystem_type,
                                 device: dev_path.clone(),
