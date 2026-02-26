@@ -5,8 +5,6 @@
 //
 
 //! # BlockDevice SecureStorage
-//!
-//! See [`Action`] for supported actions.
 
 pub mod error;
 
