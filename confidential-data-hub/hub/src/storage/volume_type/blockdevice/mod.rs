@@ -107,6 +107,7 @@ pub enum TargetType {
         /// level encryption_type ([`BlockDeviceEncryptType`]), so this
         /// field will be optional.
         #[serde(rename = "filesystemType")]
+        #[serde(default)]
         filesystem_type: FsType,
 
         /// Extra options passed verbatim to mkfs.<fs> when it is needed.
@@ -312,7 +313,12 @@ impl BlockDevice {
                                     .collect::<Vec<String>>()
                             })
                             .unwrap_or_default();
-                        debug!("formatting device: {}", dev_path);
+                        debug!(
+                            device_path = dev_path,
+                            filesystem_type = ?filesystem_type,
+                            args = ?args,
+                            "formatting device"
+                        );
                         let fs_formatter = FsFormatter {
                             fs_type: filesystem_type,
                             force: true,
