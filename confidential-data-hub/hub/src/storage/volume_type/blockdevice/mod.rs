@@ -20,12 +20,11 @@ use async_trait::async_trait;
 use crypto::rand::random_bytes;
 use error::{BlockDeviceError, Result};
 use kms::{Annotations, ProviderSettings};
-use nix::mount::{mount, MsFlags};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use strum::{Display, EnumString};
 use tokio::{
-    fs::{symlink, File},
+    fs::File,
     io::{AsyncBufReadExt, BufReader},
 };
 use tracing::{debug, info, warn};
@@ -169,6 +168,7 @@ pub struct BlockDevice {
     /// clean up.
     ///
     /// It is (device-path, dev-mapper-name)
+    #[cfg(feature = "luks2")]
     cryptsetup_pairs: Vec<(String, String)>,
 }
 
@@ -212,6 +212,10 @@ impl BlockDevice {
                 data_integrity,
                 mapper_name,
             } => {
+                use crate::storage::drivers::{filesystem::FsFormatter, luks2::Luks2Formatter};
+                use nix::mount::{mount, MsFlags};
+                use tokio::fs::symlink;
+
                 let integrity = data_integrity.map_or(false, |e| e.parse().unwrap_or(false));
                 let formatter = Luks2Formatter::default().with_integrity(integrity);
                 // 3.1 if the source type is empty, encrypt the device and create detached header
@@ -374,8 +378,9 @@ impl BlockDevice {
         }
 
         // 3. close luks2 devices
+        #[cfg(feature = "luks2")]
         for (_, name) in &self.cryptsetup_pairs {
-            let formatter = Luks2Formatter::default();
+            let formatter = crate::storage::drivers::luks2::Luks2Formatter::default();
             formatter
                 .close_device(name)
                 .map_err(|source| BlockDeviceError::Luks2Error { source })?;
@@ -434,10 +439,6 @@ async fn get_device_path(major: u32, minor: u32) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::{io::Write, path::Path};
-
-    use rand::{distr::Alphanumeric, rng, Rng};
-    use rstest::rstest;
     use serial_test::serial;
 
     use super::*;
@@ -464,13 +465,14 @@ mod tests {
 
     #[cfg(feature = "luks2")]
     #[tokio::test]
-    #[rstest]
+    #[rstest::rstest]
     #[serial]
     #[case::integrity("true")]
     #[case::no_integrity("false")]
     async fn encrypt_an_empty_device_and_make_a_filesystem_on_it_using_luks2(
         #[case] integrity: &str,
     ) {
+        use std::io::Write;
         let mut temp_device_file = tempfile::NamedTempFile::new().unwrap();
         temp_device_file
             .as_file_mut()
@@ -553,6 +555,10 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn encrypt_an_empty_device_using_luks2() {
+        use rand::{distr::Alphanumeric, rng, Rng};
+        use std::io::Write;
+        use std::path::Path;
+
         let target_device_name = format!(
             "/dev/{}",
             rng()
