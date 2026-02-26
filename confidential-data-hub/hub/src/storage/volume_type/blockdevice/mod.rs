@@ -12,10 +12,15 @@ use super::SecureMount;
 use crate::{
     secret,
     storage::drivers::{
-        filesystem::{FsFormatter, FsType},
-        luks2::{self, Luks2Formatter},
+        filesystem::FsType,
+        zfs::{
+            create_zdataset, create_zpool, export_zpool, import_zpool, is_zfs_installed, load_key,
+            mount_dataset, DEFAULT_ZDATASET_NAME, DEFAULT_ZPOOL_NAME,
+        },
     },
 };
+
+use anyhow::anyhow;
 use async_trait::async_trait;
 use crypto::rand::random_bytes;
 use error::{BlockDeviceError, Result};
@@ -44,6 +49,18 @@ pub enum BlockDeviceEncryptType {
         /// Optional name for /dev/mapper/<name>
         #[serde(rename = "mapperName")]
         mapper_name: Option<String>,
+    },
+
+    #[strum(serialize = "zfs")]
+    #[serde(rename = "zfs")]
+    Zfs {
+        /// The name of the zpool to use.
+        /// If not set, [`crate::storage::drivers::zfs::DEFAULT_ZPOOL_NAME`] will be used.
+        pool: Option<String>,
+
+        /// The name of the zdataset to use.
+        /// If not set, [`crate::storage::drivers::zfs::DEFAULT_ZDATASET_NAME`] will be used.
+        dataset: Option<String>,
     },
 }
 
@@ -170,6 +187,10 @@ pub struct BlockDevice {
     /// It is (device-path, dev-mapper-name)
     #[cfg(feature = "luks2")]
     cryptsetup_pairs: Vec<(String, String)>,
+
+    /// The zfs pools created by the operation. This is used to
+    /// clean up.
+    zfs_pools: Vec<String>,
 }
 
 impl BlockDevice {
@@ -355,6 +376,47 @@ impl BlockDevice {
                     }
                 }
             }
+            BlockDeviceEncryptType::Zfs { pool, dataset } => {
+                if !is_zfs_installed() {
+                    return Err(BlockDeviceError::ZfsError {
+                        source: anyhow!("zfs is not installed. Please install zfsutils-linux and enable the zfs module in the kernel."),
+                    });
+                }
+                let pool = pool.unwrap_or_else(|| {
+                    warn!("No pool name provided, using default pool name");
+                    DEFAULT_ZPOOL_NAME.to_string()
+                });
+                let dataset = dataset.unwrap_or_else(|| {
+                    warn!("No dataset name provided, using default dataset name");
+                    DEFAULT_ZDATASET_NAME.to_string()
+                });
+
+                if parameters.target_type == TargetType::Device {
+                    return Err(BlockDeviceError::ZfsError {
+                        source: anyhow!("zfs is not supported for device target type."),
+                    });
+                }
+
+                // if the source type is empty, create a new zpool and zdataset
+                if parameters.source_type == SourceType::Empty {
+                    warn!("creating a new zpool and zdataset on the device. This will wipe original data on the disk.");
+                    create_zpool(&pool, &device_path)
+                        .map_err(|source| BlockDeviceError::ZfsError { source })?;
+                    self.zfs_pools.push(pool.clone());
+                    create_zdataset(&pool, &dataset, key.clone(), mount_point)
+                        .map_err(|source| BlockDeviceError::ZfsError { source })?;
+                } else {
+                    // if the source type is encrypted, import the zpool and load the key to the zdataset
+                    info!("importing the zpool and loading the key to the zdataset on the device.");
+                    import_zpool(&pool, &device_path)
+                        .map_err(|source| BlockDeviceError::ZfsError { source })?;
+                    self.zfs_pools.push(pool.clone());
+                    load_key(&pool, &dataset, key.clone())
+                        .map_err(|source| BlockDeviceError::ZfsError { source })?;
+                    mount_dataset(&pool, &dataset, Some(mount_point))
+                        .map_err(|source| BlockDeviceError::ZfsError { source })?;
+                }
+            }
         }
         info!("Target path {} mounted successfully", mount_point);
         Ok(())
@@ -384,6 +446,11 @@ impl BlockDevice {
             formatter
                 .close_device(name)
                 .map_err(|source| BlockDeviceError::Luks2Error { source })?;
+        }
+
+        // 4. export zfs pools. This will release the zpool from the current machine.
+        for pool in &self.zfs_pools {
+            export_zpool(pool).map_err(|source| BlockDeviceError::ZfsError { source })?;
         }
 
         Ok(())
@@ -440,6 +507,13 @@ async fn get_device_path(major: u32, minor: u32) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
+    use tempfile::TempDir;
+    use tracing::warn;
+
+    use crate::storage::{
+        drivers::{zfs::is_zfs_installed, TempFileLoopDevice},
+        tests::init_tracing,
+    };
 
     use super::*;
 
@@ -684,7 +758,69 @@ mod tests {
         if !Path::new(&target_device_name).exists() {
             panic!("target device not exist");
         }
+        bd.umount().await.unwrap();
+    }
 
+    #[tokio::test]
+    #[serial]
+    async fn encrypt_an_empty_device_using_zfs() {
+        init_tracing();
+        if !is_zfs_installed() {
+            warn!("zfs is not installed. Skipping zfs flow test.");
+            return;
+        }
+
+        let pool_name = "pool1";
+        let dataset_name = "dataset1";
+
+        let mut bd = BlockDevice::default();
+        let temp_device = TempFileLoopDevice::new(200 * 1024 * 1024).unwrap();
+        let device_path = temp_device.dev_path();
+        let options = HashMap::from([
+            ("sourceType".to_string(), "empty".to_string()),
+            ("devicePath".to_string(), device_path.to_string()),
+            ("encryptionType".to_string(), "zfs".to_string()),
+            (
+                "key".to_string(),
+                "file://./test_files/zfs-disk-passphrase".to_string(),
+            ),
+            ("pool".to_string(), pool_name.to_string()),
+            ("dataset".to_string(), dataset_name.to_string()),
+        ]);
+
+        let mount_point = TempDir::new().unwrap();
+        let mount_point_path = mount_point.path().to_str().unwrap();
+        bd.real_mount(&options, &[], mount_point_path)
+            .await
+            .unwrap();
+        // Try to write a file in the directory
+        tokio::fs::write(mount_point.path().join("test-file"), b"some data")
+            .await
+            .unwrap();
+
+        bd.umount().await.unwrap();
+
+        let mut bd = BlockDevice::default();
+        let options = HashMap::from([
+            ("sourceType".to_string(), "encrypted".to_string()),
+            ("targetType".to_string(), "fileSystem".to_string()),
+            ("devicePath".to_string(), device_path.to_string()),
+            ("encryptionType".to_string(), "zfs".to_string()),
+            (
+                "key".to_string(),
+                "file://./test_files/zfs-disk-passphrase".to_string(),
+            ),
+            ("pool".to_string(), pool_name.to_string()),
+            ("dataset".to_string(), dataset_name.to_string()),
+        ]);
+        bd.real_mount(&options, &[], mount_point_path)
+            .await
+            .unwrap();
+        assert!(mount_point.path().join("test-file").exists());
+        let content = tokio::fs::read_to_string(mount_point.path().join("test-file"))
+            .await
+            .unwrap();
+        assert_eq!(content, "some data");
         bd.umount().await.unwrap();
     }
 }
