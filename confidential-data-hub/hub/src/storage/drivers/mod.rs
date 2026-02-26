@@ -7,11 +7,16 @@ use std::{
     io::Write,
     process::{Command, Stdio},
 };
+
+use anyhow::{anyhow, bail, Result};
+use tempfile::NamedTempFile;
 use tracing::debug;
 
 pub mod filesystem;
 #[cfg(feature = "luks2")]
 pub mod luks2;
+pub mod zfs;
+
 /// Run a command and return the stdout and stderr.
 pub fn run_command(
     command: &str,
@@ -51,3 +56,39 @@ pub fn run_command(
     Ok((stdout, stderr))
 }
 
+/// A wrapper for the loop device backed by a temporary file.
+pub struct TempFileLoopDevice {
+    _file: NamedTempFile,
+    loop_path: String,
+}
+
+impl TempFileLoopDevice {
+    /// Create a new loop device.
+    pub fn new(size_bytes: u64) -> Result<Self> {
+        let file = NamedTempFile::new()?;
+        file.as_file().set_len(size_bytes)?;
+
+        let path = file
+            .path()
+            .to_str()
+            .ok_or_else(|| anyhow!("failed to get path of the temporary file"))?;
+        let (stdout, _) = run_command("losetup", &["--find", "--show", path], None)?;
+
+        let loop_path = stdout.trim().to_string();
+
+        Ok(Self {
+            _file: file,
+            loop_path,
+        })
+    }
+
+    pub fn dev_path(&self) -> &str {
+        &self.loop_path
+    }
+}
+
+impl Drop for TempFileLoopDevice {
+    fn drop(&mut self) {
+        let _ = run_command("losetup", &["-d", self.loop_path.as_str()], None).unwrap();
+    }
+}
