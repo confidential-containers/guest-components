@@ -9,7 +9,7 @@ use strum::AsRefStr;
 
 use crate::storage::drivers::run_command;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy, AsRefStr, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Copy, AsRefStr, Default)]
 pub enum FsType {
     #[strum(serialize = "ext4")]
     #[serde(rename = "ext4")]
