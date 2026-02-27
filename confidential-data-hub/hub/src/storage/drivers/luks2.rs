@@ -12,7 +12,7 @@
 
 use std::path::Path;
 
-use anyhow::Context;
+use anyhow::{Context, Result};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD as b64, Engine};
 use const_format::concatcp;
 
@@ -20,8 +20,14 @@ use crate::hub::CDH_BASE_DIR;
 use libcryptsetup_rs::consts::flags::{CryptActivate, CryptDeactivate, CryptVolumeKey};
 use libcryptsetup_rs::consts::vals::EncryptionFormat;
 use libcryptsetup_rs::{CryptInit, CryptParamsLuks2, CryptParamsLuks2Ref};
-use tracing::debug;
+use nix::mount::{mount, MsFlags};
+use serde::{Deserialize, Serialize};
+use tokio::fs::symlink;
+use tracing::{debug, info, warn};
 use zeroize::Zeroizing;
+
+use crate::storage::drivers::filesystem::{FsFormatter, FsType};
+use crate::storage::volume_type::blockdevice::SourceType;
 
 /// Algorithm of the integrity hash
 const HMAC_SHA256: &str = "hmac(sha256)";
@@ -60,6 +66,31 @@ pub fn prepare_luks_header_file(header_path: &str) -> std::io::Result<()> {
     // error "Device ... is too small" / OS error 5" from libcryptsetup if header isn't sized.
     file.set_len(LUKS2_HEADER_MIN_SIZE_BYTES)?;
     Ok(())
+}
+
+/// The type of the target mount point.
+#[derive(Serialize, Deserialize, PartialEq, Debug, Eq)]
+#[serde(tag = "targetType")]
+#[serde(rename_all = "camelCase")]
+pub enum TargetType {
+    /// The target is a device.
+    Device,
+
+    /// The target is a filesystem directory.
+    FileSystem {
+        /// The type of the target filesystem.
+        /// In some cases, the filesystem type is determined by the higher
+        /// level encryption_type ([`BlockDeviceEncryptType`]), so this
+        /// field will be optional.
+        #[serde(rename = "filesystemType")]
+        #[serde(default)]
+        filesystem_type: FsType,
+
+        /// Extra options passed verbatim to mkfs.<fs> when it is needed.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[serde(rename = "mkfsOpts")]
+        mkfs_opts: Option<String>,
+    },
 }
 
 #[derive(Default)]
@@ -173,6 +204,166 @@ fn init_device(
     };
 
     Ok(CryptInit::init_with_data_device(device_paths)?)
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub struct Luks2MountParameters {
+    /// Indicates whether to enable dm-integrity.
+    #[serde(rename = "dataIntegrity")]
+    #[serde(default)]
+    pub data_integrity: Option<String>,
+
+    /// Optional name for /dev/mapper/<name>
+    #[serde(rename = "mapperName")]
+    pub mapper_name: Option<String>,
+
+    /// The type of the target mount point.
+    /// Either `device` or `fileSystem`.
+    #[serde(rename = "targetType")]
+    #[serde(flatten)]
+    pub target_type: TargetType,
+}
+
+impl Luks2MountParameters {
+    /// Do the mount operation for the LUKS2 device.
+    /// Returns the header path if the source type is empty.
+    pub async fn do_mount(
+        self,
+        device_path: &str,
+        mount_point: &str,
+        key: Zeroizing<Vec<u8>>,
+        source_type: SourceType,
+    ) -> Result<Option<String>> {
+        let data_integrity = self.data_integrity.map(|s| s == "true").unwrap_or(false);
+        let formatter = Luks2Formatter::default().with_integrity(data_integrity);
+        // 3.1 if the source type is empty, encrypt the device and create detached header
+        let header_path = if source_type == SourceType::Empty {
+            warn!("encrypting the device. This will wipe original data on the disk.");
+            let header_path = luks_header_path(device_path);
+            prepare_luks_header_file(&header_path)?;
+            formatter
+                .encrypt_device(device_path, Some(&header_path), key.clone())
+                .context("Failed to encrypt LUKS2 device")?;
+            Some(header_path)
+        } else {
+            None
+        };
+
+        let devmapper_name = self.mapper_name.unwrap_or_else(|| {
+            debug!("No mapper name provided, generating a random one");
+            uuid::Uuid::new_v4().to_string()
+        });
+
+        debug!(device_path = device_path, "luks2 opening device");
+        formatter
+            .open_device(device_path, header_path.as_deref(), &devmapper_name, key)
+            .context("Failed to open LUKS2 device")?;
+
+        let dev_path = format!("/dev/mapper/{}", devmapper_name);
+        match (self.target_type, source_type) {
+            // 3.2 if the target type is device, do the symlink operation to map
+            // the device path to the mount point.
+            (TargetType::Device, _) => {
+                info!(
+                    "symlinking device: {} to mount point: {}",
+                    dev_path, mount_point
+                );
+                symlink(&dev_path, mount_point).await.with_context(|| {
+                    format!(
+                        "Failed to create symlink from {} to {}",
+                        dev_path, mount_point
+                    )
+                })?;
+                debug!(mount_point = mount_point, "created symlink");
+            }
+            // 3.3 if the source type is encrypted, meaning that there is
+            // already a filesystem on the device, so we just need to mount it to the mount point.
+            (
+                TargetType::FileSystem {
+                    filesystem_type, ..
+                },
+                SourceType::Encrypted,
+            ) => {
+                info!(
+                    "mounting device: {} to mount point: {}",
+                    dev_path, mount_point
+                );
+                mount::<_, _, str, _>(
+                    Some(&dev_path[..]),
+                    mount_point,
+                    Some(filesystem_type.as_ref()),
+                    MsFlags::MS_NOATIME,
+                    Some(""),
+                )
+                .with_context(|| {
+                    format!(
+                        "Failed to mount device {} to mount point {}",
+                        dev_path, mount_point
+                    )
+                })?;
+
+                debug!(mount_point = mount_point, "mounted device");
+            }
+            // 3.4 if the source type is empty, meaning that we should also make
+            // a filesystem on the device.
+            (
+                TargetType::FileSystem {
+                    filesystem_type,
+                    mkfs_opts,
+                },
+                SourceType::Empty,
+            ) => {
+                info!(
+                    "formatting device: {} and mounting it to mount point: {}",
+                    dev_path, mount_point
+                );
+                let args = mkfs_opts
+                    .map(|s| {
+                        s.split_ascii_whitespace()
+                            .map(|x| x.to_string())
+                            .collect::<Vec<String>>()
+                    })
+                    .unwrap_or_default();
+                debug!(
+                    device_path = dev_path,
+                    filesystem_type = ?filesystem_type,
+                    args = ?args,
+                    "formatting device"
+                );
+                let fs_formatter = FsFormatter {
+                    fs_type: filesystem_type,
+                    force: true,
+                    args,
+                };
+
+                fs_formatter
+                    .format_integrity_compatible(&dev_path)
+                    .with_context(|| {
+                        format!(
+                            "Failed to make filesystem {:?} of device {}",
+                            filesystem_type, dev_path
+                        )
+                    })?;
+
+                debug!(device_path = dev_path, "mounting device");
+                mount(
+                    Some(&dev_path[..]),
+                    mount_point,
+                    Some(filesystem_type.as_ref()),
+                    MsFlags::MS_NOATIME,
+                    Some(""),
+                )
+                .with_context(|| {
+                    format!(
+                        "Failed to mount device {} to mount point {}",
+                        dev_path, mount_point
+                    )
+                })?;
+                debug!(mount_point = mount_point, "mounted device");
+            }
+        }
+        Ok(header_path)
+    }
 }
 
 #[cfg(test)]
