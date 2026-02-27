@@ -15,6 +15,7 @@ TARGET_DIR := ../target
 BIN_NAME := confidential-data-hub
 
 ONE_SHOT ?= false
+GUEST_SERVICES ?= false
 
 SOURCE_ARCH := $(shell uname -m)
 RPC ?= ttrpc
@@ -43,6 +44,10 @@ ifeq ($(ONE_SHOT), true)
     binary = --bin cdh-oneshot
     features += bin
     binary_name = cdh-oneshot
+else ifeq ($(GUEST_SERVICES), true)
+    binary = --bin guest-services
+    features += bin,ttrpc
+    binary_name = guest-services
 else ifeq ($(RPC), ttrpc)
     binary = --bin ttrpc-cdh
     features += bin,ttrpc
