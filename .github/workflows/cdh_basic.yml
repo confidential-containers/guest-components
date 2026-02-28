@@ -55,9 +55,9 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Install cryptsetup
+      - name: Install cryptsetup and zfs
         run: |
-          sudo apt-get update && sudo apt-get install -y libcryptsetup-dev pkg-config
+          sudo apt-get update && sudo apt-get install -y libcryptsetup-dev pkg-config zfsutils-linux
 
       - name: Build and install
         run: |
@@ -72,4 +72,4 @@ jobs:
 
       - name: Run cargo test
         run: |
-          sudo -E PATH=$PATH -s cargo test --features kbs,aliyun,sev,bin,luks2 -p kms -p confidential-data-hub
+          sudo -E PATH=$PATH -s RUST_LOG=warn cargo test --features kbs,aliyun,sev,bin,luks2 -p kms -p confidential-data-hub -- --nocapture
