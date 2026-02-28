@@ -6,7 +6,7 @@
 use clap::Parser;
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{Method, Server};
+use hyper::Server;
 use shadow_rs::shadow;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -15,14 +15,14 @@ use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 shadow!(build);
 
-mod aa;
-mod cdh;
+mod client;
 mod router;
 mod utils;
 
-use aa::{AAClient, AA_ROOT};
-use cdh::{CDHClient, CDH_ROOT};
 use router::Router;
+
+use crate::client::aa::AAClient;
+use crate::client::cdh::CDHClient;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
 type Result<T> = std::result::Result<T, GenericError>;
@@ -34,9 +34,11 @@ const CDH_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
 const AA_ADDR: &str =
     "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock";
 
+const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/guest_components_version"));
+
 /// API Server arguments info.
 #[derive(Parser, Debug)]
-#[command(author, about, long_about = None)]
+#[command(author, version = Some(VERSION), about, long_about = None)]
 struct Args {
     /// Bind address for API Server
     #[arg(default_value_t = DEFAULT_BIND.to_string(), short, long = "bind")]
@@ -73,40 +75,19 @@ async fn main() -> Result<()> {
 
     let address: SocketAddr = args.bind.parse().expect("Failed to parse the address");
 
-    let mut router = Router::new();
-
-    match args.features.as_str() {
-        "resource" => {
-            router.register_route(
-                CDH_ROOT,
-                Box::new(CDHClient::new(&args.cdh_addr, vec![Method::GET]).await?),
-            );
-        }
-
-        "attestation" => {
-            router.register_route(
-                AA_ROOT,
-                Box::new(AAClient::new(&args.aa_addr, vec![Method::GET, Method::POST]).await?),
-            );
-        }
-
-        "all" => {
-            router.register_route(
-                CDH_ROOT,
-                Box::new(CDHClient::new(&args.cdh_addr, vec![Method::GET]).await?),
-            );
-
-            router.register_route(
-                AA_ROOT,
-                Box::new(AAClient::new(&args.aa_addr, vec![Method::GET, Method::POST]).await?),
-            );
-        }
-
+    let (aa_client, cdh_client) = match args.features.as_str() {
+        "resource" => (None, Some(CDHClient::new(&args.cdh_addr).await?)),
+        "attestation" => (Some(AAClient::new(&args.aa_addr).await?), None),
+        "all" => (
+            Some(AAClient::new(&args.aa_addr).await?),
+            Some(CDHClient::new(&args.cdh_addr).await?),
+        ),
         _ => {
             error!("Unknown features. Supported features are: resource, attestation, all.");
             std::process::exit(1);
         }
-    }
+    };
+    let router = Router::new(aa_client, cdh_client, args.features);
 
     let router = Arc::new(tokio::sync::Mutex::new(router));
 
