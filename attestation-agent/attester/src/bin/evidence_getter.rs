@@ -7,6 +7,7 @@ use attester::{detect_attestable_devices, detect_tee_type, BoxedAttester};
 use clap::Parser;
 use std::io::Read;
 use tokio::fs;
+use tracing_subscriber::{fmt, EnvFilter};
 
 #[derive(Debug, Parser)]
 #[command(author)]
@@ -25,7 +26,16 @@ enum Cli {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    env_logger::init();
+    let env_filter = match std::env::var_os("RUST_LOG") {
+        Some(_) => EnvFilter::try_from_default_env().expect("RUST_LOG is present but invalid"),
+        None => EnvFilter::new("info"),
+    };
+
+    fmt()
+        .with_env_filter(env_filter)
+        .with_writer(std::io::stderr)
+        .init();
+
     // report_data on all platforms is 64 bytes length.
     let mut report_data = vec![0u8; 64];
 
