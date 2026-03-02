@@ -34,9 +34,11 @@ const CDH_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
 const AA_ADDR: &str =
     "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock";
 
+const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/guest_components_version"));
+
 /// API Server arguments info.
 #[derive(Parser, Debug)]
-#[command(author, about, long_about = None)]
+#[command(author, version = Some(VERSION), about, long_about = None)]
 struct Args {
     /// Bind address for API Server
     #[arg(default_value_t = DEFAULT_BIND.to_string(), short, long = "bind")]
