@@ -28,6 +28,10 @@ name = "cdh-oneshot"
 required-features = ["bin"]
 
 [[bin]]
+name = "guest-services"
+required-features = ["bin", "ttrpc"]
+
+[[bin]]
 name = "secret"
 path = "src/bin/secret_cli.rs"
 required-features = ["cli"]
