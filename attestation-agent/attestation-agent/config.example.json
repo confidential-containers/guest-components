@@ -11,5 +11,8 @@
     "eventlog_config": {
         "init_pcr": 17,
         "enable_eventlog": false
+    },
+    "log": {
+        "level": "info"
     }
 }
