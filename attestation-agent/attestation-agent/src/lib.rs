@@ -21,7 +21,7 @@ pub mod token;
 
 use eventlog::EventLog;
 use token::*;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::{config::Config, eventlog::Event};
 
@@ -55,9 +55,10 @@ pub enum RuntimeMeasurement {
 /// ```no_run
 /// use attestation_agent::AttestationAgent;
 /// use attestation_agent::AttestationAPIs;
+/// use attestation_agent::config::Config;
 ///
 /// // initialize with empty config
-/// let mut aa = AttestationAgent::new(None).unwrap();
+/// let mut aa = AttestationAgent::new(Config::default()).unwrap();
 ///
 /// let _quote = aa.get_evidence(&[0;64]);
 /// ```
@@ -123,18 +124,7 @@ impl AttestationAgent {
     }
 
     /// Create a new instance of [AttestationAgent].
-    pub fn new(config_path: Option<&str>) -> Result<Self> {
-        let config = match config_path {
-            Some(config_path) => {
-                info!("Using AA config file: {config_path}");
-                Config::try_from(config_path)?
-            }
-            None => {
-                warn!("No AA config file specified. Using a default configuration and the kbs address will be read from kernel cmdline.");
-                Config::default_with_kernel_cmdline()
-            }
-        };
-        debug!("Using config: {config:#?}");
+    pub fn new(config: Config) -> Result<Self> {
         let config = RwLock::new(config);
 
         let primary_tee = detect_tee_type();

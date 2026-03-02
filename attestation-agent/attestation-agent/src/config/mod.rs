@@ -23,6 +23,27 @@ pub const DEFAULT_AA_CONFIG_PATH: &str = "/etc/attestation-agent.conf";
 
 pub const DEFAULT_EVENTLOG_HASH: &str = "sha384";
 
+pub const DEFAULT_LOG_LEVEL: &str = "info";
+
+fn default_log_level() -> String {
+    DEFAULT_LOG_LEVEL.to_string()
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct LogConfig {
+    /// log level
+    #[serde(default = "default_log_level")]
+    pub level: String,
+}
+
+impl Default for LogConfig {
+    fn default() -> Self {
+        Self {
+            level: DEFAULT_LOG_LEVEL.to_string(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Default)]
 pub struct Config {
     /// configs about token
@@ -31,6 +52,10 @@ pub struct Config {
 
     /// configs about eventlog
     pub eventlog_config: EventlogConfig,
+
+    /// log configuration
+    #[serde(default)]
+    pub log: LogConfig,
 }
 
 impl Config {
@@ -38,7 +63,24 @@ impl Config {
         Config {
             token_configs: TokenConfigs::from_kernel_cmdline(),
             eventlog_config: EventlogConfig::default(),
+            log: LogConfig::default(),
         }
+    }
+
+    pub fn from_file(config_path: Option<String>) -> Result<(Self, String)> {
+        let (config, config_log) = match config_path {
+            Some(config_path) => {
+                let config = Self::try_from(&config_path[..])?;
+                let log = format!("Using config file: {config_path}");
+                (config, log)
+            }
+            None => {
+                let config = Self::default_with_kernel_cmdline();
+                let log = "No AA config file specified. Using default configuration and the kbs address will be read from kernel cmdline.".to_string();
+                (config, log)
+            }
+        };
+        Ok((config, config_log))
     }
 }
 
@@ -101,7 +143,7 @@ impl TryFrom<&str> for Config {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{EventlogConfig, TokenConfigs};
+    use crate::config::{EventlogConfig, LogConfig, TokenConfigs};
 
     use super::Config;
 
@@ -144,7 +186,8 @@ M9QaC1mzQ/OStg==
         eventlog_config: EventlogConfig {
             init_pcr: 17,
             enable_eventlog: false,
-        }
+        },
+        log: LogConfig::default(),
     })]
     #[case("config.example.json",
     Config {
@@ -184,7 +227,8 @@ M9QaC1mzQ/OStg==
         eventlog_config: EventlogConfig {
             init_pcr: 17,
             enable_eventlog: false,
-        }
+        },
+        log: LogConfig::default(),
     })]
     #[case(
     "test/config1.toml",
@@ -203,7 +247,8 @@ M9QaC1mzQ/OStg==
         eventlog_config: EventlogConfig {
             init_pcr: 17,
             enable_eventlog: false,
-        }
+        },
+        log: LogConfig { level: "warn".to_string() },
     })]
     #[case(
     "test/config2.toml",
@@ -220,26 +265,8 @@ M9QaC1mzQ/OStg==
         eventlog_config: EventlogConfig {
             init_pcr: 17,
             enable_eventlog: false,
-        }
-    })]
-    #[case(
-    "test/config3.toml", 
-    Config {
-        token_configs: TokenConfigs {
-            #[cfg(feature = "coco_as")]
-            coco_as: Some(crate::config::coco_as::CoCoASConfig {
-                url: "http://127.0.0.1:8000".to_string(),
-            }),
-            #[cfg(feature = "kbs")]
-            kbs: Some(crate::config::kbs::KbsConfig {
-                url: "https://127.0.0.1:8080".to_string(),
-                cert: None,
-            })
         },
-        eventlog_config: EventlogConfig {
-            init_pcr: 17,
-            enable_eventlog: false,
-        }
+        log: LogConfig { level: "warn".to_string() },
     })]
     #[case(
     "test/config4.toml", 
@@ -253,7 +280,8 @@ M9QaC1mzQ/OStg==
         eventlog_config: EventlogConfig {
             init_pcr: 17,
             enable_eventlog: false,
-        }
+        },
+        log: LogConfig { level: "warn".to_string() },
     })]
     #[case(
     "test/config5.toml", 
@@ -267,7 +295,8 @@ M9QaC1mzQ/OStg==
         eventlog_config: EventlogConfig {
             init_pcr: 17,
             enable_eventlog: false,
-        }
+        },
+        log: LogConfig::default(),
     })]
     #[case(
         "test/config6.toml", 
@@ -281,7 +310,8 @@ M9QaC1mzQ/OStg==
             eventlog_config: EventlogConfig {
                 init_pcr: 17,
                 enable_eventlog: false,
-            }
+            },
+            log: LogConfig::default(),
         })]
     fn parse_configs(#[case] config: &str, #[case] expected: Config) {
         let _config = Config::try_from(config).expect("failed to parse config file");

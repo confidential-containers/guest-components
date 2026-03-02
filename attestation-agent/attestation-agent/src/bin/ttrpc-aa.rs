@@ -4,7 +4,7 @@
 //
 
 use anyhow::*;
-use attestation_agent::{initdata::Initdata, AttestationAPIs, AttestationAgent};
+use attestation_agent::{config::Config, initdata::Initdata, AttestationAPIs, AttestationAgent};
 use base64::Engine;
 use clap::Parser;
 use const_format::concatcp;
@@ -87,9 +87,14 @@ pub fn start_ttrpc_service(aa: AttestationAgent) -> Result<HashMap<String, Servi
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    let (config, config_log) = Config::from_file(cli.config_file)?;
+
     let env_filter = match std::env::var_os("RUST_LOG") {
-        Some(_) => EnvFilter::try_from_default_env().expect("RUST_LOG is present but invalid"),
-        None => EnvFilter::new("info"),
+        Some(_) => EnvFilter::try_from_default_env().context("RUST_LOG is present but invalid")?,
+        None => EnvFilter::try_new(&config.log.level)
+            .context(format!("Invalid log level: {}", config.log.level))?,
     };
 
     let version = format!(
@@ -116,7 +121,9 @@ rpc: ttrpc
     Subscriber::builder().with_env_filter(env_filter).init();
 
     info!("Welcome to Confidential Containers Attestation Agent (ttRPC version)!\n\n{version}");
-    let cli = Cli::parse();
+
+    info!("{config_log}");
+    debug!(config = ?config, "Using config");
 
     if !Path::new(DEFAULT_UNIX_SOCKET_DIR).exists() {
         std::fs::create_dir_all(DEFAULT_UNIX_SOCKET_DIR).expect("Create unix socket dir failed");
@@ -125,7 +132,7 @@ rpc: ttrpc
     clean_previous_sock_file(&cli.attestation_sock)
         .context("clean previous attestation socket file")?;
 
-    let mut aa = AttestationAgent::new(cli.config_file.as_deref()).context("start AA")?;
+    let mut aa = AttestationAgent::new(config).context("start AA")?;
 
     let mut initdata_digest = None;
     if let Some(initdata_toml_path) = cli.initdata_toml {

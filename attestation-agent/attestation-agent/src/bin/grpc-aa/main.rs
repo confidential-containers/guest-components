@@ -6,7 +6,7 @@
 mod server;
 
 use anyhow::*;
-use attestation_agent::{initdata::Initdata, AttestationAPIs, AttestationAgent};
+use attestation_agent::{config::Config, initdata::Initdata, AttestationAPIs, AttestationAgent};
 use base64::Engine;
 use clap::Parser;
 use shadow_rs::shadow;
@@ -69,9 +69,13 @@ struct Cli {
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
+    let cli = Cli::parse();
+    let (config, config_log) = Config::from_file(cli.config_file)?;
+
     let env_filter = match std::env::var_os("RUST_LOG") {
-        Some(_) => EnvFilter::try_from_default_env().expect("RUST_LOG is present but invalid"),
-        None => EnvFilter::new("info"),
+        Some(_) => EnvFilter::try_from_default_env().context("RUST_LOG is present but invalid")?,
+        None => EnvFilter::try_new(&config.log.level)
+            .context(format!("Invalid log level: {}", config.log.level))?,
     };
 
     let version = format!(
@@ -98,11 +102,12 @@ rpc: grpc
     Subscriber::builder().with_env_filter(env_filter).init();
 
     info!("Welcome to Confidential Containers Attestation Agent (gRPC version)!\n\n{version}");
-    let cli = Cli::parse();
+    info!("{config_log}");
+    debug!(config = ?config, "Using config");
 
     let attestation_socket = cli.attestation_sock.parse::<SocketAddr>()?;
 
-    let mut aa = AttestationAgent::new(cli.config_file.as_deref()).context("start AA")?;
+    let mut aa = AttestationAgent::new(config).context("start AA")?;
 
     let mut initdata_digest = None;
     if let Some(initdata_toml_path) = cli.initdata_toml {
