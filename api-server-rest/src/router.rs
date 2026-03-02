@@ -16,20 +16,26 @@ use crate::client::{
     cdh::{CDHClient, CDH_RESOURCE_URL, CDH_ROOT},
 };
 use crate::utils::split_nth_slash;
+use crate::VERSION;
 
 pub struct Router {
     aa_client: Option<AAClient>,
     cdh_client: Option<CDHClient>,
+    version: String,
+    feature: String,
 }
 
 impl Router {
     pub fn new(
         aa_client: Option<AAClient>,
         cdh_client: Option<CDHClient>,
+        feature: String,
     ) -> Self {
         Self {
             aa_client,
             cdh_client,
+            version: VERSION.trim_ascii_end().to_string(),
+            feature,
         }
     }
 
@@ -101,6 +107,40 @@ impl Router {
             .query()
             .map(|v| form_urlencoded::parse(v.as_bytes()).into_owned().collect())
             .unwrap_or_default();
+        // First, handle the version request
+        if path == "/info" {
+            #[derive(Serialize)]
+            struct VersionInfo {
+                version: String,
+                #[serde(skip_serializing_if = "Option::is_none")]
+                tee: Option<String>,
+                #[serde(skip_serializing_if = "Vec::is_empty")]
+                additional_tees: Vec<String>,
+                feature: String,
+            }
+
+            if method != Method::GET {
+                return self.not_allowed();
+            }
+            let (tee, additional_tees) = match &self.aa_client {
+                Some(client) => {
+                    let tee = client.get_tee_type().await?;
+                    let additional_tees = client.get_additional_tees().await?;
+                    (Some(tee), additional_tees)
+                }
+                None => (None, vec![]),
+            };
+            let version_info = VersionInfo {
+                version: self.version.clone(),
+                tee,
+                additional_tees,
+                feature: self.feature.clone(),
+            };
+            let version_info = serde_json::to_string(&version_info)?;
+            return self.json_response(version_info);
+        }
+
+        // Then, handle the other requests
         if let Some((root_path, url_path)) = split_nth_slash(path, 2) {
             debug!("root_path {root_path}, url_path {url_path}");
             match root_path {
