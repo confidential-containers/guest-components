@@ -459,9 +459,26 @@ mod test {
         .await
         .expect("run kbs failed");
 
-        tokio::time::sleep(Duration::from_secs(10)).await;
         let port = kbs.get_host_port_ipv4(8085).await.expect("get port");
         let kbs_host_url = format!("http://127.0.0.1:{port}");
+
+        // Poll until the KBS HTTP server is ready to accept connections
+        let http_client = reqwest::Client::new();
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(60);
+        loop {
+            if tokio::time::Instant::now() >= deadline {
+                panic!("KBS did not become ready within 60 seconds");
+            }
+            if http_client
+                .get(format!("{kbs_host_url}/kbs/v0/auth"))
+                .send()
+                .await
+                .is_ok()
+            {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
 
         let evidence_provider = Box::new(NativeEvidenceProvider::new().unwrap());
         let mut client = KbsClientBuilder::with_evidence_provider(evidence_provider, &kbs_host_url)
