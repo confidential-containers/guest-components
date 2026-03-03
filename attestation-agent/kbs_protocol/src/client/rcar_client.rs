@@ -384,7 +384,7 @@ mod test {
     use kbs_types::HashAlgorithm;
     use rstest::rstest;
     use serde_json::{json, Value};
-    use std::{env, path::PathBuf};
+    use std::{env, path::PathBuf, time::Duration};
     use testcontainers::{
         core::{IntoContainerPort, Mount, WaitFor},
         runners::AsyncRunner,
@@ -456,6 +456,7 @@ mod test {
             "/opa/confidential-containers/kbs/policy.rego",
         ))
         .with_cmd(vec!["/usr/local/bin/start_kbs.sh"])
+        .with_startup_timeout(Duration::from_secs(60))
         .start()
         .await
         .expect("run kbs failed");
