@@ -128,7 +128,7 @@ subproject.
 It's unlikely that local development will happen in a TEE that is able to produce genuine
 attestation evidence. Therefore there are "sample" and a "sample-device" attester/verifier
 pairs that can be used as dummy stubs for testing end-to-end flow in local development and
-testing. We should be aware that there is a risk that that these dummy implementations are
+testing. We should be aware that there is a risk that that these dummy implementations and
 their evidence are accidentally used in production. We should make sure that in presence of
 real TEE, we don't default or fallback to sample evidence.
 
