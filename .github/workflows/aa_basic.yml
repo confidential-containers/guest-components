@@ -26,6 +26,11 @@ jobs:
   basic_ci:
     if: github.event_name != 'push'
     name: Check
+    env:
+      NVAT_USE_SYSTEM_LIB: "1"
+      CFLAGS: "-I/usr/local/include"
+      RUSTFLAGS: "-L /usr/local/lib"
+      LD_LIBRARY_PATH: "/usr/local/lib"
     defaults:
       run:
         working-directory: ./attestation-agent
@@ -74,10 +79,23 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libdevmapper-dev
 
+      - name: Install NVAT dependencies
+        run: |
+          sudo apt-get install cmake
+          tmpdir=$(mktemp -d)
+          cd "$tmpdir"
+          git clone https://github.com/NVIDIA/attestation-sdk
+          cd attestation-sdk/nv-attestation-sdk-cpp
+          cmake .
+          sudo make install
+          sudo ln -s /usr/local/include/nvat.h /usr/include/nvat.h
+          sudo ldconfig
+        if: matrix.instance == 'ubuntu-24.04'
+
       - name: Gnu build and install with ttrpc
         run: |
           mkdir -p ${HOME}/.local/bin
-          eval make ttrpc=true ${MAKE_ARGS} && make install PREFIX=${HOME}/.local
+          make ttrpc=true ${MAKE_ARGS} && make install PREFIX=${HOME}/.local
         env:
           MAKE_ARGS: ${{ matrix.make_args }}
 
