@@ -6,8 +6,12 @@
 use anyhow::{anyhow, bail, Result};
 use serde::{Deserialize, Serialize};
 use strum::AsRefStr;
+use tracing::warn;
 
 use crate::storage::drivers::run_command;
+
+const EXT4_COMMAND: &str = "mkfs.ext4";
+const DD_COMMAND: &str = "dd";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Copy, AsRefStr, Default)]
 pub enum FsType {
@@ -53,8 +57,18 @@ impl FsFormatter {
     /// Thus we need to get the block numbers and write to those blocks before hand.
     pub fn format_integrity_compatible(&self, device_path: &str) -> Result<()> {
         let command = match self.fs_type {
-            FsType::Ext4 => "mkfs.ext4",
+            FsType::Ext4 => {
+                if !is_ext4_installed() {
+                    bail!("ext4 is not installed. Consider installing `e2fsprogs` (ubuntu).");
+                }
+                EXT4_COMMAND
+            }
         };
+
+        if !is_dd_installed() {
+            bail!("dd is not installed. Consider installing `coreutils` (ubuntu).");
+        }
+
         let args = vec!["-F", "-n", device_path];
         let (stdout, stderr) = run_command(command, &args, None)?;
 
@@ -87,7 +101,7 @@ impl FsFormatter {
 
         for num in nums {
             let _ = run_command(
-                "dd",
+                DD_COMMAND,
                 &[
                     "if=/dev/zero",
                     &format!("of={device_path}"),
@@ -108,7 +122,12 @@ impl FsFormatter {
 
     pub fn format(&self, device_path: &str) -> Result<()> {
         let command = match self.fs_type {
-            FsType::Ext4 => "mkfs.ext4",
+            FsType::Ext4 => {
+                if !is_ext4_installed() {
+                    bail!("ext4 is not installed. Consider installing `e2fsprogs` (ubuntu).");
+                }
+                EXT4_COMMAND
+            }
         };
 
         let mut args = vec![device_path];
@@ -123,4 +142,20 @@ impl FsFormatter {
 
         Ok(())
     }
+}
+
+fn is_ext4_installed() -> bool {
+    let installed = run_command(EXT4_COMMAND, &["-V"], None).is_ok();
+    if !installed {
+        warn!("ext4 is not installed. Consider installing `e2fsprogs` (ubuntu).");
+    }
+    installed
+}
+
+fn is_dd_installed() -> bool {
+    let installed = run_command(DD_COMMAND, &["--version"], None).is_ok();
+    if !installed {
+        warn!("dd is not installed. Consider installing `coreutils` (ubuntu).");
+    }
+    installed
 }
