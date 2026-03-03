@@ -384,9 +384,9 @@ mod test {
     use kbs_types::HashAlgorithm;
     use rstest::rstest;
     use serde_json::{json, Value};
-    use std::{env, path::PathBuf, time::Duration};
+    use std::{env, path::PathBuf};
     use testcontainers::{
-        core::{IntoContainerPort, Mount},
+        core::{IntoContainerPort, Mount, WaitFor},
         runners::AsyncRunner,
         GenericImage, ImageExt,
     };
@@ -437,6 +437,7 @@ mod test {
             "ghcr.io/confidential-containers/staged-images/kbs",
             "latest",
         )
+        .with_wait_for(WaitFor::message_on_stdout("Starting HTTP server at"))
         .with_exposed_port(8085.tcp())
         .with_mount(Mount::bind_mount(
             tmp.path().as_os_str().to_string_lossy(),
@@ -461,24 +462,6 @@ mod test {
 
         let port = kbs.get_host_port_ipv4(8085).await.expect("get port");
         let kbs_host_url = format!("http://127.0.0.1:{port}");
-
-        // Poll until the KBS HTTP server is ready to accept connections
-        let http_client = reqwest::Client::new();
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(60);
-        loop {
-            if tokio::time::Instant::now() >= deadline {
-                panic!("KBS did not become ready within 60 seconds");
-            }
-            if http_client
-                .get(format!("{kbs_host_url}/kbs/v0/auth"))
-                .send()
-                .await
-                .is_ok()
-            {
-                break;
-            }
-            tokio::time::sleep(Duration::from_millis(500)).await;
-        }
 
         let evidence_provider = Box::new(NativeEvidenceProvider::new().unwrap());
         let mut client = KbsClientBuilder::with_evidence_provider(evidence_provider, &kbs_host_url)
