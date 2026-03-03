@@ -7,7 +7,7 @@ use anyhow::{anyhow, bail, Context, Result};
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use crypto::{
-    ec::{Curve, EcKeyPair, KeyWrapAlgorithm},
+    ec::{EcKeyPair, KeyWrapAlgorithm},
     rsa::{PaddingMode, RSAKeyPair},
 };
 use kbs_types::{ProtectedHeader, Response, TeePubKey};
@@ -50,7 +50,7 @@ impl TeeKeyPair {
                 let y = URL_SAFE_NO_PAD.encode(key.y()?);
 
                 Ok(TeePubKey::EC {
-                    crv: Curve::P256.as_ref().to_string(),
+                    crv: key.curve().as_ref().to_string(),
                     alg: KeyWrapAlgorithm::EcdhEsA256Kw.as_ref().to_string(),
                     x,
                     y,
