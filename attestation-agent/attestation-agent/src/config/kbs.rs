@@ -8,6 +8,8 @@ use serde::Deserialize;
 
 use super::aa_kbc_params::AaKbcParams;
 
+use kbs_protocol::TeeKeyAlgorithm;
+
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct KbsConfig {
     /// URL Address of KBS.
@@ -15,6 +17,9 @@ pub struct KbsConfig {
 
     /// Cert of KBS
     pub cert: Option<String>,
+
+    #[serde(default)]
+    pub tee_key_algorithm: TeeKeyAlgorithm,
 }
 
 impl KbsConfig {
@@ -29,6 +34,7 @@ impl KbsConfig {
         Ok(Self {
             url: aa_kbc_params.uri,
             cert: None,
+            tee_key_algorithm: TeeKeyAlgorithm::default(),
         })
     }
 }
