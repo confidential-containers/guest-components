@@ -81,5 +81,5 @@ pub mod token_provider;
 pub use api::*;
 pub use builder::KbsClientBuilder;
 pub use error::{Error, Result};
-pub use keypair::TeeKeyPair;
+pub use keypair::{TeeKeyAlgorithm, TeeKeyPair};
 pub use token_provider::Token;
