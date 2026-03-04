@@ -5,6 +5,7 @@ url = "http://127.0.0.1:8000"
 
 [token_configs.kbs]
 url = "https://127.0.0.1:8080"
+tee_key_algorithm = "ECDH-ES+A256KW-P256"
 cert = '''
 -----BEGIN CERTIFICATE-----
 MIIDljCCAn6gAwIBAgIUR/UNh13GFam4emgludtype/S9BIwDQYJKoZIhvcNAQEL

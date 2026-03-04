@@ -11,6 +11,7 @@ use crypto::{
     rsa::{PaddingMode, RSAKeyPair},
 };
 use kbs_types::{ProtectedHeader, Response, TeePubKey};
+use serde::Deserialize;
 use tracing::warn;
 use zeroize::Zeroizing;
 
@@ -25,11 +26,14 @@ pub enum TeeKey {
     Ec(Box<EcKeyPair>),
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
 pub enum TeeKeyAlgorithm {
     #[default]
+    #[serde(rename = "ECDH-ES+A256KW-P256")]
     EcdhEsA256KwP256,
+    #[serde(rename = "ECDH-ES+A256KW-P521")]
     EcdhEsA256KwP521,
+    #[serde(rename = "RSA-OAEP-256")]
     RsaOaep256,
 }
 
@@ -213,5 +217,20 @@ mod tests {
             panic!("must be rsa key")
         };
         assert_eq!(alg, "RSA-OAEP-256");
+    }
+
+    #[test]
+    fn deserialize_jwa_compact_algorithms() {
+        let p256: TeeKeyAlgorithm = serde_json::from_str("\"ECDH-ES+A256KW-P256\"")
+            .expect("ECDH-ES+A256KW-P256 algorithm should parse");
+        assert_eq!(p256, TeeKeyAlgorithm::EcdhEsA256KwP256);
+
+        let p521: TeeKeyAlgorithm = serde_json::from_str("\"ECDH-ES+A256KW-P521\"")
+            .expect("ECDH-ES+A256KW-P521 algorithm should parse");
+        assert_eq!(p521, TeeKeyAlgorithm::EcdhEsA256KwP521);
+
+        let rsa_oaep256: TeeKeyAlgorithm =
+            serde_json::from_str("\"RSA-OAEP-256\"").expect("RSA-OAEP-256 algorithm should parse");
+        assert_eq!(rsa_oaep256, TeeKeyAlgorithm::RsaOaep256);
     }
 }
