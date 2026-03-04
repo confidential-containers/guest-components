@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::config::kbs::KbsConfig;
+use crate::config::kbs::{KbsConfig, TeeKeyAlgorithm};
 
 use anyhow::*;
 use kbs_protocol::{evidence_provider::NativeEvidenceProvider, KbsClientBuilder};
@@ -19,6 +19,7 @@ struct Message {
 pub struct KbsTokenGetter {
     kbs_host_url: String,
     cert: Option<String>,
+    tee_key_algorithm: TeeKeyAlgorithm,
 }
 
 impl KbsTokenGetter {
@@ -31,6 +32,7 @@ impl KbsTokenGetter {
         if let Some(cert) = &self.cert {
             builder = builder.add_kbs_cert(cert);
         }
+        builder = builder.set_tee_key_algorithm(self.tee_key_algorithm.clone().into());
 
         if let Some(initdata) = initdata {
             builder = builder.add_initdata(initdata.to_string());
@@ -54,6 +56,7 @@ impl KbsTokenGetter {
         Self {
             kbs_host_url: config.url.clone(),
             cert: config.cert.clone(),
+            tee_key_algorithm: config.tee_key_algorithm.clone(),
         }
     }
 }
