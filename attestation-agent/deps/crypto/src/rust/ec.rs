@@ -12,16 +12,22 @@ use aes_gcm::aead::generic_array::GenericArray;
 use aes_kw::{Kek, KekAes256};
 use anyhow::{anyhow, Result};
 use p256::{
-    ecdh::diffie_hellman,
+    ecdh::diffie_hellman as diffie_hellman_p256,
     elliptic_curve::sec1::FromEncodedPoint,
     pkcs8::{DecodePrivateKey, EncodePrivateKey, LineEnding},
-    EncodedPoint, PublicKey as P256PublicKey, SecretKey,
+    EncodedPoint as P256EncodedPoint, FieldBytes as P256FieldBytes, PublicKey as P256PublicKey,
+    SecretKey as P256SecretKey,
+};
+use p521::{
+    ecdh::diffie_hellman as diffie_hellman_p521, EncodedPoint as P521EncodedPoint,
+    FieldBytes as P521FieldBytes, PublicKey as P521PublicKey, SecretKey as P521SecretKey,
 };
 use zeroize::Zeroizing;
 
 #[derive(Clone, Debug)]
 pub enum EcKeyPair {
     P256(P256EcKeyPair),
+    P521(P521EcKeyPair),
 }
 
 impl Default for EcKeyPair {
@@ -34,35 +40,37 @@ impl EcKeyPair {
     pub fn curve(&self) -> Curve {
         match self {
             Self::P256(_) => Curve::P256,
-        }
-    }
-
-    pub fn secret_key(&self) -> &SecretKey {
-        match self {
-            Self::P256(p256) => p256.secret_key(),
+            Self::P521(_) => Curve::P521,
         }
     }
 
     pub fn x(&self) -> Result<Vec<u8>> {
         match self {
             Self::P256(p256) => p256.x(),
+            Self::P521(p521) => p521.x(),
         }
     }
 
     pub fn y(&self) -> Result<Vec<u8>> {
         match self {
             Self::P256(p256) => p256.y(),
+            Self::P521(p521) => p521.y(),
         }
     }
 
     pub fn to_pkcs8_pem(&self) -> Result<Zeroizing<String>> {
-        let pem = self.secret_key().to_pkcs8_pem(LineEnding::default())?;
-        Ok(pem)
+        match self {
+            Self::P256(p256) => Ok(p256.secret_key().to_pkcs8_pem(LineEnding::default())?),
+            Self::P521(p521) => Ok(p521.secret_key().to_pkcs8_pem(LineEnding::default())?),
+        }
     }
 
     pub fn from_pkcs8_pem(pem: &str) -> Result<Self> {
         if let Ok(p256) = P256EcKeyPair::from_pkcs8_pem(pem) {
             return Ok(Self::P256(p256));
+        };
+        if let Ok(p521) = P521EcKeyPair::from_pkcs8_pem(pem) {
+            return Ok(Self::P521(p521));
         };
 
         Err(anyhow!("invalid key type"))
@@ -77,25 +85,58 @@ impl EcKeyPair {
     ) -> Result<Vec<u8>> {
         match wrapping_algorithm {
             KeyWrapAlgorithm::EcdhEsA256Kw => {
-                let secret_key = self.secret_key();
-                let epk_x: [u8; 32] = epk_x
-                    .try_into()
-                    .map_err(|_| anyhow!("invalid bytes length of coordinates X"))?;
-                let epk_y: [u8; 32] = epk_y
-                    .try_into()
-                    .map_err(|_| anyhow!("invalid bytes length of coordinates Y"))?;
-                let epk_point = EncodedPoint::from_affine_coordinates(
-                    &GenericArray::from(epk_x),
-                    &GenericArray::from(epk_y),
-                    false,
-                );
-                let public_key =
-                    Into::<Option<_>>::into(P256PublicKey::from_encoded_point(&epk_point));
-                let public_key: P256PublicKey = public_key.ok_or(anyhow!("invalid public key"))?;
-
-                let z = diffie_hellman(secret_key.to_nonzero_scalar(), public_key.as_affine())
-                    .raw_secret_bytes()
-                    .to_vec();
+                let z = match self {
+                    Self::P256(p256) => {
+                        let epk_x: [u8; 32] = epk_x
+                            .clone()
+                            .try_into()
+                            .map_err(|_| anyhow!("invalid bytes length of coordinates X"))?;
+                        let epk_y: [u8; 32] = epk_y
+                            .clone()
+                            .try_into()
+                            .map_err(|_| anyhow!("invalid bytes length of coordinates Y"))?;
+                        let epk_point = P256EncodedPoint::from_affine_coordinates(
+                            P256FieldBytes::from_slice(&epk_x),
+                            P256FieldBytes::from_slice(&epk_y),
+                            false,
+                        );
+                        let public_key =
+                            Into::<Option<_>>::into(P256PublicKey::from_encoded_point(&epk_point));
+                        let public_key: P256PublicKey =
+                            public_key.ok_or(anyhow!("invalid public key"))?;
+                        diffie_hellman_p256(
+                            p256.secret_key().to_nonzero_scalar(),
+                            public_key.as_affine(),
+                        )
+                        .raw_secret_bytes()
+                        .to_vec()
+                    }
+                    Self::P521(p521) => {
+                        let epk_x: [u8; 66] = epk_x
+                            .clone()
+                            .try_into()
+                            .map_err(|_| anyhow!("invalid bytes length of coordinates X"))?;
+                        let epk_y: [u8; 66] = epk_y
+                            .clone()
+                            .try_into()
+                            .map_err(|_| anyhow!("invalid bytes length of coordinates Y"))?;
+                        let epk_point = P521EncodedPoint::from_affine_coordinates(
+                            P521FieldBytes::from_slice(&epk_x),
+                            P521FieldBytes::from_slice(&epk_y),
+                            false,
+                        );
+                        let public_key =
+                            Into::<Option<_>>::into(P521PublicKey::from_encoded_point(&epk_point));
+                        let public_key: P521PublicKey =
+                            public_key.ok_or(anyhow!("invalid public key"))?;
+                        diffie_hellman_p521(
+                            p521.secret_key().to_nonzero_scalar(),
+                            public_key.as_affine(),
+                        )
+                        .raw_secret_bytes()
+                        .to_vec()
+                    }
+                };
 
                 let mut key_derivation_materials = Vec::new();
                 let algorithm_str = KeyWrapAlgorithm::EcdhEsA256Kw.as_ref();
@@ -129,14 +170,14 @@ impl EcKeyPair {
 
 #[derive(Clone, Debug)]
 pub struct P256EcKeyPair {
-    secret_key: SecretKey,
+    secret_key: P256SecretKey,
     public_key: P256PublicKey,
 }
 
 impl Default for P256EcKeyPair {
     fn default() -> Self {
         let mut rng = rand_08::thread_rng();
-        let secret_key = SecretKey::random(&mut rng);
+        let secret_key = P256SecretKey::random(&mut rng);
         let public_key = secret_key.public_key();
         Self {
             secret_key,
@@ -146,12 +187,12 @@ impl Default for P256EcKeyPair {
 }
 
 impl P256EcKeyPair {
-    pub fn secret_key(&self) -> &SecretKey {
+    pub fn secret_key(&self) -> &P256SecretKey {
         &self.secret_key
     }
 
     pub fn from_pkcs8_pem(pem: &str) -> Result<Self> {
-        let secret_key = SecretKey::from_pkcs8_pem(pem)?;
+        let secret_key = P256SecretKey::from_pkcs8_pem(pem)?;
         let public_key = secret_key.public_key();
         Ok(Self {
             secret_key,
@@ -160,7 +201,7 @@ impl P256EcKeyPair {
     }
 
     pub fn x(&self) -> Result<Vec<u8>> {
-        let x = EncodedPoint::from(self.public_key)
+        let x = P256EncodedPoint::from(self.public_key)
             .x()
             .ok_or(anyhow!("invalid public key: without coordinate X"))?
             .to_vec();
@@ -168,10 +209,81 @@ impl P256EcKeyPair {
     }
 
     pub fn y(&self) -> Result<Vec<u8>> {
-        let y = EncodedPoint::from(self.public_key)
+        let y = P256EncodedPoint::from(self.public_key)
             .y()
             .ok_or(anyhow!("invalid public key: without coordinate Y"))?
             .to_vec();
         Ok(y)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct P521EcKeyPair {
+    secret_key: P521SecretKey,
+    public_key: P521PublicKey,
+}
+
+impl Default for P521EcKeyPair {
+    fn default() -> Self {
+        let mut rng = rand_08::thread_rng();
+        let secret_key = P521SecretKey::random(&mut rng);
+        let public_key = secret_key.public_key();
+        Self {
+            secret_key,
+            public_key,
+        }
+    }
+}
+
+impl P521EcKeyPair {
+    pub fn secret_key(&self) -> &P521SecretKey {
+        &self.secret_key
+    }
+
+    pub fn from_pkcs8_pem(pem: &str) -> Result<Self> {
+        let secret_key = P521SecretKey::from_pkcs8_pem(pem)?;
+        let public_key = secret_key.public_key();
+        Ok(Self {
+            secret_key,
+            public_key,
+        })
+    }
+
+    pub fn x(&self) -> Result<Vec<u8>> {
+        let x = P521EncodedPoint::from(self.public_key)
+            .x()
+            .ok_or(anyhow!("invalid public key: without coordinate X"))?
+            .to_vec();
+        Ok(x)
+    }
+
+    pub fn y(&self) -> Result<Vec<u8>> {
+        let y = P521EncodedPoint::from(self.public_key)
+            .y()
+            .ok_or(anyhow!("invalid public key: without coordinate Y"))?
+            .to_vec();
+        Ok(y)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_curve_is_p256() {
+        assert!(matches!(EcKeyPair::default(), EcKeyPair::P256(_)));
+    }
+
+    #[test]
+    fn p521_roundtrip_and_coordinates() {
+        let p521 = EcKeyPair::P521(P521EcKeyPair::default());
+        assert!(matches!(p521.curve(), Curve::P521));
+        assert_eq!(p521.x().expect("x should exist").len(), 66);
+        assert_eq!(p521.y().expect("y should exist").len(), 66);
+
+        let pem = p521.to_pkcs8_pem().expect("serialize pem");
+        let parsed = EcKeyPair::from_pkcs8_pem(&pem).expect("parse pem");
+        assert!(matches!(parsed.curve(), Curve::P521));
     }
 }
