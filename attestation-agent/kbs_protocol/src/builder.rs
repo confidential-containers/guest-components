@@ -11,7 +11,7 @@ use anyhow::*;
 use crate::{
     client::ClientTee,
     evidence_provider::EvidenceProvider,
-    keypair::TeeKeyPair,
+    keypair::{TeeKeyAlgorithm, TeeKeyPair},
     token_provider::{Token, TokenProvider},
 };
 
@@ -25,6 +25,7 @@ pub struct KbsClientBuilder<T> {
     kbs_host_url: String,
     token: Option<String>,
     tee_key: Option<String>,
+    tee_key_algorithm: TeeKeyAlgorithm,
     initdata: Option<String>,
 }
 
@@ -39,6 +40,7 @@ impl KbsClientBuilder<Box<dyn EvidenceProvider>> {
             kbs_host_url: kbs_host_url.trim_end_matches('/').to_string(),
             token: None,
             tee_key: None,
+            tee_key_algorithm: TeeKeyAlgorithm::default(),
             initdata: None,
         }
     }
@@ -52,6 +54,7 @@ impl KbsClientBuilder<Box<dyn TokenProvider>> {
             kbs_host_url: kbs_host_url.trim_end_matches('/').to_string(),
             token: None,
             tee_key: None,
+            tee_key_algorithm: TeeKeyAlgorithm::default(),
             initdata: None,
         }
     }
@@ -70,6 +73,11 @@ impl<T> KbsClientBuilder<T> {
 
     pub fn set_tee_key(mut self, tee_key: &str) -> Self {
         self.tee_key = Some(tee_key.to_string());
+        self
+    }
+
+    pub fn set_tee_key_algorithm(mut self, tee_key_algorithm: TeeKeyAlgorithm) -> Self {
+        self.tee_key_algorithm = tee_key_algorithm;
         self
     }
 
@@ -100,7 +108,7 @@ impl<T> KbsClientBuilder<T> {
 
         let tee_key = match self.tee_key {
             Some(key) => TeeKeyPair::from_pem(&key[..]).context("read tee public key")?,
-            None => TeeKeyPair::new()?,
+            None => TeeKeyPair::new_with_algorithm(self.tee_key_algorithm)?,
         };
 
         let token = match self.token {
