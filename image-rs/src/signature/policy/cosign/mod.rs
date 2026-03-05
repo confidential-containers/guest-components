@@ -151,6 +151,18 @@ impl CosignParameters {
             .trusted_signature_layers(&auth, &source_image_digest, &cosign_image)
             .await?;
 
+        // Some cosign implementations leave newlines in the signature. Strip these out.
+        let signature_layers: Vec<sigstore::cosign::SignatureLayer> = signature_layers
+            .iter()
+            .map(|layer| {
+                let mut cleaned = layer.clone();
+                if let Some(sig) = &cleaned.signature {
+                    cleaned.signature = Some(sig.replace(['\n', '\r'], ""));
+                }
+                cleaned
+            })
+            .collect();
+
         // By default, the hashing algorithm is SHA256
         let pub_key_verifier =
             PublicKeyVerifier::new(&key, &SigningScheme::ECDSA_P256_SHA256_ASN1)?;
@@ -187,11 +199,6 @@ mod tests {
     use rstest::rstest;
     use serial_test::serial;
 
-    // All the test images are the same image, but different
-    // registry and repository
-    const IMAGE_DIGEST: &str =
-        "sha256:10e0ec4c7663b5f9be6efd16d8ceec760efe5377b9a0762ef3f51101ac08b7e8";
-
     #[rstest]
     #[case(
         CosignParameters{
@@ -208,6 +215,7 @@ mod tests {
             signed_identity: None,
         },
         "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
+        "sha256:10e0ec4c7663b5f9be6efd16d8ceec760efe5377b9a0762ef3f51101ac08b7e8",
     )]
     #[case(
         CosignParameters{
@@ -224,18 +232,37 @@ mod tests {
             signed_identity: None,
         },
         "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
+        "sha256:10e0ec4c7663b5f9be6efd16d8ceec760efe5377b9a0762ef3f51101ac08b7e8",
+    )]
+    #[case(
+        CosignParameters{
+            key_path: Some(
+                format!(
+                    "{}/test_data/signature/cosign/nv.pub",
+                    std::env::current_dir()
+                        .expect("get current dir")
+                        .to_str()
+                        .expect("get current dir"),
+                )
+            ),
+            key_data: None,
+            signed_identity: None,
+        },
+        "nvcr.io/nvidia/cuda:12.2.0-base-ubuntu22.04",
+        "sha256:ecdf8549dd5f12609e365217a64dedde26ecda26da8f3ff3f82def6749f53051",
     )]
     #[tokio::test]
     #[serial]
     async fn verify_signature_and_get_payload_test(
         #[case] parameter: CosignParameters,
         #[case] image_reference: &str,
+        #[case] image_digest: &str,
     ) {
         let reference =
             Reference::try_from(image_reference).expect("deserialize OCI Reference failed.");
         let mut image = Image::default_with_reference(reference);
         image
-            .set_manifest_digest(IMAGE_DIGEST)
+            .set_manifest_digest(image_digest)
             .expect("Set manifest digest failed.");
         let resource_provider = ResourceProvider::default();
 
@@ -292,6 +319,7 @@ mod tests {
         ),
         // The repository of the given image's and the Payload's are different
         "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
+        "sha256:10e0ec4c7663b5f9be6efd16d8ceec760efe5377b9a0762ef3f51101ac08b7e8",
         false,
         "Match reference failed.",
     )]
@@ -304,6 +332,7 @@ mod tests {
             std::env::current_dir().expect("get current dir").to_str().expect("get current dir")
         ),
         "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
+        "sha256:10e0ec4c7663b5f9be6efd16d8ceec760efe5377b9a0762ef3f51101ac08b7e8",
         false,
         // If verified failed, the pubkey given to verify will be printed.
         "[PublicKeyVerifier { key: ECDSA_P256_SHA256_ASN1(VerifyingKey { inner: PublicKey { point: AffinePoint { x: FieldElement(0x4D1167C9BBBCDB6CC1C867394D50C1777D5C2FCC46374E6B07819141E8D2CFAF), y: FieldElement(0xDB4E43CA897D2EE05C70836839AF5DBEE8B62EC4B93563FB044D92551FE33EEE), infinity: 0 } } }) }]"
@@ -320,6 +349,7 @@ mod tests {
             std::env::current_dir().expect("get current dir").to_str().expect("get current dir")
         ),
         "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
+        "sha256:10e0ec4c7663b5f9be6efd16d8ceec760efe5377b9a0762ef3f51101ac08b7e8",
         false,
         // Only MatchRepository and ExactRepository are supported.
         "Denied by MatchExact",
@@ -332,6 +362,7 @@ mod tests {
         }}", 
         std::env::current_dir().expect("get current dir").to_str().expect("get current dir")),
         "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
+        "sha256:10e0ec4c7663b5f9be6efd16d8ceec760efe5377b9a0762ef3f51101ac08b7e8",
         true,
         ""
     )]
@@ -340,6 +371,7 @@ mod tests {
     async fn verify_signature(
         #[case] policy: &str,
         #[case] image_reference: &str,
+        #[case] image_digest: &str,
         #[case] allow: bool,
         #[case] failed_reason: &str,
     ) {
@@ -350,7 +382,7 @@ mod tests {
 
         let mut image = Image::default_with_reference(reference);
         image
-            .set_manifest_digest(IMAGE_DIGEST)
+            .set_manifest_digest(image_digest)
             .expect("Set manifest digest failed.");
 
         if let PolicyReqType::Cosign(scheme) = policy_requirement {
