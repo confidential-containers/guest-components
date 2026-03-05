@@ -17,6 +17,11 @@ concurrency:
 jobs:
   trustee_attester_ci:
     name: Check
+    env:
+      MAKE_ARGS: ${{ matrix.make_args }}
+      NVAT_USE_SYSTEM_LIB: "1"
+      CFLAGS: "-I/usr/local/include"
+      RUSTFLAGS: "-L /usr/local/lib"
     defaults:
       run:
         working-directory: ./attestation-agent/kbs_protocol/
@@ -61,6 +66,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libdevmapper-dev
+
+      - name: Install NVAT dependencies
+        run: |
+          sudo apt-get install cmake
+          tmpdir=$(mktemp -d)
+          cd "$tmpdir"
+          git clone https://github.com/NVIDIA/attestation-sdk
+          cd attestation-sdk/nv-attestation-sdk-cpp
+          cmake .
+          sudo make install
+          sudo ln -s /usr/local/include/nvat.h /usr/include/nvat.h
+        if: matrix.instance == 'ubuntu-24.04'
 
       - name: Run cargo build
         run: cargo build ${{ matrix.cargo_test_opts }}
