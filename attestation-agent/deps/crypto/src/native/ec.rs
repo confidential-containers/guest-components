@@ -23,6 +23,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub enum EcKeyPair {
     P256(P256EcKeyPair),
+    P521(P521EcKeyPair),
 }
 
 impl Default for EcKeyPair {
@@ -35,24 +36,28 @@ impl EcKeyPair {
     fn private_key(&self) -> &PKey<Private> {
         match self {
             Self::P256(p256) => p256.private_key(),
+            Self::P521(p521) => p521.private_key(),
         }
     }
 
     pub fn curve(&self) -> Curve {
         match self {
             Self::P256(_) => Curve::P256,
+            Self::P521(_) => Curve::P521,
         }
     }
 
     pub fn x(&self) -> Result<Vec<u8>> {
         match self {
             Self::P256(p256) => p256.x(),
+            Self::P521(p521) => p521.x(),
         }
     }
 
     pub fn y(&self) -> Result<Vec<u8>> {
         match self {
             Self::P256(p256) => p256.y(),
+            Self::P521(p521) => p521.y(),
         }
     }
 
@@ -71,6 +76,7 @@ impl EcKeyPair {
             .ok_or(anyhow!("failed to get curve name"))?;
         match curve_nid {
             Nid::X9_62_PRIME256V1 => Ok(Self::P256(P256EcKeyPair { private_key })),
+            Nid::SECP521R1 => Ok(Self::P521(P521EcKeyPair { private_key })),
             _ => bail!("unsupported EC curve with NID {curve_nid:?}"),
         }
     }
@@ -84,6 +90,7 @@ impl EcKeyPair {
     ) -> Result<Vec<u8>> {
         let group = match self.curve() {
             Curve::P256 => EcGroup::from_curve_name(Nid::X9_62_PRIME256V1)?,
+            Curve::P521 => EcGroup::from_curve_name(Nid::SECP521R1)?,
         };
         let point = group.generator();
         let mut point = point.to_owned(&group)?;
@@ -148,6 +155,76 @@ fn concat_kdf(alg: &str, target_length: usize, z: &[u8]) -> Result<Vec<u8>> {
 #[derive(Clone, Debug)]
 pub struct P256EcKeyPair {
     private_key: PKey<Private>,
+}
+
+#[derive(Clone, Debug)]
+pub struct P521EcKeyPair {
+    private_key: PKey<Private>,
+}
+
+impl Default for P521EcKeyPair {
+    fn default() -> Self {
+        Self::new().expect("Create P521 key pair failed")
+    }
+}
+
+impl P521EcKeyPair {
+    fn private_key(&self) -> &PKey<Private> {
+        &self.private_key
+    }
+
+    pub fn new() -> Result<Self> {
+        let ec_group = EcGroup::from_curve_name(Nid::SECP521R1)?;
+        let ec_key = EcKey::generate(&ec_group)?;
+        let private_key = PKey::from_ec_key(ec_key)?;
+        Ok(Self { private_key })
+    }
+
+    pub fn x(&self) -> Result<Vec<u8>> {
+        let private_key = self.private_key.ec_key().context("must be a ec key")?;
+        let public_key = private_key.public_key();
+        let mut x = BigNum::new()?;
+        let mut _y = BigNum::new()?;
+        let mut ctx = BigNumContext::new()?;
+        public_key.affine_coordinates_gfp(private_key.group(), &mut x, &mut _y, &mut ctx)?;
+        let mut x = x.to_vec();
+        x.resize(66, b'0');
+        Ok(x)
+    }
+
+    pub fn y(&self) -> Result<Vec<u8>> {
+        let private_key = self.private_key.ec_key().context("must be a ec key")?;
+        let public_key = private_key.public_key();
+        let mut _x = BigNum::new()?;
+        let mut y = BigNum::new()?;
+        let mut ctx = BigNumContext::new()?;
+        public_key.affine_coordinates_gfp(private_key.group(), &mut _x, &mut y, &mut ctx)?;
+        let mut y = y.to_vec();
+        y.resize(66, b'0');
+        Ok(y)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_curve_is_p256() {
+        assert!(matches!(EcKeyPair::default(), EcKeyPair::P256(_)));
+    }
+
+    #[test]
+    fn p521_roundtrip_and_coordinates() {
+        let p521 = EcKeyPair::P521(P521EcKeyPair::default());
+        assert!(matches!(p521.curve(), Curve::P521));
+        assert_eq!(p521.x().expect("x should exist").len(), 66);
+        assert_eq!(p521.y().expect("y should exist").len(), 66);
+
+        let pem = p521.to_pkcs8_pem().expect("serialize pem");
+        let parsed = EcKeyPair::from_pkcs8_pem(&pem).expect("parse pem");
+        assert!(matches!(parsed.curve(), Curve::P521));
+    }
 }
 
 impl Default for P256EcKeyPair {

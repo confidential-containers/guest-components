@@ -139,6 +139,7 @@ DYEbQvoZIkUTc1gBUWDcAUS5ztbJg9LCb9WVtvUTqTP2lGuNymOvdsuXq+sAZh9b
 M9QaC1mzQ/OStg==
 -----END CERTIFICATE-----
 ".to_string()),
+                tee_key_algorithm: crate::config::kbs::TeeKeyAlgorithm::EcdhEsA256KwP256,
             })
         },
         eventlog_config: EventlogConfig {
@@ -179,6 +180,7 @@ DYEbQvoZIkUTc1gBUWDcAUS5ztbJg9LCb9WVtvUTqTP2lGuNymOvdsuXq+sAZh9b
 M9QaC1mzQ/OStg==
 -----END CERTIFICATE-----
 ".to_string()),
+                tee_key_algorithm: crate::config::kbs::TeeKeyAlgorithm::EcdhEsA256KwP256,
             })
         },
         eventlog_config: EventlogConfig {
@@ -198,6 +200,7 @@ M9QaC1mzQ/OStg==
             kbs: Some(crate::config::kbs::KbsConfig {
                 url: "https://127.0.0.1:8080".to_string(),
                 cert: Some("cert".to_string()),
+                tee_key_algorithm: crate::config::kbs::TeeKeyAlgorithm::EcdhEsA256KwP256,
             })
         },
         eventlog_config: EventlogConfig {
@@ -215,6 +218,7 @@ M9QaC1mzQ/OStg==
             kbs: Some(crate::config::kbs::KbsConfig {
                 url: "https://127.0.0.1:8080".to_string(),
                 cert: Some("cert".to_string()),
+                tee_key_algorithm: crate::config::kbs::TeeKeyAlgorithm::EcdhEsA256KwP256,
             })
         },
         eventlog_config: EventlogConfig {
@@ -234,6 +238,7 @@ M9QaC1mzQ/OStg==
             kbs: Some(crate::config::kbs::KbsConfig {
                 url: "https://127.0.0.1:8080".to_string(),
                 cert: None,
+                tee_key_algorithm: crate::config::kbs::TeeKeyAlgorithm::EcdhEsA256KwP256,
             })
         },
         eventlog_config: EventlogConfig {
