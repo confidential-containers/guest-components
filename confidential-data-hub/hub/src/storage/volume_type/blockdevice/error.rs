@@ -5,8 +5,6 @@
 
 use thiserror::Error;
 
-use crate::storage::drivers::filesystem::FsType;
-
 pub type Result<T> = std::result::Result<T, BlockDeviceError>;
 
 #[derive(Error, Debug)]
@@ -41,30 +39,6 @@ pub enum BlockDeviceError {
         source: anyhow::Error,
     },
 
-    #[error("Create symlink [{source_path}] -> [{target_path}] failed: {source}")]
-    CreateSymlinkFailed {
-        #[source]
-        source: std::io::Error,
-        source_path: String,
-        target_path: String,
-    },
-
-    #[error("Failed to make filesystem {fs:?} of device {device}: {source}")]
-    MakeFileSystemFailed {
-        fs: FsType,
-        device: String,
-        #[source]
-        source: anyhow::Error,
-    },
-
-    #[error("Failed to mount device {device} to mount point {mount_point}: {source}")]
-    MountFailed {
-        mount_point: String,
-        device: String,
-        #[source]
-        source: nix::Error,
-    },
-
     #[error("Failed to umount device {mount_point}: {source}")]
     UmountFailed {
         mount_point: String,
@@ -72,6 +46,9 @@ pub enum BlockDeviceError {
         source: nix::Error,
     },
 
-    #[error("No encryption feature is supported. Please enable feature\n1. 'luks2' to use LUKS2 encryption.")]
-    NoEncryptionFeatureEnabled,
+    #[error("Error when doing zfs operation: {source}")]
+    ZfsError {
+        #[source]
+        source: anyhow::Error,
+    },
 }

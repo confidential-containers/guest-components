@@ -5,49 +5,40 @@
 //
 
 //! # BlockDevice SecureStorage
-//!
-//! See [`Action`] for supported actions.
 
 pub mod error;
 
 use super::SecureMount;
 use crate::{
     secret,
-    storage::drivers::{
-        filesystem::{FsFormatter, FsType},
-        luks2::{self, Luks2Formatter},
-    },
+    storage::drivers::zfs::{export_zpool, ZfsParameters},
 };
+
 use async_trait::async_trait;
 use crypto::rand::random_bytes;
 use error::{BlockDeviceError, Result};
 use kms::{Annotations, ProviderSettings};
-use nix::mount::{mount, MsFlags};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use strum::{Display, EnumString};
+use strum::Display;
 use tokio::{
-    fs::{symlink, File},
+    fs::File,
     io::{AsyncBufReadExt, BufReader},
 };
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 use zeroize::Zeroizing;
 
-#[derive(EnumString, Serialize, Deserialize, Display, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Display, Debug, PartialEq, Eq)]
 #[serde(tag = "encryptionType")]
 pub enum BlockDeviceEncryptType {
     #[cfg(feature = "luks2")]
     #[strum(serialize = "luks2")]
     #[serde(rename = "luks2")]
-    Luks2 {
-        /// Indicates whether to enable dm-integrity.
-        #[serde(rename = "dataIntegrity")]
-        data_integrity: Option<String>,
+    Luks2(crate::storage::drivers::luks2::Luks2MountParameters),
 
-        /// Optional name for /dev/mapper/<name>
-        #[serde(rename = "mapperName")]
-        mapper_name: Option<String>,
-    },
+    #[strum(serialize = "zfs")]
+    #[serde(rename = "zfs")]
+    Zfs(ZfsParameters),
 }
 
 async fn get_plaintext_key(key_uri: &str) -> Result<Zeroizing<Vec<u8>>> {
@@ -92,30 +83,6 @@ pub enum SourceType {
     Empty,
 }
 
-/// The type of the target mount point.
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-#[serde(tag = "targetType")]
-#[serde(rename_all = "camelCase")]
-pub enum TargetType {
-    /// The target is a device.
-    Device,
-
-    /// The target is a filesystem directory.
-    FileSystem {
-        /// The type of the target filesystem.
-        /// In some cases, the filesystem type is determined by the higher
-        /// level encryption_type ([`BlockDeviceEncryptType`]), so this
-        /// field will be optional.
-        #[serde(rename = "filesystemType")]
-        filesystem_type: FsType,
-
-        /// Extra options passed verbatim to mkfs.<fs> when it is needed.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        #[serde(rename = "mkfsOpts")]
-        mkfs_opts: Option<String>,
-    },
-}
-
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct BlockDeviceParameters {
     /// The device number, formatted as "MAJ:MIN".
@@ -137,10 +104,6 @@ pub struct BlockDeviceParameters {
     /// The type of the source.
     #[serde(rename = "sourceType")]
     pub source_type: SourceType,
-
-    /// The type of the target mount point.
-    #[serde(flatten)]
-    pub target_type: TargetType,
 
     /// The key to encrypt or decrypt the device.
     ///
@@ -170,7 +133,12 @@ pub struct BlockDevice {
     /// clean up.
     ///
     /// It is (device-path, dev-mapper-name)
+    #[cfg(feature = "luks2")]
     cryptsetup_pairs: Vec<(String, String)>,
+
+    /// The zfs pools created by the operation. This is used to
+    /// clean up.
+    zfs_pools: Vec<String>,
 }
 
 impl BlockDevice {
@@ -199,7 +167,7 @@ impl BlockDevice {
 
         // 2. get key if the parameter is set
         let key = match &parameters.key {
-            Some(key) => get_plaintext_key(&key).await?,
+            Some(key) => get_plaintext_key(key).await?,
             None => {
                 debug!("generate a random key. All data on the device will be overwritten.");
                 Zeroizing::new(random_bytes::<4096>())
@@ -209,144 +177,25 @@ impl BlockDevice {
         // 3. do the workflow according to the source type and target type according to different encryption types
         match parameters.encryption_type {
             #[cfg(feature = "luks2")]
-            BlockDeviceEncryptType::Luks2 {
-                data_integrity,
-                mapper_name,
-            } => {
-                let integrity = data_integrity.map_or(false, |e| e.parse().unwrap_or(false));
-                let formatter = Luks2Formatter::default().with_integrity(integrity);
-                // 3.1 if the source type is empty, encrypt the device and create detached header
-                let header_path = if parameters.source_type == SourceType::Empty {
-                    warn!("encrypting the device. This will wipe original data on the disk.");
-                    let header_path = luks2::luks_header_path(&device_path);
-                    luks2::prepare_luks_header_file(&header_path)?;
-                    self.temp_paths.push(header_path.clone());
-                    formatter
-                        .encrypt_device(&device_path, Some(&header_path), key.clone())
-                        .map_err(|source| BlockDeviceError::Luks2Error { source })?;
-                    Some(header_path)
+            BlockDeviceEncryptType::Luks2(luks2_parameters) => {
+                if luks2_parameters.target_type
+                    == crate::storage::drivers::luks2::TargetType::Device
+                {
+                    self.temp_paths.push(mount_point.to_string());
                 } else {
-                    None
-                };
-
-                let devmapper_name = mapper_name.unwrap_or_else(|| {
-                    debug!("No mapper name provided, generating a random one");
-                    uuid::Uuid::new_v4().to_string()
-                });
-
-                debug!("luks2 opening device: {}", device_path);
-                formatter
-                    .open_device(&device_path, header_path.as_deref(), &devmapper_name, key)
-                    .map_err(|source| BlockDeviceError::Luks2Error { source })?;
-
-                let dev_path = format!("/dev/mapper/{}", devmapper_name);
-
-                self.cryptsetup_pairs
-                    .push((device_path.clone(), devmapper_name.clone()));
-
-                match (parameters.target_type, parameters.source_type) {
-                    // 3.2 if the target type is device, do the symlink operation to map
-                    // the device path to the mount point.
-                    (TargetType::Device, _) => {
-                        info!(
-                            "symlinking device: {} to mount point: {}",
-                            dev_path, mount_point
-                        );
-                        symlink(&dev_path, mount_point).await.map_err(|source| {
-                            BlockDeviceError::CreateSymlinkFailed {
-                                source,
-                                source_path: dev_path.to_string(),
-                                target_path: mount_point.to_string(),
-                            }
-                        })?;
-
-                        self.temp_paths.push(mount_point.to_string());
-                        debug!("created symlink {} => {}", mount_point, dev_path);
-                    }
-                    // 3.3 if the source type is encrypted, meaning that there is
-                    // already a filesystem on the device, so we just need to mount it to the mount point.
-                    (
-                        TargetType::FileSystem {
-                            filesystem_type, ..
-                        },
-                        SourceType::Encrypted,
-                    ) => {
-                        info!(
-                            "mounting device: {} to mount point: {}",
-                            dev_path, mount_point
-                        );
-                        mount::<_, _, str, _>(
-                            Some(&dev_path[..]),
-                            mount_point,
-                            Some(filesystem_type.as_ref()),
-                            MsFlags::MS_NOATIME,
-                            Some(""),
-                        )
-                        .map_err(|source| {
-                            BlockDeviceError::MountFailed {
-                                mount_point: mount_point.to_string(),
-                                device: dev_path.to_string(),
-                                source,
-                            }
-                        })?;
-
-                        self.mount_points.push(mount_point.to_string());
-                    }
-                    // 3.4 if the source type is empty, meaning that we should also make
-                    // a filesystem on the device.
-                    (
-                        TargetType::FileSystem {
-                            filesystem_type,
-                            mkfs_opts,
-                        },
-                        SourceType::Empty,
-                    ) => {
-                        info!(
-                            "formatting device: {} and mounting it to mount point: {}",
-                            dev_path, mount_point
-                        );
-                        let args = mkfs_opts
-                            .map(|s| {
-                                s.split_ascii_whitespace()
-                                    .map(|x| x.to_string())
-                                    .collect::<Vec<String>>()
-                            })
-                            .unwrap_or_default();
-                        debug!("formatting device: {}", dev_path);
-                        let fs_formatter = FsFormatter {
-                            fs_type: filesystem_type,
-                            force: true,
-                            args: args,
-                        };
-
-                        fs_formatter
-                            .format_integrity_compatible(&dev_path)
-                            .await
-                            .map_err(|source| BlockDeviceError::MakeFileSystemFailed {
-                                fs: filesystem_type,
-                                device: dev_path.clone(),
-                                source,
-                            })?;
-
-                        debug!("mounting device: {}", dev_path);
-                        mount(
-                            Some(&dev_path[..]),
-                            mount_point,
-                            Some(filesystem_type.as_ref()),
-                            MsFlags::MS_NOATIME,
-                            Some(""),
-                        )
-                        .map_err(|source| {
-                            BlockDeviceError::MountFailed {
-                                mount_point: mount_point.to_string(),
-                                device: dev_path.to_string(),
-                                source,
-                            }
-                        })?;
-
-                        self.mount_points.push(mount_point.to_string());
-                    }
+                    self.mount_points.push(mount_point.to_string());
                 }
+                luks2_parameters
+                    .do_mount(&device_path, mount_point, key, parameters.source_type)
+                    .await
+                    .map_err(|source| BlockDeviceError::Luks2Error { source })?;
+            }
+            BlockDeviceEncryptType::Zfs(zfs_parameters) => {
+                self.zfs_pools.push(zfs_parameters.pool.clone());
+                zfs_parameters
+                    .do_mount(&device_path, mount_point, key, parameters.source_type)
+                    .await
+                    .map_err(|source| BlockDeviceError::ZfsError { source })?;
             }
         }
         info!("Target path {} mounted successfully", mount_point);
@@ -371,11 +220,17 @@ impl BlockDevice {
         }
 
         // 3. close luks2 devices
+        #[cfg(feature = "luks2")]
         for (_, name) in &self.cryptsetup_pairs {
-            let formatter = Luks2Formatter::default();
+            let formatter = crate::storage::drivers::luks2::Luks2Formatter::default();
             formatter
                 .close_device(name)
                 .map_err(|source| BlockDeviceError::Luks2Error { source })?;
+        }
+
+        // 4. export zfs pools. This will release the zpool from the current machine.
+        for pool in &self.zfs_pools {
+            export_zpool(pool).map_err(|source| BlockDeviceError::ZfsError { source })?;
         }
 
         Ok(())
@@ -422,8 +277,8 @@ async fn get_device_path(major: u32, minor: u32) -> Result<String> {
     let reader = BufReader::new(file);
     let mut lines = reader.lines();
     while let Ok(Some(line)) = lines.next_line().await {
-        if line.starts_with("DEVNAME=") {
-            return Ok(format!("/dev/{}", &line["DEVNAME=".len()..]));
+        if let Some(line) = line.strip_prefix("DEVNAME=") {
+            return Ok(format!("/dev/{}", line));
         }
     }
     Err(BlockDeviceError::NoDeviceFound { major, minor })
@@ -431,11 +286,14 @@ async fn get_device_path(major: u32, minor: u32) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::{io::Write, path::Path};
-
-    use rand::{distr::Alphanumeric, rng, Rng};
-    use rstest::rstest;
     use serial_test::serial;
+    use tempfile::TempDir;
+    use tracing::warn;
+
+    use crate::storage::{
+        drivers::{zfs::is_zfs_installed, TempFileLoopDevice},
+        tests::init_tracing,
+    };
 
     use super::*;
 
@@ -461,13 +319,14 @@ mod tests {
 
     #[cfg(feature = "luks2")]
     #[tokio::test]
-    #[rstest]
+    #[rstest::rstest]
     #[serial]
     #[case::integrity("true")]
     #[case::no_integrity("false")]
     async fn encrypt_an_empty_device_and_make_a_filesystem_on_it_using_luks2(
         #[case] integrity: &str,
     ) {
+        use std::io::Write;
         let mut temp_device_file = tempfile::NamedTempFile::new().unwrap();
         temp_device_file
             .as_file_mut()
@@ -504,11 +363,13 @@ mod tests {
 
     #[cfg(feature = "luks2")]
     #[tokio::test]
-    #[rstest]
+    #[rstest::rstest]
     #[serial]
     #[case::integrity("true")]
     #[case::no_integrity("false")]
     async fn encrypt_an_empty_device_with_mkfs_opts_using_luks2(#[case] integrity: &str) {
+        use std::io::Write;
+
         let mut temp_device_file = tempfile::NamedTempFile::new().unwrap();
         temp_device_file
             .as_file_mut()
@@ -550,6 +411,10 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn encrypt_an_empty_device_using_luks2() {
+        use rand::{distr::Alphanumeric, rng, Rng};
+        use std::io::Write;
+        use std::path::Path;
+
         let target_device_name = format!(
             "/dev/{}",
             rng()
@@ -593,6 +458,8 @@ mod tests {
     #[serial]
     async fn open_pre_encrypted_device_using_luks2_with_key() {
         use crate::storage::drivers::luks2::Luks2Formatter;
+        use rand::{distr::Alphanumeric, rng, Rng};
+        use std::{io::Write, path::Path};
         use zeroize::Zeroizing;
 
         let target_device_name = format!(
@@ -645,6 +512,9 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn encrypt_empty_device_without_key_uses_random_key() {
+        use rand::{distr::Alphanumeric, rng, Rng};
+        use std::{io::Write, path::Path};
+
         let target_device_name = format!(
             "/dev/{}",
             rng()
@@ -675,7 +545,69 @@ mod tests {
         if !Path::new(&target_device_name).exists() {
             panic!("target device not exist");
         }
+        bd.umount().await.unwrap();
+    }
 
+    #[tokio::test]
+    #[serial]
+    async fn encrypt_an_empty_device_using_zfs() {
+        init_tracing();
+        if !is_zfs_installed() {
+            warn!("zfs is not installed. Skipping zfs flow test.");
+            return;
+        }
+
+        let pool_name = "pool1";
+        let dataset_name = "dataset1";
+
+        let mut bd = BlockDevice::default();
+        let temp_device = TempFileLoopDevice::new(200 * 1024 * 1024).unwrap();
+        let device_path = temp_device.dev_path();
+        let options = HashMap::from([
+            ("sourceType".to_string(), "empty".to_string()),
+            ("devicePath".to_string(), device_path.to_string()),
+            ("encryptionType".to_string(), "zfs".to_string()),
+            (
+                "key".to_string(),
+                "file://./test_files/zfs-disk-passphrase".to_string(),
+            ),
+            ("pool".to_string(), pool_name.to_string()),
+            ("dataset".to_string(), dataset_name.to_string()),
+        ]);
+
+        let mount_point = TempDir::new().unwrap();
+        let mount_point_path = mount_point.path().to_str().unwrap();
+        bd.real_mount(&options, &[], mount_point_path)
+            .await
+            .unwrap();
+        // Try to write a file in the directory
+        tokio::fs::write(mount_point.path().join("test-file"), b"some data")
+            .await
+            .unwrap();
+
+        bd.umount().await.unwrap();
+
+        let mut bd = BlockDevice::default();
+        let options = HashMap::from([
+            ("sourceType".to_string(), "encrypted".to_string()),
+            ("targetType".to_string(), "fileSystem".to_string()),
+            ("devicePath".to_string(), device_path.to_string()),
+            ("encryptionType".to_string(), "zfs".to_string()),
+            (
+                "key".to_string(),
+                "file://./test_files/zfs-disk-passphrase".to_string(),
+            ),
+            ("pool".to_string(), pool_name.to_string()),
+            ("dataset".to_string(), dataset_name.to_string()),
+        ]);
+        bd.real_mount(&options, &[], mount_point_path)
+            .await
+            .unwrap();
+        assert!(mount_point.path().join("test-file").exists());
+        let content = tokio::fs::read_to_string(mount_point.path().join("test-file"))
+            .await
+            .unwrap();
+        assert_eq!(content, "some data");
         bd.umount().await.unwrap();
     }
 }

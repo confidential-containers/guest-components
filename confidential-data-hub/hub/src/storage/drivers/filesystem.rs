@@ -3,17 +3,21 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::process::Stdio;
-
 use anyhow::{anyhow, bail, Result};
 use serde::{Deserialize, Serialize};
 use strum::AsRefStr;
-use tokio::process::Command;
+use tracing::warn;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy, AsRefStr)]
+use crate::storage::drivers::run_command;
+
+const EXT4_COMMAND: &str = "mkfs.ext4";
+const DD_COMMAND: &str = "dd";
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Copy, AsRefStr, Default)]
 pub enum FsType {
     #[strum(serialize = "ext4")]
     #[serde(rename = "ext4")]
+    #[default]
     Ext4,
 }
 
@@ -51,12 +55,22 @@ impl FsFormatter {
     /// ```
     ///
     /// Thus we need to get the block numbers and write to those blocks before hand.
-    pub async fn format_integrity_compatible(&self, device_path: &str) -> Result<()> {
+    pub fn format_integrity_compatible(&self, device_path: &str) -> Result<()> {
         let command = match self.fs_type {
-            FsType::Ext4 => "mkfs.ext4",
+            FsType::Ext4 => {
+                if !is_ext4_installed() {
+                    bail!("ext4 is not installed. Consider installing `e2fsprogs` (ubuntu).");
+                }
+                EXT4_COMMAND
+            }
         };
+
+        if !is_dd_installed() {
+            bail!("dd is not installed. Consider installing `coreutils` (ubuntu).");
+        }
+
         let args = vec!["-F", "-n", device_path];
-        let (stdout, stderr) = run_command(command, &args).await?;
+        let (stdout, stderr) = run_command(command, &args, None)?;
 
         // Get the block numbers
         let delimiter = "Superblock backups stored on blocks:";
@@ -87,7 +101,7 @@ impl FsFormatter {
 
         for num in nums {
             let _ = run_command(
-                "dd",
+                DD_COMMAND,
                 &[
                     "if=/dev/zero",
                     &format!("of={device_path}"),
@@ -96,19 +110,24 @@ impl FsFormatter {
                     "oflag=direct",
                     &format!("seek={num}"),
                 ],
-            )
-            .await?;
+                None,
+            )?;
         }
 
         // then do original format command
-        self.format(device_path).await?;
+        self.format(device_path)?;
 
         Ok(())
     }
 
-    pub async fn format(&self, device_path: &str) -> Result<()> {
+    pub fn format(&self, device_path: &str) -> Result<()> {
         let command = match self.fs_type {
-            FsType::Ext4 => "mkfs.ext4",
+            FsType::Ext4 => {
+                if !is_ext4_installed() {
+                    bail!("ext4 is not installed. Consider installing `e2fsprogs` (ubuntu).");
+                }
+                EXT4_COMMAND
+            }
         };
 
         let mut args = vec![device_path];
@@ -119,30 +138,24 @@ impl FsFormatter {
             args.push(arg);
         }
 
-        let _ = run_command(command, &args).await?;
+        let _ = run_command(command, &args, None)?;
 
         Ok(())
     }
 }
 
-/// Run a command and return the stdout and stderr.
-async fn run_command(command: &str, args: &[&str]) -> Result<(String, String)> {
-    let status = Command::new(command)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .kill_on_drop(true)
-        .args(args)
-        .spawn()?;
-
-    let output = status.wait_with_output().await?;
-    let stdout = String::from_utf8_lossy(&output.stdout).replace("\n", "\n\t");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace("\n", "\n\t");
-
-    if !output.status.success() {
-        bail!(
-            "Failed to run command {command} with args: {args:#?}\nstdout: {stdout}\nstderr: {stderr}",
-        );
+fn is_ext4_installed() -> bool {
+    let installed = run_command(EXT4_COMMAND, &["-V"], None).is_ok();
+    if !installed {
+        warn!("ext4 is not installed. Consider installing `e2fsprogs` (ubuntu).");
     }
+    installed
+}
 
-    Ok((stdout, stderr))
+fn is_dd_installed() -> bool {
+    let installed = run_command(DD_COMMAND, &["--version"], None).is_ok();
+    if !installed {
+        warn!("dd is not installed. Consider installing `coreutils` (ubuntu).");
+    }
+    installed
 }
