@@ -30,9 +30,9 @@ impl KbsClient<Box<dyn TokenProvider>> {
 
 #[async_trait]
 impl KbsClientCapabilities for KbsClient<Box<dyn TokenProvider>> {
-    async fn get_resource(&mut self, resource_uri: ResourceUri) -> Result<Vec<u8>> {
+    async fn get_resource(&mut self, resource_uri: ResourceUri, plugin: String) -> Result<Vec<u8>> {
         let mut remote_url = format!(
-            "{}/{KBS_PREFIX}/resource/{}/{}/{}",
+            "{}/{KBS_PREFIX}/{plugin}/{}/{}/{}",
             self.kbs_host_url, resource_uri.repository, resource_uri.r#type, resource_uri.tag
         );
         if let Some(ref q) = resource_uri.query {
