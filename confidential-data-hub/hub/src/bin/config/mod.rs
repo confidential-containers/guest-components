@@ -21,17 +21,10 @@ pub fn read_config(config_path: Option<String>) -> Result<(CdhConfig, String)> {
             (config, log)
         }
         None => {
-            if let std::result::Result::Ok(env_path) = env::var("CDH_CONFIG_PATH") {
-                let log = format!("Read CDH's config path from env: {env_path}");
-                let config = CdhConfig::from_file(&env_path[..])
-                    .with_context(|| format!("failed to read config file {env_path}"))?;
-                (config, log)
-            } else {
-                let log = "No CDH config path specified. Using default configuration.".to_string();
-                let config = CdhConfig::default_with_kernel_cmdline()
-                    .with_context(|| "failed to read default configuration".to_string())?;
-                (config, log)
-            }
+            let log = "No CDH config path specified. Using default configuration.".to_string();
+            let config = CdhConfig::default_with_kernel_cmdline()
+                .with_context(|| "failed to read default configuration".to_string())?;
+            (config, log)
         }
     };
 
