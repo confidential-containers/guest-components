@@ -21,17 +21,10 @@ pub fn read_config(config_path: Option<String>) -> Result<(CdhConfig, String)> {
             (config, log)
         }
         None => {
-            if let std::result::Result::Ok(env_path) = env::var("CDH_CONFIG_PATH") {
-                let log = format!("Read CDH's config path from env: {env_path}");
-                let config = CdhConfig::from_file(&env_path[..])
-                    .with_context(|| format!("failed to read config file {env_path}"))?;
-                (config, log)
-            } else {
-                let log = "No CDH config path specified. Using default configuration.".to_string();
-                let config = CdhConfig::default_with_kernel_cmdline()
-                    .with_context(|| "failed to read default configuration".to_string())?;
-                (config, log)
-            }
+            let log = "No CDH config path specified. Using default configuration.".to_string();
+            let config = CdhConfig::default_with_kernel_cmdline()
+                .with_context(|| "failed to read default configuration".to_string())?;
+            (config, log)
         }
     };
 
@@ -51,9 +44,6 @@ pub fn read_config(config_path: Option<String>) -> Result<(CdhConfig, String)> {
 mod tests {
     use std::{env, io::Write};
 
-    use anyhow::anyhow;
-    use confidential_data_hub::{CdhConfig, KbsConfig, LogConfig, DEFAULT_CDH_SOCKET_ADDR};
-    use image_rs::config::ImageConfig;
     use serial_test::serial;
 
     use crate::config::read_config;
@@ -101,41 +91,5 @@ authenticated_registry_credentials_uri = "kbs:///default/auth/1"
             config.image.authenticated_registry_credentials_uri,
             Some("kbs:///default/auth/1".into())
         );
-    }
-
-    #[test]
-    #[serial]
-    fn test_config_path() {
-        // --config takes precedence,
-        // then env.CDH_CONFIG_PATH
-
-        let config = CdhConfig::default_with_kernel_cmdline().expect("Must be successful");
-        let expected = CdhConfig {
-            log: LogConfig::default(),
-            kbc: KbsConfig {
-                name: "offline_fs_kbc".into(),
-                url: "".into(),
-                kbs_cert: None,
-            },
-            credentials: Vec::new(),
-            socket: DEFAULT_CDH_SOCKET_ADDR.into(),
-            image: ImageConfig::from_kernel_cmdline(),
-            skip_sealed_secret_verification: false,
-        };
-        assert_eq!(config, expected);
-
-        let config = CdhConfig::from_file("/thing").unwrap_err();
-        let expected = anyhow!("configuration file \"/thing\" not found");
-        assert_eq!(format!("{config}"), format!("{expected}"));
-
-        env::set_var("CDH_CONFIG_PATH", "/byenv");
-        let result = read_config(None).unwrap_err();
-        let expected = anyhow!("failed to read config file /byenv");
-        assert_eq!(format!("{result}"), format!("{expected}"));
-        env::remove_var("CDH_CONFIG_PATH");
-
-        let config = CdhConfig::from_file("/thing").unwrap_err();
-        let expected = anyhow!("configuration file \"/thing\" not found");
-        assert_eq!(format!("{config}"), format!("{expected}"));
     }
 }
