@@ -167,9 +167,17 @@ location = "docker.io"
 [[image.registry_config.registry.mirror]]
 location = "123456.mirror.aliyuncs.com"
 
-# To support registries with self signed certs. This config item
-# is used to add extra trusted root certifications. The certificates
-# must be encoded by PEM.
+# To support registries with self-signed or privately-signed TLS certificates,
+# or HTTPS proxies that use such certificates. This config item adds extra
+# trusted root CA certificates (in PEM format).
+#
+# IMPORTANT: This works by adding the cert as a trusted root CA. Therefore:
+# - Supply the CA certificate that signed the registry's (or proxy's) TLS certificate.
+# - If using a self-signed certificate, it must have the CA:true Basic Constraints
+#   extension (i.e., it acts as both CA and leaf). Plain self-signed leaf certificates
+#   (without CA:true) are NOT supported when using rustls (the default TLS backend).
+# - These certificates are trusted for both direct registry connections and
+#   connections through an HTTPS proxy (see [image.image_pull_proxy] below).
 #
 # By default this value is not set.
 extra_root_certificates = ["""
@@ -213,7 +221,12 @@ work_dir = "/run/image-rs"
 
 [image.image_pull_proxy]
 
-# HTTPS proxy that will be used to pull image
+# HTTPS proxy that will be used to pull image.
+#
+# If the proxy itself uses a self-signed or privately-signed TLS certificate,
+# add its CA certificate via `extra_root_certificates` (see above). The same
+# rustls limitations apply: plain self-signed leaf certs (without CA:true) are
+# not supported
 #
 # By default this value is not set.
 https_proxy = "http://127.0.0.1:5432"
