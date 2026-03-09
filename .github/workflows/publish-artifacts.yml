@@ -18,18 +18,18 @@ jobs:
     strategy:
       matrix:
         platform: [
-          { tee: none,        arch: x86_64,  libc: musl },
-          { tee: none,        arch: s390x,   libc: gnu  },
-          { tee: none,        arch: aarch64, libc: gnu  },
-          { tee: amd,         arch: x86_64,  libc: musl },
-          { tee: az-cvm-vtpm, arch: x86_64,  libc: gnu  },
-          { tee: tdx,         arch: x86_64,  libc: gnu  },
-          { tee: cca,         arch: x86_64,  libc: musl },
-          { tee: cca,         arch: aarch64, libc: gnu  },
-          { tee: se,          arch: s390x,   libc: gnu  },
-          { tee: none,        arch: powerpc64le,  libc: gnu },
+          { tee: none,        arch: x86_64,  libc: musl, runner: ubuntu-24.04 },
+          { tee: none,        arch: s390x,   libc: gnu, runner: ubuntu-24.04-s390x },
+          { tee: none,        arch: aarch64, libc: gnu, runner: ubuntu-24.04 },
+          { tee: amd,         arch: x86_64,  libc: musl, runner: ubuntu-24.04 },
+          { tee: az-cvm-vtpm, arch: x86_64,  libc: gnu, runner: ubuntu-24.04 },
+          { tee: tdx,         arch: x86_64,  libc: gnu, runner: ubuntu-24.04 },
+          { tee: cca,         arch: x86_64,  libc: musl, runner: ubuntu-24.04 },
+          { tee: cca,         arch: aarch64, libc: gnu, runner: ubuntu-24.04 },
+          { tee: se,          arch: s390x,   libc: gnu, runner: ubuntu-24.04-s390x },
+          { tee: none,        arch: powerpc64le,  libc: gnu, runner: ubuntu-24.04-ppc64le },
         ]
-    runs-on: ${{ matrix.platform.arch == 's390x' && 's390x' || matrix.platform.arch == 'powerpc64le' && 'ubuntu-24.04-ppc64le' || 'ubuntu-24.04' }}
+    runs-on: ${{ matrix.platform.runner }}
     env:
       TEE_PLATFORM: ${{ matrix.platform.tee }}
       LIBC: ${{ matrix.platform.libc }}

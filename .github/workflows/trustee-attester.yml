@@ -25,12 +25,12 @@ jobs:
       matrix:
         instance:
           - ubuntu-24.04
-          - s390x
+          - ubuntu-24.04-s390x
           - ubuntu-24.04-arm
         include:
           - instance: ubuntu-24.04
             cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,all-attesters,bin"
-          - instance: s390x
+          - instance: ubuntu-24.04-s390x
             cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,se-attester,bin"
           - instance: ubuntu-24.04-arm
             cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,cca-attester,bin"

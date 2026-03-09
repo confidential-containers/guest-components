@@ -34,7 +34,7 @@ jobs:
       matrix:
         instance:
           - ubuntu-24.04
-          - s390x
+          - ubuntu-24.04-s390x
           - ubuntu-24.04-arm
     runs-on: ${{ matrix.instance }}
     steps:
@@ -61,7 +61,7 @@ jobs:
       - name: Musl build with default features
         run: |
           make LIBC=musl
-        if: ${{ startsWith(matrix.instance, 'ubuntu-24.04') }}
+        if: ${{ !endsWith(matrix.instance, 's390x') }}
 
       - name: Run cargo test
         run: cargo test -p api-server-rest

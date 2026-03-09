@@ -34,13 +34,13 @@ jobs:
       matrix:
         instance:
           - ubuntu-24.04
-          - s390x
+          - ubuntu-24.04-s390x
           - ubuntu-24.04-arm
         include:
           - instance: ubuntu-24.04
             make_args: ""
             cargo_test_opts: "--features openssl,rust-crypto,all-attesters,kbs,coco_as,ttrpc,grpc"
-          - instance: s390x
+          - instance: ubuntu-24.04-s390x
             make_args: "ATTESTER=se-attester TEE_PLATFORM=se"
             cargo_test_opts: "--no-default-features --features openssl,passport,se-attester,kbs,coco_as"
           - instance: ubuntu-24.04-arm
