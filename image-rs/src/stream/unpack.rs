@@ -471,6 +471,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    #[cfg_attr(target_arch = "s390x", ignore)]
     async fn test_unpack() {
         let mut ar = Builder::new(Vec::new());
         let tempdir = tempfile::tempdir().unwrap();

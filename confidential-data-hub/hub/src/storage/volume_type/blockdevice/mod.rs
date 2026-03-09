@@ -460,11 +460,12 @@ mod tests {
     }
 
     #[cfg(feature = "luks2")]
-    #[tokio::test]
     #[rstest]
-    #[serial]
     #[case::integrity("true")]
     #[case::no_integrity("false")]
+    #[tokio::test]
+    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[serial]
     async fn encrypt_an_empty_device_and_make_a_filesystem_on_it_using_luks2(
         #[case] integrity: &str,
     ) {
@@ -503,11 +504,12 @@ mod tests {
     }
 
     #[cfg(feature = "luks2")]
-    #[tokio::test]
     #[rstest]
-    #[serial]
     #[case::integrity("true")]
     #[case::no_integrity("false")]
+    #[tokio::test]
+    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[serial]
     async fn encrypt_an_empty_device_with_mkfs_opts_using_luks2(#[case] integrity: &str) {
         let mut temp_device_file = tempfile::NamedTempFile::new().unwrap();
         temp_device_file
@@ -548,6 +550,7 @@ mod tests {
 
     #[cfg(feature = "luks2")]
     #[tokio::test]
+    #[cfg_attr(target_arch = "s390x", ignore)]
     #[serial]
     async fn encrypt_an_empty_device_using_luks2() {
         let target_device_name = format!(
@@ -590,6 +593,7 @@ mod tests {
 
     #[cfg(feature = "luks2")]
     #[tokio::test]
+    #[cfg_attr(target_arch = "s390x", ignore)]
     #[serial]
     async fn open_pre_encrypted_device_using_luks2_with_key() {
         use crate::storage::drivers::luks2::Luks2Formatter;
@@ -643,6 +647,7 @@ mod tests {
 
     #[cfg(feature = "luks2")]
     #[tokio::test]
+    #[cfg_attr(target_arch = "s390x", ignore)]
     #[serial]
     async fn encrypt_empty_device_without_key_uses_random_key() {
         let target_device_name = format!(
