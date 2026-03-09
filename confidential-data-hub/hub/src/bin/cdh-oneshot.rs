@@ -9,9 +9,11 @@
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use clap::{Args, Parser, Subcommand};
-use confidential_data_hub::{hub::Hub, storage::volume_type::Storage, CdhConfig, DataHub};
-use tracing::warn;
+use confidential_data_hub::{hub::Hub, storage::volume_type::Storage, DataHub};
+use tracing::{debug, info, warn};
+use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
+mod config;
 #[derive(Parser)]
 #[command(name = "cdh_oneshot")]
 #[command(bin_name = "cdh_oneshot")]
@@ -94,14 +96,24 @@ struct PullImageArgs {
 
 #[tokio::main]
 async fn main() {
-    let args = Cli::parse();
-    let config = CdhConfig::new(args.config).expect("failed to initialize cdh config");
-    config.set_configuration_envs();
+    let cli = Cli::parse();
 
+    let (config, config_log) = config::read_config(cli.config).expect("failed to read config");
+
+    let env_filter = match std::env::var_os("RUST_LOG") {
+        Some(_) => EnvFilter::try_from_default_env().expect("RUST_LOG is present but invalid"),
+        None => EnvFilter::try_new(&config.log.level)
+            .unwrap_or_else(|_| panic!("Invalid log level: {}", config.log.level)),
+    };
+
+    Subscriber::builder().with_env_filter(env_filter).init();
+
+    info!("{config_log}");
+    debug!(config = ?config, "Using config");
     let cdh = Hub::new(config).await.expect("failed to start CDH");
 
     let mut tried = 1;
-    match args.operation {
+    match cli.operation {
         Operation::UnsealSecret(op_args) => {
             let secret = tokio::fs::read(op_args.secret_path)
                 .await
@@ -114,7 +126,7 @@ async fn main() {
                         break;
                     }
                     Err(e) => {
-                        if tried > args.retry {
+                        if tried > cli.retry {
                             let error = format!("failed to unseal secret, {e:?}");
                             panic!("{error}");
                         }
@@ -136,7 +148,7 @@ async fn main() {
                         break;
                     }
                     Err(e) => {
-                        if tried > args.retry {
+                        if tried > cli.retry {
                             panic!("failed to unwrap key");
                         }
                         warn!("Tried {tried} times... failed to unwrap key: {e}.");
@@ -153,7 +165,7 @@ async fn main() {
                     break;
                 }
                 Err(e) => {
-                    if tried > args.retry {
+                    if tried > cli.retry {
                         let error = format!("failed to get resource, {e:?}");
                         panic!("{error}");
                     }

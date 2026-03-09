@@ -245,3 +245,7 @@ http_proxy = "http://127.0.0.1:5432"
 #
 # By default this value is not set.
 no_proxy = "192.168.0.1,localhost"
+
+[log]
+# log level
+level = "info"
