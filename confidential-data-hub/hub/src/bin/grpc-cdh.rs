@@ -3,18 +3,19 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{env, net::SocketAddr};
+use std::net::SocketAddr;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use confidential_data_hub::{hub::Hub, CdhConfig};
+use confidential_data_hub::hub::Hub;
 use shadow_rs::shadow;
 use tokio::signal::unix::{signal, SignalKind};
-use tracing::info;
+use tracing::{debug, info};
 use tracing_subscriber::{fmt::Subscriber, EnvFilter};
 
 shadow!(build);
 
+mod config;
 mod grpc_server;
 mod message;
 
@@ -32,9 +33,14 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    let (config, config_log) = config::read_config(cli.config).context("failed to read config")?;
+
     let env_filter = match std::env::var_os("RUST_LOG") {
-        Some(_) => EnvFilter::try_from_default_env().expect("RUST_LOG is present but invalid"),
-        None => EnvFilter::new("info"),
+        Some(_) => EnvFilter::try_from_default_env().context("RUST_LOG is present but invalid")?,
+        None => EnvFilter::try_new(&config.log.level)
+            .context(format!("Invalid log level: {}", config.log.level))?,
     };
 
     let version = format!(
@@ -60,16 +66,10 @@ rpc: grpc
     Subscriber::builder().with_env_filter(env_filter).init();
 
     info!("Welcome to Confidential Containers Confidential Data Hub (gRPC version)!\n\n{version}");
-    let cli = Cli::parse();
-
-    let config = CdhConfig::new(cli.config)?;
+    info!("{config_log}");
+    debug!(config = ?config, "Using config");
 
     let cdh_socket = config.socket.parse::<SocketAddr>()?;
-
-    info!(
-        "[gRPC] Confidential Data Hub starts to listen to request: {}",
-        config.socket
-    );
 
     let cdh = Hub::new(config).await.context("start CDH")?;
 

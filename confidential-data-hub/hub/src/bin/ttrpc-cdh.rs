@@ -3,12 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{env, path::Path, sync::Arc};
+use std::{path::Path, sync::Arc};
 
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
-use confidential_data_hub::CdhConfig;
-use tracing::info;
+use tracing::{debug, info};
 
 use protos::ttrpc::cdh::{
     api_ttrpc::{
@@ -28,6 +27,7 @@ use ttrpc_server::Server;
 
 shadow!(build);
 
+mod config;
 mod message;
 mod ttrpc_server;
 
@@ -47,9 +47,14 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    let (config, config_log) = config::read_config(cli.config).context("failed to read config")?;
+
     let env_filter = match std::env::var_os("RUST_LOG") {
-        Some(_) => EnvFilter::try_from_default_env().expect("RUST_LOG is present but invalid"),
-        None => EnvFilter::new("info"),
+        Some(_) => EnvFilter::try_from_default_env().context("RUST_LOG is present but invalid")?,
+        None => EnvFilter::try_new(&config.log.level)
+            .context(format!("Invalid log level: {}", config.log.level))?,
     };
 
     let version = format!(
@@ -75,9 +80,8 @@ rpc: ttrpc
     Subscriber::builder().with_env_filter(env_filter).init();
 
     info!("Welcome to Confidential Containers Confidential Data Hub (ttRPC version)!\n\n{version}");
-    let cli = Cli::parse();
-
-    let config = CdhConfig::new(cli.config)?;
+    info!("{config_log}");
+    debug!(config = ?config, "Using config");
 
     let unix_socket_path = config
         .socket

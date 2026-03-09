@@ -3,25 +3,24 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{env, fs, path::Path};
+use std::{env, fs};
 
 use anyhow::*;
 use attestation_agent::config::aa_kbc_params::AaKbcParams;
 use config::{Config, File};
 use image_rs::config::ImageConfig;
 use serde::Deserialize;
-use tracing::{debug, info};
+use tracing::debug;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "ttrpc")] {
-        const DEFAULT_CDH_SOCKET_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
+        pub const DEFAULT_CDH_SOCKET_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
     } else {
-        const DEFAULT_CDH_SOCKET_ADDR: &str = "127.0.0.1:50000";
+        pub const DEFAULT_CDH_SOCKET_ADDR: &str = "127.0.0.1:50000";
     }
 }
 
-const CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS: &str =
-    "CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS";
+pub const DEFAULT_LOG_LEVEL: &str = "info";
 
 #[derive(Clone, Deserialize, Debug, PartialEq)]
 pub struct KbsConfig {
@@ -51,6 +50,29 @@ pub struct Credential {
     pub path: String,
 }
 
+fn default_log_level() -> String {
+    DEFAULT_LOG_LEVEL.to_string()
+}
+
+#[derive(Clone, Deserialize, Debug, PartialEq)]
+pub struct LogConfig {
+    /// log level
+    #[serde(default = "default_log_level")]
+    pub level: String,
+}
+
+impl Default for LogConfig {
+    fn default() -> Self {
+        Self {
+            level: DEFAULT_LOG_LEVEL.to_string(),
+        }
+    }
+}
+
+fn default_socket_addr() -> String {
+    DEFAULT_CDH_SOCKET_ADDR.to_string()
+}
+
 #[derive(Clone, Deserialize, Debug, PartialEq)]
 pub struct CdhConfig {
     pub kbc: KbsConfig,
@@ -64,6 +86,8 @@ pub struct CdhConfig {
     #[serde(default = "ImageConfig::from_kernel_cmdline")]
     pub image: ImageConfig,
 
+    /// socket address
+    #[serde(default = "default_socket_addr")]
     pub socket: String,
 
     /// Sealed Secrets use JWS integrity protection to ensure
@@ -74,53 +98,27 @@ pub struct CdhConfig {
     /// itself, not to the unsealed secret.
     #[serde(default)]
     pub skip_sealed_secret_verification: bool,
+
+    /// log configuration
+    #[serde(default)]
+    pub log: LogConfig,
 }
 
 impl CdhConfig {
-    pub fn new(config_path: Option<String>) -> Result<Self> {
-        let config_path = config_path.or_else(|| {
-            if let std::result::Result::Ok(env_path) = env::var("CDH_CONFIG_PATH") {
-                debug!("Read CDH's config path from env: {env_path}");
-                return Some(env_path);
-            }
-            None
-        });
-
-        let mut config = match config_path {
-            Some(path) => {
-                info!("Use configuration file {path}");
-                if !Path::new(&path).exists() {
-                    bail!("Config file {path} not found.")
-                }
-
-                Self::from_file(&path)?
-            }
-            None => {
-                info!("No config path specified, use a default config (some parts will read from kernel cmdline).");
-                Self {
-                    kbc: KbsConfig::new()?,
-                    credentials: Vec::new(),
-                    socket: DEFAULT_CDH_SOCKET_ADDR.into(),
-                    image: ImageConfig::from_kernel_cmdline(),
-                    skip_sealed_secret_verification: false,
-                }
-            }
-        };
-
-        if let std::result::Result::Ok(env) =
-            env::var(CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS)
-        {
-            info!("Read authenticated registry credentials URI from env: {env}");
-            config.image.authenticated_registry_credentials_uri = Some(env);
-        }
-
-        config.extend_credentials_from_kernel_cmdline()?;
-        Ok(config)
+    pub fn default_with_kernel_cmdline() -> Result<Self> {
+        Ok(Self {
+            kbc: KbsConfig::new()?,
+            credentials: Vec::new(),
+            socket: default_socket_addr(),
+            image: ImageConfig::from_kernel_cmdline(),
+            skip_sealed_secret_verification: false,
+            log: LogConfig::default(),
+        })
     }
 
     /// Load `CdhConfig` from a configuration file. Supported formats are all formats supported by the
     /// `config` crate.
-    fn from_file(config_path: &str) -> Result<Self> {
+    pub fn from_file(config_path: &str) -> Result<Self> {
         let c = Config::builder()
             .set_default("socket", DEFAULT_CDH_SOCKET_ADDR)?
             .set_default("kbc.url", "")?
@@ -146,7 +144,7 @@ impl CdhConfig {
     /// path.
     ///
     /// TODO: delete this way after initdata mechanism could cover CDH's launch config.
-    fn extend_credentials_from_kernel_cmdline(&mut self) -> Result<()> {
+    pub fn extend_credentials_from_kernel_cmdline(&mut self) -> Result<()> {
         let cmdline = fs::read_to_string("/proc/cmdline").context("read kernel cmdline failed")?;
         let kbs_resources = cmdline
             .split_ascii_whitespace()
@@ -188,9 +186,8 @@ impl CdhConfig {
 
 #[cfg(test)]
 mod tests {
-    use std::{env, io::Write};
+    use std::io::Write;
 
-    use anyhow::anyhow;
     use image_rs::{
         config::{ImageConfig, ProxyConfig},
         registry::{Config, Mirror, Registry},
@@ -198,7 +195,7 @@ mod tests {
     use rstest::rstest;
     use serial_test::serial;
 
-    use crate::{config::DEFAULT_CDH_SOCKET_ADDR, CdhConfig, KbsConfig};
+    use crate::{config::DEFAULT_CDH_SOCKET_ADDR, CdhConfig, KbsConfig, LogConfig};
 
     #[rstest]
     #[case(
@@ -233,6 +230,7 @@ location = "example-mirror-0.local/mirror-for-foo"
 https_proxy = "http://127.0.0.1:8080"
     "#,
         Some(CdhConfig {
+            log: LogConfig::default(),
             kbc: KbsConfig {
                 name: "offline_fs_kbc".to_string(),
                 url: "".to_string(),
@@ -292,6 +290,7 @@ kbs_cert = ""
 name = "offline_fs_kbc"
 "#,
     Some(CdhConfig {
+        log: LogConfig::default(),
         kbc: KbsConfig {
             name: "offline_fs_kbc".to_string(),
             url: "".to_string(),
@@ -311,6 +310,9 @@ name = "offline_fs_kbc"
     )]
     #[case(
         r#"
+[log]
+level = "warn"
+
 [kbc]
 name = "offline_fs_kbc"
 
@@ -318,6 +320,9 @@ name = "offline_fs_kbc"
 some_undefined_field = "unknown value"
 "#,
     Some(CdhConfig {
+        log: LogConfig {
+            level: "warn".to_string(),
+        },
         kbc: KbsConfig {
             name: "offline_fs_kbc".to_string(),
             url: "".to_string(),
@@ -348,85 +353,5 @@ some_undefined_field = "unknown value"
             Some(cfg) => assert_eq!(cfg, res.unwrap()),
             None => assert!(res.is_err()),
         }
-    }
-
-    #[test]
-    #[serial]
-    fn test_config_path() {
-        // --config takes precedence,
-        // then env.CDH_CONFIG_PATH
-
-        let config = CdhConfig::new(None).expect("Must be successful");
-        let expected = CdhConfig {
-            kbc: KbsConfig {
-                name: "offline_fs_kbc".into(),
-                url: "".into(),
-                kbs_cert: None,
-            },
-            credentials: Vec::new(),
-            socket: DEFAULT_CDH_SOCKET_ADDR.into(),
-            image: ImageConfig::from_kernel_cmdline(),
-            skip_sealed_secret_verification: false,
-        };
-        assert_eq!(config, expected);
-
-        let config = CdhConfig::new(Some("/thing".into())).unwrap_err();
-        let expected = anyhow!("Config file /thing not found.");
-        assert_eq!(format!("{config}"), format!("{expected}"));
-
-        env::set_var("CDH_CONFIG_PATH", "/byenv");
-        let config = CdhConfig::new(None).unwrap_err();
-        let expected = anyhow!("Config file /byenv not found.");
-        assert_eq!(format!("{config}"), format!("{expected}"));
-        env::remove_var("CDH_CONFIG_PATH");
-
-        let config = CdhConfig::new(Some("/thing".into())).unwrap_err();
-        let expected = anyhow!("Config file /thing not found.");
-        assert_eq!(format!("{config}"), format!("{expected}"));
-    }
-
-    #[test]
-    #[serial]
-    fn test_config_auth_override_by_env() {
-        let config = r#"
-[kbc]
-name = "offline_fs_kbc"
-
-[image]
-authenticated_registry_credentials_uri = "kbs:///default/auth/1"
-        "#;
-        let mut file = tempfile::Builder::new()
-            .append(true)
-            .suffix(".toml")
-            .tempfile()
-            .unwrap();
-        file.write_all(config.as_bytes()).unwrap();
-
-        // without env and from config file
-        let config_path = file.path().to_str().unwrap().to_string();
-        let config = CdhConfig::new(Some(config_path.clone())).expect("Must be successful");
-        assert_eq!(
-            config.image.authenticated_registry_credentials_uri,
-            Some("kbs:///default/auth/1".into())
-        );
-
-        // overrided by env
-        env::set_var(
-            "CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS",
-            "file:///test",
-        );
-        let config = CdhConfig::new(Some(config_path.clone())).unwrap();
-        assert_eq!(
-            config.image.authenticated_registry_credentials_uri,
-            Some("file:///test".to_string())
-        );
-        env::remove_var("CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS");
-
-        // no env again
-        let config = CdhConfig::new(Some(config_path)).unwrap();
-        assert_eq!(
-            config.image.authenticated_registry_credentials_uri,
-            Some("kbs:///default/auth/1".into())
-        );
     }
 }
