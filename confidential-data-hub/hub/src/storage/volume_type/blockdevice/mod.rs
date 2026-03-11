@@ -31,7 +31,6 @@ use zeroize::Zeroizing;
 #[derive(Serialize, Deserialize, Display, Debug, PartialEq, Eq)]
 #[serde(tag = "encryptionType")]
 pub enum BlockDeviceEncryptType {
-    #[cfg(feature = "luks2")]
     #[strum(serialize = "luks2")]
     #[serde(rename = "luks2")]
     Luks2(crate::storage::drivers::luks2::Luks2MountParameters),
@@ -133,7 +132,6 @@ pub struct BlockDevice {
     /// clean up.
     ///
     /// It is (device-path, dev-mapper-name)
-    #[cfg(feature = "luks2")]
     cryptsetup_pairs: Vec<(String, String)>,
 
     /// The zfs pools created by the operation. This is used to
@@ -176,7 +174,6 @@ impl BlockDevice {
 
         // 3. do the workflow according to the source type and target type according to different encryption types
         match parameters.encryption_type {
-            #[cfg(feature = "luks2")]
             BlockDeviceEncryptType::Luks2(luks2_parameters) => {
                 if luks2_parameters.target_type
                     == crate::storage::drivers::luks2::TargetType::Device
@@ -220,7 +217,6 @@ impl BlockDevice {
         }
 
         // 3. close luks2 devices
-        #[cfg(feature = "luks2")]
         for (_, name) in &self.cryptsetup_pairs {
             let formatter = crate::storage::drivers::luks2::Luks2Formatter::default();
             formatter
@@ -317,7 +313,6 @@ mod tests {
         assert!(device_path.len() > 4); // "/dev/" is 4 characters long
     }
 
-    #[cfg(feature = "luks2")]
     #[rstest::rstest]
     #[case::integrity("true")]
     #[case::no_integrity("false")]
@@ -362,7 +357,6 @@ mod tests {
         bd.umount().await.unwrap();
     }
 
-    #[cfg(feature = "luks2")]
     #[rstest::rstest]
     #[case::integrity("true")]
     #[case::no_integrity("false")]
@@ -409,7 +403,6 @@ mod tests {
         bd.umount().await.unwrap();
     }
 
-    #[cfg(feature = "luks2")]
     #[tokio::test]
     #[cfg_attr(target_arch = "s390x", ignore)]
     #[serial]
@@ -456,7 +449,6 @@ mod tests {
         bd.umount().await.unwrap();
     }
 
-    #[cfg(feature = "luks2")]
     #[tokio::test]
     #[cfg_attr(target_arch = "s390x", ignore)]
     #[serial]
@@ -512,7 +504,6 @@ mod tests {
         bd.umount().await.unwrap();
     }
 
-    #[cfg(feature = "luks2")]
     #[tokio::test]
     #[cfg_attr(target_arch = "s390x", ignore)]
     #[serial]
