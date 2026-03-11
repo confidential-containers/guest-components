@@ -96,10 +96,10 @@ Commands, steps, and expected behavior when using **LUKS2** secure mount (`encry
 ### Prerequisites
 
 - Build CDH and the client tool: see [CDH README](../../README.md#confidential-data-hub) and [Client Tool README](../../README.md#client-tool).
-- Install libcryptsetup and development library:
+- Install the `cryptsetup` CLI
 
 ```bash
-sudo apt install -y libcryptsetup-dev
+sudo apt install -y cryptsetup
 ```
 
 ### Step 1: Start CDH

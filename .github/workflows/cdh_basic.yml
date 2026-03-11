@@ -57,7 +57,7 @@ jobs:
 
       - name: Install cryptsetup and zfs
         run: |
-          sudo apt-get update && sudo apt-get install -y libcryptsetup-dev pkg-config zfsutils-linux
+          sudo apt-get update && sudo apt-get install -y cryptsetup pkg-config zfsutils-linux
 
       - name: Build and install
         run: |
