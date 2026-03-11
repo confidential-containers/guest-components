@@ -52,7 +52,6 @@ jose-jwa = "0.1.2"
 jose-jwk = "0.1.2"
 jose-jws = "0.1.2"
 kms = { path = "../kms", default-features = false }
-libcryptsetup-rs = { version = "0.13.1", optional = true, features = ["mutex"] }
 nix.workspace = true
 p256 = "0.13.2"
 prost = { workspace = true, optional = true }
@@ -105,10 +104,6 @@ sev = ["kms/sev"]
 
 # support eHSM stacks (KMS, ...)
 ehsm = []
-
-# support luks2 encrypted block device storage enabled by cryptsetup.
-# It requires to install dependency `libcryptsetup-dev` for ubuntu.
-luks2 = ["libcryptsetup-rs"]
 
 # Binary RPC type
 bin = ["clap", "shadow-rs", "tracing-subscriber"]
