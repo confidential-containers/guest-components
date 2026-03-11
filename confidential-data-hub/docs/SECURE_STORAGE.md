@@ -69,7 +69,7 @@ The [plugin](../hub/src/storage/volume_type/blockdevice) provides ways to encryp
 
 It supports **two secure mount modes**, selected by the `encryptionType` field in the `secure_mount()` request:
 
-- **LUKS2 mode (`"luks2"`)**: Uses `libcryptsetup` to create and open a LUKS2-encrypted device.
+- **LUKS2 mode (`"luks2"`)**: Uses `cryptsetup` to create and open a LUKS2-encrypted device.
 - **ZFS mode (`"zfs"`)**: Uses ZFS native encryption on top of a ZFS pool and encrypted dataset created on the block device.
 
 In both modes, the cleartext device or filesystem is only exposed inside the TEE guest.

@@ -4,7 +4,7 @@ This guide helps an user to use confidential data hub to secure mount inside TEE
 
 ## Preliminaries
 
-- Ensure that `libcryptsetup-dev` is installed for **LUKS2** mode.
+- Ensure that `cryptsetup` is installed for **LUKS2** mode.
 - Ensure that `zfsutils-linux` is installed and the ZFS kernel module is enabled for **ZFS** mode.
 
 The block-device plugin supports two secure mount modes: **LUKS2** (`encryptionType: "luks2"`) and **ZFS** (`encryptionType: "zfs"`). The following [Configuration](#configuration) section summarizes common and mode-specific options; then [Best practices](#best-practices) covers loop-device preparation plus end-to-end flows for LUKS2 and ZFS.
@@ -96,10 +96,10 @@ Commands, steps, and expected behavior when using **LUKS2** secure mount (`encry
 ### Prerequisites
 
 - Build CDH and the client tool: see [CDH README](../../README.md#confidential-data-hub) and [Client Tool README](../../README.md#client-tool).
-- Install libcryptsetup and development library:
+- Install the `cryptsetup` CLI
 
 ```bash
-sudo apt install -y libcryptsetup-dev
+sudo apt install -y cryptsetup
 ```
 
 ### Step 1: Start CDH

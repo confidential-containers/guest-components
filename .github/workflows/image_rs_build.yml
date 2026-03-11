@@ -70,7 +70,8 @@ jobs:
       
       - name: Install cryptsetup
         run: |
-          sudo apt-get install -y libcryptsetup-dev pkg-config
+          sudo apt-get install -y cryptsetup pkg-config
+        if: matrix.instance == 'ubuntu-24.04'  || matrix.instance == 'ubuntu-24.04-arm'
 
       - name: Install cross-compliation support dependencies
         run: |
