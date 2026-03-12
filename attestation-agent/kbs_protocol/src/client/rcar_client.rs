@@ -308,9 +308,9 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
 
 #[async_trait]
 impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
-    async fn get_resource(&mut self, resource_uri: ResourceUri) -> Result<Vec<u8>> {
+    async fn get_resource(&mut self, resource_uri: ResourceUri, plugin: String) -> Result<Vec<u8>> {
         let mut remote_url = format!(
-            "{}/{KBS_PREFIX}/resource/{}/{}/{}",
+            "{}/{KBS_PREFIX}/{plugin}/{}/{}/{}",
             self.kbs_host_url, resource_uri.repository, resource_uri.r#type, resource_uri.tag
         );
         if let Some(ref q) = resource_uri.query {
@@ -471,7 +471,10 @@ mod test {
             .try_into()
             .expect("resource uri");
 
-        let resource = match client.get_resource(resource_uri).await {
+        let resource = match client
+            .get_resource(resource_uri, "resource".to_string())
+            .await
+        {
             Ok(resource) => resource,
             Err(e) => {
                 // Skip the test if the kbs server returned ProtocolVersion error. Any other
