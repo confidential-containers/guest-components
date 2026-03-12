@@ -20,7 +20,7 @@ clap = { workspace = true, features = ["derive"], optional = true }
 cfg-if.workspace = true
 crypto.path = "../deps/crypto"
 hex.workspace = true
-iocuddle = { version = "0.1.1", optional = true }
+iocuddle = { version = "0.2.0", optional = true }
 kbs-types.workspace = true
 nvml-wrapper = { git = "https://github.com/rust-nvml/nvml-wrapper", rev = "7e0752f331", optional = true, default-features = false, features = [
     "serde",
