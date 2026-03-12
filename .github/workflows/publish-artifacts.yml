@@ -124,7 +124,7 @@ jobs:
         - powerpc64le
         include:
         - arch: x86_64
-          libc: gnu
+          libc: musl
           instance: ubuntu-24.04
         - arch: s390x
           libc: gnu
