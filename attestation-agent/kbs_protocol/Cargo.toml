@@ -5,6 +5,7 @@ authors = ["The Attestation Agent Authors"]
 publish = false
 edition = "2021"
 license = "Apache-2.0"
+build = "build.rs"
 
 [dependencies]
 anyhow.workspace = true
@@ -26,6 +27,7 @@ resource_uri.path = "../deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+shadow-rs = { version = "1.7.1", default-features = false }
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
@@ -42,6 +44,7 @@ testcontainers.workspace = true
 tokio = { workspace = true, features = ["rt", "macros", "fs", "process"] }
 
 [build-dependencies]
+shadow-rs = "1.7.1"
 
 [[bin]]
 name = "trustee-attester"
