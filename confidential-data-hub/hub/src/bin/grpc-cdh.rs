@@ -8,6 +8,7 @@ use std::net::SocketAddr;
 use anyhow::{Context, Result};
 use clap::Parser;
 use confidential_data_hub::hub::Hub;
+use const_format::concatcp;
 use shadow_rs::shadow;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::{debug, info};
@@ -19,10 +20,19 @@ mod config;
 mod grpc_server;
 mod message;
 
-const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
+const FEATURE_INFO: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
+const DIRTY_SUFFIX: &str = if build::GIT_CLEAN { "" } else { " (dirty)" };
+const VERSION: &str = concatcp!(
+    build::LAST_TAG,
+    "-",
+    build::SHORT_COMMIT,
+    DIRTY_SUFFIX,
+    "\n",
+    FEATURE_INFO
+);
 
 #[derive(Debug, Parser)]
-#[command(author, version = Some(VERSION))]
+#[command(author, version = VERSION)]
 struct Cli {
     /// Path to the config  file
     ///
@@ -52,14 +62,11 @@ async fn main() -> Result<()> {
 | \__/\| (_) || | | || |  | || (_| ||  __/| | | || |_ | || (_| || |  | |/ /| (_| || |_| (_| |  | | | || |_| || |_) |
  \____/ \___/ |_| |_||_|  |_| \__,_| \___||_| |_| \__||_| \__,_||_|  |___/  \__,_| \__|\__,_|  \_| |_/ \__,_||_.__/ 
                                                                                                                                                                                          
-version: v{}
-commit: {}
+version: {VERSION}
 buildtime: {}
 loglevel: {env_filter}
 rpc: grpc
 ",
-        build::PKG_VERSION,
-        build::COMMIT_HASH,
         build::BUILD_TIME,
     );
 
