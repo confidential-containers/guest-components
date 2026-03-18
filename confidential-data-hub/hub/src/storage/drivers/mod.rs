@@ -13,7 +13,6 @@ use tempfile::NamedTempFile;
 use tracing::debug;
 
 pub mod filesystem;
-#[cfg(feature = "luks2")]
 pub mod luks2;
 pub mod zfs;
 

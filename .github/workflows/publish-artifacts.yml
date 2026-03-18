@@ -124,7 +124,7 @@ jobs:
         - powerpc64le
         include:
         - arch: x86_64
-          libc: gnu
+          libc: musl
           instance: ubuntu-24.04
         - arch: s390x
           libc: gnu
@@ -168,7 +168,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
-          libdevmapper-dev libcryptsetup-dev pkg-config
+          libdevmapper-dev pkg-config
         if [ "${{ matrix.arch }}" = "powerpc64le" ]; then
           sudo apt-get install -y libclang-dev cmake protobuf-compiler
         fi
