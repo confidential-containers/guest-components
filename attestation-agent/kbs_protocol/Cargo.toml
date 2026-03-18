@@ -44,7 +44,7 @@ testcontainers.workspace = true
 tokio = { workspace = true, features = ["rt", "macros", "fs", "process"] }
 
 [build-dependencies]
-shadow-rs = "1.7.1"
+shadow-rs.workspace = true
 
 [[bin]]
 name = "trustee-attester"
