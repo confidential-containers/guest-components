@@ -30,10 +30,19 @@ const DEFAULT_ATTESTATION_SOCKET_ADDR: &str = concatcp!(
     "attestation-agent.sock"
 );
 
-const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
+const FEATURE_INFO: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
+const DIRTY_SUFFIX: &str = if build::GIT_CLEAN { "" } else { " (dirty)" };
+const VERSION: &str = concatcp!(
+    build::LAST_TAG,
+    "-",
+    build::SHORT_COMMIT,
+    DIRTY_SUFFIX,
+    "\n",
+    FEATURE_INFO
+);
 
 #[derive(Debug, Parser)]
-#[command(author, version = Some(VERSION))]
+#[command(author, version = VERSION)]
 struct Cli {
     /// Attestation ttRPC Unix socket addr.
     ///
@@ -107,14 +116,11 @@ pub async fn main() -> Result<()> {
 \_| |_/ \__| \__|\___||___/ \__|\__,_| \__||_| \___/ |_| |_|    \_| |_/ \__, | \___||_| |_| \__|
                                                                          __/ |                  
                                                                         |___/                                                                  
-version: v{}
-commit: {}
+version: {VERSION}
 buildtime: {}
 loglevel: {env_filter}
 rpc: ttrpc
 ",
-        build::PKG_VERSION,
-        build::COMMIT_HASH,
         build::BUILD_TIME,
     );
 
