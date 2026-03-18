@@ -9,6 +9,7 @@ use anyhow::*;
 use attestation_agent::{config::Config, initdata::Initdata, AttestationAPIs, AttestationAgent};
 use base64::Engine;
 use clap::Parser;
+use const_format::concatcp;
 use shadow_rs::shadow;
 use std::net::SocketAddr;
 use tokio::signal::unix::{signal, SignalKind};
@@ -19,10 +20,19 @@ shadow!(build);
 
 const DEFAULT_ATTESTATION_AGENT_ADDR: &str = "127.0.0.1:50002";
 
-const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
+const FEATURE_INFO: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
+const DIRTY_SUFFIX: &str = if build::GIT_CLEAN { "" } else { " (dirty)" };
+const VERSION: &str = concatcp!(
+    build::LAST_TAG,
+    "-",
+    build::SHORT_COMMIT,
+    DIRTY_SUFFIX,
+    "\n",
+    FEATURE_INFO
+);
 
 #[derive(Debug, Parser)]
-#[command(author, version = Some(VERSION))]
+#[command(author, version = VERSION)]
 struct Cli {
     /// Attestation gRPC Unix socket addr.
     ///
@@ -88,14 +98,11 @@ pub async fn main() -> Result<()> {
 \_| |_/ \__| \__|\___||___/ \__|\__,_| \__||_| \___/ |_| |_|    \_| |_/ \__, | \___||_| |_| \__|
                                                                          __/ |                  
                                                                         |___/                                                                  
-version: v{}
-commit: {}
+version: {VERSION}
 buildtime: {}
 loglevel: {env_filter}
 rpc: grpc
 ",
-        build::PKG_VERSION,
-        build::COMMIT_HASH,
         build::BUILD_TIME,
     );
 
