@@ -294,7 +294,12 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
         //
         // because we changed the files ownership manually, thus we need to reset
         // the mtime again.
-        if kind.is_dir() || file.header().as_ustar().is_none() && file.path_bytes().ends_with(b"/")
+        if kind.is_dir()
+            || file.header().as_ustar().is_none()
+                && file
+                    .path_bytes()
+                    .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?
+                    .ends_with(b"/")
         {
             set_perms_ownerships(&path_cstring, ChownType::LChown, uid, gid, mode)
                 .await
