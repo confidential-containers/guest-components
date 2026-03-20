@@ -2172,8 +2172,9 @@ checksum = "1c7a8fb8a9fbf66c1f703fe16184d10ca0ee9d23be5b4436400408ba54a95005"
 
 [[package]]
 name = "ear"
-version = "0.4.0"
-source = "git+https://github.com/veraison/rust-ear?rev=4c25640e0f57b82f7851602264a85e7da04e2634#4c25640e0f57b82f7851602264a85e7da04e2634"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5aec2877d084955915f48086ae07f49f4c89e33e3826d1f7af33b342274f8100"
 dependencies = [
  "base64 0.22.1",
  "ciborium",
@@ -3759,7 +3760,8 @@ dependencies = [
 [[package]]
 name = "kbs-types"
 version = "0.15.0"
-source = "git+https://github.com/confidential-containers/kbs-types?rev=24a9d131a35fd8da46bea53ddf462279dbcbdaec#24a9d131a35fd8da46bea53ddf462279dbcbdaec"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "010924a5f65328c9609598c895ea506c723e3c72e528aeaba0a9645d8330b718"
 dependencies = [
  "base64 0.22.1",
  "ear",
@@ -3955,7 +3957,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
