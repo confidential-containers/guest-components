@@ -371,7 +371,7 @@ dependencies = [
  "iocuddle",
  "kbs-types",
  "num-traits",
- "nvml-wrapper",
+ "nv-attestation-sdk",
  "occlum_dcap",
  "pem-rfc7468 1.0.0",
  "picky-asn1 0.10.1",
@@ -680,6 +680,26 @@ dependencies = [
  "cexpr",
  "clang-sys",
  "itertools 0.13.0",
+ "log",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "rustc-hash 2.1.1",
+ "shlex",
+ "syn 2.0.99",
+]
+
+[[package]]
+name = "bindgen"
+version = "0.72.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "993776b509cfb49c750f11b8f07a46fa23e0a1386ffc01fb1e7d343efc387895"
+dependencies = [
+ "bitflags 2.11.0",
+ "cexpr",
+ "clang-sys",
+ "itertools 0.10.5",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -4350,26 +4370,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "nvml-wrapper"
-version = "0.11.0"
-source = "git+https://github.com/rust-nvml/nvml-wrapper?rev=7e0752f331#7e0752f331d37a62a46ef2fb6329a33fae36dd8d"
+name = "nv-attestation-sdk"
+version = "1.2.0"
+source = "git+https://github.com/NVIDIA/attestation-sdk?rev=0c1be386a8fbb8f2766a6a556d10df86f5fed9d3#0c1be386a8fbb8f2766a6a556d10df86f5fed9d3"
 dependencies = [
- "bitflags 2.11.0",
- "libloading",
- "nvml-wrapper-sys",
- "serde",
- "serde_derive",
- "static_assertions",
- "thiserror 1.0.69",
- "wrapcenum-derive",
+ "nv-attestation-sdk-sys",
 ]
 
 [[package]]
-name = "nvml-wrapper-sys"
-version = "0.9.0"
-source = "git+https://github.com/rust-nvml/nvml-wrapper?rev=7e0752f331#7e0752f331d37a62a46ef2fb6329a33fae36dd8d"
+name = "nv-attestation-sdk-sys"
+version = "1.2.0"
+source = "git+https://github.com/NVIDIA/attestation-sdk?rev=0c1be386a8fbb8f2766a6a556d10df86f5fed9d3#0c1be386a8fbb8f2766a6a556d10df86f5fed9d3"
 dependencies = [
- "libloading",
+ "bindgen 0.72.1",
 ]
 
 [[package]]
@@ -8509,18 +8522,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3268f3d866458b787f390cf61f4bbb563b922d091359f9608842999eaee3943c"
 dependencies = [
  "bitflags 2.11.0",
-]
-
-[[package]]
-name = "wrapcenum-derive"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a76ff259533532054cfbaefb115c613203c73707017459206380f03b3b3f266e"
-dependencies = [
- "darling 0.20.10",
- "proc-macro2",
- "quote",
- "syn 2.0.99",
 ]
 
 [[package]]

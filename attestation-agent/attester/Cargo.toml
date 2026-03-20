@@ -22,9 +22,7 @@ crypto.path = "../deps/crypto"
 hex.workspace = true
 iocuddle = { version = "0.1.1", optional = true }
 kbs-types.workspace = true
-nvml-wrapper = { git = "https://github.com/rust-nvml/nvml-wrapper", rev = "7e0752f331", optional = true, default-features = false, features = [
-    "serde",
-] }
+nv-attestation-sdk = { git  = "https://github.com/NVIDIA/attestation-sdk", rev="0c1be386a8fbb8f2766a6a556d10df86f5fed9d3", optional = true }
 occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.7", optional = true }
 pem-rfc7468 = { version = "1", optional = true, features = ["alloc"] }
 pv = { version = "0.10.0", package = "s390_pv", optional = true }
@@ -88,7 +86,7 @@ tsm-report = ["tempfile"]
 tdx-attester = ["scroll", "tsm-report", "iocuddle"]
 tdx-attest-dcap-ioctls = ["tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
-nvidia-attester = ["nvml-wrapper"]
+nvidia-attester = ["nv-attestation-sdk"]
 az-snp-vtpm-attester = ["az-snp-vtpm", "pem-rfc7468"]
 az-tdx-vtpm-attester = ["az-snp-vtpm-attester", "az-tdx-vtpm"]
 snp-attester = ["sev"]
