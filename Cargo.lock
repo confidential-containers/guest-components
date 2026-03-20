@@ -1621,6 +1621,7 @@ dependencies = [
  "kbs-types",
  "openssl",
  "p256",
+ "p521",
  "rand 0.8.5",
  "rand 0.9.2",
  "rsa",
@@ -3792,6 +3793,7 @@ dependencies = [
  "serde_json",
  "serial_test",
  "sha2 0.10.9",
+ "shadow-rs",
  "tempfile",
  "testcontainers",
  "thiserror 2.0.18",
@@ -4034,6 +4036,12 @@ dependencies = [
  "errno 0.2.8",
  "libc",
 ]
+
+[[package]]
+name = "lru-slab"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "matchers"
@@ -5511,14 +5519,15 @@ dependencies = [
 
 [[package]]
 name = "quinn-proto"
-version = "0.11.9"
+version = "0.11.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2fe5ef3495d7d2e377ff17b1a8ce2ee2ec2a18cde8b6ad6619d65d0701c135d"
+checksum = "434b42fec591c96ef50e21e886936e66d3cc3f737104fdb9b737c40ffb94c098"
 dependencies = [
  "aws-lc-rs",
  "bytes",
- "getrandom 0.2.15",
- "rand 0.8.5",
+ "getrandom 0.3.1",
+ "lru-slab",
+ "rand 0.9.2",
  "ring",
  "rustc-hash 2.1.1",
  "rustls",
@@ -6674,9 +6683,9 @@ dependencies = [
 
 [[package]]
 name = "shadow-rs"
-version = "1.7.0"
+version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d9967e7c3cd89d19cd533d8fceb3e5dcee28cf97fe76441481abe1d32723039"
+checksum = "3c798acfc78a69c7b038adde44084d8df875555b091da42c90ae46257cdcc41a"
 dependencies = [
  "const_format",
  "git2",

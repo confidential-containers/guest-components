@@ -9,6 +9,7 @@ use anyhow::Result;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use clap::{Parser, Subcommand};
+use shadow_rs::{formatcp, shadow};
 use std::fs;
 use std::path::PathBuf;
 use tracing::debug;
@@ -19,7 +20,12 @@ use kbs_protocol::KbsClientBuilder;
 use kbs_protocol::KbsClientCapabilities;
 use kbs_protocol::ResourceUri;
 
+shadow!(build);
+
+const CLI_VERSION: &str = formatcp!("{}-{}", build::LAST_TAG, build::SHORT_COMMIT);
+
 #[derive(Parser)]
+#[command(version = CLI_VERSION)]
 struct Cli {
     /// Trustee URL of format <protocol>://<host>:<port>
     #[clap(long, value_parser)]

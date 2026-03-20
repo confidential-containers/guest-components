@@ -51,13 +51,13 @@ jobs:
           fetch-depth: 1
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@a0b538fa0b742a6aa35d6e2c169b4bd06d225a98 # v1.15.3
+        uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
         with:
           components: rustfmt, clippy
 
-      - name: Install cryptsetup
+      - name: Install cryptsetup and zfs
         run: |
-          sudo apt-get update && sudo apt-get install -y libcryptsetup-dev pkg-config
+          sudo apt-get update && sudo apt-get install -y libcryptsetup-dev pkg-config zfsutils-linux
 
       - name: Build and install
         run: |
@@ -72,4 +72,4 @@ jobs:
 
       - name: Run cargo test
         run: |
-          sudo -E PATH=$PATH -s cargo test --features kbs,aliyun,sev,bin,luks2 -p kms -p confidential-data-hub
+          sudo -E PATH=$PATH -s RUST_LOG=warn cargo test --features kbs,aliyun,sev,bin,luks2 -p kms -p confidential-data-hub -- --nocapture

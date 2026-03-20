@@ -7,10 +7,11 @@ use anyhow::{anyhow, bail, Context, Result};
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use crypto::{
-    ec::{EcKeyPair, KeyWrapAlgorithm},
+    ec::{EcKeyPair, KeyWrapAlgorithm, P256EcKeyPair, P521EcKeyPair},
     rsa::{PaddingMode, RSAKeyPair},
 };
 use kbs_types::{ProtectedHeader, Response, TeePubKey};
+use serde::Deserialize;
 use tracing::warn;
 use zeroize::Zeroizing;
 
@@ -25,10 +26,33 @@ pub enum TeeKey {
     Ec(Box<EcKeyPair>),
 }
 
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
+pub enum TeeKeyAlgorithm {
+    #[default]
+    #[serde(rename = "ECDH-ES+A256KW-P256")]
+    EcdhEsA256KwP256,
+    #[serde(rename = "ECDH-ES+A256KW-P521")]
+    EcdhEsA256KwP521,
+    #[serde(rename = "RSA-OAEP-256")]
+    RsaOaep256,
+}
+
 impl TeeKeyPair {
     /// Create a new Tee key pair. We by default to use EC key pair.
     pub fn new() -> Result<Self> {
-        let key = TeeKey::Ec(Box::default());
+        Self::new_with_algorithm(TeeKeyAlgorithm::default())
+    }
+
+    pub fn new_with_algorithm(algo: TeeKeyAlgorithm) -> Result<Self> {
+        let key = match algo {
+            TeeKeyAlgorithm::EcdhEsA256KwP256 => {
+                TeeKey::Ec(Box::new(EcKeyPair::P256(P256EcKeyPair::default())))
+            }
+            TeeKeyAlgorithm::EcdhEsA256KwP521 => {
+                TeeKey::Ec(Box::new(EcKeyPair::P521(P521EcKeyPair::default())))
+            }
+            TeeKeyAlgorithm::RsaOaep256 => TeeKey::Rsa(Box::new(RSAKeyPair::new()?)),
+        };
         Ok(Self { key })
     }
 
@@ -130,7 +154,7 @@ impl TeeKeyPair {
         }
 
         let keypair = EcKeyPair::from_pkcs8_pem(pem)
-            .context("private key is not RSA (PKCS#1) nor EC P256 (PKCS#8)")?;
+            .context("private key is not RSA (PKCS#1) nor EC P256/P521 (PKCS#8)")?;
         Ok(Self {
             key: TeeKey::Ec(Box::new(keypair)),
         })
@@ -159,5 +183,54 @@ impl TeeKeyPair {
         )?;
 
         Ok(plaintext)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_defaults_to_p256() {
+        let keypair = TeeKeyPair::new().expect("new keypair");
+        let TeePubKey::EC { crv, .. } = keypair.export_pubkey().expect("export key") else {
+            panic!("must be ec key")
+        };
+        assert_eq!(crv, "P-256");
+    }
+
+    #[test]
+    fn new_with_p521_exports_p521() {
+        let keypair =
+            TeeKeyPair::new_with_algorithm(TeeKeyAlgorithm::EcdhEsA256KwP521).expect("new keypair");
+        let TeePubKey::EC { crv, .. } = keypair.export_pubkey().expect("export key") else {
+            panic!("must be ec key")
+        };
+        assert_eq!(crv, "P-521");
+    }
+
+    #[test]
+    fn new_with_rsa_exports_rsa_oaep() {
+        let keypair =
+            TeeKeyPair::new_with_algorithm(TeeKeyAlgorithm::RsaOaep256).expect("new keypair");
+        let TeePubKey::RSA { alg, .. } = keypair.export_pubkey().expect("export key") else {
+            panic!("must be rsa key")
+        };
+        assert_eq!(alg, "RSA-OAEP-256");
+    }
+
+    #[test]
+    fn deserialize_jwa_compact_algorithms() {
+        let p256: TeeKeyAlgorithm = serde_json::from_str("\"ECDH-ES+A256KW-P256\"")
+            .expect("ECDH-ES+A256KW-P256 algorithm should parse");
+        assert_eq!(p256, TeeKeyAlgorithm::EcdhEsA256KwP256);
+
+        let p521: TeeKeyAlgorithm = serde_json::from_str("\"ECDH-ES+A256KW-P521\"")
+            .expect("ECDH-ES+A256KW-P521 algorithm should parse");
+        assert_eq!(p521, TeeKeyAlgorithm::EcdhEsA256KwP521);
+
+        let rsa_oaep256: TeeKeyAlgorithm =
+            serde_json::from_str("\"RSA-OAEP-256\"").expect("RSA-OAEP-256 algorithm should parse");
+        assert_eq!(rsa_oaep256, TeeKeyAlgorithm::RsaOaep256);
     }
 }

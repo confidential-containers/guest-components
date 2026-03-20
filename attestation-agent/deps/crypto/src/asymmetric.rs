@@ -57,5 +57,7 @@ pub mod ec {
     pub enum Curve {
         #[strum(serialize = "P-256")]
         P256,
+        #[strum(serialize = "P-521")]
+        P521,
     }
 }
