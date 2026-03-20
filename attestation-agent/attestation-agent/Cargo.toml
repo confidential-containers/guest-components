@@ -76,7 +76,6 @@ all-attesters = [
     "se-attester",
     "cca-attester",
     "tpm-attester",
-    "nvidia-attester",
 ]
 tdx-attester = ["kbs_protocol?/tdx-attester", "attester/tdx-attester"]
 tdx-attester-libtdx = [
