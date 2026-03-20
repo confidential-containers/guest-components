@@ -76,7 +76,6 @@ all-attesters = [
     "cca-attester",
     "se-attester",
     "tpm-attester",
-    "nvidia-attester",
 ]
 
 # tsm-report enables a module that helps attesters to use Linux TSM_REPORTS for generating
