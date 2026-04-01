@@ -69,7 +69,9 @@ anyhow.workspace = true
 cfg-if.workspace = true
 criterion = "0.8.2"
 nix = { workspace = true, features = ["user"] }
+rand_core.workspace = true
 ring.workspace = true
+rsa.workspace = true
 rstest.workspace = true
 serial_test = "3.4.0"
 strum.workspace = true
