@@ -5,9 +5,6 @@ sockets = ["0.0.0.0:8085"]
 [attestation_token]
 insecure_key = true
 
-[policy_engine]
-policy_path = "/opa/confidential-containers/kbs/policy.rego"
-
 [attestation_service]
 type = "coco_as_builtin"
 work_dir = "/opt/confidential-containers/attestation-service"
@@ -18,12 +15,14 @@ duration_min = 5
 
 [attestation_service.rvps_config]
 type = "BuiltIn"
-store_type = "LocalFs"
 
 [admin]
 type = "InsecureAllowAll"
 
 [[plugins]]
 name = "resource"
-type = "LocalFs"
-dir_path = "/opt/confidential-containers/kbs/repository"
+type = "kvstorage"
+
+[storage_backend]
+storage_type = "local_fs"
+backends.local_fs.dir_path = "/opt/confidential-containers/trustee"
