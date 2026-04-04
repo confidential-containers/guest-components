@@ -391,6 +391,7 @@ mod test {
         GenericImage, ImageExt,
     };
     use tokio::fs;
+    use tokio::io::AsyncBufReadExt;
 
     use crate::{
         evidence_provider::NativeEvidenceProvider, Error, KbsClientBuilder, KbsClientCapabilities,
@@ -412,12 +413,8 @@ mod test {
         let tmp = tempfile::tempdir().expect("create tempdir");
         let mut resource_path = PathBuf::new();
         resource_path.push(tmp.path());
-        resource_path.push("default/key");
-        fs::create_dir_all(resource_path.clone())
-            .await
-            .expect("create resource path");
+        resource_path.push("default\\x2Fkey\\x2Ftestfile");
 
-        resource_path.push("testfile");
         fs::write(resource_path.clone(), CONTENT)
             .await
             .expect("write content");
@@ -440,7 +437,7 @@ mod test {
         .with_exposed_port(8085.tcp())
         .with_mount(Mount::bind_mount(
             tmp.path().as_os_str().to_string_lossy(),
-            "/opt/confidential-containers/kbs/repository",
+            "/opt/confidential-containers/trustee/repository",
         ))
         .with_mount(Mount::bind_mount(
             start_kbs_script.into_os_string().to_string_lossy(),
@@ -452,12 +449,44 @@ mod test {
         ))
         .with_mount(Mount::bind_mount(
             policy.into_os_string().to_string_lossy(),
-            "/opa/confidential-containers/kbs/policy.rego",
+            "/opt/confidential-containers/trustee/kbs/resource-policy.rego",
         ))
+        .with_env_var("RUST_LOG", "debug")
         .with_cmd(vec!["/usr/local/bin/start_kbs.sh"])
         .start()
         .await
         .expect("run kbs failed");
+
+        let stdout = kbs.stdout(true);
+        let stderr = kbs.stderr(true);
+        let _stdout_log = tokio::spawn(async move {
+            let mut lines = stdout.lines();
+            loop {
+                match lines.next_line().await {
+                    Ok(Some(line)) => println!("[kbs container stdout] {line}"),
+                    Ok(None) => break,
+                    Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+                    Err(e) => {
+                        eprintln!("[kbs container stdout] log stream error: {e}");
+                        break;
+                    }
+                }
+            }
+        });
+        let _stderr_log = tokio::spawn(async move {
+            let mut lines = stderr.lines();
+            loop {
+                match lines.next_line().await {
+                    Ok(Some(line)) => println!("[kbs container stderr] {line}"),
+                    Ok(None) => break,
+                    Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+                    Err(e) => {
+                        eprintln!("[kbs container stderr] log stream error: {e}");
+                        break;
+                    }
+                }
+            }
+        });
 
         tokio::time::sleep(Duration::from_secs(10)).await;
         let port = kbs.get_host_port_ipv4(8085).await.expect("get port");
