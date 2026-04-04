@@ -45,7 +45,7 @@ enum Architecture {
 }
 
 pub fn detect_platform() -> bool {
-    if let Err(_) = ensure_sdk_init() {
+    if ensure_sdk_init().is_err() {
         warn!("NVIDIA Attestation SDK could not be initialized.");
         return false;
     };
@@ -116,24 +116,31 @@ fn get_device_evidence(report_data: Option<[u8; 32]>) -> Result<Vec<NvDeviceRepo
         None => Nonce::generate(32)?,
     };
 
-    let gpu_source = GpuEvidenceSource::from_nvml()?;
-    let gpu_evidence = gpu_source.collect(&nonce)?;
-
-    let switch_source = SwitchEvidenceSource::from_nscq()?;
-    let switch_evidence = switch_source.collect(&nonce)?;
-
     let mut evidence = vec![];
 
-    if !gpu_evidence.is_empty() {
-        let gpu_evidence: Vec<NvDeviceReportAndCert> =
-            serde_json::from_str(&gpu_evidence.to_json()?)?;
-        evidence.extend(gpu_evidence);
+    match GpuEvidenceSource::from_nvml() {
+        Ok(gpu_source) => {
+            let gpu_evidence = gpu_source.collect(&nonce)?;
+
+            if !gpu_evidence.is_empty() {
+                let gpu_evidence: Vec<NvDeviceReportAndCert> =
+                    serde_json::from_str(&gpu_evidence.to_json()?)?;
+                evidence.extend(gpu_evidence);
+            }
+        }
+        Err(e) => warn!("Failed to get gpu evidence: {}", e),
     }
 
-    if !switch_evidence.is_empty() {
-        let switch_evidence: Vec<NvDeviceReportAndCert> =
-            serde_json::from_str(&switch_evidence.to_json()?)?;
-        evidence.extend(switch_evidence);
+    match SwitchEvidenceSource::from_nscq() {
+        Ok(switch_source) => {
+            let switch_evidence = switch_source.collect(&nonce)?;
+            if !switch_evidence.is_empty() {
+                let switch_evidence: Vec<NvDeviceReportAndCert> =
+                    serde_json::from_str(&switch_evidence.to_json()?)?;
+                evidence.extend(switch_evidence);
+            }
+        }
+        Err(e) => warn!("Failed to get switch evidence: {}", e),
     }
 
     Ok(evidence)
