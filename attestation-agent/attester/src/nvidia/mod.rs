@@ -119,28 +119,31 @@ fn get_device_evidence(report_data: Option<[u8; 32]>) -> Result<Vec<NvDeviceRepo
     let mut evidence = vec![];
 
     match GpuEvidenceSource::from_nvml() {
-        Ok(gpu_source) => {
-            let gpu_evidence = gpu_source.collect(&nonce)?;
-
-            if !gpu_evidence.is_empty() {
-                let gpu_evidence: Vec<NvDeviceReportAndCert> =
-                    serde_json::from_str(&gpu_evidence.to_json()?)?;
-                evidence.extend(gpu_evidence);
+        Ok(gpu_source) => match gpu_source.collect(&nonce) {
+            Ok(gpu_evidence) => {
+                if !gpu_evidence.is_empty() {
+                    let gpu_evidence: Vec<NvDeviceReportAndCert> =
+                        serde_json::from_str(&gpu_evidence.to_json()?)?;
+                    evidence.extend(gpu_evidence);
+                }
             }
-        }
-        Err(e) => warn!("Failed to get gpu evidence: {}", e),
+            Err(e) => warn!("Failed to get gpu evidence: {}", e),
+        },
+        Err(e) => warn!("Failed to initialize gpu evidence source: {}", e),
     }
 
     match SwitchEvidenceSource::from_nscq() {
-        Ok(switch_source) => {
-            let switch_evidence = switch_source.collect(&nonce)?;
-            if !switch_evidence.is_empty() {
-                let switch_evidence: Vec<NvDeviceReportAndCert> =
-                    serde_json::from_str(&switch_evidence.to_json()?)?;
-                evidence.extend(switch_evidence);
+        Ok(switch_source) => match switch_source.collect(&nonce) {
+            Ok(switch_evidence) => {
+                if !switch_evidence.is_empty() {
+                    let switch_evidence: Vec<NvDeviceReportAndCert> =
+                        serde_json::from_str(&switch_evidence.to_json()?)?;
+                    evidence.extend(switch_evidence);
+                }
             }
-        }
-        Err(e) => warn!("Failed to get switch evidence: {}", e),
+            Err(e) => warn!("Failed to get switch evidence: {}", e),
+        },
+        Err(e) => warn!("Failed to initialize switch evidence source: {}", e),
     }
 
     Ok(evidence)
