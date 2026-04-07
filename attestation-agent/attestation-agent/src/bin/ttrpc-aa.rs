@@ -4,8 +4,7 @@
 //
 
 use anyhow::*;
-use attestation_agent::{config::Config, initdata::Initdata, AttestationAPIs, AttestationAgent};
-use base64::Engine;
+use attestation_agent::{config::Config, AttestationAgent};
 use clap::Parser;
 use const_format::concatcp;
 use shadow_rs::shadow;
@@ -60,26 +59,9 @@ struct Cli {
     #[arg(short, long)]
     config_file: Option<String>,
 
-    /// Initdata digest to be verified by AA. If initdata check failed, AA will failed to launch.
-    /// The initdata should be base64 standard encoding.
+    /// Path to the Initdata TOML file. The initdata plaintext will be carried in the attestation process.
     ///
-    /// Note that this is an alternative to `--initdata_toml`.
-    ///
-    /// If both parameters `--initdata_toml` and `initdata_digest` are provided, parameter
-    /// `--initdata_toml` takes precedence.
-    ///
-    /// Example:
-    /// `--initdata_digest AAAAAAAAAAAA`
-    #[arg(short, long)]
-    initdata_digest: Option<String>,
-
-    /// Path to the Initdata TOML file to be verified by AA. If initdata check failed, AA will failed to launch.
-    /// The initdata should be base64 standard encoding.
-    ///
-    /// Note that this is an alternative to `--initdata_digest`.
-    ///
-    /// /// If both parameters `--initdata_toml` and `initdata_digest` are provided, parameter
-    /// `--initdata_toml` takes precedence.
+    /// Note that the initdata digest will not be checked against the platform's initdata status.
     ///
     /// Example:
     /// `--initdata_toml /path/to/initdata.toml`
@@ -140,33 +122,11 @@ rpc: ttrpc
 
     let mut aa = AttestationAgent::new(config).context("start AA")?;
 
-    let mut initdata_digest = None;
     if let Some(initdata_toml_path) = cli.initdata_toml {
         info!("Initdata TOML file is given by parameter");
         let initdata_toml =
             std::fs::read_to_string(&initdata_toml_path).context("read initdata toml file")?;
-        let (_, digest) = Initdata::parse_and_get_digest(&initdata_toml)?;
         aa.set_initdata_toml(initdata_toml);
-        initdata_digest = Some(digest);
-    } else if let Some(initdata) = cli.initdata_digest {
-        info!("Initdata digest is given by parameter");
-        let initdata = base64::engine::general_purpose::STANDARD
-            .decode(&initdata)
-            .context("base64 decode initdata")?;
-        initdata_digest = Some(initdata);
-    }
-
-    if let Some(initdata_digest) = initdata_digest {
-        let res = aa.bind_init_data(&initdata_digest).await.context(
-        "The initdata supplied by the parameter is inconsistent with that of the current platform.",
-    )?;
-
-        match res {
-            attester::InitDataResult::Ok => info!("Check initdata passed."),
-            attester::InitDataResult::Unsupported => {
-                info!("Platform does not support initdata checking. Jumping.")
-            }
-        }
     }
 
     aa.init().await.context("init AA")?;
