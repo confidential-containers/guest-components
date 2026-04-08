@@ -64,6 +64,10 @@ rstest.workspace = true
 name = "evidence_getter"
 required-features = ["bin"]
 
+[[bin]]
+name = "initdata-validator"
+required-features = ["bin"]
+
 [features]
 default = ["all-attesters"]
 all-attesters = [
