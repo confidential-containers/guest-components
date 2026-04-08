@@ -193,8 +193,8 @@ mod tests {
     };
 
     use oci_client::Reference;
-    use rand_core::OsRng;
     use rsa::pkcs8::{EncodePublicKey, LineEnding};
+    use rsa::rand_core::OsRng;
     use rsa::RsaPrivateKey;
     use rstest::rstest;
     use serial_test::serial;
