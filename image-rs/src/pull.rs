@@ -106,9 +106,11 @@ impl<'a> PullClient<'a> {
     }
 
     /// pull_manifest pulls an image manifest and config data.
-    pub async fn pull_manifest(&mut self) -> PullLayerResult<(OciImageManifest, String, String)> {
+    pub async fn pull_manifest(
+        &mut self,
+    ) -> PullLayerResult<(OciImageManifest, String, String, Option<String>)> {
         self.client
-            .pull_manifest_and_config(&self.reference, self.auth)
+            .pull_manifest_and_config_and_list_digest(&self.reference, self.auth)
             .await
             .map_err(|source| PullLayerError::PullManifestError { source })
     }
@@ -262,7 +264,8 @@ mod tests {
             client_config,
         )
         .unwrap();
-        let (image_manifest, _image_digest, image_config) = client.pull_manifest().await.unwrap();
+        let (image_manifest, _image_digest, image_config, _manifest_list_digest) =
+            client.pull_manifest().await.unwrap();
 
         let image_config = ImageConfiguration::from_reader(image_config.as_bytes()).unwrap();
         let diff_ids = image_config.rootfs().diff_ids();
@@ -315,7 +318,7 @@ mod tests {
                 client_config,
             )
             .unwrap();
-            let (image_manifest, _image_digest, image_config) =
+            let (image_manifest, _image_digest, image_config, _manifest_list_digest) =
                 client.pull_manifest().await.unwrap();
 
             let image_config = ImageConfiguration::from_reader(image_config.as_bytes()).unwrap();
@@ -356,7 +359,7 @@ mod tests {
                 client_config,
             )
             .unwrap();
-            let (image_manifest, _image_digest, image_config) =
+            let (image_manifest, _image_digest, image_config, _manifest_list_digest) =
                 client.pull_manifest().await.unwrap();
 
             let image_config = ImageConfiguration::from_reader(image_config.as_bytes()).unwrap();
@@ -425,7 +428,8 @@ mod tests {
         )
         .unwrap();
 
-        let (_image_manifest, _image_digest, _image_config) = client.pull_manifest().await.unwrap();
+        let (_image_manifest, _image_digest, _image_config, _manifest_list_digest) =
+            client.pull_manifest().await.unwrap();
 
         let meta_store = MetaStore::default();
         let ms = Arc::new(RwLock::new(meta_store));
