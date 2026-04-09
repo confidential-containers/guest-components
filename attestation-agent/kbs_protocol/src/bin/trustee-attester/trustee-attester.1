@@ -27,7 +27,7 @@ Optional. When <protocol> is https, add a certificate to verify the Trustee serv
 
 .SH SUBCOMMAND
 .IR get-resource
-\-\-path <resource-path> [\-\-initdata <initdata-string>]
+\-\-path <resource-path> [\-\-initdata <initdata-string> \-\-plugin <plugin-string>]
 
 .RS
 Do attestation and get a secret from Trustee.
@@ -40,6 +40,10 @@ Plaintext initdata can optionally be passed as a string with the
 .B \-\-initdata
 flag. The verifier will generally expect its hash to be measured,
 e.g. in PCR8 when using the TPM attester.
+
+.B \-\-plugin
+flag. Trustee can fulfill resources via a plugin that is specified
+here. The default is "resource"
 
 For more information look at
 https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md

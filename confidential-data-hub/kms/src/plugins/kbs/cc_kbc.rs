@@ -55,7 +55,7 @@ impl Kbc for CcKbc {
     async fn get_resource(&mut self, rid: ResourceUri) -> Result<Vec<u8>> {
         let secret = self
             .client
-            .get_resource(rid)
+            .get_resource(rid, "resource".to_string())
             .await
             .map_err(|e| Error::KbsClientError(format!("get resource failed: {e:?}")))?;
         Ok(secret)
