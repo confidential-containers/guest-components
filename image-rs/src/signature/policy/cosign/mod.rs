@@ -81,7 +81,21 @@ impl CosignParameters {
                 payload.validate_signed_docker_reference(&image.reference, rule)?;
             }
 
-            payload.validate_signed_docker_manifest_digest(&image.manifest_digest.to_string())?;
+            if payload
+                .validate_signed_docker_manifest_digest(&image.manifest_digest.to_string())
+                .is_err()
+            {
+                // If the image manifest digest does not match the digest in the signature,
+                // and the image is a multi-arch image, check if the digest of the manifest list
+                // matches the signature.
+                if let Some(manifest_list_digest) = &image.manifest_list_digest {
+                    payload.validate_signed_docker_manifest_digest(
+                        &manifest_list_digest.to_string(),
+                    )?;
+                } else {
+                    bail!("Manifest digest does not match signature.");
+                }
+            }
         }
 
         Ok(())

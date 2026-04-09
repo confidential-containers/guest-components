@@ -123,6 +123,7 @@ impl SignatureValidator {
         &self,
         image_reference: &str,
         image_digest: &str,
+        manifest_list_digest: Option<&str>,
         auth: &RegistryAuth,
     ) -> SignatureResult<()> {
         let reference = oci_client::Reference::try_from(image_reference)
@@ -131,6 +132,12 @@ impl SignatureValidator {
         image
             .set_manifest_digest(image_digest)
             .map_err(|_| SignatureError::IllegalImageDigest(image_digest.to_string()))?;
+
+        if let Some(list_digest) = manifest_list_digest {
+            image
+                .set_manifest_list_digest(list_digest)
+                .map_err(|_| SignatureError::IllegalImageDigest(list_digest.to_string()))?;
+        }
 
         // Get the policy set that matches the image.
         let reqs = self.policy.requirements_for_image(&image);

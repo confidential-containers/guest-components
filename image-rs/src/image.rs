@@ -381,7 +381,9 @@ impl ImageClient {
             client_config,
         )
         .map_err(|source| PullImageError::Internal { source })?;
-        let (image_manifest, image_digest, image_config) = client.pull_manifest().await?;
+
+        let (image_manifest, image_digest, image_config, manifest_list_digest) =
+            client.pull_manifest().await?;
 
         let id = image_manifest.config.digest.clone();
 
@@ -401,7 +403,12 @@ impl ImageClient {
         #[cfg(feature = "signature")]
         if let Some(signature_validator) = &self.signature_validator {
             signature_validator
-                .check_image_signature(image_url, &image_digest, &auth)
+                .check_image_signature(
+                    image_url,
+                    &image_digest,
+                    manifest_list_digest.as_deref(),
+                    &auth,
+                )
                 .await?;
         }
 
