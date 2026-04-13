@@ -168,25 +168,49 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
 
         // Calculate the runtime data for the primary attester, which includes
         // the device evidence retrieved above.
+        let primary_runtime_data_json = json!({
+            "tee-pubkey": runtime_data.tee_pubkey,
+            "nonce": runtime_data.nonce,
+            "additional-evidence": additional_evidence,
+        });
+        let primary_runtime_data_serialized =
+            serialize_json_canonically(&primary_runtime_data_json)
+                .context("serialize runtime data failed")?;
+        let primary_runtime_digest = hash_algorithm.digest(&primary_runtime_data_serialized);
+
         let primary_runtime_data = match tee {
-            // SE handles the report data differently. As such, it does not support
-            // multi-device attestation.
+            // SE handles the report data differently. It:
+            // - does not support multi-device attestation.
+            // - injects runtime_data_digest into the request
+            // The injected data will be used in SE attester's get_evidence method.
             Tee::Se => {
                 if !additional_evidence.is_empty() {
                     bail!("Cannot attest multiple devices on s390x platform.")
                 }
-                runtime_data.nonce.into_bytes()
+
+                #[cfg(feature = "se-attester")]
+                {
+                    use attester::se::SeAttestationRequest;
+
+                    // Deserialize the nonce as SeAttestationRequest
+                    let mut request: SeAttestationRequest =
+                        serde_json::from_str(&runtime_data.nonce)
+                            .context("Failed to deserialize SeAttestationRequest from nonce")?;
+
+                    // Inject runtime_data_digest
+                    request.runtime_data_digest = Some(primary_runtime_digest);
+                    debug!("Injected runtime_data_digest into SE attestation request");
+
+                    // Serialize the modified request to pass to the attester
+                    serde_json::to_vec(&request)
+                        .context("Failed to serialize modified SeAttestationRequest")?
+                }
+                #[cfg(not(feature = "se-attester"))]
+                {
+                    bail!("Tee::Se requires se-attester feature to be enabled")
+                }
             }
-            _ => {
-                let primary_runtime_data = json!({
-                    "tee-pubkey": runtime_data.tee_pubkey,
-                    "nonce": runtime_data.nonce,
-                    "additional-evidence": additional_evidence,
-                });
-                let primary_runtime_data = serialize_json_canonically(&primary_runtime_data)
-                    .context("serialize runtime data failed")?;
-                hash_algorithm.digest(&primary_runtime_data)
-            }
+            _ => primary_runtime_digest,
         };
 
         let primary_evidence = self.provider.primary_evidence(primary_runtime_data).await?;
