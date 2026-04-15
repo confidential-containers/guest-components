@@ -7,7 +7,6 @@ use std::time::Duration;
 
 use anyhow::{bail, Context};
 use async_trait::async_trait;
-use canon_json::CanonicalFormatter;
 use kbs_types::HashAlgorithm;
 use kbs_types::{
     Attestation, Challenge, CompositeEvidence, ErrorInformation, InitData, Request, Response,
@@ -84,10 +83,7 @@ fn get_hash_algorithm(extra_params: serde_json::Value) -> Result<HashAlgorithm> 
 }
 
 fn serialize_json_canonically<T: Serialize>(value: T) -> anyhow::Result<Vec<u8>> {
-    let mut buf = Vec::new();
-    let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
-    value.serialize(&mut ser)?;
-    Ok(buf)
+    Ok(serde_json_canonicalizer::to_vec(&value)?)
 }
 
 async fn build_request(tee: Tee) -> Request {
