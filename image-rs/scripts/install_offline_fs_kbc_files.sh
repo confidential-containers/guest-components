@@ -12,7 +12,7 @@ set -o errtrace
 
 [ -n "${DEBUG:-}" ] && set -o xtrace
 
-script_dir=$(dirname $(readlink -f $0))
+script_dir=$(dirname "$(readlink -f "$0")")
 test_resource_json_name="${2:-aa-offline_fs_kbc-resources.json}"
 resource_json_name="aa-offline_fs_kbc-resources.json"
 keys_json_name="aa-offline_fs_kbc-keys.json"

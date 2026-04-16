@@ -31,39 +31,38 @@ dump_keys() {
 
 generate_keys() {
 	repo=
-	if [ -z $1 ]; then
+	if [ -z "$1" ]; then
 		repo="default"
 	else
-		repo=$1
+		repo="$1"
 	fi
 
-	create_keys 10 $repo
+	create_keys 10 "$repo"
 	dump_keys
 }
 
 export_key() {
-	local json_file=$1
-	local uri=$2
-	local output_path=$3
+	local json_file="$1"
+	local uri="$2"
+	local output_path="$3"
 
-	cat $json_file | jq ".\"$uri\"" -r | base64 -d > $output_path
+	cat "$json_file" | jq ".\"$uri\"" -r | base64 -d > "$output_path"
 }
 
 main() {
-    local dir=$(cd "$(dirname "$0")";pwd)
-	local operation=$1
+	local operation="$1"
     if [ -z "$operation" ]; then 
         usage
     fi
 
-    if [ "$operation" = "generate" ] ;then
-        generate_keys $2
+	if [ "$operation" = "generate" ] ;then
+        generate_keys "$2"
     elif [ "$operation" = "export" ] ;then
-		if [ -z $4 ] ; then
+		if [ -z "$4" ] ; then
 			echo "[FAILED] Unmatched parameters"
 			usage
 		fi
-        export_key $2 $3 $4
+        export_key "$2" "$3" "$4"
     else
 		echo "[FAILED] Unknown operation $operation"
 		usage

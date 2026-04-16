@@ -1,4 +1,5 @@
-rm -rf occlum_instance && mkdir occlum_instance && cd occlum_instance
+#!/bin/bash
+rm -rf occlum_instance && mkdir occlum_instance && cd occlum_instance || exit
 
 occlum init && rm -rf image
 
