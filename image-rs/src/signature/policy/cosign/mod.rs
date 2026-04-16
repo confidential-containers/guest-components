@@ -368,7 +368,7 @@ mod tests {
         ),
         // The repository of the given image's and the Payload's are different
         "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
-        "sha256:10e0ec4c7663b5f9be6efd16d8ceec760efe5377b9a0762ef3f51101ac08b7e8",
+        "sha256:4f926abc2dc7b29781fd7870c7c91a1550f390fc86e10b7b3d5fa795eb5a3d39",
         false,
         "Match reference failed.",
     )]
@@ -381,7 +381,7 @@ mod tests {
             std::env::current_dir().expect("get current dir").to_str().expect("get current dir")
         ),
         "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
-        "sha256:10e0ec4c7663b5f9be6efd16d8ceec760efe5377b9a0762ef3f51101ac08b7e8",
+        "sha256:4f926abc2dc7b29781fd7870c7c91a1550f390fc86e10b7b3d5fa795eb5a3d39",
         false,
         // Wrong key: only ECDSA P-256 schemes are tried for this SPKI.
         "[PublicKeyVerifier { key: ECDSA_P256_SHA256_ASN1(VerifyingKey { inner: PublicKey { point: AffinePoint { x: FieldElement(0x4D1167C9BBBCDB6CC1C867394D50C1777D5C2FCC46374E6B07819141E8D2CFAF), y: FieldElement(0xDB4E43CA897D2EE05C70836839AF5DBEE8B62EC4B93563FB044D92551FE33EEE), infinity: 0 } } }) }]"
@@ -398,7 +398,7 @@ mod tests {
             std::env::current_dir().expect("get current dir").to_str().expect("get current dir")
         ),
         "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
-        "sha256:10e0ec4c7663b5f9be6efd16d8ceec760efe5377b9a0762ef3f51101ac08b7e8",
+        "sha256:4f926abc2dc7b29781fd7870c7c91a1550f390fc86e10b7b3d5fa795eb5a3d39",
         false,
         // Only MatchRepository and ExactRepository are supported.
         "Denied by MatchExact",
@@ -411,7 +411,7 @@ mod tests {
         }}", 
         std::env::current_dir().expect("get current dir").to_str().expect("get current dir")),
         "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
-        "sha256:10e0ec4c7663b5f9be6efd16d8ceec760efe5377b9a0762ef3f51101ac08b7e8",
+        "sha256:4f926abc2dc7b29781fd7870c7c91a1550f390fc86e10b7b3d5fa795eb5a3d39",
         true,
         ""
     )]
