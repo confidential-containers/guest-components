@@ -1,0 +1,65 @@
+name: Publish ORAS artifact
+description: Package a binary and publish as ORAS artifact with manifest
+
+inputs:
+  registry:
+    description: OCI registry hostname
+    required: true
+  image_name:
+    description: Repository image namespace
+    required: true
+  artifact_name:
+    description: Binary/artifact name
+    required: true
+  rust_target:
+    description: Rust target triple
+    required: true
+  git_sha:
+    description: Git SHA for tag
+    required: true
+  tee:
+    description: TEE platform suffix for tag
+    required: true
+  arch:
+    description: Build architecture (x86_64/aarch64/powerpc64le/...)
+    required: true
+  oci_arch:
+    description: OCI architecture for manifest annotation
+    required: true
+
+outputs:
+  image:
+    description: Published image name
+    value: ${{ steps.publish.outputs.image }}
+  digest:
+    description: Published image digest
+    value: ${{ steps.publish.outputs.digest }}
+
+runs:
+  using: composite
+  steps:
+    - id: publish
+      shell: bash
+      run: |
+        mkdir -p oras
+        cd oras
+        cp ../target/${{ inputs.rust_target }}/release/${{ inputs.artifact_name }} .
+        tar cJf "${{ inputs.artifact_name }}.tar.xz" "${{ inputs.artifact_name }}"
+
+        arch="${{ inputs.arch }}"
+        # Align non-standard Rust arch naming with OCI conventions.
+        [ "$arch" = "powerpc64le" ] && arch="ppc64le"
+
+        arch_tag="${{ inputs.git_sha }}-${{ inputs.tee }}_${arch}"
+        image="${{ inputs.registry }}/${{ inputs.image_name }}/${{ inputs.artifact_name }}"
+        tag="${{ inputs.git_sha }}-${{ inputs.tee }}"
+
+        oras push "${image}:${arch_tag}" "${{ inputs.artifact_name }}.tar.xz"
+        docker manifest create "${image}:${tag}" --amend "${image}:${arch_tag}"
+        docker manifest annotate --arch "${{ inputs.oci_arch }}" --os linux "${image}:${tag}" "${image}:${arch_tag}"
+        docker manifest push "${image}:${tag}"
+
+        # add image and digest to output for attestation
+        echo "image=${image}" >> "$GITHUB_OUTPUT"
+        digest="$(oras manifest fetch "${image}:${arch_tag}" --descriptor | jq -r .digest)"
+        echo "digest=${digest}" >> "$GITHUB_OUTPUT"

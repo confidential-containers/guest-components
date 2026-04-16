@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  publish-aa:
+  publish-aa-and-initdata-validator:
     permissions:
       contents: read
       packages: write
@@ -70,43 +70,50 @@ jobs:
 
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-    - name: Build AA
+    - name: Build AA and Initdata Validator
       env:
         ARCH: ${{ matrix.platform.arch }}
         LIBC: ${{ matrix.platform.libc }}
       run: |
         make ./target/${{ env.RUST_TARGET }}/release/attestation-agent
+        make ./target/${{ env.RUST_TARGET }}/release/initdata-validator
 
-    - name: Publish with ORAS
+    - name: Publish AA with ORAS
       id: publish
-      env:
-        OCI_ARCH: ${{ matrix.platform.arch == 'x86_64' && 'amd64' || matrix.platform.arch == 'aarch64' && 'arm64' || matrix.platform.arch == 'powerpc64le' && 'ppc64le' || matrix.platform.arch }}
-      run: |
-        mkdir oras
-        cd oras
-        cp ../target/${{ env.RUST_TARGET }}/release/attestation-agent .
-        tar cJf attestation-agent.tar.xz attestation-agent
-        arch="${{ matrix.platform.arch }}"
-        # After building for target powerpc64le, tag and push the image as ppc64le to match standard arch naming.
-        [ "$arch" = "powerpc64le" ] && arch="ppc64le"
-        arch_tag="${{ github.sha }}-${{ matrix.platform.tee }}_${arch}"
-        image="${REGISTRY}/${IMAGE_NAME}/attestation-agent"
-        tag="${{ github.sha }}-${{ matrix.platform.tee }}"
-        oras push "${image}:${arch_tag}" attestation-agent.tar.xz
-        # We need to create the platform annotations with docker, since oras 1.2 doesn't support
-        # pushing with platform yet.
-        docker manifest create "${image}:${tag}" --amend "${image}:${arch_tag}"
-        docker manifest annotate --arch "$OCI_ARCH" --os linux "${image}:${tag}" "${image}:${arch_tag}"
-        docker manifest push "${image}:${tag}"
-        # add image and digest to output for attestation
-        echo "image=${image}" >> "$GITHUB_OUTPUT"
-        digest="$(oras manifest fetch "${image}:${arch_tag}" --descriptor | jq -r .digest)"
-        echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+      uses: ./.github/actions/publish-oras-artifact
+      with:
+        registry: ${{ env.REGISTRY }}
+        image_name: ${{ env.IMAGE_NAME }}
+        artifact_name: attestation-agent
+        rust_target: ${{ env.RUST_TARGET }}
+        git_sha: ${{ github.sha }}
+        tee: ${{ matrix.platform.tee }}
+        arch: ${{ matrix.platform.arch }}
+        oci_arch: ${{ matrix.platform.arch == 'x86_64' && 'amd64' || matrix.platform.arch == 'aarch64' && 'arm64' || matrix.platform.arch == 'powerpc64le' && 'ppc64le' || matrix.platform.arch }}
+
+    - name: Publish Initdata Validator with ORAS
+      id: publish-initdata-validator
+      uses: ./.github/actions/publish-oras-artifact
+      with:
+        registry: ${{ env.REGISTRY }}
+        image_name: ${{ env.IMAGE_NAME }}
+        artifact_name: initdata-validator
+        rust_target: ${{ env.RUST_TARGET }}
+        git_sha: ${{ github.sha }}
+        tee: ${{ matrix.platform.tee }}
+        arch: ${{ matrix.platform.arch }}
+        oci_arch: ${{ matrix.platform.arch == 'x86_64' && 'amd64' || matrix.platform.arch == 'aarch64' && 'arm64' || matrix.platform.arch == 'powerpc64le' && 'ppc64le' || matrix.platform.arch }}
 
     - uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
       with:
         subject-name: ${{ steps.publish.outputs.image }}
         subject-digest: ${{ steps.publish.outputs.digest }}
+        push-to-registry: true
+
+    - uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+      with:
+        subject-name: ${{ steps.publish-initdata-validator.outputs.image }}
+        subject-digest: ${{ steps.publish-initdata-validator.outputs.digest }}
         push-to-registry: true
 
   publish-cdh-and-asr:
