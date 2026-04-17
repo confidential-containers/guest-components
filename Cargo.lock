@@ -499,7 +499,7 @@ dependencies = [
  "sha2 0.10.9",
  "thiserror 2.0.18",
  "tss-esapi",
- "zerocopy 0.8.48",
+ "zerocopy",
 ]
 
 [[package]]
@@ -528,7 +528,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.18",
  "ureq",
- "zerocopy 0.8.48",
+ "zerocopy",
 ]
 
 [[package]]
@@ -2311,6 +2311,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "enum_dispatch"
+version = "0.3.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa18ce2bc66555b3218614519ac839ddb759a7d6720732f979ef8d13be147ecd"
+dependencies = [
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
 name = "enumflags2"
 version = "0.7.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2785,7 +2797,7 @@ checksum = "6ea2d84b969582b4b1864a92dc5d27cd2b77b622a8d79306834f1be5ba20d84b"
 dependencies = [
  "cfg-if",
  "crunchy",
- "zerocopy 0.8.48",
+ "zerocopy",
 ]
 
 [[package]]
@@ -3802,6 +3814,7 @@ dependencies = [
  "testcontainers",
  "thiserror 2.0.18",
  "tokio",
+ "toml",
  "tracing",
  "tracing-subscriber",
  "ttrpc",
@@ -5281,7 +5294,7 @@ version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
 dependencies = [
- "zerocopy 0.8.48",
+ "zerocopy",
 ]
 
 [[package]]
@@ -6231,34 +6244,36 @@ checksum = "dd29631678d6fb0903b69223673e122c32e9ae559d0960a38d574695ebc0ea15"
 
 [[package]]
 name = "s390_pv"
-version = "0.10.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f75b3a6c5bb5b3e8e4fdced5e8b406fcfaf909a96975c4010e839799bf25f48"
+checksum = "73b3164010c1c8f2555721d3c2297158fc957e751d383b4e617610b40bf40ac6"
 dependencies = [
  "byteorder",
  "curl",
+ "enum_dispatch",
  "foreign-types",
  "log",
  "openssl",
  "openssl-sys",
  "s390_pv_core",
  "serde",
- "thiserror 1.0.69",
- "zerocopy 0.7.35",
+ "thiserror 2.0.18",
+ "zerocopy",
 ]
 
 [[package]]
 name = "s390_pv_core"
-version = "0.10.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dacc93d1903ab065f327d8c71745a9a48f4e812dd6707cec62538d5a84654627"
+checksum = "ba83bc04ef65f9a404af077f4e6b84d59569ae2ce6c473a923105059df79ec54"
 dependencies = [
  "byteorder",
  "libc",
  "log",
+ "regex",
  "serde",
- "thiserror 1.0.69",
- "zerocopy 0.7.35",
+ "thiserror 2.0.18",
+ "zerocopy",
 ]
 
 [[package]]
@@ -8871,32 +8886,11 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.7.35"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b9b4fd18abc82b8136838da5d50bae7bdea537c574d8dc1a34ed098d6c166f0"
-dependencies = [
- "byteorder",
- "zerocopy-derive 0.7.35",
-]
-
-[[package]]
-name = "zerocopy"
 version = "0.8.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eed437bf9d6692032087e337407a86f04cd8d6a16a37199ed57949d415bd68e9"
 dependencies = [
- "zerocopy-derive 0.8.48",
-]
-
-[[package]]
-name = "zerocopy-derive"
-version = "0.7.35"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa4f8080344d4671fb4e831a13ad1e68092748387dfc4f55e356242fae12ce3e"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.117",
+ "zerocopy-derive",
 ]
 
 [[package]]
