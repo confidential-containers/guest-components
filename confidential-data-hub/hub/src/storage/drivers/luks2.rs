@@ -541,7 +541,7 @@ mod tests {
 
     #[test]
     fn prepare_luks_header_file_rejects_existing_path() {
-        use rand::{distr::Alphanumeric, rng, Rng};
+        use rand::{distr::Alphanumeric, rng, RngExt};
 
         let path_str = format!(
             "/dev/{}",
