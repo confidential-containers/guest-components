@@ -23,7 +23,7 @@ jobs:
           { tee: none,        arch: aarch64, libc: gnu, runner: ubuntu-24.04 },
           { tee: amd,         arch: x86_64,  libc: musl, runner: ubuntu-24.04 },
           { tee: az-cvm-vtpm, arch: x86_64,  libc: gnu, runner: ubuntu-24.04 },
-          { tee: tdx,         arch: x86_64,  libc: gnu, runner: ubuntu-24.04 },
+          { tee: tdx,         arch: x86_64,  libc: musl, runner: ubuntu-24.04 },
           { tee: cca,         arch: x86_64,  libc: musl, runner: ubuntu-24.04 },
           { tee: cca,         arch: aarch64, libc: gnu, runner: ubuntu-24.04 },
           { tee: se,          arch: s390x,   libc: gnu, runner: ubuntu-24.04-s390x },
