@@ -18,7 +18,7 @@ use kms::plugins::aliyun::AliyunKmsClient;
 #[cfg(feature = "ehsm")]
 use kms::plugins::ehsm::EhsmKmsClient;
 use kms::{Encrypter, ProviderSettings};
-use rand::Rng;
+use rand::RngExt;
 #[cfg(feature = "ehsm")]
 use serde_json::Value;
 use tokio::{fs, io::AsyncWriteExt};

@@ -13,7 +13,7 @@ use std::{
 use anyhow::bail;
 use chrono::Utc;
 use credential::StsCredential;
-use rand::{distr::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, RngExt};
 use reqwest::{header::HeaderMap, ClientBuilder};
 use serde::Deserialize;
 use serde_json::Value;
