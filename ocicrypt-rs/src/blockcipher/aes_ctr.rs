@@ -6,7 +6,7 @@ use std::io::Read;
 use anyhow::{anyhow, Result};
 use ctr::cipher::generic_array::GenericArray;
 use ctr::cipher::{KeyIvInit, StreamCipher};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 
 use crate::blockcipher::{EncryptionFinalizer, LayerBlockCipher, LayerBlockCipherOptions};
