@@ -368,7 +368,7 @@ dependencies = [
  "hex",
  "hyper 0.14.32",
  "hyper-tls 0.5.0",
- "iocuddle",
+ "iocuddle 0.2.0",
  "kbs-types",
  "num-traits",
  "nv-attestation-sdk",
@@ -1698,7 +1698,7 @@ dependencies = [
  "hex",
  "hyper 0.14.32",
  "hyper-tls 0.5.0",
- "iocuddle",
+ "iocuddle 0.1.1",
  "libc",
  "log",
  "openssl",
@@ -3419,6 +3419,12 @@ name = "iocuddle"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8972d5be69940353d5347a1344cb375d9b457d6809b428b05bb1ca2fb9ce007"
+
+[[package]]
+name = "iocuddle"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6a239b45d1a4561e861ae04c14539ae7b5608290b173a7bfbd666c915aeb662"
 
 [[package]]
 name = "ipnet"
@@ -6722,7 +6728,7 @@ dependencies = [
  "codicon",
  "dirs 6.0.0",
  "hex",
- "iocuddle",
+ "iocuddle 0.1.1",
  "lazy_static",
  "libc",
  "serde",
@@ -6744,7 +6750,7 @@ dependencies = [
  "byteorder",
  "dirs 6.0.0",
  "hex",
- "iocuddle",
+ "iocuddle 0.1.1",
  "lazy_static",
  "libc",
  "openssl",
