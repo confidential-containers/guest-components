@@ -21,7 +21,7 @@ rand.workspace = true
 
 # This is for API compability of p256 who is using the old version of `rand`
 rand_08 = { package = "rand", version = "0.8", optional = true }
-rsa = { workspace = true, optional = true }
+rsa = { workspace = true, optional = true, features = ["sha2"] }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

@@ -39,7 +39,7 @@ impl RSAKeyPair {
         match mode {
             PaddingMode::OAEP => self
                 .private_key
-                .decrypt(Oaep::new::<sha2::Sha256>(), &cipher_text)
+                .decrypt(Oaep::new::<rsa::sha2::Sha256>(), &cipher_text)
                 .map_err(|e| anyhow!("RSA key decrypt OAEP failed: {:?}", e)),
             #[allow(deprecated)]
             PaddingMode::PKCS1v15 => self
