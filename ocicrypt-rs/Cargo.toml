@@ -38,6 +38,7 @@ zeroize = { workspace = true, optional = true }
 [dev-dependencies]
 aes-gcm.workspace = true
 ctrlc = { version = "3.5", features = ["termination"] }
+hex.workspace = true
 openssl = { workspace = true, features = ["vendored"] }
 tokio = { workspace = true, features = ["time", "signal"] }
 

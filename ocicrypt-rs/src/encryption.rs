@@ -330,7 +330,8 @@ mod tests {
             .is_ok());
 
         let layer_data: Vec<u8> = b"This is some text!".to_vec();
-        let digest = format!("sha256:{:x}", Sha256::digest(&layer_data));
+        let digest = Sha256::digest(&layer_data);
+        let digest = format!("sha256:{}", hex::encode(digest));
 
         let (layer_encryptor, mut elf) =
             encrypt_layer(&ec, layer_data.as_slice(), None, &digest).unwrap();
@@ -379,7 +380,8 @@ mod tests {
             .is_ok());
 
         let layer_data: Vec<u8> = b"This is some text!".to_vec();
-        let digest = format!("sha256:{:x}", Sha256::digest(&layer_data));
+        let digest = Sha256::digest(&layer_data);
+        let digest = format!("sha256:{}", hex::encode(digest));
 
         let (layer_encryptor, mut elf) =
             encrypt_layer(&ec, layer_data.as_slice(), None, &digest).unwrap();

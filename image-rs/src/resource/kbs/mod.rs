@@ -106,7 +106,7 @@ impl SecureChannel {
     fn get_filepath(&self, uri: &str) -> PathBuf {
         let mut sha256 = Sha256::new();
         sha256.update(uri.as_bytes());
-        let filename = format!("{:x}", sha256.finalize());
+        let filename = hex::encode(sha256.finalize());
         self.storage_path.join(filename)
     }
 }

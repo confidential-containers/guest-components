@@ -33,10 +33,12 @@ impl DigestHasher for LayerDigestHasher {
     fn digest_finalize(self) -> String {
         match self {
             LayerDigestHasher::Sha256(hasher) => {
-                format!("{}{:x}", DIGEST_SHA256_PREFIX, hasher.finalize())
+                let digest = hasher.finalize();
+                format!("{}{}", DIGEST_SHA256_PREFIX, hex::encode(digest))
             }
             LayerDigestHasher::Sha512(hasher) => {
-                format!("{}{:x}", DIGEST_SHA512_PREFIX, hasher.finalize())
+                let digest = hasher.finalize();
+                format!("{}{}", DIGEST_SHA512_PREFIX, hex::encode(digest))
             }
         }
     }
