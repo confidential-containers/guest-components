@@ -138,11 +138,8 @@ mod tests {
 
         let layer_data = ar.into_inner().await.unwrap();
 
-        let layer_digest = format!(
-            "{}{:x}",
-            DIGEST_SHA256_PREFIX,
-            sha2::Sha256::digest(layer_data.as_slice())
-        );
+        let digest = sha2::Sha256::digest(&layer_data);
+        let layer_digest = format!("{}{}", DIGEST_SHA256_PREFIX, hex::encode(digest));
 
         let tempdir = tempfile::tempdir().unwrap();
         let file_path = tempdir.path().join("layer0");
@@ -181,11 +178,8 @@ mod tests {
 
         let layer_data = ar.into_inner().await.unwrap();
 
-        let layer_digest = format!(
-            "{}{:x}",
-            DIGEST_SHA256_PREFIX,
-            sha2::Sha256::digest(layer_data.as_slice())
-        );
+        let digest = sha2::Sha256::digest(&layer_data);
+        let layer_digest = format!("{}{}", DIGEST_SHA256_PREFIX, hex::encode(digest));
 
         let tempdir = tempfile::tempdir().unwrap();
         let file_path = tempdir.path().join("layer0");
@@ -197,11 +191,8 @@ mod tests {
 
         let tempdir = tempfile::tempdir().unwrap();
         let file_path = tempdir.path().join("layer1");
-        let layer_digest = format!(
-            "{}{:x}",
-            DIGEST_SHA512_PREFIX,
-            sha2::Sha512::digest(layer_data.as_slice())
-        );
+        let digest = sha2::Sha512::digest(&layer_data);
+        let layer_digest = format!("{}{}", DIGEST_SHA512_PREFIX, hex::encode(digest));
 
         let layer_digest_new = stream_processing(layer_data.as_slice(), &layer_digest, &file_path)
             .await
