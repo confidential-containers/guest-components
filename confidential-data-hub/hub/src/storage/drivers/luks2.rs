@@ -79,6 +79,12 @@ pub enum TargetType {
         filesystem_type: FsType,
 
         /// Extra options passed verbatim to mkfs.<fs> when it is needed.
+        ///
+        /// For LUKS2 + dm-integrity + ext4 on an empty device, CDH adds
+        /// integrity-compatible ext4 defaults when the caller has not provided
+        /// an explicit setting. In particular, CDH defaults lazy_itable_init to
+        /// 0 to avoid lazy inode table writes against no-wipe dm-integrity
+        /// devices.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[serde(rename = "mkfsOpts")]
         mkfs_opts: Option<String>,
@@ -180,6 +186,11 @@ fn run_cryptsetup(args: &[&str]) -> anyhow::Result<()> {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct Luks2MountParameters {
     /// Indicates whether to enable dm-integrity.
+    ///
+    /// When this is true and CDH formats an empty ext4 filesystem, CDH uses
+    /// integrity-compatible formatting and applies ext4 safety defaults such as
+    /// lazy_itable_init=0 unless the caller explicitly provides that option in
+    /// mkfsOpts.
     #[serde(rename = "dataIntegrity")]
     #[serde(default)]
     pub data_integrity: Option<String>,
@@ -307,14 +318,17 @@ impl Luks2MountParameters {
                     args,
                 };
 
-                fs_formatter
-                    .format_integrity_compatible(&dev_path)
-                    .with_context(|| {
-                        format!(
-                            "Failed to make filesystem {:?} of device {}",
-                            filesystem_type, dev_path
-                        )
-                    })?;
+                let format_result = if data_integrity {
+                    fs_formatter.format_integrity_compatible(&dev_path)
+                } else {
+                    fs_formatter.format(&dev_path)
+                };
+                format_result.with_context(|| {
+                    format!(
+                        "Failed to make filesystem {:?} of device {}",
+                        filesystem_type, dev_path
+                    )
+                })?;
 
                 debug!(device_path = dev_path, "mounting device");
                 mount(

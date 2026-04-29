@@ -114,13 +114,20 @@ impl FsFormatter {
             )?;
         }
 
-        // then do original format command
-        self.format(device_path)?;
+        // then do original format command with integrity-compatible defaults
+        let format_args = match self.fs_type {
+            FsType::Ext4 => disable_lazy_itable_init(&self.args),
+        };
+        self.format_with_args(device_path, &format_args)?;
 
         Ok(())
     }
 
     pub fn format(&self, device_path: &str) -> Result<()> {
+        self.format_with_args(device_path, &self.args)
+    }
+
+    fn format_with_args(&self, device_path: &str, format_args: &[String]) -> Result<()> {
         let command = match self.fs_type {
             FsType::Ext4 => {
                 if !is_ext4_installed() {
@@ -134,7 +141,7 @@ impl FsFormatter {
         if self.force {
             args.push("-F");
         }
-        for arg in &self.args {
+        for arg in format_args {
             args.push(arg);
         }
 
@@ -142,6 +149,37 @@ impl FsFormatter {
 
         Ok(())
     }
+}
+
+// Keep explicit caller choices, but default ext4 to eager inode table initialization.
+fn disable_lazy_itable_init(args: &[String]) -> Vec<String> {
+    let mut args = args.to_vec();
+    if args.iter().any(|arg| arg.contains("lazy_itable_init")) {
+        return args;
+    }
+
+    warn!(
+        "defaulting ext4 lazy_itable_init=0 for LUKS2 dm-integrity; set it explicitly in mkfsOpts to override"
+    );
+
+    if let Some(index) = args.iter().rposition(|arg| arg == "-E") {
+        if let Some(options) = args.get_mut(index + 1) {
+            options.push_str(",lazy_itable_init=0");
+            return args;
+        }
+    }
+
+    if let Some(options) = args
+        .iter_mut()
+        .rfind(|arg| arg.starts_with("-E") && arg.len() > 2)
+    {
+        options.push_str(",lazy_itable_init=0");
+        return args;
+    }
+
+    args.push("-E".to_string());
+    args.push("lazy_itable_init=0".to_string());
+    args
 }
 
 fn is_ext4_installed() -> bool {
@@ -158,4 +196,47 @@ fn is_dd_installed() -> bool {
         warn!("dd is not installed. Consider installing `coreutils` (ubuntu).");
     }
     installed
+}
+
+#[cfg(test)]
+mod tests {
+    use super::disable_lazy_itable_init;
+
+    #[test]
+    fn ext4_args_add_lazy_itable_init_when_missing() {
+        let args = vec!["-m".to_string(), "0".to_string()];
+        assert_eq!(
+            disable_lazy_itable_init(&args),
+            vec![
+                "-m".to_string(),
+                "0".to_string(),
+                "-E".to_string(),
+                "lazy_itable_init=0".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn ext4_args_merge_lazy_itable_init_into_separate_extended_options() {
+        let args = vec!["-E".to_string(), "nodiscard".to_string()];
+        assert_eq!(
+            disable_lazy_itable_init(&args),
+            vec!["-E".to_string(), "nodiscard,lazy_itable_init=0".to_string()]
+        );
+    }
+
+    #[test]
+    fn ext4_args_merge_lazy_itable_init_into_combined_extended_options() {
+        let args = vec!["-Enodiscard".to_string()];
+        assert_eq!(
+            disable_lazy_itable_init(&args),
+            vec!["-Enodiscard,lazy_itable_init=0".to_string()]
+        );
+    }
+
+    #[test]
+    fn ext4_args_keep_caller_lazy_itable_init() {
+        let args = vec!["-E".to_string(), "lazy_itable_init=1".to_string()];
+        assert_eq!(disable_lazy_itable_init(&args), args);
+    }
 }
