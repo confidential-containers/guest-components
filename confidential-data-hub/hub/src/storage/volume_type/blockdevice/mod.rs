@@ -297,6 +297,24 @@ mod tests {
 
     const EXT4_INTEGRITY_MKFS_OPTS: &str = "-O ^has_journal -m 0 -i 163840 -I 128";
 
+    struct Ext4StressConfig {
+        workers: usize,
+        data_files_per_worker: usize,
+        tree_dirs_per_worker: usize,
+    }
+
+    const SINGLE_WORKER_EXT4_STRESS: Ext4StressConfig = Ext4StressConfig {
+        workers: 1,
+        data_files_per_worker: 128,
+        tree_dirs_per_worker: 256,
+    };
+
+    const PARALLEL_EXT4_STRESS: Ext4StressConfig = Ext4StressConfig {
+        workers: 16,
+        data_files_per_worker: 128,
+        tree_dirs_per_worker: 256,
+    };
+
     fn close_luks_device(name: &str) {
         let path = format!("/dev/mapper/{name}");
         if Path::new(&path).exists() {
@@ -329,6 +347,72 @@ mod tests {
         let header_path = luks_header_path(device_path);
         let _ = std::fs::remove_file(&header_path);
         RemoveFileOnDrop(header_path)
+    }
+
+    async fn run_ext4_stress(root: &Path, config: Ext4StressConfig) -> anyhow::Result<()> {
+        let data = vec![0u8; 1024 * 1024];
+        let mut tasks = Vec::with_capacity(config.workers);
+        for worker in 0..config.workers {
+            let worker_dir = root.join(format!("w{worker}"));
+            let data = data.clone();
+            let data_files_per_worker = config.data_files_per_worker;
+            tasks.push(tokio::spawn(async move {
+                tokio::fs::create_dir_all(&worker_dir).await?;
+                for file in 0..data_files_per_worker {
+                    tokio::fs::write(worker_dir.join(format!("f{file}")), &data).await?;
+                }
+                std::io::Result::Ok(())
+            }));
+        }
+
+        let mut stress_error = None;
+        for task in tasks {
+            match task.await {
+                Ok(Ok(())) => {}
+                Ok(Err(err)) => {
+                    stress_error.get_or_insert_with(|| anyhow::Error::new(err));
+                }
+                Err(err) => {
+                    stress_error.get_or_insert_with(|| anyhow::Error::new(err));
+                }
+            }
+        }
+        if let Some(err) = stress_error {
+            return Err(err);
+        }
+
+        let mut tasks = Vec::with_capacity(config.workers);
+        for worker in 0..config.workers {
+            let worker_tree = root.join("trees").join(format!("w{worker}"));
+            let tree_dirs_per_worker = config.tree_dirs_per_worker;
+            tasks.push(tokio::spawn(async move {
+                tokio::fs::create_dir_all(&worker_tree).await?;
+                for dir in 0..tree_dirs_per_worker {
+                    let dir_path = worker_tree.join(format!("d{dir}"));
+                    tokio::fs::create_dir_all(&dir_path).await?;
+                    tokio::fs::write(dir_path.join("file"), format!("w{worker}-{dir}")).await?;
+                }
+                std::io::Result::Ok(())
+            }));
+        }
+
+        let mut stress_error = None;
+        for task in tasks {
+            match task.await {
+                Ok(Ok(())) => {}
+                Ok(Err(err)) => {
+                    stress_error.get_or_insert_with(|| anyhow::Error::new(err));
+                }
+                Err(err) => {
+                    stress_error.get_or_insert_with(|| anyhow::Error::new(err));
+                }
+            }
+        }
+        if let Some(err) = stress_error {
+            return Err(err);
+        }
+
+        Ok(())
     }
 
     #[test]
@@ -482,6 +566,95 @@ mod tests {
 
         bd.umount().await.unwrap();
         close_luks_device_after_unmount(&mapper_name).await;
+    }
+
+    #[tokio::test]
+    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[serial]
+    async fn encrypt_a_loop_device_with_integrity_and_parallel_ext4_stress_using_luks2() {
+        let temp_device = TempFileLoopDevice::new(56 * 1024 * 1024 * 1024).unwrap();
+        let device_path = temp_device.dev_path().to_string();
+        let _header_guard = remove_luks_header_on_drop(&device_path);
+        let mapper_name = format!("luks2-loop-stress-test-{}", std::process::id());
+        let _mapper_guard = CloseDeviceOnDrop(mapper_name.clone());
+        let mut bd = BlockDevice::default();
+
+        let options = HashMap::from([
+            ("sourceType".to_string(), "empty".to_string()),
+            ("targetType".to_string(), "fileSystem".to_string()),
+            ("devicePath".to_string(), device_path),
+            ("encryptionType".to_string(), "luks2".to_string()),
+            (
+                "key".to_string(),
+                "file://./test_files/luks2-disk-passphrase".to_string(),
+            ),
+            ("mapperName".to_string(), mapper_name.clone()),
+            ("dataIntegrity".to_string(), "true".to_string()),
+            ("filesystemType".to_string(), "ext4".to_string()),
+            ("mkfsOpts".to_string(), EXT4_INTEGRITY_MKFS_OPTS.to_string()),
+        ]);
+
+        let tempdir = TempDir::new().unwrap();
+        let result = bd
+            .real_mount(&options, &[], tempdir.path().to_str().unwrap())
+            .await;
+        if result.is_err() {
+            close_luks_device(&mapper_name);
+        }
+        result.unwrap();
+
+        let stress_result = run_ext4_stress(tempdir.path(), PARALLEL_EXT4_STRESS).await;
+        let umount_result = bd.umount().await;
+        close_luks_device_after_unmount(&mapper_name).await;
+
+        umount_result.unwrap();
+        stress_result.unwrap();
+    }
+
+    #[tokio::test]
+    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[serial]
+    async fn encrypt_a_loop_device_with_integrity_and_single_worker_ext4_stress_using_luks2() {
+        let temp_device = TempFileLoopDevice::new(56 * 1024 * 1024 * 1024).unwrap();
+        let device_path = temp_device.dev_path().to_string();
+        let _header_guard = remove_luks_header_on_drop(&device_path);
+        let mapper_name = format!(
+            "luks2-loop-single-worker-stress-test-{}",
+            std::process::id()
+        );
+        let _mapper_guard = CloseDeviceOnDrop(mapper_name.clone());
+        let mut bd = BlockDevice::default();
+
+        let options = HashMap::from([
+            ("sourceType".to_string(), "empty".to_string()),
+            ("targetType".to_string(), "fileSystem".to_string()),
+            ("devicePath".to_string(), device_path),
+            ("encryptionType".to_string(), "luks2".to_string()),
+            (
+                "key".to_string(),
+                "file://./test_files/luks2-disk-passphrase".to_string(),
+            ),
+            ("mapperName".to_string(), mapper_name.clone()),
+            ("dataIntegrity".to_string(), "true".to_string()),
+            ("filesystemType".to_string(), "ext4".to_string()),
+            ("mkfsOpts".to_string(), EXT4_INTEGRITY_MKFS_OPTS.to_string()),
+        ]);
+
+        let tempdir = TempDir::new().unwrap();
+        let result = bd
+            .real_mount(&options, &[], tempdir.path().to_str().unwrap())
+            .await;
+        if result.is_err() {
+            close_luks_device(&mapper_name);
+        }
+        result.unwrap();
+
+        let stress_result = run_ext4_stress(tempdir.path(), SINGLE_WORKER_EXT4_STRESS).await;
+        let umount_result = bd.umount().await;
+        close_luks_device_after_unmount(&mapper_name).await;
+
+        umount_result.unwrap();
+        stress_result.unwrap();
     }
 
     #[tokio::test]
