@@ -50,6 +50,12 @@ In addition to the common fields above, LUKS2 mode understands the following opt
 | `options.dataIntegrity`    | Boolean (`true` / `false`)                   | No (default `false`) | Enable (`true`) to turn on dm-integrity for stronger integrity guarantees; expect >30% IO performance overhead. Keep `false` for performance‑sensitive ephemeral storage. |
 | `options.mapperName`       | String (e.g. `"my-mapped-device"`)           | No       | Set when you need a stable `/dev/mapper/<name>` for monitoring or debugging. When omitted, CDH generates a UUID-based name. |
 
+When `encryptionType` is `"luks2"`, `targetType` is `"fileSystem"`,
+`filesystemType` is `"ext4"`, and `dataIntegrity` is `true`, CDH formats ext4
+with `lazy_itable_init=0` unless the caller explicitly provides a
+`lazy_itable_init` setting in `mkfsOpts`. This avoids later I/O errors from
+lazy inode table initialization on no-wipe dm-integrity devices.
+
 ### ZFS-specific options
 
 In addition to the common fields above, ZFS mode understands the following options:
@@ -359,4 +365,3 @@ secret
 > - For ZFS, CDH always creates a filesystem-style mount.
 > - `pool` and `dataset` must match what was used when the device was first formatted (`sourceType: "empty"`); otherwise import or mount may fail.
 > - After unmount, the device can be moved to another machine; use the same `pool`, `dataset`, and key to re-mount there.
-

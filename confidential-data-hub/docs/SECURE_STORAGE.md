@@ -83,7 +83,10 @@ In both modes, the cleartext device or filesystem is only exposed inside the TEE
 - **LUKS2 mode**:
   - Uses `targetType` to decide whether to expose a cleartext **device** (`"device"`) or a cleartext **filesystem** (`"fileSystem"`).
   - Can optionally enable dm-integrity via `dataIntegrity`.
-  - Uses a `/dev/mapper/<name>` device created by `libcryptsetup` as the cleartext device.
+  - Uses a `/dev/mapper/<name>` device created by `cryptsetup` as the cleartext device.
+  - When formatting an empty ext4 filesystem with dm-integrity enabled, CDH
+    defaults `lazy_itable_init` to `0` unless the caller explicitly provides a
+    `lazy_itable_init` setting in `mkfsOpts`.
 - **ZFS mode**:
   - Always provides a filesystem mount at the given `mount_point`; `targetType` is currently ignored but should be set to `"fileSystem"` for clarity.
   - Adds ZFS-specific options: `pool` (zpool name, defaults to `zpool`) and `dataset` (dataset name, defaults to `zdataset`).
@@ -100,7 +103,7 @@ flowchart LR
     A[Local/Network] -- mount --> B[Block Device]
     subgraph TEE Guest
         B -- Check if encrypted --> F{Is Encrypted?}
-        F -- No --> G[Encrypt by libcryptsetup]
+        F -- No --> G[Encrypt by cryptsetup]
         G -- encrypt --> C[LUKS Encrypted Block Device]
         F -- Yes --> C[LUKS Encrypted Block Device]
         C -- open and mapping --> D[Mapped Device]
