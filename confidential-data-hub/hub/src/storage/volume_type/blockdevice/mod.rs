@@ -283,15 +283,53 @@ async fn get_device_path(major: u32, minor: u32) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use serial_test::serial;
+    use std::path::Path;
     use tempfile::TempDir;
     use tracing::warn;
 
+    use crate::storage::drivers::luks2::{luks_header_path, Luks2Formatter};
     use crate::storage::{
         drivers::{zfs::is_zfs_installed, TempFileLoopDevice},
         tests::init_tracing,
     };
 
     use super::*;
+
+    const EXT4_INTEGRITY_MKFS_OPTS: &str = "-O ^has_journal -m 0 -i 163840 -I 128";
+
+    fn close_luks_device(name: &str) {
+        let path = format!("/dev/mapper/{name}");
+        if Path::new(&path).exists() {
+            let _ = Luks2Formatter::default().close_device(name);
+        }
+    }
+
+    async fn close_luks_device_after_unmount(name: &str) {
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+        close_luks_device(name);
+    }
+
+    struct CloseDeviceOnDrop(String);
+
+    impl Drop for CloseDeviceOnDrop {
+        fn drop(&mut self) {
+            close_luks_device(&self.0);
+        }
+    }
+
+    struct RemoveFileOnDrop(String);
+
+    impl Drop for RemoveFileOnDrop {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.0);
+        }
+    }
+
+    fn remove_luks_header_on_drop(device_path: &str) -> RemoveFileOnDrop {
+        let header_path = luks_header_path(device_path);
+        let _ = std::fs::remove_file(&header_path);
+        RemoveFileOnDrop(header_path)
+    }
 
     #[test]
     fn test_parse_device_id() {
@@ -401,6 +439,49 @@ mod tests {
             .unwrap();
 
         bd.umount().await.unwrap();
+    }
+
+    #[tokio::test]
+    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[serial]
+    async fn encrypt_a_loop_device_with_integrity_and_mkfs_opts_using_luks2() {
+        let temp_device = TempFileLoopDevice::new(512 * 1024 * 1024).unwrap();
+        let device_path = temp_device.dev_path().to_string();
+        let _header_guard = remove_luks_header_on_drop(&device_path);
+        let mapper_name = format!("luks2-loop-integrity-test-{}", std::process::id());
+        let _mapper_guard = CloseDeviceOnDrop(mapper_name.clone());
+        let mut bd = BlockDevice::default();
+
+        let options = HashMap::from([
+            ("sourceType".to_string(), "empty".to_string()),
+            ("targetType".to_string(), "fileSystem".to_string()),
+            ("devicePath".to_string(), device_path),
+            ("encryptionType".to_string(), "luks2".to_string()),
+            (
+                "key".to_string(),
+                "file://./test_files/luks2-disk-passphrase".to_string(),
+            ),
+            ("mapperName".to_string(), mapper_name.clone()),
+            ("dataIntegrity".to_string(), "true".to_string()),
+            ("filesystemType".to_string(), "ext4".to_string()),
+            ("mkfsOpts".to_string(), EXT4_INTEGRITY_MKFS_OPTS.to_string()),
+        ]);
+
+        let tempdir = TempDir::new().unwrap();
+        let result = bd
+            .real_mount(&options, &[], tempdir.path().to_str().unwrap())
+            .await;
+        if result.is_err() {
+            close_luks_device(&mapper_name);
+        }
+        result.unwrap();
+
+        tokio::fs::write(tempdir.path().join("test-file"), b"some data")
+            .await
+            .unwrap();
+
+        bd.umount().await.unwrap();
+        close_luks_device_after_unmount(&mapper_name).await;
     }
 
     #[tokio::test]
