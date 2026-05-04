@@ -375,7 +375,7 @@ dependencies = [
  "occlum_dcap",
  "pem-rfc7468 1.0.0",
  "picky-asn1 0.10.1",
- "picky-asn1-der 0.5.5",
+ "picky-asn1-der 0.5.6",
  "picky-asn1-x509 0.15.3",
  "rstest",
  "s390_pv",
@@ -634,7 +634,7 @@ dependencies = [
  "bitflags 2.11.0",
  "cexpr",
  "clang-sys",
- "itertools 0.10.5",
+ "itertools 0.13.0",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -654,7 +654,7 @@ dependencies = [
  "bitflags 2.11.0",
  "cexpr",
  "clang-sys",
- "itertools 0.10.5",
+ "itertools 0.13.0",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -5169,9 +5169,9 @@ dependencies = [
 
 [[package]]
 name = "picky-asn1-der"
-version = "0.5.5"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09561f7aa88cd6fae98edaf7dca3d8520da5b86a92839f2109a928af12a55c41"
+checksum = "d413165e4bf7f808b9a27cbaba657657a2921f0965db833f488c4d4be96dcd2e"
 dependencies = [
  "picky-asn1 0.10.1",
  "serde",
@@ -5200,7 +5200,7 @@ dependencies = [
  "base64 0.22.1",
  "oid",
  "picky-asn1 0.10.1",
- "picky-asn1-der 0.5.5",
+ "picky-asn1-der 0.5.6",
  "serde",
 ]
 
@@ -6566,7 +6566,7 @@ dependencies = [
  "sha1collisiondetection",
  "sha2 0.10.9",
  "sha3 0.10.8",
- "thiserror 1.0.69",
+ "thiserror 2.0.18",
  "twofish",
  "typenum",
  "x25519-dalek",
