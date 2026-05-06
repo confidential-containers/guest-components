@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, bail, Result};
-use openpgp::parse::Parse;
-use openpgp::PacketPile;
-use sequoia_openpgp as openpgp;
+use anyhow::{anyhow, bail, Context, Result};
+use pgp::composed::{Deserializable, SignedPublicKey};
+use pgp::packet::{OpsVersionSpecific, Packet, PacketParser};
+use pgp::types::KeyDetails;
 
 use crate::signature::payload::simple_signing::SigPayload;
 
@@ -49,63 +49,102 @@ impl SigKeyIDs {
     }
 }
 
+/// Parsed contents of an OpenPGP one-pass signed message:
+/// `(ops_issuer_key_id, literal_body, signature)`.
+type SigPackets = (
+    Option<Vec<u8>>,
+    Option<Vec<u8>>,
+    Option<pgp::packet::Signature>,
+);
+
+/// Collect `OnePassSignature`, `LiteralData`, and `Signature` packets from a
+/// flat packet stream.  Returns `(ops_key_id, literal_body, signature)`.
+fn collect_sig_packets(
+    parser: impl Iterator<Item = pgp::errors::Result<Packet>>,
+) -> Result<SigPackets> {
+    let mut ops_key_id: Option<Vec<u8>> = None;
+    let mut literal_body: Option<Vec<u8>> = None;
+    let mut signature_packet: Option<pgp::packet::Signature> = None;
+
+    for pkt in parser {
+        let pkt = pkt.context("Failed to parse OpenPGP packet")?;
+        match pkt {
+            Packet::OnePassSignature(ops) => {
+                if let OpsVersionSpecific::V3 { key_id } = ops.version_specific() {
+                    ops_key_id = Some(key_id.as_ref().to_vec());
+                }
+            }
+            Packet::LiteralData(lit) => {
+                literal_body = Some(lit.data().to_vec());
+            }
+            Packet::Signature(sig) => {
+                signature_packet = Some(sig);
+            }
+            Packet::CompressedData(compressed) => {
+                // Atomic container signatures are often wrapped in a
+                // compressed packet.  Decompress and recurse one level.
+                let decompressor = compressed
+                    .decompress()
+                    .context("Failed to decompress signature packet")?;
+                let (inner_ops, inner_lit, inner_sig) =
+                    collect_sig_packets(PacketParser::new(decompressor))?;
+                if inner_ops.is_some() {
+                    ops_key_id = inner_ops;
+                }
+                if inner_lit.is_some() {
+                    literal_body = inner_lit;
+                }
+                if inner_sig.is_some() {
+                    signature_packet = inner_sig;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok((ops_key_id, literal_body, signature_packet))
+}
+
 // Verifies the input signature, and verifies its principal components match expected
 // values, both as specified by rules, and returns the signature payload.
 pub fn verify_sig_and_extract_payload(pubkey_ring: &[u8], sig: Vec<u8>) -> Result<SigPayload> {
-    // Parse the gpg pubkey ring.
-    let keyring_packet = PacketPile::from_bytes(pubkey_ring)?;
-    let keyring_iter = keyring_packet.descendants();
-    // Parse the signature cliam file into sequoia-opengpg PacketPile format.
-    let mut sig_packet = PacketPile::from_bytes(&sig)?;
+    // Parse all public keys from the keyring, supporting both binary and
+    // ASCII-armored (PEM-style) formats.
+    let (pubkeys_iter, _headers) = SignedPublicKey::from_reader_many(pubkey_ring)?;
+    let pubkeys: Vec<SignedPublicKey> = pubkeys_iter
+        .collect::<pgp::errors::Result<Vec<_>>>()
+        .context("Failed to parse public key ring")?;
 
-    let mut validate_key_id = SigKeyIDs::default();
+    // Parse the raw OpenPGP packets from the signature blob.
+    // An atomic container signature is a one-pass signed literal message with structure:
+    //   (optionally wrapped in a CompressedData packet)
+    //   [0] OnePassSignature  — contains issuer key ID
+    //   [1] LiteralData       — the signed JSON payload
+    //   [2] Signature         — the actual cryptographic signature
+    let (ops_key_id, literal_body, signature_packet) =
+        collect_sig_packets(PacketParser::new(sig.as_slice()))?;
 
-    // Dump the keyID which recorded in the signature itself from the OnePassSig of the sig claim file.
-    // OnePassSig: https://docs.rs/sequoia-openpgp/1.21.2/sequoia_openpgp/packet/enum.OnePassSig.html
-    //
-    // sig_packet is a sequoia-opengpg PacketPile, `path_ref()` and `path_ref_mut()`
-    // returns a reference to the packet at the location described by
-    // `pathspec`.
-    //
-    // `pathspec` is a slice of the form `[0, 1, 2]`.  Each element
-    // is the index of packet in a container.  Thus, the previous
-    // path specification means: return the third child of the second
-    // child of the first top-level packet.  In other words, the
-    // starred packet in the following tree:
-    //
-    // ```text
-    //         PacketPile
-    //        /     |     \
-    //       0      1      2  ...
-    //     /   \
-    //    /     \
-    //  0         1  ...
-    //        /   |   \  ...
-    //       0    1    2
-    //                 *
-    // ```
-    //
-    // According to sequoia-opengpg docs, the path ref of OnePassSig is [0, 0],
-    // The path ref of Signature is [0, 2].
-    if let Some(openpgp::Packet::OnePassSig(ref sig_info)) = sig_packet.path_ref(&[0, 0]) {
-        validate_key_id.sig_info_key_id = sig_info.issuer().as_bytes().to_vec();
-    }
+    let sig_info_key_id = ops_key_id
+        .ok_or_else(|| anyhow!("Signature format error: no OnePassSignature packet found"))?;
+    let body =
+        literal_body.ok_or_else(|| anyhow!("Signature format error: no literal field in it!"))?;
+    let signature =
+        signature_packet.ok_or_else(|| anyhow!("Signature format error: no Signature packet"))?;
 
-    // Try to use each pubkey in the pubkey ring to verify the signature.
-    // If the signature is verified,
-    // verify that the keyID of the pubkey is consistent with the keyID recorded in the signature.
-    for packet in keyring_iter {
-        if let openpgp::Packet::PublicKey(pubkey) = packet {
-            if let Some(openpgp::Packet::Signature(ref mut signature)) =
-                sig_packet.path_ref_mut(&[0, 2])
-            {
-                if signature.verify_signature(pubkey).is_ok() {
-                    validate_key_id.trusted_key_id = pubkey.fingerprint().as_bytes().to_vec();
-                    // If the cryptography verification passes, but the key IDs are inconsistent,
-                    // the verification failure is returned directly.
-                    validate_key_id.validate()?;
-                }
-            }
+    // Try to verify using each public key in the keyring.
+    let mut validate_key_id = SigKeyIDs {
+        sig_info_key_id,
+        ..Default::default()
+    };
+
+    for pubkey in &pubkeys {
+        if signature.verify(&pubkey.primary_key, &*body).is_ok() {
+            let fp = pubkey.primary_key.fingerprint();
+            validate_key_id.trusted_key_id = fp.as_bytes().to_vec();
+            // If the cryptography verification passes, but the key IDs are inconsistent,
+            // the verification failure is returned directly.
+            validate_key_id.validate()?;
+            break;
         }
     }
 
@@ -113,14 +152,9 @@ pub fn verify_sig_and_extract_payload(pubkey_ring: &[u8], sig: Vec<u8>) -> Resul
         bail!("signature verify failed! There is no pubkey can verify the signature!");
     }
 
-    // Dump the signature payload.
-    if let Some(openpgp::Packet::Literal(ref literal)) = sig_packet.path_ref(&[0, 1]) {
-        let body_message = String::from_utf8(literal.body().to_vec())?;
-        let sig_payload = serde_json::from_str::<SigPayload>(&body_message)?;
-        Ok(sig_payload)
-    } else {
-        Err(anyhow!("Signature format error: no literal field in it!"))
-    }
+    let body_message = String::from_utf8(body).context("Signature body is not valid UTF-8")?;
+    let sig_payload = serde_json::from_str::<SigPayload>(&body_message)?;
+    Ok(sig_payload)
 }
 
 #[cfg(test)]
