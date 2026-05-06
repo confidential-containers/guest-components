@@ -8,9 +8,10 @@ use std::{
     process::{Command, Stdio},
 };
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use tempfile::NamedTempFile;
 use tracing::debug;
+use which::which;
 
 pub mod filesystem;
 pub mod luks2;
@@ -22,6 +23,7 @@ pub fn run_command(
     args: &[&str],
     inputs: Option<Vec<u8>>,
 ) -> Result<(String, String)> {
+    let _ = which(command).with_context(|| format!("command `{command}` not found"))?;
     let mut status = Command::new(command)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

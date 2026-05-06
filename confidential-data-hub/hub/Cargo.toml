@@ -75,6 +75,7 @@ tokio = { workspace = true, features = [
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 uuid = { workspace = true, features = ["fast-rng", "v4"] }
+which = "8.0.2"
 zeroize.workspace = true
 
 [build-dependencies]
