@@ -2462,7 +2462,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee93edf3c501f0035bbeffeccfed0b79e14c311f12195ec0e661e114a0f60da4"
 dependencies = [
  "portable-atomic",
- "rand 0.10.0",
+ "rand 0.10.1",
  "web-time",
 ]
 
@@ -3918,7 +3918,7 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
- "yasna 0.5.2",
+ "yasna 0.6.0",
  "zeroize",
 ]
 
@@ -8980,6 +8980,12 @@ name = "yasna"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e17bb3549cc1321ae1296b9cdc2698e2b6cb1992adfa19a8c72e5b7a738f44cd"
+
+[[package]]
+name = "yasna"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5f6765e852b9b4dc8e2a76843e4d64d1cea8e79bcde0b6901aea8e7c7f08282"
 
 [[package]]
 name = "yoke"
