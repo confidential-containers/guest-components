@@ -376,7 +376,7 @@ dependencies = [
  "pem-rfc7468 1.0.0",
  "picky-asn1 0.10.1",
  "picky-asn1-der 0.5.6",
- "picky-asn1-x509 0.15.3",
+ "picky-asn1-x509 0.15.4",
  "rstest",
  "s390_pv",
  "scroll",
@@ -5186,9 +5186,9 @@ dependencies = [
 
 [[package]]
 name = "picky-asn1-x509"
-version = "0.15.3"
+version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2cacf27a75aa1b95e8b1726569fcd693a19d3445aecbcd0d20120e7f82a3cb3b"
+checksum = "859d4117bd1b1dc5646359ee7243c50c5000c0920ea2d1fb120335a2f4c684b8"
 dependencies = [
  "base64 0.22.1",
  "oid",
