@@ -32,13 +32,13 @@ dependencies = [
 
 [[package]]
 name = "aes"
-version = "0.9.0-rc.4"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04097e08a47d9ad181c2e1f4a5fabc9ae06ce8839a333ba9a949bcb0d31fd2a3"
+checksum = "66bd29a732b644c0431c6140f370d097879203d79b80c94a6747ba0872adaef8"
 dependencies = [
  "cipher 0.5.1",
  "cpubits",
- "cpufeatures 0.2.17",
+ "cpufeatures 0.3.0",
 ]
 
 [[package]]
@@ -61,7 +61,7 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "10b6f24a1f796bc46415a1d0d18dc0a8203ccba088acf5def3291c4f61225522"
 dependencies = [
- "aes 0.9.0-rc.4",
+ "aes 0.9.0",
  "byteorder",
 ]
 
@@ -2462,7 +2462,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee93edf3c501f0035bbeffeccfed0b79e14c311f12195ec0e661e114a0f60da4"
 dependencies = [
  "portable-atomic",
- "rand 0.10.0",
+ "rand 0.10.1",
  "web-time",
 ]
 
@@ -3705,7 +3705,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 1.0.69",
- "yasna 0.4.0",
+ "yasna",
  "zeroize",
 ]
 
@@ -3897,13 +3897,12 @@ dependencies = [
  "ehsm_client",
  "hex",
  "kbs_protocol",
- "p12",
+ "openssl",
  "prost 0.14.3",
  "protos",
  "rand 0.10.1",
  "reqwest 0.13.2",
  "resource_uri",
- "ring",
  "rstest",
  "serde",
  "serde_json",
@@ -3918,7 +3917,6 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
- "yasna 0.5.2",
  "zeroize",
 ]
 
@@ -4816,23 +4814,6 @@ checksum = "49203cdcae0030493bad186b28da2fa25645fa276a51b6fec8010d281e02ef79"
 dependencies = [
  "dlv-list",
  "hashbrown 0.14.5",
-]
-
-[[package]]
-name = "p12"
-version = "0.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4873306de53fe82e7e484df31e1e947d61514b6ea2ed6cd7b45d63006fd9224"
-dependencies = [
- "cbc",
- "cipher 0.4.4",
- "des",
- "getrandom 0.2.17",
- "hmac 0.12.1",
- "lazy_static",
- "rc2",
- "sha1",
- "yasna 0.5.2",
 ]
 
 [[package]]
@@ -5854,15 +5835,6 @@ checksum = "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
-]
-
-[[package]]
-name = "rc2"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62c64daa8e9438b84aaae55010a93f396f8e60e3911590fcba770d04643fc1dd"
-dependencies = [
- "cipher 0.4.4",
 ]
 
 [[package]]
@@ -8974,12 +8946,6 @@ checksum = "e262a29d0e61ccf2b6190d7050d4b237535fc76ce4c1210d9caa316f71dffa75"
 dependencies = [
  "num-bigint",
 ]
-
-[[package]]
-name = "yasna"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e17bb3549cc1321ae1296b9cdc2698e2b6cb1992adfa19a8c72e5b7a738f44cd"
 
 [[package]]
 name = "yoke"

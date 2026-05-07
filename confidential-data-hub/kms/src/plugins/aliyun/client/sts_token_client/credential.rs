@@ -7,7 +7,9 @@
 
 use anyhow::*;
 use base64::{engine::general_purpose::STANDARD, Engine};
-use ring::hmac::{self, Key, HMAC_SHA1_FOR_LEGACY_USE_ONLY};
+use openssl::hash::MessageDigest;
+use openssl::pkey::PKey;
+use openssl::sign::Signer;
 use serde::Deserialize;
 use url::form_urlencoded::byte_serialize;
 
@@ -24,8 +26,12 @@ pub struct StsCredential {
 }
 
 pub(crate) fn sign(str_to_sign: &str, secret: &str) -> Result<String> {
-    let pkey = Key::new(HMAC_SHA1_FOR_LEGACY_USE_ONLY, secret.as_bytes());
-    let signature = hmac::sign(&pkey, str_to_sign.as_bytes());
+    let pkey = PKey::hmac(secret.as_bytes()).map_err(|e| anyhow!("HMAC key: {e}"))?;
+    let mut signer =
+        Signer::new(MessageDigest::sha1(), &pkey).map_err(|e| anyhow!("HMAC signer: {e}"))?;
+    let signature = signer
+        .sign_oneshot_to_vec(str_to_sign.as_bytes())
+        .map_err(|e| anyhow!("HMAC sign: {e}"))?;
     Ok(STANDARD.encode(signature))
 }
 
