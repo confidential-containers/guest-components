@@ -125,6 +125,7 @@ impl Luks2Formatter {
             args.push("--integrity");
             args.push(HMAC_SHA256);
             args.push("--integrity-no-wipe");
+            args.push("--integrity-no-journal");
         }
 
         args.push(device_path);
