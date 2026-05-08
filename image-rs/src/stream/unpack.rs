@@ -5,8 +5,9 @@
 use anyhow::{anyhow, bail, Context, Result};
 use filetime::FileTime;
 use futures::StreamExt;
+use nix::libc;
 use nix::libc::timeval;
-use nix::sys::stat::{mknod, Mode, SFlag};
+use pathrs::flags::OpenFlags;
 use pathrs::InodeType;
 use thiserror::Error;
 use tracing::{debug, warn};
@@ -18,10 +19,10 @@ use std::{
     fs::Permissions,
     io,
     os::{
-        fd::{AsFd, AsRawFd},
+        fd::{AsFd, AsRawFd, BorrowedFd},
         unix::fs::PermissionsExt,
     },
-    path::{Path, PathBuf},
+    path::Path,
 };
 use tokio::{fs, io::AsyncRead};
 use tokio_tar::ArchiveBuilder;
@@ -140,29 +141,31 @@ fn is_whiteout(name: &str) -> bool {
 async fn convert_whiteout(
     name: &str,
     path: &Path,
-    uid: u32,
-    gid: u32,
-    mode: Option<u32>,
-    destination: &Path,
+    layer_dir: &Path,
     attr_available: bool,
 ) -> Result<()> {
     let parent = path
         .parent()
         .ok_or(anyhow!("Invalid whiteout parent for path: {:?}", path))?;
 
+    let layer_dir = pathrs::Root::open(layer_dir).context("Failed initialize layer dir")?;
+
     // Handle opaque directories
     if name == WHITEOUT_OPAQUE_DIR {
+        let opaque_dir = layer_dir.resolve(parent)?;
+
         // Opaque directory whiteout requires xattr support
         if !attr_available {
             debug!(
                 "Skipping opaque directory whiteout (xattr unavailable) for: {:?}",
-                destination.join(parent)
+                opaque_dir
             );
             return Ok(());
         }
 
-        let destination_parent = destination.join(parent);
-        xattr::set(destination_parent, "trusted.overlay.opaque", b"y")?;
+        let opaque_dir = opaque_dir.reopen(OpenFlags::O_RDONLY)?;
+        opaque_dir.set_xattr("trusted.overlay.opaque", b"y")?;
+
         return Ok(());
     }
 
@@ -171,39 +174,33 @@ async fn convert_whiteout(
         .strip_prefix(WHITEOUT_PREFIX)
         .ok_or(anyhow!("Failed to strip whiteout prefix for: {}", name))?;
     let original_path = parent.join(original_name);
-    let path = CString::new(format!(
-        "{}/{}",
-        destination.display(),
-        original_path.display()
-    ))?;
 
-    let path_str = path.to_string_lossy().into_owned();
-    let path_buf = PathBuf::from(path_str);
-    if let Some(parent) = path_buf.parent() {
-        fs::create_dir_all(parent).await?;
+    if let Some(parent) = original_path.parent() {
+        layer_dir.mkdir_all(parent, &Permissions::from_mode(0o755))?;
     }
 
-    mknod(path.as_c_str(), SFlag::S_IFCHR, Mode::empty(), 0)?;
+    layer_dir.create(
+        &original_path,
+        &InodeType::CharacterDevice(Permissions::from_mode(0o000), 0),
+    )?;
 
-    set_perms_ownerships(&path, ChownType::LChown, uid, gid, mode).await
+    Ok(())
 }
 
-/// Unpack the contents of tarball to the destination path
-pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> UnpackResult<()> {
-    if destination.exists() {
-        warn!(
-            "unpack destination {destination:?} already exists, will delete and rewrite the layer",
-        );
-        fs::remove_dir_all(destination)
+/// Unpack the contents of tarball to the layer_dir path
+pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackResult<()> {
+    if layer_dir.exists() {
+        warn!("layer_dir {layer_dir:?} already exists, will delete and rewrite the layer",);
+        fs::remove_dir_all(layer_dir)
             .await
             .map_err(|source| UnpackError::DeleteExistingLayerFailed { source })?;
     }
 
-    fs::create_dir_all(destination)
+    fs::create_dir_all(layer_dir)
         .await
         .map_err(|source| UnpackError::CreateLayerDirectoryFailed { source })?;
 
-    let attr_available = is_attr_available(destination);
+    let attr_available = is_attr_available(layer_dir);
     let mut archive = ArchiveBuilder::new(input)
         .set_ignore_zeros(true)
         .set_unpack_xattrs(attr_available)
@@ -248,22 +245,15 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
         let kind = file.header().entry_type();
 
         if is_whiteout(entry_name) {
-            convert_whiteout(
-                entry_name,
-                &entry_path,
-                uid,
-                gid,
-                mode,
-                destination,
-                attr_available,
-            )
-            .await
-            .map_err(|source| UnpackError::ConvertWhiteoutFailed { source })?;
+            convert_whiteout(entry_name, &entry_path, layer_dir, attr_available)
+                .await
+                .map_err(|source| UnpackError::ConvertWhiteoutFailed { source })?;
             continue;
         }
 
-        if let Err(e) = file.unpack_in(destination).await {
-            match try_hardlink_fallback(&kind, &mut file, destination).await {
+        // Both of these paths ensure that the entry is actually inside the layer dir
+        if let Err(e) = file.unpack_in(layer_dir).await {
+            match try_hardlink_fallback(&kind, &mut file, layer_dir).await {
                 Ok(true) => {}
                 Ok(false) => return Err(UnpackError::UnpackFailed { source: e }),
                 Err(f) => {
@@ -278,11 +268,12 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
 
         let path = format!(
             "{}/{}",
-            destination.display(),
+            layer_dir.display(),
             file.path()
                 .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?
                 .display()
         );
+
         let path_cstring =
             CString::new(path.clone()).map_err(|_| UnpackError::IllegalEntryName(path.clone()))?;
 
@@ -307,8 +298,13 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
                     .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?
                     .ends_with(b"/")
         {
-            set_perms_ownerships(&path_cstring, ChownType::LChown, uid, gid, mode)
-                .await
+            let f =
+                std::fs::File::open(file_path).map_err(|e| UnpackError::SetOwnershipsFailed {
+                    source: anyhow!("failed to open dir: {e}"),
+                    path: path.clone(),
+                })?;
+
+            set_permissions(f.as_fd(), uid, gid, mode)
                 .map_err(|source| UnpackError::SetOwnershipsFailed { source, path })?;
             let atime = timeval {
                 tv_sec: mtime,
@@ -319,7 +315,6 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
 
             dirs.insert(path_cstring.clone(), times);
         } else if !kind.is_symlink() && !kind.is_hard_link() {
-            // for other files except link we use fchown
             let f = fs::OpenOptions::new()
                 .write(true)
                 .open(file_path)
@@ -329,12 +324,12 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
                     path: path.clone(),
                 })?;
 
-            set_perms_ownerships(&path_cstring, ChownType::FChown(f), uid, gid, mode)
-                .await
-                .map_err(|source| UnpackError::SetOwnershipsFailed {
+            set_permissions(f.as_fd(), uid, gid, mode).map_err(|source| {
+                UnpackError::SetOwnershipsFailed {
                     source,
                     path: path.clone(),
-                })?;
+                }
+            })?;
 
             // set mtime
             let mtime = FileTime::from_unix_time(mtime, 0);
@@ -344,6 +339,17 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
                     path,
                 }
             })?;
+        } else if kind.is_symlink() {
+            let path_cstr =
+                CString::new(file_path).map_err(|_| UnpackError::IllegalEntryName(path.clone()))?;
+            let ret = unsafe { libc::lchown(path_cstr.as_ptr(), uid, gid) };
+
+            if ret != 0 {
+                return Err(UnpackError::SetOwnershipsFailed {
+                    source: io::Error::last_os_error().into(),
+                    path: path.clone(),
+                });
+            }
         }
     }
 
@@ -364,46 +370,21 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, destination: &Path) -> Unpac
     Ok(())
 }
 
-enum ChownType {
-    LChown,
-    FChown(fs::File),
-}
-
-async fn set_perms_ownerships(
-    dst: &CString,
-    chown: ChownType,
-    uid: u32,
-    gid: u32,
-    mode: Option<u32>,
-) -> Result<()> {
-    match chown {
-        ChownType::FChown(f) => {
-            let ret = unsafe { nix::libc::fchown(f.as_fd().as_raw_fd(), uid, gid) };
-            if ret != 0 {
-                bail!(
-                    "failed to set ownerships of file: {:?} chown error: {:?}",
-                    dst,
-                    io::Error::last_os_error()
-                );
-            }
-        }
-        ChownType::LChown => {
-            let ret = unsafe { nix::libc::lchown(dst.as_ptr(), uid, gid) };
-            if ret != 0 {
-                bail!(
-                    "failed to set ownerships of file: {:?} lchown error: {:?}",
-                    dst,
-                    io::Error::last_os_error()
-                );
-            }
-        }
+fn set_permissions(fd: BorrowedFd<'_>, uid: u32, gid: u32, mode: Option<u32>) -> Result<()> {
+    let ret =
+        unsafe { libc::fchownat(fd.as_raw_fd(), c"".as_ptr(), uid, gid, libc::AT_EMPTY_PATH) };
+    if ret != 0 {
+        bail!("failed to set ownership: {:?}", io::Error::last_os_error());
     }
-    // ... then set permissions, SUID bits set here is kept
+
     if let Some(mode) = mode {
-        let perm = Permissions::from_mode(mode as _);
-        fs::set_permissions(Path::new(dst.to_str().expect("must be utf8")), perm)
-            .await
-            .context("failed to set permissions")?;
+        let ret = unsafe { libc::fchmod(fd.as_raw_fd(), mode as libc::mode_t) };
+        if ret != 0 {
+            bail!(
+                "failed to set permissions: {:?}",
+                io::Error::last_os_error()
+            );
+        }
     }
 
     Ok(())
