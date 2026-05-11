@@ -54,7 +54,7 @@ serde_with = { version = "3.18.0", features = ["base64", "hex"] }
 serde_json = "1.0"
 serial_test = "3"
 sha2 = "0.11.0"
-shadow-rs = "1.7.1"
+shadow-rs = "2.0.0"
 strum = { version = "0.28", features = ["derive"] }
 tempfile = "3.25"
 testcontainers = "0.27.3"

@@ -27,7 +27,7 @@ resource_uri.path = "../deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
-shadow-rs = { version = "1.7.1", default-features = false }
+shadow-rs = { version = "2.0.0", default-features = false }
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
