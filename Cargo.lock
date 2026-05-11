@@ -626,7 +626,7 @@ dependencies = [
  "bitflags 2.11.1",
  "cexpr",
  "clang-sys",
- "itertools 0.13.0",
+ "itertools 0.10.5",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -646,7 +646,7 @@ dependencies = [
  "bitflags 2.11.1",
  "cexpr",
  "clang-sys",
- "itertools 0.13.0",
+ "itertools 0.10.5",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -7274,7 +7274,7 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 [[package]]
 name = "tdx-attest-rs"
 version = "0.1.2"
-source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.24#717f2a91ca732c3309b0c59d21757463133eb440"
+source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.26#1f362a6cffc228e290862bd7fffe2d31e290bb4f"
 dependencies = [
  "tdx-attest-sys",
 ]
@@ -7282,7 +7282,7 @@ dependencies = [
 [[package]]
 name = "tdx-attest-sys"
 version = "0.1.0"
-source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.24#717f2a91ca732c3309b0c59d21757463133eb440"
+source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.26#1f362a6cffc228e290862bd7fffe2d31e290bb4f"
 dependencies = [
  "bindgen 0.70.1",
 ]
