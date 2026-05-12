@@ -14,7 +14,10 @@ use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use tracing::debug;
 
-const RUNTIME_DIGEST_SIZE: usize = 48; // SHA-384 digest size in bytes
+/// The size for SE attestation report data (SHA-512 digest size in bytes).
+/// Only the first `SE_REPORT_DATA_SIZE` bytes of the `runtime_data_digest` field
+/// from `SeAttestationRequest` are used in the attestation command.
+const SE_REPORT_DATA_SIZE: usize = 64;
 
 /// Structured user data for IBM SEL attestation
 /// Currently, only contains runtime data digest bound to the attestation measurement
@@ -105,7 +108,7 @@ impl Attester for SeAttester {
             runtime_digest
         );
 
-        let runtime_digest = validate_and_pad_data(runtime_digest, RUNTIME_DIGEST_SIZE)?;
+        let runtime_digest = validate_and_pad_data(runtime_digest, SE_REPORT_DATA_SIZE)?;
 
         let user_data = UserData {
             runtime_data_digest: runtime_digest,
@@ -147,9 +150,9 @@ impl Attester for SeAttester {
 mod tests {
     use super::*;
 
-    // Mock runtime digest (SHA-384 size: 48 bytes) for tests
+    // Mock runtime digest (SHA-512 size: 64 bytes) for tests
     // This simulates the digest computed from runtime data in production
-    const MOCK_RUNTIME_DIGEST: [u8; 48] = [0xBB; 48];
+    const MOCK_RUNTIME_DIGEST: [u8; 64] = [0xBB; 64];
 
     // Helper to create a dummy BootHdrTags for testing
     fn create_dummy_boot_hdr_tags() -> BootHdrTags {
@@ -207,44 +210,43 @@ mod tests {
     #[tokio::test]
     async fn test_runtime_data_digest_with_various_sizes() {
         // Case 1: Exact size (48 bytes) - should use as-is
-        let exact_digest = vec![0xAA; RUNTIME_DIGEST_SIZE];
-        let result = validate_and_pad_data(exact_digest.clone(), RUNTIME_DIGEST_SIZE).unwrap();
-        assert_eq!(result.len(), RUNTIME_DIGEST_SIZE);
+        let exact_digest = vec![0xAA; SE_REPORT_DATA_SIZE];
+        let result = validate_and_pad_data(exact_digest.clone(), SE_REPORT_DATA_SIZE).unwrap();
+        assert_eq!(result.len(), SE_REPORT_DATA_SIZE);
         assert_eq!(result, exact_digest);
 
-        // Case 2: Too small (< 48 bytes) - should be padded with zeros
+        // Case 2: Small size (< 64 bytes) - should be padded with zeros
         let small_test_cases = vec![
             (vec![], 0),                       // Empty digest
             (vec![0xAA], 1),                   // Single byte
             (vec![0xAA, 0xBB, 0xCC, 0xDD], 4), // 4 bytes
             (vec![0xFF; 32], 32),              // 32 bytes (SHA-256 size)
-            (vec![0x11; 47], 47),              // 47 bytes (just under limit)
+            (vec![0x11; 63], 63),              // 63 bytes (just under limit)
         ];
 
         for (small_digest, original_len) in small_test_cases {
-            let result = validate_and_pad_data(small_digest.clone(), RUNTIME_DIGEST_SIZE).unwrap();
+            let result = validate_and_pad_data(small_digest.clone(), SE_REPORT_DATA_SIZE).unwrap();
 
-            // Verify result is padded to 48 bytes
-            assert_eq!(result.len(), RUNTIME_DIGEST_SIZE);
+            // Verify result is padded to 64 bytes
+            assert_eq!(result.len(), SE_REPORT_DATA_SIZE);
 
             // Verify original data is preserved at the beginning
             assert_eq!(&result[..original_len], &small_digest[..]);
 
             // Verify zeros are padded at the end
-            for i in original_len..RUNTIME_DIGEST_SIZE {
+            for i in original_len..SE_REPORT_DATA_SIZE {
                 assert_eq!(result[i], 0, "Byte at index {} should be 0 (padded)", i);
             }
         }
 
-        // Case 3: Too large (> 48 bytes) - should return error
+        // Case 3: Large size (> 64 bytes) - should return error
         let large_test_cases = vec![
-            (vec![0xFF; 49], 49),   // 49 bytes (just over limit)
-            (vec![0xFF; 64], 64),   // 64 bytes (SHA-512 size)
+            (vec![0xFF; 65], 65),   // 65 bytes (just over limit)
             (vec![0xFF; 100], 100), // 100 bytes (way over limit)
         ];
 
         for (large_digest, len) in large_test_cases {
-            let result = validate_and_pad_data(large_digest, RUNTIME_DIGEST_SIZE);
+            let result = validate_and_pad_data(large_digest, SE_REPORT_DATA_SIZE);
 
             // Verify error is returned
             assert!(
