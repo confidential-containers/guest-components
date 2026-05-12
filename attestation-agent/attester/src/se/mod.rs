@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use tracing::debug;
 
-const RUNTIME_DIGEST_SIZE: usize = 48; // SHA-384 digest size in bytes
+const SE_REPORT_DATA_SIZE: usize = 64; // SHA-512 digest size in bytes
 
 /// Structured user data for IBM SEL attestation
 /// Currently, only contains runtime data digest bound to the attestation measurement
@@ -106,20 +106,20 @@ impl Attester for SeAttester {
         );
 
         let runtime_digest = match runtime_digest.len() {
-            len if len > RUNTIME_DIGEST_SIZE => {
+            len if len > SE_REPORT_DATA_SIZE => {
                 bail!(
-                    "Invalid runtime_data_digest length: expected {} bytes (SHA-384), got {} (too large)",
-                    RUNTIME_DIGEST_SIZE,
+                    "Invalid runtime_data_digest length: expected {} bytes (SHA-512), got {} (too large)",
+                    SE_REPORT_DATA_SIZE,
                     len
                 );
             }
-            len if len < RUNTIME_DIGEST_SIZE => {
+            len if len < SE_REPORT_DATA_SIZE => {
                 debug!(
                     "Padding runtime_data_digest from {} to {} bytes with zeros",
-                    len, RUNTIME_DIGEST_SIZE
+                    len, SE_REPORT_DATA_SIZE
                 );
                 let mut padded = runtime_digest;
-                padded.resize(RUNTIME_DIGEST_SIZE, 0);
+                padded.resize(SE_REPORT_DATA_SIZE, 0);
                 padded
             }
             _ => runtime_digest, // Exact match, use as-is
@@ -227,56 +227,55 @@ mod tests {
         // Helper function that mimics the validation/padding logic from lines 110-129
         fn process_runtime_digest(runtime_digest: Vec<u8>) -> Result<Vec<u8>> {
             match runtime_digest.len() {
-                len if len > RUNTIME_DIGEST_SIZE => {
+                len if len > SE_REPORT_DATA_SIZE => {
                     bail!(
-                        "Invalid runtime_data_digest length: expected {} bytes (SHA-384), got {} (too large)",
-                        RUNTIME_DIGEST_SIZE,
+                        "Invalid runtime_data_digest length: expected {} bytes (SHA-512), got {} (too large)",
+                        SE_REPORT_DATA_SIZE,
                         len
                     )
                 }
-                len if len < RUNTIME_DIGEST_SIZE => {
+                len if len < SE_REPORT_DATA_SIZE => {
                     let mut padded = runtime_digest;
-                    padded.resize(RUNTIME_DIGEST_SIZE, 0);
+                    padded.resize(SE_REPORT_DATA_SIZE, 0);
                     Ok(padded)
                 }
                 _ => Ok(runtime_digest), // Exact match, use as-is
             }
         }
 
-        // Case 1: Exact size (48 bytes) - should use as-is
-        let exact_digest = vec![0xAA; RUNTIME_DIGEST_SIZE];
+        // Case 1: Exact size (64 bytes) - should use as-is
+        let exact_digest = vec![0xAA; SE_REPORT_DATA_SIZE];
         let result = process_runtime_digest(exact_digest.clone()).unwrap();
-        assert_eq!(result.len(), RUNTIME_DIGEST_SIZE);
+        assert_eq!(result.len(), SE_REPORT_DATA_SIZE);
         assert_eq!(result, exact_digest);
 
-        // Case 2: Too small (< 48 bytes) - should be padded with zeros
+        // Case 2: Small size (< 64 bytes) - should be padded with zeros
         let small_test_cases = vec![
             (vec![], 0),                       // Empty digest
             (vec![0xAA], 1),                   // Single byte
             (vec![0xAA, 0xBB, 0xCC, 0xDD], 4), // 4 bytes
             (vec![0xFF; 32], 32),              // 32 bytes (SHA-256 size)
-            (vec![0x11; 47], 47),              // 47 bytes (just under limit)
+            (vec![0x11; 63], 63),              // 63 bytes (just under limit)
         ];
 
         for (small_digest, original_len) in small_test_cases {
             let result = process_runtime_digest(small_digest.clone()).unwrap();
 
-            // Verify result is padded to 48 bytes
-            assert_eq!(result.len(), RUNTIME_DIGEST_SIZE);
+            // Verify result is padded to 64 bytes
+            assert_eq!(result.len(), SE_REPORT_DATA_SIZE);
 
             // Verify original data is preserved at the beginning
             assert_eq!(&result[..original_len], &small_digest[..]);
 
             // Verify zeros are padded at the end
-            for i in original_len..RUNTIME_DIGEST_SIZE {
+            for i in original_len..SE_REPORT_DATA_SIZE {
                 assert_eq!(result[i], 0, "Byte at index {} should be 0 (padded)", i);
             }
         }
 
-        // Case 3: Too large (> 48 bytes) - should return error
+        // Case 3: Large size (> 64 bytes) - should return error
         let large_test_cases = vec![
-            (vec![0xFF; 49], 49),   // 49 bytes (just over limit)
-            (vec![0xFF; 64], 64),   // 64 bytes (SHA-512 size)
+            (vec![0xFF; 65], 65),   // 65 bytes (just over limit)
             (vec![0xFF; 100], 100), // 100 bytes (way over limit)
         ];
 
