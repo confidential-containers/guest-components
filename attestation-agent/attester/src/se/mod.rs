@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::{Attester, TeeEvidence};
+use super::{utils::validate_and_pad_data, Attester, TeeEvidence};
 use anyhow::*;
 use pv::{
     misc,
@@ -105,25 +105,11 @@ impl Attester for SeAttester {
             runtime_digest
         );
 
-        let runtime_digest = match runtime_digest.len() {
-            len if len > SE_REPORT_DATA_SIZE => {
-                bail!(
-                    "Invalid runtime_data_digest length: expected {} bytes (SHA-512), got {} (too large)",
-                    SE_REPORT_DATA_SIZE,
-                    len
-                );
-            }
-            len if len < SE_REPORT_DATA_SIZE => {
-                debug!(
-                    "Padding runtime_data_digest from {} to {} bytes with zeros",
-                    len, SE_REPORT_DATA_SIZE
-                );
-                let mut padded = runtime_digest;
-                padded.resize(SE_REPORT_DATA_SIZE, 0);
-                padded
-            }
-            _ => runtime_digest, // Exact match, use as-is
-        };
+        let runtime_digest = validate_and_pad_data(
+            runtime_digest,
+            SE_REPORT_DATA_SIZE,
+            "runtime_data_digest (SHA-512)",
+        )?;
 
         let user_data = UserData {
             runtime_data_digest: runtime_digest,
@@ -224,28 +210,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_runtime_data_digest_with_various_sizes() {
-        // Helper function that mimics the validation/padding logic from lines 110-129
-        fn process_runtime_digest(runtime_digest: Vec<u8>) -> Result<Vec<u8>> {
-            match runtime_digest.len() {
-                len if len > SE_REPORT_DATA_SIZE => {
-                    bail!(
-                        "Invalid runtime_data_digest length: expected {} bytes (SHA-512), got {} (too large)",
-                        SE_REPORT_DATA_SIZE,
-                        len
-                    )
-                }
-                len if len < SE_REPORT_DATA_SIZE => {
-                    let mut padded = runtime_digest;
-                    padded.resize(SE_REPORT_DATA_SIZE, 0);
-                    Ok(padded)
-                }
-                _ => Ok(runtime_digest), // Exact match, use as-is
-            }
-        }
-
         // Case 1: Exact size (64 bytes) - should use as-is
         let exact_digest = vec![0xAA; SE_REPORT_DATA_SIZE];
-        let result = process_runtime_digest(exact_digest.clone()).unwrap();
+        let result = validate_and_pad_data(
+            exact_digest.clone(),
+            SE_REPORT_DATA_SIZE,
+            "runtime_data_digest",
+        )
+        .unwrap();
         assert_eq!(result.len(), SE_REPORT_DATA_SIZE);
         assert_eq!(result, exact_digest);
 
@@ -259,7 +231,12 @@ mod tests {
         ];
 
         for (small_digest, original_len) in small_test_cases {
-            let result = process_runtime_digest(small_digest.clone()).unwrap();
+            let result = validate_and_pad_data(
+                small_digest.clone(),
+                SE_REPORT_DATA_SIZE,
+                "runtime_data_digest",
+            )
+            .unwrap();
 
             // Verify result is padded to 64 bytes
             assert_eq!(result.len(), SE_REPORT_DATA_SIZE);
@@ -280,7 +257,8 @@ mod tests {
         ];
 
         for (large_digest, len) in large_test_cases {
-            let result = process_runtime_digest(large_digest);
+            let result =
+                validate_and_pad_data(large_digest, SE_REPORT_DATA_SIZE, "runtime_data_digest");
 
             // Verify error is returned
             assert!(
