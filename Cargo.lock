@@ -362,6 +362,7 @@ dependencies = [
  "hyper-tls 0.5.0",
  "iocuddle 0.2.0",
  "kbs-types",
+ "nix 0.31.3",
  "num-traits",
  "nv-attestation-sdk",
  "occlum_dcap",
