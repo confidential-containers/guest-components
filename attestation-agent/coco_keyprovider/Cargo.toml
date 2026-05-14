@@ -23,6 +23,7 @@ protos = { path = "../../protos", default-features = false, features = [
 ] }
 rand.workspace = true
 reqwest.workspace = true
+resource_uri.path = "../deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
 strum.workspace = true

@@ -5,11 +5,12 @@
 
 use std::collections::HashMap;
 
-use anyhow::*;
+use anyhow::{anyhow, bail, Context, Result};
 use base64::Engine;
 use jwt_simple::prelude::Ed25519KeyPair;
 use rand::RngExt;
 use reqwest::Url;
+use resource_uri::ResourceUri;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 use tracing::{debug, info};
@@ -149,40 +150,31 @@ async fn generate_key_parameters(input_params: &InputParams) -> Result<(Vec<u8>,
 /// Normalize the given keyid into (kbs addr, key path), s.t.
 /// converting `kbs://...` or `../..` to `(<kbs-addr>, <repository>/<type>/<tag>)`.
 /// Supports both `kbs://` and `kbs+<plugin>://` schemes.
-fn normalize_path(keyid: &str) -> Result<(String, String)> {
-    debug!("normalize key id {keyid}");
+fn normalize_path(key_id: &str) -> Result<(String, String)> {
+    debug!("normalize key id {key_id}");
 
-    let path = if let Some(rest) = keyid.strip_prefix("kbs://") {
-        rest
-    } else if let Some(pos) = keyid.find("://") {
-        let scheme = &keyid[..pos];
-        if scheme.starts_with("kbs+") {
-            &keyid[pos + 3..]
-        } else {
-            keyid
-        }
-    } else {
-        keyid
-    };
+    if let Ok(resource_uri) = ResourceUri::try_from(key_id) {
+        return Ok((resource_uri.kbs_addr.clone(), resource_uri.resource_path()));
+    }
 
-    let values: Vec<&str> = path.split('/').collect();
+    let values: Vec<&str> = key_id.split('/').collect();
     if values.len() == 4 {
-        Ok((
+        return Ok((
             values[0].to_string(),
             format!("{}/{}/{}", values[1], values[2], values[3]),
-        ))
-    } else {
-        bail!(
-            "Resource path {keyid} must follow one of the following formats:
-                'kbs:///<repository>/<type>/<tag>'
-                'kbs://<kbs-addr>/<repository>/<type>/<tag>'
-                'kbs+<plugin>:///<repository>/<type>/<tag>'
-                'kbs+<plugin>://<kbs-addr>/<repository>/<type>/<tag>'
-                '<kbs-addr>/<repository>/<type>/<tag>'
-                '/<repository>/<type>/<tag>'
-            "
-        )
+        ));
     }
+
+    bail!(
+        "Resource path {key_id} must follow one of the following formats:
+            'kbs:///<repository>/<type>/<tag>'
+            'kbs://<kbs-addr>/<repository>/<type>/<tag>'
+            'kbs+<plugin>:///<repository>/<type>/<tag>'
+            'kbs+<plugin>://<kbs-addr>/<repository>/<type>/<tag>'
+            '<kbs-addr>/<repository>/<type>/<tag>'
+            '/<repository>/<type>/<tag>'
+        "
+    );
 }
 
 /// The input params vector should only have one element.
