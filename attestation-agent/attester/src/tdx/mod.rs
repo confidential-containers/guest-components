@@ -235,7 +235,10 @@ impl Attester for TdxAttester {
 mod tests {
     use super::*;
 
-    #[ignore]
+    const RTMR_DIGEST_LEN: usize = 48;
+    const MRCONFIGID_LEN: usize = 48;
+
+    #[ignore = "requires a TDX guest with /dev/tdx_guest or TSM sysfs RTMR paths"]
     #[tokio::test]
     async fn test_tdx_get_evidence() {
         let attester = TdxAttester::default();
@@ -243,5 +246,60 @@ mod tests {
 
         let evidence = attester.get_evidence(report_data).await;
         assert!(evidence.is_ok());
+    }
+
+    /// Guest-owned runtime measurement register (see `extend_runtime_measurement` mapping).
+    const TEST_RTMR_INDEX: u64 = 3;
+
+    #[ignore = "requires a TDX guest with /dev/tdx_guest or TSM sysfs RTMR paths"]
+    #[test]
+    fn test_read_mrconfigid() {
+        let attester = TdxAttester::default();
+        let mrconfigid = attester
+            .read_mrconfigid()
+            .expect("read MRCONFIGID should succeed inside a TDX guest");
+        assert_eq!(
+            mrconfigid.len(),
+            MRCONFIGID_LEN,
+            "MRCONFIGID is a {MRCONFIGID_LEN} bytes long field in TDINFO"
+        );
+    }
+
+    #[ignore = "requires a TDX guest with /dev/tdx_guest or TSM sysfs RTMR paths"]
+    #[test]
+    fn test_read_rtmr() {
+        let attester = TdxAttester::default();
+        let rtmr = attester
+            .read_rtmr(TEST_RTMR_INDEX)
+            .expect("read RTMR should succeed inside a TDX guest");
+        assert_eq!(
+            rtmr.len(),
+            RTMR_DIGEST_LEN,
+            "RTMR values exposed to guests are {RTMR_DIGEST_LEN} bytes long",
+        );
+    }
+
+    #[ignore = "requires a TDX guest with /dev/tdx_guest or TSM sysfs RTMR paths; mutates RTMR state"]
+    #[test]
+    fn test_write_rtmr_then_read_changes() {
+        let attester = TdxAttester::default();
+        let before = attester
+            .read_rtmr(TEST_RTMR_INDEX)
+            .expect("baseline RTMR read should succeed inside a TDX guest");
+
+        let extend_data: [u8; 48] = [0x5A; 48];
+        attester
+            .write_rtmr(TEST_RTMR_INDEX, extend_data)
+            .expect("RTMR extend should succeed inside a TDX guest");
+
+        let after = attester
+            .read_rtmr(TEST_RTMR_INDEX)
+            .expect("RTMR read after extend should succeed inside a TDX guest");
+
+        assert_ne!(
+            before, after,
+            "extending an RTMR must change its digest value"
+        );
+        assert_eq!(after.len(), RTMR_DIGEST_LEN);
     }
 }
