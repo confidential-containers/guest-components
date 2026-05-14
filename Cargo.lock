@@ -1195,6 +1195,7 @@ dependencies = [
  "protos",
  "rand 0.10.1",
  "reqwest 0.13.3",
+ "resource_uri",
  "rstest",
  "serde",
  "serde_json",

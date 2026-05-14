@@ -80,8 +80,9 @@ impl ResourceProvider {
         let url = url::Url::parse(&uri).map_err(|e| ResourceError::GetResource {
             source: anyhow!("Failed to parse resource uri: {:?}", e),
         })?;
-        match url.scheme() {
-            "kbs" => {
+        let scheme = url.scheme();
+        match scheme {
+            s if s == "kbs" || s.starts_with("kbs+") => {
                 #[cfg(feature = "kbs")]
                 {
                     self.secure_channel
