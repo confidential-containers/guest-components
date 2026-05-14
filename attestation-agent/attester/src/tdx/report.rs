@@ -108,6 +108,10 @@ impl TdReport {
 
         rtmr_u8
     }
+
+    pub fn get_mrconfigid(&self) -> Vec<u8> {
+        self.tdinfo.mrconfigid.to_vec()
+    }
 }
 
 #[cfg(test)]
