@@ -32,8 +32,12 @@ impl KbsClient<Box<dyn TokenProvider>> {
 impl KbsClientCapabilities for KbsClient<Box<dyn TokenProvider>> {
     async fn get_resource(&mut self, resource_uri: ResourceUri) -> Result<Vec<u8>> {
         let mut remote_url = format!(
-            "{}/{KBS_PREFIX}/resource/{}/{}/{}",
-            self.kbs_host_url, resource_uri.repository, resource_uri.r#type, resource_uri.tag
+            "{}/{KBS_PREFIX}/{}/{}/{}/{}",
+            self.kbs_host_url,
+            resource_uri.plugin(),
+            resource_uri.repository,
+            resource_uri.r#type,
+            resource_uri.tag
         );
         if let Some(ref q) = resource_uri.query {
             remote_url = format!("{remote_url}?{q}");
