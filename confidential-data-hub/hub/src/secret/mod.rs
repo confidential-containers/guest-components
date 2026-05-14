@@ -21,6 +21,7 @@ use self::layout::{envelope::EnvelopeSecret, vault::VaultSecret};
 use kms::{Annotations, ProviderSettings};
 
 use crate::hub::CDH_BASE_DIR;
+use resource_uri::ResourceUri;
 
 pub use error::{Result, SecretError};
 
@@ -142,7 +143,7 @@ impl Secret {
     /// Otherwise, look for a local credential (provisioned to the fs
     /// at CDH startup).
     async fn get_kid(kid: &String) -> Result<Vec<u8>> {
-        if kid.starts_with("kbs://") {
+        if ResourceUri::try_from(kid.as_str()).is_ok() {
             let verification_key = kms::new_getter("kbs", ProviderSettings::default())
                 .await?
                 .get_secret(kid, &Annotations::default())
