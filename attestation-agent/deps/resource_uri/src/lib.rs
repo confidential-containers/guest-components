@@ -14,8 +14,9 @@ const RESOURCE_ID_ERROR_INFO: &str =
     "invalid kbs resource uri, should be kbs://<addr-of-kbs>/<repo>/<type>/<tag>";
 
 const SCHEME: &str = "kbs";
+const DEFAULT_PLUGIN: &str = "resource";
 
-/// Resource Id document <https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md>
+/// Resource Id document <https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/RESOURCE_URI.md>
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ResourceUri {
     pub kbs_addr: String,
@@ -23,6 +24,7 @@ pub struct ResourceUri {
     pub r#type: String,
     pub tag: String,
     pub query: Option<String>,
+    pub plugin: Option<String>,
 }
 
 impl TryFrom<&str> for ResourceUri {
@@ -47,9 +49,19 @@ impl TryFrom<url::Url> for ResourceUri {
             }
         }
 
-        if value.scheme() != SCHEME {
-            return Err("scheme must be kbs");
-        }
+        let scheme = value.scheme();
+
+        let plugin = match scheme {
+            SCHEME => None,
+            s if s.starts_with("kbs+") => {
+                let plugin_name = s.trim_start_matches("kbs+");
+                if plugin_name.is_empty() {
+                    return Err("scheme kbs+ requires a plugin name, e.g. kbs+pkcs11");
+                }
+                Some(plugin_name.to_string())
+            }
+            _ => return Err("scheme must be kbs or kbs+<plugin>"),
+        };
 
         if value.path().is_empty() {
             return Err(RESOURCE_ID_ERROR_INFO);
@@ -64,6 +76,7 @@ impl TryFrom<url::Url> for ResourceUri {
                 r#type: values[1].into(),
                 tag: values[2].into(),
                 query: value.query().map(|s| s.to_string()),
+                plugin,
             })
         } else {
             Err(RESOURCE_ID_ERROR_INFO)
@@ -106,6 +119,7 @@ impl ResourceUri {
                 r#type: values[2].into(),
                 tag: values[3].into(),
                 query: None,
+                plugin: None,
             })
         } else {
             bail!(
@@ -115,14 +129,24 @@ impl ResourceUri {
     }
 
     pub fn whole_uri(&self) -> String {
+        let scheme = match &self.plugin {
+            Some(p) => format!("{SCHEME}+{p}"),
+            None => SCHEME.to_string(),
+        };
         let uri = format!(
-            "{SCHEME}://{}/{}/{}/{}",
+            "{scheme}://{}/{}/{}/{}",
             self.kbs_addr, self.repository, self.r#type, self.tag
         );
         match &self.query {
             Some(q) => format!("{uri}?{q}"),
             None => uri,
         }
+    }
+
+    /// Returns the plugin name. If no plugin was specified in the URI,
+    /// returns the default plugin "resource".
+    pub fn plugin(&self) -> &str {
+        self.plugin.as_deref().unwrap_or(DEFAULT_PLUGIN)
     }
 
     /// Only return the resource path. This function is used
@@ -158,13 +182,38 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case("kbs:///alice/cosign-key/213", "alice", "cosign-key", "213", None)]
     #[case(
-        "kbs:///plugin/plugname/resourcename?param1=value1&param2=value2",
-        "plugin",
-        "plugname",
-        "resourcename",
-        Some("param1=value1&param2=value2")
+        "kbs:///alice/cosign-key/213",
+        "alice",
+        "cosign-key",
+        "213",
+        None,
+        None
+    )]
+    #[case(
+        "kbs:///repo/type/tag?param1=value1&param2=value2",
+        "repo",
+        "type",
+        "tag",
+        Some("param1=value1&param2=value2"),
+        None
+    )]
+    #[case(
+        "kbs+pkcs11:///repo/type/tag",
+        "repo",
+        "type",
+        "tag",
+        None,
+        Some("pkcs11")
+    )]
+    #[case("kbs+myplugin:///a/b/c", "a", "b", "c", None, Some("myplugin"))]
+    #[case(
+        "kbs+custom://example.com:8080/repo/type/tag",
+        "repo",
+        "type",
+        "tag",
+        None,
+        Some("custom")
     )]
     fn test_resource_uri_serialization_conversion(
         #[case] url: &str,
@@ -172,13 +221,19 @@ mod tests {
         #[case] r#type: &str,
         #[case] tag: &str,
         #[case] query: Option<&str>,
+        #[case] plugin: Option<&str>,
     ) {
         let resource = ResourceUri {
-            kbs_addr: "".into(),
+            kbs_addr: if url.contains("example.com") {
+                "example.com:8080".into()
+            } else {
+                "".into()
+            },
             repository: repository.into(),
             r#type: r#type.into(),
             tag: tag.into(),
             query: query.map(|s| s.to_string()),
+            plugin: plugin.map(|s| s.to_string()),
         };
 
         // Deserialization
@@ -200,5 +255,22 @@ mod tests {
         let resource_from_url =
             ResourceUri::try_from(url_from_string).expect("failed to try from url");
         assert_eq!(resource_from_url, resource);
+    }
+
+    #[rstest]
+    #[case("kbs:///repo/type/tag", "resource")]
+    #[case("kbs+pkcs11:///repo/type/tag", "pkcs11")]
+    fn test_plugin_accessor(#[case] uri: &str, #[case] plugin: &str) {
+        let uri: ResourceUri = uri.try_into().expect("failed to parse uri");
+        assert_eq!(uri.plugin(), plugin);
+    }
+
+    #[rstest]
+    #[case("http:///repo/type/tag", "scheme must be kbs")]
+    #[case("kbs+:///repo/type/tag", "requires a plugin name")]
+    fn test_invalid_scheme(#[case] uri: &str, #[case] error: &str) {
+        let result = ResourceUri::try_from(uri);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains(error));
     }
 }

@@ -66,8 +66,6 @@ const HARD_CODED_KEYID: &str = "kbs:///default/test-key/1";
 /// with this prefix.
 const DEFAULT_KEY_REPO_PATH: &str = "/default/image-kek";
 
-const KBS_RESOURCE_URL_PREFIX: &str = "kbs://";
-
 fn parse_input_params(input: &str) -> Result<InputParams> {
     let map: HashMap<&str, &str> = input
         .split("::")
@@ -150,9 +148,23 @@ async fn generate_key_parameters(input_params: &InputParams) -> Result<(Vec<u8>,
 
 /// Normalize the given keyid into (kbs addr, key path), s.t.
 /// converting `kbs://...` or `../..` to `(<kbs-addr>, <repository>/<type>/<tag>)`.
+/// Supports both `kbs://` and `kbs+<plugin>://` schemes.
 fn normalize_path(keyid: &str) -> Result<(String, String)> {
     debug!("normalize key id {keyid}");
-    let path = keyid.strip_prefix(KBS_RESOURCE_URL_PREFIX).unwrap_or(keyid);
+
+    let path = if let Some(rest) = keyid.strip_prefix("kbs://") {
+        rest
+    } else if let Some(pos) = keyid.find("://") {
+        let scheme = &keyid[..pos];
+        if scheme.starts_with("kbs+") {
+            &keyid[pos + 3..]
+        } else {
+            keyid
+        }
+    } else {
+        keyid
+    };
+
     let values: Vec<&str> = path.split('/').collect();
     if values.len() == 4 {
         Ok((
@@ -164,6 +176,8 @@ fn normalize_path(keyid: &str) -> Result<(String, String)> {
             "Resource path {keyid} must follow one of the following formats:
                 'kbs:///<repository>/<type>/<tag>'
                 'kbs://<kbs-addr>/<repository>/<type>/<tag>'
+                'kbs+<plugin>:///<repository>/<type>/<tag>'
+                'kbs+<plugin>://<kbs-addr>/<repository>/<type>/<tag>'
                 '<kbs-addr>/<repository>/<type>/<tag>'
                 '/<repository>/<type>/<tag>'
             "
@@ -195,7 +209,7 @@ pub async fn enc_optsdata_gen_anno(
         .await
         .context("generating key params")?;
 
-    let (kbs_addr, k_path) = normalize_path(&kid)?;
+    let (_kbs_addr, k_path) = normalize_path(&kid)?;
 
     let algorithm = input_params.algorithm;
     let encrypt_optsdata = crypto::encrypt(optsdata, &key, &iv, &algorithm)
@@ -213,7 +227,7 @@ pub async fn enc_optsdata_gen_anno(
 
     let engine = base64::engine::general_purpose::STANDARD;
     let annotation = AnnotationPacket {
-        kid: format!("{KBS_RESOURCE_URL_PREFIX}{kbs_addr}/{k_path}"),
+        kid: kid.clone(),
         wrapped_data: engine.encode(encrypt_optsdata),
         iv: engine.encode(iv),
         wrap_type: algorithm.to_string(),
@@ -229,6 +243,9 @@ mod tests {
     #[rstest]
     #[case("kbs://a/b/c/d", ("a", "b/c/d"))]
     #[case("kbs:///b/c/d", ("", "b/c/d"))]
+    #[case("kbs+pkcs11://a/b/c/d", ("a", "b/c/d"))]
+    #[case("kbs+pkcs11:///b/c/d", ("", "b/c/d"))]
+    #[case("kbs+myplugin:///repo/type/tag", ("", "repo/type/tag"))]
     #[case("a/b/c/d", ("a", "b/c/d"))]
     #[case("/b/c/d", ("", "b/c/d"))]
     fn test_normalize_keypath(#[case] input: &str, #[case] expected: (&str, &str)) {
