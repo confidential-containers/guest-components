@@ -8,6 +8,7 @@ use std::{env, path::Path};
 use anyhow::{bail, Result};
 use base64::{engine::general_purpose::STANDARD, Engine};
 use tokio::{fs::File, io::AsyncReadExt};
+use tracing::debug;
 
 pub fn pad<const T: usize>(input: &[u8]) -> [u8; T] {
     let mut output = [0; T];
@@ -18,6 +19,48 @@ pub fn pad<const T: usize>(input: &[u8]) -> [u8; T] {
         output[..len].copy_from_slice(input);
     }
     output
+}
+
+/// Validates and pads data to a specified size.
+///
+/// This function ensures that the input data does not exceed the expected size,
+/// and pads it with zeros if it's smaller than the expected size.
+///
+/// # Arguments
+///
+/// * `data` - The input data to validate and pad
+/// * `expected_size` - The target size for the data
+/// * `data_name` - A descriptive name for the data (used in error messages)
+///
+/// # Returns
+///
+/// * `Ok(Vec<u8>)` - The validated and padded data
+/// * `Err(anyhow::Error)` - If the data exceeds the expected size
+pub fn validate_and_pad_data(
+    data: Vec<u8>,
+    expected_size: usize,
+    data_name: &str,
+) -> Result<Vec<u8>> {
+    match data.len() {
+        len if len > expected_size => {
+            bail!(
+                "Invalid {} length: expected {} bytes, got {} (too large)",
+                data_name,
+                expected_size,
+                len
+            )
+        }
+        len if len < expected_size => {
+            debug!(
+                "Padding {} from {} to {} bytes with zeros",
+                data_name, len, expected_size
+            );
+            let mut padded = data;
+            padded.resize(expected_size, 0);
+            Ok(padded)
+        }
+        _ => Ok(data), // Exact match, use as-is
+    }
 }
 
 /// This is a fixed eventlog header. If no CCEL is found, we will use this header ahead
