@@ -112,8 +112,7 @@ attestation-agent --attestation_sock unix:///tmp/attestation.sock
 AA supports different kinds of hardware TEE attesters, now
 | Attester name       |           Info              |
 | ------------------- | --------------------------  |
-| tdx-attester        | Intel TDX                   |
-| tdx-attester-libtdx | Intel TDX (using libtdx-attest for certain non-upstream Linux `ioctl()`s). Disabled by default. |
+| tdx-attester        | Intel TDX (Linux `TSM_REPORT` configfs, kernel version `>= 6.16`) |
 | sgx-attester        | Intel SGX DCAP              |
 | snp-attester        | AMD SEV-SNP                 |
 | az-snp-vtpm-attester| Azure SEV-SNP CVM           |
