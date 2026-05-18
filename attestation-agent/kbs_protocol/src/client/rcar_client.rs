@@ -180,10 +180,6 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             // - injects runtime_data_digest into the request
             // The injected data will be used in SE attester's get_evidence method.
             Tee::Se => {
-                if !additional_evidence.is_empty() {
-                    bail!("Cannot attest multiple devices on s390x platform.")
-                }
-
                 #[cfg(feature = "se-attester")]
                 {
                     use attester::se::SeAttestationRequest;
