@@ -1665,7 +1665,9 @@ version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77727bb15fa921304124b128af125e7e3b968275d1b108b379190264f4423710"
 dependencies = [
+ "getrandom 0.4.2",
  "hybrid-array",
+ "rand_core 0.10.1",
 ]
 
 [[package]]
@@ -3787,9 +3789,9 @@ dependencies = [
 
 [[package]]
 name = "jwt-simple"
-version = "0.12.15"
+version = "0.12.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a65458f9bc08b9a19ae93d9030d5fcf21688a976473e447446e62676a213085"
+checksum = "f45048cd18221c81d27dd4621d51df25b33f11b68655d79f67a9f9d3eb48fecc"
 dependencies = [
  "anyhow",
  "binstring",
@@ -4213,25 +4215,25 @@ dependencies = [
 
 [[package]]
 name = "ml-dsa"
-version = "0.1.0-rc.9"
+version = "0.1.0-rc.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3a596bd65985e2b343c3fd6cc4ade15cdd76da66b15936cfbce72ea661cdbb2"
+checksum = "163f15320f3fba11760c373af52d7f69d638482c2c350d877fb06513b1c3137c"
 dependencies = [
  "const-oid 0.10.2",
+ "crypto-common 0.2.1",
  "ctutils",
  "hybrid-array",
  "module-lattice",
  "pkcs8 0.11.0",
- "rand_core 0.10.1",
  "sha3 0.11.0",
  "signature 3.0.0",
 ]
 
 [[package]]
 name = "module-lattice"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc7c90d33a0dac244570c26461d761ffaeadb3bfc2b17cc625ae2185cafdffae"
+checksum = "0c61b87c9683ab7cb1c6871d261ad5479b6b10ceb52c4352aaca3b5d35a8febe"
 dependencies = [
  "ctutils",
  "hybrid-array",
@@ -7180,9 +7182,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "superboring"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ecf6e616c1b95e83c2fb1fb541865b3ca885556bd6359f2d5810d60794094ec"
+checksum = "efc6310a69b44420f3bf53d518077615b7d466cc57df7a80e404e7feb8c510f7"
 dependencies = [
  "aes-gcm",
  "aes-keywrap",
