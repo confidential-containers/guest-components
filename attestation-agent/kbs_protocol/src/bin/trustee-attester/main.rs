@@ -5,6 +5,7 @@
 
 //! Attest and fetch confidential resources from Trustee
 
+use anyhow::Context;
 use anyhow::Result;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
@@ -87,18 +88,22 @@ async fn main() -> Result<()> {
 
     match cli.command {
         Commands::GetResource { path, initdata } => {
-            // resource_path should start with '/' but not with '//'
-            let resource_path = match path.starts_with('/') {
-                false => format!("/{path}"),
-                true => path,
-            };
-
             if let Some(init) = initdata {
                 client_builder = client_builder.add_initdata(init);
             }
             let mut client = client_builder.build()?;
 
-            let resource = ResourceUri::new("", &resource_path)?;
+            let resource = if path.contains("://") {
+                ResourceUri::try_from(path.as_str())
+                    .map_err(|e| anyhow::anyhow!(e))
+                    .context("failed to parse ResourceUri")?
+            } else {
+                let resource_path = match path.starts_with('/') {
+                    false => format!("/{path}"),
+                    true => path,
+                };
+                ResourceUri::new("", &resource_path)?
+            };
             let (_token, _key) = client.get_token().await?; // attest first
             let resource_bytes = client.get_resource(resource).await?;
 
