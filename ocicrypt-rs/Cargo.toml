@@ -30,6 +30,7 @@ serde_json.workspace = true
 sha2 = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["rt-multi-thread"], optional = true }
 tonic = { workspace = true, optional = true }
+tracing = { workspace = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 zeroize = { workspace = true, optional = true }
 
