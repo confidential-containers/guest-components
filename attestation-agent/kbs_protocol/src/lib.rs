@@ -70,6 +70,8 @@
 //! Note: everytime the token is found expired, the client will call the
 //! `token_provider` to retrieve a new token.
 
+#[cfg(feature = "pqc-experimental")]
+pub mod akp;
 pub mod api;
 pub mod builder;
 pub mod client;
