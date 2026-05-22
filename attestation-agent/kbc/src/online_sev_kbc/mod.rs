@@ -7,7 +7,7 @@ use crate::{KbcCheckInfo, KbcInterface};
 use ::sev::*;
 use base64::Engine;
 use crypto::WrapType;
-use resource_uri::ResourceUri;
+use resource_uri::{ResourcePluginPath, ResourceUri};
 
 use anyhow::*;
 use async_trait::async_trait;
@@ -61,8 +61,11 @@ impl KbcInterface for OnlineSevKbc {
         Ok(plain_payload)
     }
 
-    async fn get_resource(&mut self, rid: ResourceUri) -> Result<Vec<u8>> {
-        match &rid.r#type[..] {
+    async fn get_resource(&mut self, resource_uri: ResourceUri) -> Result<Vec<u8>> {
+        let ResourcePluginPath { repo, r#type, tag } = resource_uri
+            .try_into()
+            .context("online sev kbc only supports resource plugin")?;
+        match &r#type[..] {
             "client-id" => {
                 let connection = self
                     .connection
@@ -70,7 +73,7 @@ impl KbcInterface for OnlineSevKbc {
                     .map_err(|e| anyhow!("Failed to get injected connection. {}", e))?;
                 Ok(connection.client_id.hyphenated().to_string().into_bytes())
             }
-            _ => self.get_resource_from_kbs(rid).await,
+            _ => self.get_resource_from_kbs(&repo, &r#type, &tag).await,
         }
     }
 }
@@ -137,8 +140,8 @@ impl OnlineSevKbc {
         Ok(key)
     }
 
-    async fn get_resource_from_kbs(&self, rid: ResourceUri) -> Result<Vec<u8>> {
-        self.query_kbs("resource".to_string(), rid.resource_path())
+    async fn get_resource_from_kbs(&self, repo: &str, r#type: &str, tag: &str) -> Result<Vec<u8>> {
+        self.query_kbs("resource".to_string(), format!("{repo}/{type}/{tag}"))
             .await
     }
 }

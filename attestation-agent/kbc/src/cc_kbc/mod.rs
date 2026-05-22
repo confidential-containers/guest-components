@@ -42,8 +42,8 @@ impl KbcInterface for Kbc {
         )
     }
 
-    async fn get_resource(&mut self, desc: ResourceUri) -> Result<Vec<u8>> {
-        let data = self.kbs_client.get_resource(desc).await?;
+    async fn get_resource(&mut self, resource_uri: ResourceUri) -> Result<Vec<u8>> {
+        let data = self.kbs_client.get_resource(resource_uri).await?;
 
         Ok(data)
     }

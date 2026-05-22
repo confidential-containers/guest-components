@@ -154,7 +154,10 @@ fn normalize_path(key_id: &str) -> Result<(String, String)> {
     debug!("normalize key id {key_id}");
 
     if let Ok(resource_uri) = ResourceUri::try_from(key_id) {
-        return Ok((resource_uri.kbs_addr.clone(), resource_uri.resource_path()));
+        return Ok((
+            resource_uri.kbs_address.clone(),
+            resource_uri.resource_path(),
+        ));
     }
 
     let values: Vec<&str> = key_id.split('/').collect();

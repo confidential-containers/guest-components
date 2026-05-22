@@ -8,11 +8,11 @@ use crate::{KbcCheckInfo, KbcInterface};
 pub mod common;
 use common::*;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use base64::Engine;
 use crypto::WrapType;
-use resource_uri::ResourceUri;
+use resource_uri::{ResourcePluginPath, ResourceUri};
 use std::collections::HashMap;
 use zeroize::Zeroizing;
 
@@ -51,8 +51,11 @@ impl KbcInterface for OfflineFsKbc {
         Ok(plain_payload)
     }
 
-    async fn get_resource(&mut self, rid: ResourceUri) -> Result<Vec<u8>> {
-        let resource_path = rid.resource_path();
+    async fn get_resource(&mut self, resource_uri: ResourceUri) -> Result<Vec<u8>> {
+        let ResourcePluginPath { repo, r#type, tag } = resource_uri
+            .try_into()
+            .context("offline fs kbc only supports resource plugin")?;
+        let resource_path = format!("{repo}/{type}/{tag}");
         let resources = self.resources.as_ref().map_err(|e| anyhow!("{}", e))?;
         let resource = resources
             .get(resource_path.as_str())
@@ -152,10 +155,11 @@ mod tests {
         #[case] resource_id: &str,
         #[case] resource_content: &str,
     ) {
-        let mut kbc = kbc_instance();
-        let rid = ResourceUri::try_from(resource_id).unwrap();
+        use resource_uri::ResourceUri;
 
-        let res = kbc.get_resource(rid).await;
+        let mut kbc = kbc_instance();
+        let resource_id = ResourceUri::try_from(resource_id).unwrap();
+        let res = kbc.get_resource(resource_id).await;
         if success {
             assert!(res.is_ok());
             assert_eq!(res.unwrap(), resource_content.as_bytes());
