@@ -36,11 +36,7 @@ pub fn load_resources(resources_file_name: &str) -> Result<Resources> {
         .map(
             |(k, v)| match base64::engine::general_purpose::STANDARD.decode(v) {
                 Ok(resource) => Ok((k.clone(), resource)),
-                Err(e) => Err(anyhow!(
-                    "Failed to decode resource for {}: {}",
-                    k,
-                    e.to_string()
-                )),
+                Err(e) => Err(anyhow!("Failed to decode resource for {k}: {e}")),
             },
         )
         .collect()

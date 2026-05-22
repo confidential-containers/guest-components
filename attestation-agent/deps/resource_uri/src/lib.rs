@@ -14,17 +14,28 @@ const RESOURCE_ID_ERROR_INFO: &str =
     "invalid kbs resource uri, should be kbs://<addr-of-kbs>/<repo>/<type>/<tag>";
 
 const SCHEME: &str = "kbs";
-const DEFAULT_PLUGIN: &str = "resource";
+pub const DEFAULT_RESOURCE_PLUGIN: &str = "resource";
 
 /// Resource Id document <https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/RESOURCE_URI.md>
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ResourceUri {
-    pub kbs_addr: String,
-    pub repository: String,
+    pub kbs_address: String,
+    pub plugin: String,
+    pub path: Vec<String>,
+    pub query: Option<String>,
+}
+
+/// This three section segment is used to identify the resource in the KBS.
+/// This is the useful when the plugin is `resource`, that means a confidential
+/// resource inside the KBS.
+///
+/// - repo: the repository name
+/// - r#type: the resource type
+/// - tag: the resource tag
+pub struct ResourcePluginPath {
+    pub repo: String,
     pub r#type: String,
     pub tag: String,
-    pub query: Option<String>,
-    pub plugin: Option<String>,
 }
 
 impl TryFrom<&str> for ResourceUri {
@@ -40,25 +51,25 @@ impl TryFrom<url::Url> for ResourceUri {
     type Error = &'static str;
 
     fn try_from(value: url::Url) -> Result<Self, Self::Error> {
-        let mut addr = value.host_str().unwrap_or_default().to_string();
+        let mut kbs_address = value.host_str().unwrap_or_default().to_string();
 
-        if !addr.is_empty() {
+        if !kbs_address.is_empty() {
             if let Some(port) = value.port() {
-                addr += ":";
-                addr += &port.to_string();
+                kbs_address += ":";
+                kbs_address += &port.to_string();
             }
         }
 
         let scheme = value.scheme();
 
         let plugin = match scheme {
-            SCHEME => None,
+            SCHEME => DEFAULT_RESOURCE_PLUGIN.to_string(),
             s if s.starts_with("kbs+") => {
                 let plugin_name = s.trim_start_matches("kbs+");
                 if plugin_name.is_empty() {
                     return Err("scheme kbs+ requires a plugin name, e.g. kbs+pkcs11");
                 }
-                Some(plugin_name.to_string())
+                plugin_name.to_string()
             }
             _ => return Err("scheme must be kbs or kbs+<plugin>"),
         };
@@ -68,19 +79,14 @@ impl TryFrom<url::Url> for ResourceUri {
         }
 
         let path = &value.path()[1..];
-        let values: Vec<&str> = path.split('/').collect();
-        if values.len() == 3 {
-            Ok(Self {
-                kbs_addr: addr,
-                repository: values[0].into(),
-                r#type: values[1].into(),
-                tag: values[2].into(),
-                query: value.query().map(|s| s.to_string()),
-                plugin,
-            })
-        } else {
-            Err(RESOURCE_ID_ERROR_INFO)
-        }
+        let segments: Vec<String> = path.split('/').map(|s| s.to_string()).collect();
+
+        Ok(Self {
+            kbs_address,
+            path: segments,
+            query: value.query().map(|s| s.to_string()),
+            plugin,
+        })
     }
 }
 
@@ -90,9 +96,40 @@ impl From<ResourceUri> for url::Url {
     }
 }
 
+impl TryFrom<ResourceUri> for ResourcePluginPath {
+    type Error = anyhow::Error;
+    fn try_from(value: ResourceUri) -> Result<Self, Self::Error> {
+        if value.plugin != DEFAULT_RESOURCE_PLUGIN {
+            bail!(
+                "resource uri plugin must be {} instead of {}",
+                DEFAULT_RESOURCE_PLUGIN,
+                value.plugin
+            );
+        }
+
+        if value.path.len() != 3 {
+            bail!(
+                "resource uri path must be 3 instead of {}",
+                value.path.len()
+            );
+        }
+
+        Ok(ResourcePluginPath {
+            repo: value.path[0].clone(),
+            r#type: value.path[1].clone(),
+            tag: value.path[2].clone(),
+        })
+    }
+}
+
 impl ResourceUri {
-    pub fn new(kbs_uri: &str, resource_path: &str) -> Result<Self> {
-        let kbs_addr = match url::Url::parse(kbs_uri) {
+    pub fn new(
+        kbs_uri: &str,
+        resource_path: &str,
+        plugin: Option<&str>,
+        query: Option<&str>,
+    ) -> Result<Self> {
+        let kbs_address = match url::Url::parse(kbs_uri) {
             Ok(url) => {
                 let kbs_host = url
                     .host_str()
@@ -111,31 +148,25 @@ impl ResourceUri {
             bail!("Resource path {resource_path} must start with '/'")
         }
 
-        let values: Vec<&str> = resource_path.split('/').collect();
-        if values.len() == 4 {
-            Ok(Self {
-                kbs_addr,
-                repository: values[1].into(),
-                r#type: values[2].into(),
-                tag: values[3].into(),
-                query: None,
-                plugin: None,
-            })
-        } else {
-            bail!(
-                "Resource path {resource_path} must follow the format '/<repository>/<type>/<tag>'"
-            )
-        }
+        let segments: Vec<String> = resource_path.split('/').map(|s| s.to_string()).collect();
+
+        Ok(Self {
+            kbs_address,
+            path: segments,
+            query: query.map(|s| s.to_string()),
+            plugin: plugin.unwrap_or(DEFAULT_RESOURCE_PLUGIN).to_string(),
+        })
     }
 
     pub fn whole_uri(&self) -> String {
-        let scheme = match &self.plugin {
-            Some(p) => format!("{SCHEME}+{p}"),
-            None => SCHEME.to_string(),
+        let scheme = match self.plugin.as_str() {
+            DEFAULT_RESOURCE_PLUGIN => SCHEME.to_string(),
+            plugin => format!("{SCHEME}+{plugin}"),
         };
         let uri = format!(
-            "{scheme}://{}/{}/{}/{}",
-            self.kbs_addr, self.repository, self.r#type, self.tag
+            "{scheme}://{kbs_address}/{path}",
+            kbs_address = self.kbs_address,
+            path = self.resource_path(),
         );
         match &self.query {
             Some(q) => format!("{uri}?{q}"),
@@ -146,14 +177,14 @@ impl ResourceUri {
     /// Returns the plugin name. If no plugin was specified in the URI,
     /// returns the default plugin "resource".
     pub fn plugin(&self) -> &str {
-        self.plugin.as_deref().unwrap_or(DEFAULT_PLUGIN)
+        &self.plugin
     }
 
     /// Only return the resource path. This function is used
     /// currently because up to now the kbs-uri is given
     /// to create an AA instance.
     pub fn resource_path(&self) -> String {
-        format!("{}/{}/{}", self.repository, self.r#type, self.tag)
+        self.path.join("/")
     }
 }
 
@@ -223,17 +254,17 @@ mod tests {
         #[case] query: Option<&str>,
         #[case] plugin: Option<&str>,
     ) {
+        use crate::DEFAULT_RESOURCE_PLUGIN;
+
         let resource = ResourceUri {
-            kbs_addr: if url.contains("example.com") {
+            kbs_address: if url.contains("example.com") {
                 "example.com:8080".into()
             } else {
                 "".into()
             },
-            repository: repository.into(),
-            r#type: r#type.into(),
-            tag: tag.into(),
+            path: vec![repository.into(), r#type.into(), tag.into()],
             query: query.map(|s| s.to_string()),
-            plugin: plugin.map(|s| s.to_string()),
+            plugin: plugin.unwrap_or(DEFAULT_RESOURCE_PLUGIN).to_string(),
         };
 
         // Deserialization
@@ -255,6 +286,19 @@ mod tests {
         let resource_from_url =
             ResourceUri::try_from(url_from_string).expect("failed to try from url");
         assert_eq!(resource_from_url, resource);
+    }
+
+    #[rstest]
+    #[case("kbs:///repo/type/tag", "kbs+resource:///repo/type/tag")]
+    fn test_resource_plugin_uri_equivalence(#[case] shorthand: &str, #[case] explicit: &str) {
+        let from_shorthand: ResourceUri = shorthand.try_into().expect("parse shorthand");
+        let from_explicit: ResourceUri = explicit.try_into().expect("parse explicit");
+        assert_eq!(from_shorthand, from_explicit);
+        assert_eq!(from_shorthand.whole_uri(), shorthand);
+        assert_eq!(
+            serde_json::to_string(&from_explicit).expect("serialize"),
+            format!("\"{shorthand}\"")
+        );
     }
 
     #[rstest]
