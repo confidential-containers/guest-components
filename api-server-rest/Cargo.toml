@@ -21,6 +21,9 @@ tracing-subscriber.workspace = true
 ttrpc = { workspace = true, features = ["async"] }
 protos = { path = "../protos", default-features = false, features = ["ttrpc"] }
 
+[dev-dependencies]
+rstest.workspace = true
+
 [build-dependencies]
 serde_json = { workspace = true }
 shadow-rs.workspace = true

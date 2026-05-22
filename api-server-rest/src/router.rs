@@ -15,7 +15,7 @@ use crate::client::{
     aa::{AAClient, AaelEvent, AA_AAEL_URL, AA_EVIDENCE_URL, AA_ROOT, AA_TOKEN_URL},
     cdh::{CDHClient, CDH_RESOURCE_URL, CDH_ROOT},
 };
-use crate::utils::split_nth_slash;
+use crate::utils::{decode_runtime_data, split_nth_slash};
 use crate::VERSION;
 
 pub struct Router {
@@ -168,10 +168,14 @@ impl Router {
                             info!("Get evidence");
                             match params.get("runtime_data") {
                                 Some(runtime_data) => {
-                                    match client
-                                        .get_evidence(&runtime_data.clone().into_bytes())
-                                        .await
-                                    {
+                                    let runtime_data = match decode_runtime_data(
+                                        runtime_data,
+                                        params.get("encoding").map(String::as_str),
+                                    ) {
+                                        std::result::Result::Ok(data) => data,
+                                        std::result::Result::Err(_) => return self.bad_request(),
+                                    };
+                                    match client.get_evidence(&runtime_data).await {
                                         std::result::Result::Ok(results) => {
                                             return self.octet_stream_response(results)
                                         }
