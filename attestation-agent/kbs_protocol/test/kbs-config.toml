@@ -17,7 +17,7 @@ duration_min = 5
 type = "BuiltIn"
 
 [admin]
-type = "InsecureAllowAll"
+authorization_mode = "InsecureAllowAll"
 
 [[plugins]]
 name = "resource"
