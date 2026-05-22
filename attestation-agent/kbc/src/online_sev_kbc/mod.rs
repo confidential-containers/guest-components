@@ -18,13 +18,12 @@ use tonic::codegen::http::Uri;
 use uuid::Uuid;
 use zeroize::Zeroizing;
 
-use keybroker::key_broker_service_client::KeyBrokerServiceClient;
-use keybroker::{OnlineSecretRequest, RequestDetails};
+use protos::grpc::aa::keybroker::{
+    key_broker_service_client::KeyBrokerServiceClient,
+    {OnlineSecretRequest, RequestDetails},
+};
 
 use super::AnnotationPacket;
-
-#[rustfmt::skip]
-mod keybroker;
 
 const KEYS_PATH: &str = "/sys/kernel/security/secrets/coco/1ee27366-0c87-43a6-af48-28543eaf7cb0";
 
@@ -119,7 +118,10 @@ impl OnlineSevKbc {
             WrapType::Aes256Gcm,
         )?;
 
-        let payload_dict: HashMap<String, Vec<u8>> = bincode::deserialize(&decrypted_payload)?;
+        let (payload_dict, _) = bincode::decode_from_slice::<HashMap<String, Vec<u8>>, _>(
+            &decrypted_payload,
+            bincode::config::legacy(),
+        )?;
 
         Ok(payload_dict
             .get(&guid)
