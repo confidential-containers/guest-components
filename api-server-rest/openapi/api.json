@@ -62,6 +62,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "encoding",
+            "in": "query",
+            "description": "Runtime data encoding; use `base64` for URL-safe base64 (no padding)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
