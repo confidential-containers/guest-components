@@ -49,6 +49,59 @@
         }
       }
     },
+    "/aa/additional-evidence": {
+      "get": {
+        "tags": [],
+        "operationId": "_additional_evidence",
+        "parameters": [
+          {
+            "name": "runtime_data",
+            "in": "query",
+            "description": "Runtime Data",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "encoding",
+            "in": "query",
+            "description": "Runtime data encoding; use `base64` for URL-safe base64 (no padding)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "success response",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": {
+                  "sev-snp": "..."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request for invalid query param"
+          },
+          "403": {
+            "description": "forbid external access"
+          },
+          "404": {
+            "description": "resource not found"
+          },
+          "405": {
+            "description": "only Get method allowed"
+          }
+        }
+      }
+    },
     "/aa/evidence": {
       "get": {
         "tags": [],
