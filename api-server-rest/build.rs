@@ -47,6 +47,26 @@ fn _token() {}
 )]
 fn _evidence() {}
 
+#[utoipa::path(
+    get,
+    path = "/aa/additional-evidence",
+    params(
+        ("runtime_data" = String, Query, description = "Runtime Data"),
+        ("encoding" = Option<String>, Query, description = "Runtime data encoding; use `base64` for URL-safe base64 (no padding)")
+    ),
+    responses(
+        (status = 200, description = "success response",
+                content_type = "application/octet-stream",
+                body = String,
+                example = json!({"sev-snp":"..."})),
+        (status = 400, description = "bad request for invalid query param"),
+        (status = 403, description = "forbid external access"),
+        (status = 404, description = "resource not found"),
+        (status = 405, description = "only Get method allowed")
+    )
+)]
+fn _additional_evidence() {}
+
 #[derive(ToSchema)]
 pub struct AaelEvent {
     /// Attestation Agent Event Log Domain
@@ -128,7 +148,7 @@ fn generate_openapi_document() -> std::io::Result<()> {
         (url = "http://127.0.0.1:8006", description = "CoCo RESTful API")
      ),
 
-    paths(_token, _evidence, _aael, _resource, _version)
+    paths(_token, _evidence, _additional_evidence, _aael, _resource, _version)
  )]
     struct ApiDoc;
     let mut file = File::create("openapi/api.json")?;

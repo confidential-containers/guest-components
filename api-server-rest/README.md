@@ -17,6 +17,12 @@ $ curl http://127.0.0.1:8006/aa/evidence\?runtime_data\=xxxx
 $ curl "http://127.0.0.1:8006/aa/evidence?runtime_data=eHh4eA&encoding=base64"
 {"svn":"1","report_data":"eHh4eA=="}
 
+$ curl http://127.0.0.1:8006/aa/additional-evidence\?runtime_data\=xxxx
+{"nvidia":"..."}
+
+$ curl "http://127.0.0.1:8006/aa/additional-evidence?runtime_data=eHh4eA&encoding=base64"
+{"nvidia":"..."}
+
 $ curl http://127.0.0.1:8006/aa/token\?token_type\=kbs
 {"token":"eyJhbGciOiJFi...","tee_keypair":"-----BEGIN... "}
 
