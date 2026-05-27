@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use strum::EnumString;
@@ -10,6 +11,8 @@ use tempfile::tempdir_in;
 use thiserror::Error;
 
 const TSM_REPORT_PATH: &str = "/sys/kernel/config/tsm/report";
+
+const TDX_RTMR_PATH: &str = "/sys/devices/virtual/misc/tdx_guest/measurements";
 
 #[derive(Error, Debug)]
 pub enum TsmReportError {
@@ -29,9 +32,13 @@ pub enum TsmReportError {
     InblobConflict(u32),
     #[error("Failed to generate TSM Report: missing inblob (len=0)")]
     InblobLen,
+    #[error("Initdata reading via TSM is not supported on this platform.")]
+    InitdataNotSupported,
+    #[error("RTMR reading via TSM is not supported on this platform.")]
+    RtmrNotSupported,
 }
 
-#[derive(PartialEq, Debug, EnumString)]
+#[derive(PartialEq, Debug, EnumString, Copy, Clone)]
 pub enum TsmReportProvider {
     #[strum(serialize = "arm_cca_guest\n")]
     Cca,
@@ -39,6 +46,45 @@ pub enum TsmReportProvider {
     Tdx,
     #[strum(serialize = "sev_guest\n")]
     Sev,
+}
+
+impl TsmReportProvider {
+    pub fn read_initdata(&self) -> Result<Vec<u8>, TsmReportError> {
+        let report_path = Path::new(TDX_RTMR_PATH);
+
+        let initdata = match self {
+            TsmReportProvider::Tdx => std::fs::read(report_path.join("mrconfigid"))?,
+            _ => return Err(TsmReportError::InitdataNotSupported),
+        };
+
+        Ok(initdata)
+    }
+
+    pub fn read_rtmr(&self, index: u64) -> Result<Vec<u8>, TsmReportError> {
+        let rtmr = match self {
+            TsmReportProvider::Tdx => {
+                let rtmr_directory = Path::new(TDX_RTMR_PATH);
+                std::fs::read(rtmr_directory.join(format!("rtmr{}:sha384", index)))?
+            }
+            _ => return Err(TsmReportError::RtmrNotSupported),
+        };
+
+        Ok(rtmr)
+    }
+
+    pub fn write_rtmr(&self, index: u64, data: &[u8]) -> Result<(), TsmReportError> {
+        match self {
+            TsmReportProvider::Tdx => {
+                let rtmr_directory = Path::new(TDX_RTMR_PATH);
+                let rtmr_path = rtmr_directory.join(format!("rtmr{}:sha384", index));
+                let mut fd = std::fs::OpenOptions::new().write(true).open(rtmr_path)?;
+                fd.write_all(data)?;
+            }
+            _ => return Err(TsmReportError::RtmrNotSupported),
+        }
+
+        Ok(())
+    }
 }
 
 pub enum TsmReportData {
@@ -81,6 +127,7 @@ impl TsmReportPath {
 
         Ok(Self { path })
     }
+
     pub fn attestation_report(
         &self,
         provider_data: TsmReportData,
@@ -112,6 +159,7 @@ impl TsmReportPath {
 
         Ok(q)
     }
+
     pub fn supplemental_data(&self) -> Result<Vec<u8>, TsmReportError> {
         let report_path = self.path.as_path();
 
