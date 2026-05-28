@@ -125,6 +125,10 @@ impl Attester for TdxAttester {
         self.supports_tsm_measurements || LIBTDX_ENABLED
     }
 
+    /// To call this function, the platform is asserted to support extending runtime measurement.
+    /// There are two cases:
+    /// 1. The platform supports TSM measurements via sysfs.
+    /// 2. The platform supports extending runtime measurement via ioctl (by enabling the feature "tdx-attest-dcap-ioctls").
     async fn extend_runtime_measurement(
         &self,
         event_digest: Vec<u8>,
@@ -140,29 +144,30 @@ impl Attester for TdxAttester {
             hex::encode(extend_data)
         );
 
-        #[cfg(not(feature = "tdx-attest-dcap-ioctls"))]
-        std::fs::write(
-            Path::new(TDX_TSM_SYSFS_PATH).join(format!("rtmr{rtmr_index}:sha384")),
-            extend_data,
-        )
-        .context("TDX Attester: failed to extend RTMR")?;
+        if self.supports_tsm_measurements {
+            let rtmr_path =
+                Path::new(TDX_TSM_SYSFS_PATH).join(format!("rtmr{}:sha384", rtmr_index));
+            std::fs::write(rtmr_path, extend_data).context("Failed to write RTMR via sysfs")?;
+
+            return Ok(());
+        }
 
         #[cfg(feature = "tdx-attest-dcap-ioctls")]
-        let event: Vec<u8> = rtmr::TdxRtmrEvent::default()
-            .with_extend_data(extend_data)
-            .with_rtmr_index(rtmr_index)
-            .into();
-
-        #[cfg(feature = "tdx-attest-dcap-ioctls")]
-        match tdx_attest_rs::tdx_att_extend(&event) {
-            tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
-                debug!("TDX extend runtime measurement succeeded.")
-            }
-            error_code => {
-                bail!(
-                    "TDX Attester: Failed to extend RTMR. Error code: {:?}",
-                    error_code
-                );
+        {
+            let event: Vec<u8> = rtmr::TdxRtmrEvent::default()
+                .with_extend_data(extend_data)
+                .with_rtmr_index(rtmr_index)
+                .into();
+            match tdx_attest_rs::tdx_att_extend(&event) {
+                tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
+                    debug!("TDX extend runtime measurement succeeded.")
+                }
+                error_code => {
+                    bail!(
+                        "TDX Attester: Failed to extend RTMR. Error code: {:?}",
+                        error_code
+                    );
+                }
             }
         }
 
@@ -170,10 +175,22 @@ impl Attester for TdxAttester {
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> Result<InitDataResult> {
-        let report = self.ioctl_get_report()?;
+        let mr_configid = match self.supports_tsm_measurements {
+            true => {
+                let mrconfigid = std::fs::read(Path::new(TDX_TSM_SYSFS_PATH).join("mrconfigid"))
+                    .context("Failed to read MRCONFIGID via sysfs")?;
+
+                mrconfigid
+            }
+            false => {
+                let report = self.ioctl_get_report()?;
+                report.tdinfo.mrconfigid.to_vec()
+            }
+        };
+
         let mut init_data = init_data_digest.to_vec();
         init_data.resize(TDX_REGISTER_LENGTH, 0);
-        if init_data != report.tdinfo.mrconfigid.to_vec() {
+        if init_data != mr_configid {
             bail!("Init data does not match!");
         }
 
@@ -183,8 +200,15 @@ impl Attester for TdxAttester {
     async fn get_runtime_measurement(&self, pcr_index: u64) -> Result<Vec<u8>> {
         let ccmr = self.pcr_to_ccmr(pcr_index);
         let index = ccmr - 1;
+        if self.supports_tsm_measurements {
+            let rtmr_path = Path::new(TDX_TSM_SYSFS_PATH).join(format!("rtmr{}:sha384", index));
+            let rtmr = std::fs::read(rtmr_path).context("Failed to read RTMR via sysfs")?;
+            return Ok(rtmr);
+        }
+
         let report = self.ioctl_get_report()?;
-        Ok(report.get_rtmr(index as usize))
+        let rtmr = report.get_rtmr(index as usize);
+        Ok(rtmr)
     }
 
     fn pcr_to_ccmr(&self, pcr_index: u64) -> u64 {
