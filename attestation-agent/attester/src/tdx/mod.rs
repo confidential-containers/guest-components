@@ -21,24 +21,13 @@ mod rtmr;
 
 const TDX_REPORT_DATA_SIZE: usize = 64;
 
-const TDX_RTMR_PATH: &str = "/sys/devices/virtual/misc/tdx_guest/measurements";
+const TDX_TSM_SYSFS_PATH: &str = "/sys/devices/virtual/misc/tdx_guest/measurements";
 const TDX_GUEST_IOCTL: &str = "/dev/tdx_guest";
+
+const LIBTDX_ENABLED: bool = cfg!(feature = "tdx-attest-dcap-ioctls");
 
 pub fn detect_platform() -> bool {
     TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || Path::new(TDX_GUEST_IOCTL).exists()
-}
-// Return true if the TD environment can extend runtime measurement.
-// The best guess at the moment is that if tdx-attest-dcap-ioctls
-// is enabled, runtime measurement is possible. It's also possible
-// if TDX_RTMR_PATH exits. The two are mutually exclusive.
-fn runtime_measurement_extend_available() -> bool {
-    cfg_if::cfg_if! {
-            if #[cfg(feature = "tdx-attest-dcap-ioctls")] {
-                true
-            } else {
-                Path::new(TDX_RTMR_PATH).exists()
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -53,7 +42,26 @@ struct TdxEvidence {
 }
 
 #[derive(Debug, Default)]
-pub struct TdxAttester {}
+pub struct TdxAttester {
+    /// Linux TSM sysfs is used to read and write runtime measurement registers,
+    /// and also read the registers like MRCONFIGID. This ability starts with kernel version 6.16.
+    /// If the sysfs is not supported, the attester will use the ioctl to get the report
+    /// and the registers.
+    supports_tsm_measurements: bool,
+}
+
+impl TdxAttester {
+    pub fn new() -> Self {
+        let supports_tsm_measurements = Path::new(TDX_TSM_SYSFS_PATH).exists();
+        if !supports_tsm_measurements {
+            debug!("sysfs for TDX is not supported, which requires kernel version >= 6.16.");
+        }
+
+        Self {
+            supports_tsm_measurements,
+        }
+    }
+}
 
 #[repr(C)]
 struct TdxReportReq {
@@ -117,7 +125,7 @@ impl Attester for TdxAttester {
     }
 
     fn supports_runtime_measurement(&self) -> bool {
-        true
+        self.supports_tsm_measurements || LIBTDX_ENABLED
     }
 
     async fn extend_runtime_measurement(
@@ -125,10 +133,6 @@ impl Attester for TdxAttester {
         event_digest: Vec<u8>,
         register_index: u64,
     ) -> Result<()> {
-        if !runtime_measurement_extend_available() {
-            bail!("TDX Attester: runtime measurement extend is not available");
-        }
-
         let ccmr_index = self.pcr_to_ccmr(register_index);
         let rtmr_index = ccmr_index - 1;
 
@@ -141,7 +145,7 @@ impl Attester for TdxAttester {
 
         #[cfg(not(feature = "tdx-attest-dcap-ioctls"))]
         std::fs::write(
-            Path::new(TDX_RTMR_PATH).join(format!("rtmr{rtmr_index}:sha384")),
+            Path::new(TDX_TSM_SYSFS_PATH).join(format!("rtmr{rtmr_index}:sha384")),
             extend_data,
         )
         .context("TDX Attester: failed to extend RTMR")?;
