@@ -15,11 +15,15 @@ use report::TdReport;
 use scroll::Pread;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use tracing::debug;
 
 mod report;
 mod rtmr;
 
 const TDX_REPORT_DATA_SIZE: usize = 64;
+
+/// `TDX_REGISTER_LENGTH` / SHA384 digest size
+const TDX_REGISTER_LENGTH: usize = 48;
 
 const TDX_TSM_SYSFS_PATH: &str = "/sys/devices/virtual/misc/tdx_guest/measurements";
 const TDX_GUEST_IOCTL: &str = "/dev/tdx_guest";
@@ -66,31 +70,24 @@ impl TdxAttester {
 #[repr(C)]
 struct TdxReportReq {
     report_data: [u8; 64],
-
     d: [u8; 1024],
-}
-
-impl Default for TdxReportReq {
-    fn default() -> Self {
-        Self {
-            report_data: [0; 64],
-            d: [0; 1024],
-        }
-    }
 }
 
 const TDX: Group = Group::new(b'T');
 const TDX_CMD_GET_REPORT0: Ioctl<WriteRead, &TdxReportReq> = unsafe { TDX.write_read(0x1) };
 
 impl TdxAttester {
-    fn get_report() -> Result<TdReport> {
-        let mut report = TdxReportReq::default();
-        let mut fd =
-            std::fs::File::open(TDX_GUEST_IOCTL).context("Open TD report ioctl() failed")?;
+    fn ioctl_get_report(&self) -> Result<TdReport> {
+        let mut report = TdxReportReq {
+            report_data: [0; 64],
+            d: [0; 1024],
+        };
+        let mut fd = std::fs::File::open(TDX_GUEST_IOCTL)
+            .with_context(|| format!("open {TDX_GUEST_IOCTL} failed"))?;
 
         TDX_CMD_GET_REPORT0
             .ioctl(&mut fd, &mut report)
-            .context("Get TD report ioctl() failed")?;
+            .context("Get TD report via ioctl() failed")?;
 
         let td_report = report
             .d
@@ -136,9 +133,9 @@ impl Attester for TdxAttester {
         let ccmr_index = self.pcr_to_ccmr(register_index);
         let rtmr_index = ccmr_index - 1;
 
-        let extend_data: [u8; 48] = pad(&event_digest);
+        let extend_data: [u8; TDX_REGISTER_LENGTH] = pad(&event_digest);
 
-        tracing::debug!(
+        debug!(
             "TDX Attester: extend RTMR{rtmr_index}: {}",
             hex::encode(extend_data)
         );
@@ -159,7 +156,7 @@ impl Attester for TdxAttester {
         #[cfg(feature = "tdx-attest-dcap-ioctls")]
         match tdx_attest_rs::tdx_att_extend(&event) {
             tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
-                tracing::debug!("TDX extend runtime measurement succeeded.")
+                debug!("TDX extend runtime measurement succeeded.")
             }
             error_code => {
                 bail!(
@@ -173,9 +170,10 @@ impl Attester for TdxAttester {
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> Result<InitDataResult> {
-        let td_report = Self::get_report()?;
-        let init_data: [u8; 48] = pad(init_data_digest);
-        if init_data != td_report.tdinfo.mrconfigid {
+        let report = self.ioctl_get_report()?;
+        let mut init_data = init_data_digest.to_vec();
+        init_data.resize(TDX_REGISTER_LENGTH, 0);
+        if init_data != report.tdinfo.mrconfigid.to_vec() {
             bail!("Init data does not match!");
         }
 
@@ -183,10 +181,10 @@ impl Attester for TdxAttester {
     }
 
     async fn get_runtime_measurement(&self, pcr_index: u64) -> Result<Vec<u8>> {
-        let td_report = Self::get_report()?;
-        let ccmr = self.pcr_to_ccmr(pcr_index) as usize;
-
-        Ok(td_report.get_rtmr(ccmr - 1))
+        let ccmr = self.pcr_to_ccmr(pcr_index);
+        let index = ccmr - 1;
+        let report = self.ioctl_get_report()?;
+        Ok(report.get_rtmr(index as usize))
     }
 
     fn pcr_to_ccmr(&self, pcr_index: u64) -> u64 {
@@ -213,14 +211,17 @@ mod tests {
     #[tokio::test]
     async fn test_tdx_get_evidence() {
         let attester = TdxAttester::default();
-        let report_data: Vec<u8> = vec![0; 48];
+        let report_data: Vec<u8> = vec![0; TDX_REPORT_DATA_SIZE];
 
         let evidence = attester.get_evidence(report_data).await;
         assert!(evidence.is_ok());
     }
+
     #[ignore]
     #[tokio::test]
-    async fn test_tdx_get_report() {
-        assert!(TdxAttester::get_report().is_ok());
+    async fn test_tdx_ioctl_get_report() {
+        let attester = TdxAttester::default();
+        let report = attester.ioctl_get_report();
+        assert!(report.is_ok());
     }
 }
