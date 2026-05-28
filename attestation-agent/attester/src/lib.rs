@@ -56,7 +56,7 @@ impl TryFrom<Tee> for BoxedAttester {
             Tee::Sample => Box::<sample::SampleAttester>::default(),
             Tee::SampleDevice => Box::<sample_device::SampleDeviceAttester>::default(),
             #[cfg(feature = "tdx-attester")]
-            Tee::Tdx => Box::<tdx::TdxAttester>::default(),
+            Tee::Tdx => Box::new(tdx::TdxAttester::new()),
             #[cfg(feature = "sgx-attester")]
             Tee::Sgx => Box::<sgx_dcap::SgxDcapAttester>::default(),
             #[cfg(feature = "az-snp-vtpm-attester")]
