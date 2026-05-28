@@ -76,5 +76,15 @@ The ttRPC and gRPC protos can be updated via run
 make build-protos
 ```
 
+## Compatibility
+
+For compatibility information between guest-components and [Trustee](https://github.com/confidential-containers/trustee) (KBS, Attestation Service), see the [Compatibility Matrix](COMPATIBILITY.md).
+
+This includes:
+- Release version mappings
+- TEE platform support status
+- KBS protocol versions
+- Breaking changes
+
 ## License
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fconfidential-containers%2Fimage-rs.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fconfidential-containers%2Fimage-rs?ref=badge_large)
