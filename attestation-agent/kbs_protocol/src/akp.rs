@@ -143,7 +143,14 @@ impl AkpKeyPair {
 /// PartyUInfo / PartyVInfo are intentionally excluded per the draft.
 ///
 /// MUST stay byte-identical to the server's `kbs/src/akp.rs::kmac256_kdf`.
-fn kmac256_kdf(shared_secret: &[u8], alg: &str, out_len_bytes: usize) -> Result<Vec<u8>> {
+///
+/// Visible to the rest of the crate to support unwrap-path testing in
+/// `keypair.rs` without re-implementing the encoding.
+pub(crate) fn kmac256_kdf(
+    shared_secret: &[u8],
+    alg: &str,
+    out_len_bytes: usize,
+) -> Result<Vec<u8>> {
     let alg_bytes = alg.as_bytes();
     let alg_len = (alg_bytes.len() as u32).to_be_bytes();
     let keydatalen_bits = ((out_len_bytes * 8) as u32).to_be_bytes();

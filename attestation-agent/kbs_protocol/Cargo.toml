@@ -90,3 +90,7 @@ openssl = ["reqwest/native-tls-vendored", "crypto/openssl"]
 pqc-experimental = ["dep:aes-kw", "dep:ml-kem", "dep:sha3-kmac"]
 
 bin = ["tokio/rt", "tokio/macros", "clap", "tracing-subscriber"]
+
+[[example]]
+name = "akp_get_resource"
+required-features = ["pqc-experimental", "bin"]

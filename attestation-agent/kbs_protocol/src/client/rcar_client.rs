@@ -9,8 +9,7 @@ use anyhow::{bail, Context};
 use async_trait::async_trait;
 use kbs_types::HashAlgorithm;
 use kbs_types::{
-    Attestation, Challenge, CompositeEvidence, ErrorInformation, InitData, Request, Response,
-    RuntimeData, Tee,
+    Challenge, CompositeEvidence, ErrorInformation, InitData, Request, Response, RuntimeData, Tee,
 };
 use resource_uri::ResourceUri;
 use serde::{Deserialize, Serialize};
@@ -146,12 +145,27 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
     }
 
     /// Get composite evidence for the confidential guest.
+    ///
+    /// `runtime_data` is the JSON `{nonce, tee-pubkey}` object that will be
+    /// embedded in the attestation request body. It's accepted as a
+    /// `serde_json::Value` (rather than the typed `kbs_types::RuntimeData`)
+    /// so the experimental AKP path can embed a JWK that the upstream
+    /// `TeePubKey` enum can't represent. The canonical-JSON hash computed
+    /// here is byte-identical regardless of how the value was constructed,
+    /// so wire compatibility is preserved for the classical path.
     async fn get_composite_evidence(
         &self,
-        runtime_data: RuntimeData,
+        runtime_data: serde_json::Value,
         hash_algorithm: HashAlgorithm,
         tee: Tee,
     ) -> anyhow::Result<CompositeEvidence> {
+        let nonce = runtime_data["nonce"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("runtime_data missing string `nonce`"))?;
+        let tee_pubkey = runtime_data
+            .get("tee-pubkey")
+            .ok_or_else(|| anyhow::anyhow!("runtime_data missing `tee-pubkey`"))?;
+
         let device_runtime_data = serialize_json_canonically(&runtime_data)?;
 
         let device_runtime_data_hash = hash_algorithm.digest(&device_runtime_data);
@@ -165,8 +179,8 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         // Calculate the runtime data for the primary attester, which includes
         // the device evidence retrieved above.
         let primary_runtime_data_json = json!({
-            "tee-pubkey": runtime_data.tee_pubkey,
-            "nonce": runtime_data.nonce,
+            "tee-pubkey": tee_pubkey,
+            "nonce": nonce,
             "additional-evidence": additional_evidence,
         });
         let primary_runtime_data_serialized =
@@ -189,9 +203,8 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
                     use attester::se::SeAttestationRequest;
 
                     // Deserialize the nonce as SeAttestationRequest
-                    let mut request: SeAttestationRequest =
-                        serde_json::from_str(&runtime_data.nonce)
-                            .context("Failed to deserialize SeAttestationRequest from nonce")?;
+                    let mut request: SeAttestationRequest = serde_json::from_str(nonce)
+                        .context("Failed to deserialize SeAttestationRequest from nonce")?;
 
                     // Inject runtime_data_digest
                     request.runtime_data_digest = Some(primary_runtime_digest);
@@ -272,10 +285,25 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
 
         let algorithm = get_hash_algorithm(extra_params)?;
 
-        let tee_pubkey = self.tee_key.export_pubkey()?;
-        let runtime_data = RuntimeData {
-            nonce: challenge.nonce,
-            tee_pubkey,
+        // Build runtime data as JSON. AKP keys cannot be represented in the
+        // upstream `kbs_types::TeePubKey` enum (kbs-types 0.15.0), so the
+        // AKP path embeds a JWK Value directly. The classical path
+        // round-trips through `serde_json::to_value` to keep a single
+        // downstream code path. Wire bytes are unchanged for classical
+        // since canonical-JSON is unique for a given JSON tree.
+        let runtime_data = if self.tee_key.is_akp() {
+            let tee_pubkey = self.tee_key.export_pubkey_value()?;
+            json!({
+                "nonce": challenge.nonce,
+                "tee-pubkey": tee_pubkey,
+            })
+        } else {
+            let tee_pubkey = self.tee_key.export_pubkey()?;
+            let typed = RuntimeData {
+                nonce: challenge.nonce,
+                tee_pubkey,
+            };
+            serde_json::to_value(&typed).context("serialize runtime_data to JSON")?
         };
 
         let tee_evidence = self
@@ -289,11 +317,16 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             body: initdata.into(),
         });
 
-        let attest = Attestation {
-            init_data,
-            runtime_data,
-            tee_evidence,
-        };
+        // Build the attestation body via `json!` rather than the typed
+        // `kbs_types::Attestation`. The kebab-case field names match
+        // `Attestation`'s serde derives, so wire bytes are unchanged for
+        // the classical path while the AKP path can carry a JWK that
+        // `Attestation::runtime_data: RuntimeData` couldn't.
+        let attest = json!({
+            "init-data": init_data,
+            "runtime-data": runtime_data,
+            "tee-evidence": tee_evidence,
+        });
 
         debug!("send attest request.");
         let attest_response = self
