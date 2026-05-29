@@ -194,10 +194,6 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             // - injects runtime_data_digest into the request
             // The injected data will be used in SE attester's get_evidence method.
             Tee::Se => {
-                if !additional_evidence.is_empty() {
-                    bail!("Cannot attest multiple devices on s390x platform.")
-                }
-
                 #[cfg(feature = "se-attester")]
                 {
                     use attester::se::SeAttestationRequest;
@@ -363,8 +359,12 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
 impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
     async fn get_resource(&mut self, resource_uri: ResourceUri) -> Result<Vec<u8>> {
         let mut remote_url = format!(
-            "{}/{KBS_PREFIX}/resource/{}/{}/{}",
-            self.kbs_host_url, resource_uri.repository, resource_uri.r#type, resource_uri.tag
+            "{}/{KBS_PREFIX}/{}/{}/{}/{}",
+            self.kbs_host_url,
+            resource_uri.plugin(),
+            resource_uri.repository,
+            resource_uri.r#type,
+            resource_uri.tag
         );
         if let Some(ref q) = resource_uri.query {
             remote_url = format!("{remote_url}?{q}");

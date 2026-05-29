@@ -7,8 +7,7 @@ use filetime::FileTime;
 use futures::StreamExt;
 use nix::libc;
 use nix::libc::timeval;
-use pathrs::flags::OpenFlags;
-use pathrs::InodeType;
+use pathrs::{flags::OpenFlags, InodeType, Root};
 use thiserror::Error;
 use tracing::{debug, warn};
 
@@ -20,12 +19,12 @@ use std::{
     io,
     os::{
         fd::{AsFd, AsRawFd, BorrowedFd},
-        unix::fs::PermissionsExt,
+        unix::{ffi::OsStrExt, fs::PermissionsExt},
     },
     path::Path,
 };
 use tokio::{fs, io::AsyncRead};
-use tokio_tar::ArchiveBuilder;
+use tokio_tar::{Archive, ArchiveBuilder, Entry};
 use xattr::FileExt;
 
 pub type UnpackResult<T> = std::result::Result<T, UnpackError>;
@@ -90,6 +89,13 @@ pub enum UnpackError {
         path: String,
     },
 
+    #[error("Failed to set permissions for path: {path}")]
+    SetPermissionsFailed {
+        #[source]
+        source: anyhow::Error,
+        path: String,
+    },
+
     #[error("Failed to set file mtime: {path}")]
     SetMTimeFailed {
         #[source]
@@ -128,6 +134,40 @@ const WHITEOUT_OPAQUE_DIR: &str = ".wh..wh..opq";
 /// Returns whether the file name is a whiteout file
 fn is_whiteout(name: &str) -> bool {
     name.starts_with(WHITEOUT_PREFIX)
+}
+
+/// Returns whether the tar entry names the layer root directory itself.
+///
+/// OCI image layers may include a `.` entry to carry the root directory metadata.
+/// The layer extraction directory already exists, so this entry must not be unpacked
+/// again; only its ownership and timestamps are applied at the end.
+fn is_layer_root_entry(path: &Path) -> bool {
+    path.as_os_str().is_empty() || path == Path::new(".") || path == Path::new("./")
+}
+
+/// Returns whether the tar entry should be treated as a directory when applying
+/// ownership, mode, and deferred mtime after unpack.
+///
+/// OCI layer tars are usually ustar or PAX. In those formats, directories are
+/// identified by typeflag `5` ([`EntryType::Directory`]), which
+/// [`EntryType::is_dir`] checks.
+///
+/// Pre-ustar (v7 / old BSD) headers do not carry a reliable directory typeflag;
+/// there, a trailing `/` on the path name historically meant "directory". That
+/// heuristic is applied only when [`Header::as_ustar`] is `None`, so ustar and
+/// later headers rely on the typeflag alone. This matches
+/// `tokio_tar::Entry::unpack` ("Old BSD-tar compatibility").
+fn is_dir<R: AsyncRead + Unpin>(
+    kind: &tokio_tar::EntryType,
+    file: &Entry<Archive<R>>,
+) -> UnpackResult<bool> {
+    let is_dir = kind.is_dir()
+        || file.header().as_ustar().is_none()
+            && file
+                .path_bytes()
+                .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?
+                .ends_with(b"/");
+    Ok(is_dir)
 }
 
 /// Converts a whiteout file or opaque directory.
@@ -187,7 +227,26 @@ async fn convert_whiteout(
     Ok(())
 }
 
-/// Unpack the contents of tarball to the layer_dir path
+/// Unpack the contents of a layer tarball into `layer_dir`.
+///
+/// Metadata is applied in two phases: `unpack_in` via astral-tokio-tar 0.6
+/// (`preserve_permissions=true`, `preserve_mtime=true`), then image-rs corrections.
+/// Astral never sets uid/gid; our chown/chmod also bumps mtime, so we restore mtime after
+/// our changes whenever astral may have set it during `unpack_in`.
+///
+/// Legend: astral = set by astral during unpack_in; us = set by image-rs; defer = after all
+///         entries; - = not applied from tar header
+///
+/// | entry type                         | uid/gid | mode        | mtime       |
+/// |------------------------------------|---------|-------------|-------------|
+/// | whiteout                           | -       | us (0o000)  | -           |
+/// | layer root "."                     | us      | us          | defer       |
+/// | directory                          | us      | astral only | defer       |
+/// | symlink                            | us      | -           | astral + us |
+/// | hard link                          | us      | -           | us          |
+/// | regular file / fifo / char / block | us      | astral + us | astral + us |
+///
+/// See issue https://github.com/astral-sh/tokio-tar/issues/81
 pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackResult<()> {
     if layer_dir.exists() {
         warn!("layer_dir {layer_dir:?} already exists, will delete and rewrite the layer",);
@@ -199,6 +258,9 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
     fs::create_dir_all(layer_dir)
         .await
         .map_err(|source| UnpackError::CreateLayerDirectoryFailed { source })?;
+
+    let layer_root =
+        Root::open(layer_dir).map_err(|source| UnpackError::PathRsFailed { source })?;
 
     let attr_available = is_attr_available(layer_dir);
     let mut archive = ArchiveBuilder::new(input)
@@ -212,12 +274,15 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
         .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?;
 
     let mut dirs: HashMap<CString, [timeval; 2]> = HashMap::default();
+    let mut root_times: Option<[timeval; 2]> = None;
     while let Some(file) = entries.next().await {
         let mut file = file.map_err(|source| UnpackError::ReadTarEntriesFailed { source })?;
 
+        // 1. collect the entry path, name, uid, gid, mode, and mtime
         let entry_path = file
             .path()
-            .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?;
+            .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?
+            .into_owned();
         let entry_name = entry_path.file_name().unwrap_or_default().to_str().ok_or(
             UnpackError::IllegalEntryName(entry_path.to_string_lossy().to_string()),
         )?;
@@ -243,7 +308,12 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
             })?;
         let mode = file.header().mode().ok();
         let kind = file.header().entry_type();
+        let mtime = file
+            .header()
+            .mtime()
+            .map_err(|source| UnpackError::IllegalMtime { source })? as i64;
 
+        // 2. whiteout: astral-tokio-tar does not handle overlay whiteouts.
         if is_whiteout(entry_name) {
             convert_whiteout(entry_name, &entry_path, layer_dir, attr_available)
                 .await
@@ -251,6 +321,37 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
             continue;
         }
 
+        let is_dir = is_dir(&kind, &file)?;
+
+        // 3. layer root ".": do not unpack_in; apply ownership and mode, defer mtime.
+        if is_layer_root_entry(&entry_path) {
+            if is_dir {
+                let path = layer_dir.display().to_string();
+                fchown_at(layer_root.as_fd(), uid, gid).map_err(|source| {
+                    UnpackError::SetOwnershipsFailed {
+                        source,
+                        path: path.clone(),
+                    }
+                })?;
+                if let Some(mode) = mode {
+                    fchmodat(layer_root.as_fd(), mode).map_err(|source| {
+                        UnpackError::SetPermissionsFailed {
+                            source: source.context("failed to set permissions for layer root"),
+                            path,
+                        }
+                    })?;
+                }
+                root_times = Some(dir_times(mtime));
+            } else {
+                warn!(
+                    "skipping layer root tar entry {:?}: not a directory (type {:?})",
+                    entry_path, kind
+                );
+            }
+            continue;
+        }
+
+        // 4. unpack the entry to the layer directory
         // Both of these paths ensure that the entry is actually inside the layer dir
         if let Err(e) = file.unpack_in(layer_dir).await {
             match try_hardlink_fallback(&kind, &mut file, layer_dir).await {
@@ -259,97 +360,89 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
                 Err(f) => {
                     return Err(UnpackError::UnpackFailed {
                         source: io::Error::other(format!(
-                            "Fallback failed, {f:?}, after original unpack error: {e:?}"
-                        )),
+                        "Try hardlink fallback failed, {f:?}, after original unpack error: {e:?}"
+                    )),
                     })
                 }
             }
         }
 
-        let path = format!(
-            "{}/{}",
-            layer_dir.display(),
-            file.path()
-                .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?
-                .display()
-        );
+        // 5. apply ownership / mode / mtime (see `unpack` doc comment for per-type details).
+        let abs_path = layer_dir.join(&entry_path);
+        let err_path = abs_path.display().to_string();
 
-        let path_cstring =
-            CString::new(path.clone()).map_err(|_| UnpackError::IllegalEntryName(path.clone()))?;
-
-        let file_path = path_cstring.to_str().expect("must be utf8");
-
-        let mtime = file
-            .header()
-            .mtime()
-            .map_err(|source| UnpackError::IllegalMtime { source })? as i64;
-
-        // krata-tokio-tar crate does not provide a way to preserve permissions
-        // for all kinds of files.
-        //
-        // this crate also does not cover symlink files/dir mtime.
-        //
-        // because we changed the files ownership manually, thus we need to reset
-        // the mtime again.
-        if kind.is_dir()
-            || file.header().as_ustar().is_none()
-                && file
-                    .path_bytes()
-                    .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?
-                    .ends_with(b"/")
-        {
-            let f =
-                std::fs::File::open(file_path).map_err(|e| UnpackError::SetOwnershipsFailed {
-                    source: anyhow!("failed to open dir: {e}"),
-                    path: path.clone(),
-                })?;
-
-            set_permissions(f.as_fd(), uid, gid, mode)
-                .map_err(|source| UnpackError::SetOwnershipsFailed { source, path })?;
-            let atime = timeval {
-                tv_sec: mtime,
-                tv_usec: 0,
-            };
-
-            let times = [atime, atime];
-
-            dirs.insert(path_cstring.clone(), times);
-        } else if !kind.is_symlink() && !kind.is_hard_link() {
-            let f = fs::OpenOptions::new()
-                .write(true)
-                .open(file_path)
-                .await
-                .map_err(|e| UnpackError::SetOwnershipsFailed {
-                    source: anyhow!("failed to open file: {e}"),
-                    path: path.clone(),
-                })?;
-
-            set_permissions(f.as_fd(), uid, gid, mode).map_err(|source| {
+        if is_dir {
+            let handle = layer_root
+                .resolve(&entry_path)
+                .map_err(|source| UnpackError::PathRsFailed { source })?;
+            fchown_at(handle.as_fd(), uid, gid).map_err(|source| {
                 UnpackError::SetOwnershipsFailed {
                     source,
-                    path: path.clone(),
+                    path: err_path.to_string(),
                 }
             })?;
-
-            // set mtime
-            let mtime = FileTime::from_unix_time(mtime, 0);
-            filetime::set_file_times(file_path, mtime, mtime).map_err(|e| {
-                UnpackError::SetMTimeFailed {
-                    source: e.into(),
-                    path,
-                }
-            })?;
+            let path_cstring = path_cstring(&abs_path)
+                .map_err(|_| UnpackError::IllegalEntryName(err_path.clone()))?;
+            dirs.insert(path_cstring, dir_times(mtime));
         } else if kind.is_symlink() {
-            let path_cstr =
-                CString::new(file_path).map_err(|_| UnpackError::IllegalEntryName(path.clone()))?;
-            let ret = unsafe { libc::lchown(path_cstr.as_ptr(), uid, gid) };
-
-            if ret != 0 {
-                return Err(UnpackError::SetOwnershipsFailed {
-                    source: io::Error::last_os_error().into(),
-                    path: path.clone(),
-                });
+            let handle = layer_root
+                .resolve_nofollow(&entry_path)
+                .map_err(|source| UnpackError::PathRsFailed { source })?;
+            fchown_at(handle.as_fd(), uid, gid).map_err(|source| {
+                UnpackError::SetOwnershipsFailed {
+                    source,
+                    path: err_path.to_string(),
+                }
+            })?;
+            let ft = FileTime::from_unix_time(mtime, 0);
+            filetime::set_symlink_file_times(layer_dir.join(entry_path), ft, ft).map_err(
+                |source| UnpackError::SetMTimeFailed {
+                    source: source.into(),
+                    path: err_path.to_string(),
+                },
+            )?;
+        } else if kind.is_hard_link() {
+            let handle = layer_root
+                .resolve(&entry_path)
+                .map_err(|source| UnpackError::PathRsFailed { source })?;
+            fchown_at(handle.as_fd(), uid, gid).map_err(|source| {
+                UnpackError::SetOwnershipsFailed {
+                    source,
+                    path: err_path.to_string(),
+                }
+            })?;
+            let ft = FileTime::from_unix_time(mtime, 0);
+            filetime::set_file_times(layer_dir.join(entry_path), ft, ft).map_err(|source| {
+                UnpackError::SetMTimeFailed {
+                    source: source.into(),
+                    path: err_path.to_string(),
+                }
+            })?;
+        } else {
+            let handle = layer_root
+                .resolve(&entry_path)
+                .map_err(|source| UnpackError::PathRsFailed { source })?;
+            fchown_at(handle.as_fd(), uid, gid).map_err(|source| {
+                UnpackError::SetOwnershipsFailed {
+                    source,
+                    path: err_path.to_string(),
+                }
+            })?;
+            if let Some(mode) = mode {
+                fchmodat(handle.as_fd(), mode).map_err(|source| {
+                    UnpackError::SetPermissionsFailed {
+                        source,
+                        path: err_path.to_string(),
+                    }
+                })?;
             }
+            let ft = FileTime::from_unix_time(mtime, 0);
+            filetime::set_file_times(layer_dir.join(entry_path), ft, ft).map_err(|source| {
+                UnpackError::SetMTimeFailed {
+                    source: source.into(),
+                    path: err_path.to_string(),
+                }
+            })?;
         }
     }
 
@@ -367,26 +460,55 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
         }
     }
 
+    // The layer root directory is created before unpacking and is modified while
+    // entries are extracted; apply the root entry timestamps last.
+    if let Some(times) = root_times {
+        let path = layer_dir.display().to_string();
+        let ft = FileTime::from_unix_time(times[1].tv_sec, 0);
+        filetime::set_file_times(layer_dir, ft, ft).map_err(|e| UnpackError::SetMTimeFailed {
+            source: e.into(),
+            path,
+        })?;
+    }
+
     Ok(())
 }
 
-fn set_permissions(fd: BorrowedFd<'_>, uid: u32, gid: u32, mode: Option<u32>) -> Result<()> {
+fn dir_times(mtime: i64) -> [timeval; 2] {
+    let atime = timeval {
+        tv_sec: mtime,
+        tv_usec: 0,
+    };
+    [atime, atime]
+}
+
+fn path_cstring(path: &Path) -> Result<CString> {
+    CString::new(path.as_os_str().as_bytes())
+        .map_err(|_| anyhow!("path contains null byte: {}", path.display()))
+}
+
+fn fchown_at(fd: BorrowedFd<'_>, uid: u32, gid: u32) -> Result<()> {
     let ret =
         unsafe { libc::fchownat(fd.as_raw_fd(), c"".as_ptr(), uid, gid, libc::AT_EMPTY_PATH) };
     if ret != 0 {
-        bail!("failed to set ownership: {:?}", io::Error::last_os_error());
+        bail!("failed to fchownat: {:?}", io::Error::last_os_error());
     }
+    Ok(())
+}
 
-    if let Some(mode) = mode {
-        let ret = unsafe { libc::fchmod(fd.as_raw_fd(), mode as libc::mode_t) };
-        if ret != 0 {
-            bail!(
-                "failed to set permissions: {:?}",
-                io::Error::last_os_error()
-            );
-        }
+/// Set mode on the inode referenced by an `O_PATH` fd (`Root` / `Handle` from pathrs).
+fn fchmodat(fd: BorrowedFd<'_>, mode: u32) -> Result<()> {
+    let ret = unsafe {
+        libc::fchmodat(
+            fd.as_raw_fd(),
+            c"".as_ptr(),
+            mode as libc::mode_t,
+            libc::AT_EMPTY_PATH,
+        )
+    };
+    if ret != 0 {
+        bail!("failed to fchmodat: {:?}", io::Error::last_os_error());
     }
-
     Ok(())
 }
 
@@ -594,6 +716,35 @@ mod tests {
         // though destination already exists, it will be deleted
         // and rewrite
         assert!(unpack(data.as_slice(), destination).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_unpack_layer_root_mtime() {
+        let root_mtime = filetime::FileTime::from_unix_time(42_000, 0);
+        let mut ar = Builder::new(Vec::new());
+        let root_src = tempfile::tempdir().unwrap();
+        let file_src = tempfile::tempdir().unwrap();
+
+        filetime::set_file_mtime(root_src.path(), root_mtime).unwrap();
+        ar.append_path_with_name(root_src.path(), ".")
+            .await
+            .unwrap();
+
+        let file_path = file_src.path().join("file.txt");
+        let mut f = File::create(&file_path).await.unwrap();
+        f.write_all(b"data").await.unwrap();
+        f.flush().await.unwrap();
+        ar.append_file("file.txt", &mut File::open(&file_path).await.unwrap())
+            .await
+            .unwrap();
+
+        let data = ar.into_inner().await.unwrap();
+        let destination = tempfile::tempdir().unwrap().path().join("layer");
+        unpack(data.as_slice(), &destination).await.unwrap();
+
+        let metadata = fs::metadata(&destination).await.unwrap();
+        let new_mtime = filetime::FileTime::from_last_modification_time(&metadata);
+        assert_eq!(root_mtime, new_mtime);
     }
 
     #[rstest]

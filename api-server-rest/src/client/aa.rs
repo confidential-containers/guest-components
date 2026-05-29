@@ -5,8 +5,8 @@
 
 use anyhow::*;
 use protos::ttrpc::aa::attestation_agent::{
-    ExtendRuntimeMeasurementRequest, GetAdditionalTeesRequest, GetEvidenceRequest,
-    GetTeeTypeRequest, GetTokenRequest,
+    ExtendRuntimeMeasurementRequest, GetAdditionalEvidenceRequest, GetAdditionalTeesRequest,
+    GetEvidenceRequest, GetTeeTypeRequest, GetTokenRequest,
 };
 use protos::ttrpc::aa::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use serde::Deserialize;
@@ -19,6 +19,7 @@ pub const AA_ROOT: &str = "/aa";
 /// URL for querying CDH get resource API
 pub const AA_TOKEN_URL: &str = "/token";
 pub const AA_EVIDENCE_URL: &str = "/evidence";
+pub const AA_ADDITIONAL_EVIDENCE_URL: &str = "/additional-evidence";
 pub const AA_AAEL_URL: &str = "/aael";
 
 pub struct AAClient {
@@ -62,6 +63,18 @@ impl AAClient {
         let res = self
             .client
             .get_evidence(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
+            .await?;
+        Ok(res.Evidence)
+    }
+
+    pub async fn get_additional_evidence(&self, runtime_data: &[u8]) -> Result<Vec<u8>> {
+        let req = GetAdditionalEvidenceRequest {
+            RuntimeData: runtime_data.to_vec(),
+            ..Default::default()
+        };
+        let res = self
+            .client
+            .get_additional_evidence(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
             .await?;
         Ok(res.Evidence)
     }

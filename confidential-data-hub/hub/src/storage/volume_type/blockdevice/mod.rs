@@ -28,6 +28,8 @@ use tokio::{
 use tracing::{debug, info};
 use zeroize::Zeroizing;
 
+use resource_uri::ResourceUri;
+
 #[derive(Serialize, Deserialize, Display, Debug, PartialEq, Eq)]
 #[serde(tag = "encryptionType")]
 pub enum BlockDeviceEncryptType {
@@ -48,7 +50,7 @@ async fn get_plaintext_key(key_uri: &str) -> Result<Zeroizing<Vec<u8>>> {
             .map_err(|source| BlockDeviceError::GetKeyFailed {
                 source: source.into(),
             })?
-    } else if key_uri.starts_with("kbs://") {
+    } else if ResourceUri::try_from(key_uri).is_ok() {
         debug!("get key from kbs");
         kms::new_getter("kbs", ProviderSettings::default())
             .await

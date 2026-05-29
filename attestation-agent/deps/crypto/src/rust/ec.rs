@@ -8,8 +8,7 @@ use crate::{
     AES_GCM_256_KEY_BITS,
 };
 
-use aes_gcm::aead::generic_array::GenericArray;
-use aes_kw::{Kek, KekAes256};
+use aes_kw::{KeyInit, KwAes256};
 use anyhow::{anyhow, Result};
 use p256::{
     ecdh::diffie_hellman as diffie_hellman_p256,
@@ -156,10 +155,10 @@ impl EcKeyPair {
                 let unwrapping_key: [u8; 32] = unwrapping_key
                     .try_into()
                     .map_err(|_| anyhow!("invalid bytes length of AES wrapping key"))?;
-                let unwrapping_key: KekAes256 = Kek::new(&GenericArray::from(unwrapping_key));
+                let unwrapping_key = KwAes256::new(&unwrapping_key.into());
                 let mut decrypted_key = vec![0; encrypted_key.len() - 8];
                 unwrapping_key
-                    .unwrap(&encrypted_key, &mut decrypted_key)
+                    .unwrap_key(&encrypted_key, &mut decrypted_key)
                     .map_err(|e| anyhow!("failed to unwrap key: {e:?}"))?;
 
                 Ok(decrypted_key)
