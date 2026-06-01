@@ -81,6 +81,7 @@ impl TsmReportPath {
 
         Ok(Self { path })
     }
+
     pub fn attestation_report(
         &self,
         provider_data: TsmReportData,
@@ -112,6 +113,7 @@ impl TsmReportPath {
 
         Ok(q)
     }
+
     pub fn supplemental_data(&self) -> Result<Vec<u8>, TsmReportError> {
         let report_path = self.path.as_path();
 
