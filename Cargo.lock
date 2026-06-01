@@ -1710,7 +1710,8 @@ dependencies = [
 [[package]]
 name = "csv-rs"
 version = "0.1.0"
-source = "git+https://github.com/openanolis/csv-rs.git?rev=2243c67#2243c67bc9c77794bd070cd0a8fd7ae26e7c77a3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed4c8d1a3c3a3573d7d33a74f612a0f1d532ef0de4eebf935374bad348df974e"
 dependencies = [
  "bincode 1.3.3",
  "bitfield 0.13.2",
