@@ -3878,9 +3878,8 @@ dependencies = [
 
 [[package]]
 name = "kbs-types"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "010924a5f65328c9609598c895ea506c723e3c72e528aeaba0a9645d8330b718"
+version = "0.17.0"
+source = "git+https://github.com/grant-arqit/kbs-types.git?rev=2009cbbc2b2c7c069317057deac0a718ca783a6f#2009cbbc2b2c7c069317057deac0a718ca783a6f"
 dependencies = [
  "base64 0.22.1",
  "ear",
@@ -3896,7 +3895,7 @@ dependencies = [
 name = "kbs_protocol"
 version = "0.1.0"
 dependencies = [
- "aes-kw",
+ "aes-kw 0.3.1",
  "anyhow",
  "async-trait",
  "attester",

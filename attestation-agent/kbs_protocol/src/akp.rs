@@ -16,11 +16,11 @@
 //! will fail. Re-validate against reference implementations and test
 //! vectors when those emerge.
 
-use aes_kw::KekAes192;
+use aes_kw::{KeyInit, KwAes192};
 use anyhow::{anyhow, Result};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use kbs_types::TeePubKey;
 use ml_kem::{kem::KeyExport, Decapsulate, DecapsulationKey, EncapsulationKey, Kem, MlKem768};
-use serde::{Deserialize, Serialize};
 use sha3_kmac::Kmac256;
 
 /// `kty` value for the Algorithm Key Pair (AKP) key type per
@@ -37,23 +37,6 @@ const A192KW_KEY_LEN: usize = 24;
 /// AES-256 content-encryption-key length in bytes. Matches the existing
 /// classical paths' `A256GCM`.
 const A256_CEK_LEN: usize = 32;
-
-/// AKP public key, JWK wire representation per draft-ietf-jose-pqc-kem-05 §10.
-///
-/// Defined locally rather than as a new `kbs_types::TeePubKey` variant while
-/// the wire format stabilises (Option 1 in the client plan). Mirrors the
-/// server's struct of the same name in `kbs/src/akp.rs`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AkpPubKey {
-    /// JWK key type — MUST be `"AKP"`.
-    pub kty: String,
-    /// Algorithm identifier, e.g. `"ML-KEM-768+A192KW"`.
-    pub alg: String,
-    /// Base64url-encoded ML-KEM encapsulation key. For ML-KEM-768 this
-    /// decodes to 1184 bytes (FIPS 203).
-    #[serde(rename = "pub")]
-    pub public_key: String,
-}
 
 /// ML-KEM-768 keypair held by the TEE for the resource-response JWE path.
 ///
@@ -89,11 +72,10 @@ impl AkpKeyPair {
     }
 
     /// Build the JWK wire representation of this keypair's public key.
-    pub fn to_pub_jwk(&self) -> AkpPubKey {
-        AkpPubKey {
-            kty: AKP_KTY.to_string(),
-            alg: ML_KEM_768_A192KW_ALGORITHM.to_string(),
-            public_key: URL_SAFE_NO_PAD.encode(self.public_key_bytes()),
+    pub fn to_pub_jwk(&self) -> TeePubKey {
+        TeePubKey::AKP { 
+            alg: ML_KEM_768_A192KW_ALGORITHM.to_string(), 
+            public_key: URL_SAFE_NO_PAD.encode(self.public_key_bytes()) 
         }
     }
 
@@ -124,10 +106,11 @@ impl AkpKeyPair {
             .try_into()
             .map_err(|_| anyhow!("KDF output not {A192KW_KEY_LEN} bytes"))?;
 
-        let unwrapper = KekAes192::from(kwk);
+        let unwrapper = KwAes192::new_from_slice(&kwk)
+            .map_err(|e| anyhow!("AES-KW key init failed: {e:?}"))?;
         let mut cek = vec![0u8; A256_CEK_LEN];
         unwrapper
-            .unwrap(wrapped_cek, &mut cek)
+            .unwrap_key(wrapped_cek, &mut cek)
             .map_err(|e| anyhow!("AES-KW unwrap failed: {e:?}"))?;
         Ok(cek)
     }
@@ -189,10 +172,10 @@ mod tests {
         let kwk: [u8; 24] = kwk.try_into().unwrap();
 
         let cek_orig: [u8; 32] = [7u8; 32];
-        let wrapper = KekAes192::from(kwk);
+        let wrapper = KwAes192::new_from_slice(&kwk).expect("init KWK");
         let mut wrapped_cek = vec![0u8; 40]; // 32-byte CEK + 8-byte AES-KW integrity check
         wrapper
-            .wrap(&cek_orig, &mut wrapped_cek)
+            .wrap_key(&cek_orig, &mut wrapped_cek)
             .expect("wrap CEK");
 
         let cek_recovered = keypair
@@ -205,24 +188,12 @@ mod tests {
     #[test]
     fn pub_jwk_has_correct_fields_and_length() {
         let kp = AkpKeyPair::generate();
-        let jwk = kp.to_pub_jwk();
-        assert_eq!(jwk.kty, AKP_KTY);
-        assert_eq!(jwk.alg, ML_KEM_768_A192KW_ALGORITHM);
-        let bytes = URL_SAFE_NO_PAD.decode(&jwk.public_key).expect("base64");
+        let TeePubKey::AKP { alg, public_key } = kp.to_pub_jwk() else {
+            panic!("expected AKP variant");
+        };
+        assert_eq!(alg, ML_KEM_768_A192KW_ALGORITHM);
+        let bytes = URL_SAFE_NO_PAD.decode(&public_key).expect("base64");
         assert_eq!(bytes.len(), 1184); // ML-KEM-768 encap-key length per FIPS 203.
-    }
-
-    #[test]
-    fn akp_pub_key_deserializes_from_jwk() {
-        let json = serde_json::json!({
-            "kty": "AKP",
-            "alg": "ML-KEM-768+A192KW",
-            "pub": "AAAAAAAAAAAAAAAAAA",
-        });
-        let key: AkpPubKey = serde_json::from_value(json).expect("deserialize");
-        assert_eq!(key.kty, AKP_KTY);
-        assert_eq!(key.alg, ML_KEM_768_A192KW_ALGORITHM);
-        assert_eq!(key.public_key, "AAAAAAAAAAAAAAAAAA");
     }
 
     #[test]

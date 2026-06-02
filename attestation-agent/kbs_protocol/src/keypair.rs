@@ -14,7 +14,6 @@ use kbs_types::{ProtectedHeader, Response, TeePubKey};
 use serde::Deserialize;
 use tracing::warn;
 use zeroize::Zeroizing;
-
 #[cfg(feature = "pqc-experimental")]
 use crate::akp::{AkpKeyPair, ML_KEM_768_A192KW_ALGORITHM};
 
@@ -27,8 +26,6 @@ pub struct TeeKeyPair {
 pub enum TeeKey {
     Rsa(Box<RSAKeyPair>),
     Ec(Box<EcKeyPair>),
-    /// ML-KEM-768 keypair for the experimental Post-Quantum KEM path.
-    /// See [`crate::akp`] and `pqc_kbs_direction` memory.
     #[cfg(feature = "pqc-experimental")]
     Akp(Box<AkpKeyPair>),
 }
@@ -88,10 +85,8 @@ impl TeeKeyPair {
 
     /// Export TEE public key as a typed `kbs_types::TeePubKey`.
     ///
-    /// Returns an error for AKP variants — the upstream `TeePubKey` enum has
-    /// no AKP variant (kbs-types 0.15.0). Callers in the AKP path should use
-    /// [`Self::export_pubkey_value`] instead, which returns a
-    /// `serde_json::Value` and bypasses the typed enum.
+    /// Covers all key types, including the experimental AKP (ML-KEM-768)
+    /// variant, which maps to `TeePubKey::AKP`.
     pub fn export_pubkey(&self) -> Result<TeePubKey> {
         match &self.key {
             TeeKey::Rsa(key) => {
@@ -116,24 +111,9 @@ impl TeeKeyPair {
                 })
             }
             #[cfg(feature = "pqc-experimental")]
-            TeeKey::Akp(_) => bail!(
-                "export_pubkey() cannot represent AKP; use export_pubkey_value() instead"
-            ),
-        }
-    }
-
-    /// Export TEE public key as a `serde_json::Value`.
-    ///
-    /// Used by the AKP wire path, which embeds a JWK that the upstream
-    /// `kbs_types::TeePubKey` enum can't represent. For classical (RSA/EC)
-    /// keys this is just `serde_json::to_value(self.export_pubkey()?)`.
-    pub fn export_pubkey_value(&self) -> Result<serde_json::Value> {
-        match &self.key {
-            #[cfg(feature = "pqc-experimental")]
-            TeeKey::Akp(key) => serde_json::to_value(key.to_pub_jwk())
-                .context("serialize AkpPubKey to JSON"),
-            _ => serde_json::to_value(self.export_pubkey()?)
-                .context("serialize TeePubKey to JSON"),
+            TeeKey::Akp(key) => {
+                Ok(key.to_pub_jwk())
+            }
         }
     }
 
@@ -317,7 +297,7 @@ mod tests {
 mod pqc_tests {
     use super::*;
     use crate::akp::{kmac256_kdf, ML_KEM_768_A192KW_ALGORITHM};
-    use aes_kw::KekAes192;
+    use aes_kw::{KeyInit, KwAes192};
     use ml_kem::{Encapsulate, EncapsulationKey, Key, MlKem768};
 
     #[test]
@@ -331,23 +311,14 @@ mod pqc_tests {
     fn new_with_akp_exports_akp_jwk() {
         let keypair = TeeKeyPair::new_with_algorithm(TeeKeyAlgorithm::MlKem768A192Kw)
             .expect("new AKP keypair");
-        let value = keypair
-            .export_pubkey_value()
-            .expect("export pubkey value");
-        assert_eq!(value["kty"], "AKP");
-        assert_eq!(value["alg"], ML_KEM_768_A192KW_ALGORITHM);
+        let TeePubKey::AKP { alg, public_key } =
+            keypair.export_pubkey().expect("export pubkey")
+        else {
+            panic!("expected AKP variant");
+        };
+        assert_eq!(alg, ML_KEM_768_A192KW_ALGORITHM);
         // Encap key is 1184 bytes → base64url with no padding is 1579 chars.
-        assert_eq!(value["pub"].as_str().expect("pub field").len(), 1579);
-    }
-
-    #[test]
-    fn export_pubkey_errors_for_akp() {
-        let keypair = TeeKeyPair::new_with_algorithm(TeeKeyAlgorithm::MlKem768A192Kw)
-            .expect("new AKP keypair");
-        let err = keypair
-            .export_pubkey()
-            .expect_err("AKP must not round-trip through TeePubKey");
-        assert!(err.to_string().contains("AKP"));
+        assert_eq!(public_key.len(), 1579);
     }
 
     #[test]
@@ -386,9 +357,9 @@ mod pqc_tests {
 
         // Wrap a known CEK.
         let cek_orig: [u8; 32] = [0xAB; 32];
-        let wrapper = KekAes192::from(kwk);
+        let wrapper = KwAes192::new_from_slice(&kwk).unwrap();
         let mut wrapped_cek = vec![0u8; 40];
-        wrapper.wrap(&cek_orig, &mut wrapped_cek).unwrap();
+        wrapper.wrap_key(&cek_orig, &mut wrapped_cek).unwrap();
 
         // Build the ProtectedHeader as the server emits.
         let ek_b64 = URL_SAFE_NO_PAD.encode(kem_ciphertext.as_slice());

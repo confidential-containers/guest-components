@@ -6,7 +6,6 @@
 // Usage: akp_get_resource <kbs_url> <kbs-resource-uri>
 // e.g.   akp_get_resource http://127.0.0.1:8080 kbs:///default/test/dummy
 // RUST_LOG=kbs_protocol=debug cargo run --no-default-features --features 'background_check,rust-crypto,pqc-experimental,bin' --example akp_get_resource -- http://127.0.0.1:8080 'kbs:///default/test/dummy'
-
 use anyhow::anyhow;
 use kbs_protocol::{
     evidence_provider::NativeEvidenceProvider, KbsClientBuilder, KbsClientCapabilities,
