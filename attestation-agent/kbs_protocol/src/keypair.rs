@@ -5,6 +5,8 @@
 
 use anyhow::{anyhow, bail, Context, Result};
 
+#[cfg(feature = "pqc-experimental")]
+use crate::akp::{AkpKeyPair, ML_KEM_768_A192KW_ALGORITHM};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use crypto::{
     ec::{EcKeyPair, KeyWrapAlgorithm, P256EcKeyPair, P521EcKeyPair},
@@ -14,8 +16,6 @@ use kbs_types::{ProtectedHeader, Response, TeePubKey};
 use serde::Deserialize;
 use tracing::warn;
 use zeroize::Zeroizing;
-#[cfg(feature = "pqc-experimental")]
-use crate::akp::{AkpKeyPair, ML_KEM_768_A192KW_ALGORITHM};
 
 #[derive(Clone, Debug)]
 pub struct TeeKeyPair {
@@ -111,9 +111,7 @@ impl TeeKeyPair {
                 })
             }
             #[cfg(feature = "pqc-experimental")]
-            TeeKey::Akp(key) => {
-                Ok(key.to_pub_jwk())
-            }
+            TeeKey::Akp(key) => Ok(key.to_pub_jwk()),
         }
     }
 
@@ -182,9 +180,7 @@ impl TeeKeyPair {
                     .get("ek")
                     .ok_or(anyhow!("Invalid JWE ProtectedHeader. Without `ek`"))?
                     .as_str()
-                    .ok_or(anyhow!(
-                        "Invalid JWE ProtectedHeader. `ek` is not a string"
-                    ))?;
+                    .ok_or(anyhow!("Invalid JWE ProtectedHeader. `ek` is not a string"))?;
 
                 let kem_ciphertext = URL_SAFE_NO_PAD
                     .decode(ek_b64)
@@ -311,8 +307,7 @@ mod pqc_tests {
     fn new_with_akp_exports_akp_jwk() {
         let keypair = TeeKeyPair::new_with_algorithm(TeeKeyAlgorithm::MlKem768A192Kw)
             .expect("new AKP keypair");
-        let TeePubKey::AKP { alg, public_key } =
-            keypair.export_pubkey().expect("export pubkey")
+        let TeePubKey::AKP { alg, public_key } = keypair.export_pubkey().expect("export pubkey")
         else {
             panic!("expected AKP variant");
         };
@@ -325,7 +320,9 @@ mod pqc_tests {
     fn to_pem_errors_for_akp() {
         let keypair = TeeKeyPair::new_with_algorithm(TeeKeyAlgorithm::MlKem768A192Kw)
             .expect("new AKP keypair");
-        let err = keypair.to_pem().expect_err("AKP has no PEM format in phase 1");
+        let err = keypair
+            .to_pem()
+            .expect_err("AKP has no PEM format in phase 1");
         assert!(err.to_string().contains("AKP"));
     }
 
@@ -344,15 +341,13 @@ mod pqc_tests {
 
         // Simulate the server: parse our own public key as an encap key.
         let pub_bytes = akp_keypair.public_key_bytes();
-        let ek_typed: &Key<EncapsulationKey<MlKem768>> =
-            pub_bytes.as_slice().try_into().unwrap();
+        let ek_typed: &Key<EncapsulationKey<MlKem768>> = pub_bytes.as_slice().try_into().unwrap();
         let encap_key = EncapsulationKey::<MlKem768>::new(ek_typed).unwrap();
         let (kem_ciphertext, shared_secret) = encap_key.encapsulate();
 
         // Same KDF the client side uses on decrypt — guarantees the wrap
         // key matches.
-        let kwk =
-            kmac256_kdf(shared_secret.as_slice(), ML_KEM_768_A192KW_ALGORITHM, 24).unwrap();
+        let kwk = kmac256_kdf(shared_secret.as_slice(), ML_KEM_768_A192KW_ALGORITHM, 24).unwrap();
         let kwk: [u8; 24] = kwk.try_into().unwrap();
 
         // Wrap a known CEK.
@@ -372,7 +367,9 @@ mod pqc_tests {
                 .clone(),
         };
 
-        let cek = keypair.unwrap_cek(&header, wrapped_cek).expect("unwrap CEK");
+        let cek = keypair
+            .unwrap_cek(&header, wrapped_cek)
+            .expect("unwrap CEK");
         assert_eq!(cek.as_slice(), &cek_orig[..]);
     }
 }

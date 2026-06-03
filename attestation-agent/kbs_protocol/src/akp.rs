@@ -73,9 +73,9 @@ impl AkpKeyPair {
 
     /// Build the JWK wire representation of this keypair's public key.
     pub fn to_pub_jwk(&self) -> TeePubKey {
-        TeePubKey::AKP { 
-            alg: ML_KEM_768_A192KW_ALGORITHM.to_string(), 
-            public_key: URL_SAFE_NO_PAD.encode(self.public_key_bytes()) 
+        TeePubKey::AKP {
+            alg: ML_KEM_768_A192KW_ALGORITHM.to_string(),
+            public_key: URL_SAFE_NO_PAD.encode(self.public_key_bytes()),
         }
     }
 
@@ -106,8 +106,8 @@ impl AkpKeyPair {
             .try_into()
             .map_err(|_| anyhow!("KDF output not {A192KW_KEY_LEN} bytes"))?;
 
-        let unwrapper = KwAes192::new_from_slice(&kwk)
-            .map_err(|e| anyhow!("AES-KW key init failed: {e:?}"))?;
+        let unwrapper =
+            KwAes192::new_from_slice(&kwk).map_err(|e| anyhow!("AES-KW key init failed: {e:?}"))?;
         let mut cek = vec![0u8; A256_CEK_LEN];
         unwrapper
             .unwrap_key(wrapped_cek, &mut cek)

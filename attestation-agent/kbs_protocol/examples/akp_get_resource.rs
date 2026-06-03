@@ -17,8 +17,12 @@ use resource_uri::ResourceUri;
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
     let mut args = std::env::args().skip(1);
-    let url = args.next().expect("usage: akp_get_resource <url> <kbs-resource-uri>");
-    let resource = args.next().expect("usage: akp_get_resource <url> <kbs-resource-uri>");
+    let url = args
+        .next()
+        .expect("usage: akp_get_resource <url> <kbs-resource-uri>");
+    let resource = args
+        .next()
+        .expect("usage: akp_get_resource <url> <kbs-resource-uri>");
 
     let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
     let mut client = KbsClientBuilder::with_evidence_provider(evidence_provider, &url)
@@ -30,6 +34,10 @@ async fn main() -> anyhow::Result<()> {
         .try_into()
         .map_err(|e| anyhow!("invalid kbs resource URI: {e}"))?;
     let bytes = client.get_resource(uri).await?;
-    println!("Got {} bytes:\n{}", bytes.len(), String::from_utf8_lossy(&bytes));
+    println!(
+        "Got {} bytes:\n{}",
+        bytes.len(),
+        String::from_utf8_lossy(&bytes)
+    );
     Ok(())
 }

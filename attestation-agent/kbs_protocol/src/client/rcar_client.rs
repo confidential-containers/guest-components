@@ -9,7 +9,7 @@ use anyhow::{bail, Context};
 use async_trait::async_trait;
 use kbs_types::HashAlgorithm;
 use kbs_types::{
-    Attestation, Challenge, CompositeEvidence, ErrorInformation, InitData, Request, Response, 
+    Attestation, Challenge, CompositeEvidence, ErrorInformation, InitData, Request, Response,
     RuntimeData, Tee,
 };
 use resource_uri::ResourceUri;
@@ -285,7 +285,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             body: initdata.into(),
         });
 
-       let attest = Attestation {
+        let attest = Attestation {
             init_data,
             runtime_data,
             tee_evidence,
