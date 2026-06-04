@@ -40,17 +40,21 @@ pub fn encrypt(data: &[u8], key: &[u8], iv: &[u8], algorithm: &Algorithm) -> Res
     match algorithm {
         Algorithm::A256GCM => {
             use aes_gcm::KeyInit;
-            let encryption_key = Key::<Aes256Gcm>::from_slice(key);
-            let cipher = Aes256Gcm::new(encryption_key);
-            let nonce = Nonce::from_slice(iv);
+            let encryption_key =
+                Key::<Aes256Gcm>::try_from(key).context("Failed to convert array to key")?;
+            let cipher = Aes256Gcm::new(&encryption_key);
+            let nonce = Nonce::try_from(iv).context("Failed to convert nonce to array")?;
             cipher
-                .encrypt(nonce, data.as_ref())
+                .encrypt(&nonce, data.as_ref())
                 .map_err(|e| anyhow!("Decrypt failed: {:?}", e))
         }
         Algorithm::A256CTR => {
             use ctr::cipher::{KeyIvInit, StreamCipher};
             let mut buf = data.to_vec();
-            let mut cipher = ctr::Ctr128BE::<Aes256>::new(key.into(), iv.into());
+            let mut cipher = ctr::Ctr128BE::<Aes256>::new(
+                key.try_into().context("Failed to convert array to key")?,
+                iv.try_into().context("Failed to convert array to nonce")?,
+            );
             cipher.apply_keystream(&mut buf);
             Ok(buf)
         }
