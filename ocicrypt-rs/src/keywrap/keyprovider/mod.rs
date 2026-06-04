@@ -582,28 +582,32 @@ mod tests {
         use aes_gcm::aead::{Aead, KeyInit};
         use aes_gcm::aes::{Aes256Dec, Aes256Enc};
         use aes_gcm::{Aes256Gcm, Key, Nonce};
-        use anyhow::{anyhow, Result};
+        use anyhow::{anyhow, Context, Result};
 
         pub static mut ENC_KEY: &[u8; 32] = b"passphrasewhichneedstobe32bytes!";
         pub static mut DEC_KEY: &[u8; 32] = b"passphrasewhichneedstobe32bytes!";
 
         pub fn encrypt_key(plain_text: &[u8], encrypting_key: &[u8; 32]) -> Result<Vec<u8>> {
-            let encrypting_key = Key::<Aes256Enc>::from_slice(encrypting_key);
-            let cipher = Aes256Gcm::new(encrypting_key);
-            let nonce = Nonce::from_slice(b"unique nonce");
+            let encrypting_key = Key::<Aes256Enc>::try_from(&encrypting_key[..])
+                .context("Failed to convert array to key")?;
+            let cipher = Aes256Gcm::new(&encrypting_key);
+            let nonce = Nonce::try_from(&b"unique nonce"[..])
+                .context("Failed to convert array to nonce")?;
 
             cipher
-                .encrypt(nonce, plain_text.as_ref())
+                .encrypt(&nonce, plain_text.as_ref())
                 .map_err(|_| anyhow!("encryption failure"))
         }
 
         pub fn decrypt_key(cipher_text: &[u8], decrypting_key: &[u8; 32]) -> Result<Vec<u8>> {
-            let decrypting_key = Key::<Aes256Dec>::from_slice(decrypting_key);
-            let cipher = Aes256Gcm::new(decrypting_key);
-            let nonce = Nonce::from_slice(b"unique nonce");
+            let decrypting_key = Key::<Aes256Dec>::try_from(&decrypting_key[..])
+                .context("Failed to convert array to key")?;
+            let cipher = Aes256Gcm::new(&decrypting_key);
+            let nonce = Nonce::try_from(&b"unique nonce"[..])
+                .context("Failed to convert array to nonce")?;
 
             cipher
-                .decrypt(nonce, cipher_text.as_ref())
+                .decrypt(&nonce, cipher_text.as_ref())
                 .map_err(|_| anyhow!("decryption failure"))
         }
     }
