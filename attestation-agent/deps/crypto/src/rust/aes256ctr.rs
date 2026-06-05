@@ -13,17 +13,21 @@ use ctr::{
 };
 
 pub fn decrypt(key: &[u8], encrypted_data: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
-    let mut decryptor = Ctr128BE::<Aes256>::new(key.into(), iv.into());
+    let mut decryptor = Ctr128BE::<Aes256>::new(
+        key.try_into().context("Failed to convert array to key")?,
+        iv.try_into().context("Failed to convert array to nonce")?,
+    );
     let mut buf = Vec::new();
     buf.resize(encrypted_data.len(), b' ');
-    decryptor
-        .apply_keystream_b2b(encrypted_data, &mut buf)
-        .map_err(|e| anyhow!("aes-256-ctr decrypt failed: {:?}", e))?;
+    decryptor.apply_keystream_b2b(encrypted_data, &mut buf);
     Ok(buf)
 }
 
 pub fn encrypt(key: &[u8], data: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
-    let mut encryptor = Ctr128BE::<Aes256>::new(key.into(), iv.into());
+    let mut encryptor = Ctr128BE::<Aes256>::new(
+        key.try_into().context("Failed to convert array to key")?,
+        iv.try_into().context("Failed to convert array to nonce")?,
+    );
     let mut ciphertext = data.to_vec();
     encryptor.apply_keystream(&mut ciphertext);
     Ok(ciphertext)

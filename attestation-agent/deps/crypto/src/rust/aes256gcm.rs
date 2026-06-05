@@ -5,7 +5,10 @@
 
 //! This mod implements aes-256-gcm encryption & decryption.
 use crate::AeadCipher;
-use aes_gcm::{aead::Aead, AeadInPlace, Aes256Gcm, Key, KeyInit, Nonce};
+use aes_gcm::{
+    aead::{Aead, AeadInOut},
+    Aes256Gcm, Key, KeyInit, Nonce,
+};
 use anyhow::*;
 
 pub fn encrypt_with_aad_detached_tag(
@@ -14,12 +17,13 @@ pub fn encrypt_with_aad_detached_tag(
     iv: &[u8],
     aad: &[u8],
 ) -> Result<AeadCipher> {
-    let encrypting_key = Key::<Aes256Gcm>::from_slice(key);
-    let cipher = Aes256Gcm::new(encrypting_key);
-    let nonce = Nonce::from_slice(iv);
+    let encrypting_key =
+        Key::<Aes256Gcm>::try_from(key).context("Failed to convert array to key")?;
+    let cipher = Aes256Gcm::new(&encrypting_key);
+    let nonce = Nonce::try_from(iv).context("Failed to convert array to nonce")?;
     let mut ciphertext = data.to_vec();
     let tag = cipher
-        .encrypt_in_place_detached(nonce, aad, &mut ciphertext)
+        .encrypt_inout_detached(&nonce, aad, (&mut ciphertext[..]).into())
         .map_err(|e| anyhow!("aes-256-gcm encrypt failed: {:?}", e))?
         .to_vec();
     Ok(AeadCipher { tag, ciphertext })
@@ -32,34 +36,38 @@ pub fn decrypt_with_aad_detached_tag(
     aad: &[u8],
     tag: &[u8],
 ) -> Result<Vec<u8>> {
-    let decrypting_key = Key::<Aes256Gcm>::from_slice(key);
-    let cipher = Aes256Gcm::new(decrypting_key);
-    let nonce = Nonce::from_slice(iv);
+    let decrypting_key =
+        Key::<Aes256Gcm>::try_from(key).context("Failed to convert array to key")?;
+    let cipher = Aes256Gcm::new(&decrypting_key);
+    let nonce = Nonce::try_from(iv).context("Failed to convert array to nonce")?;
     let mut plaintext = encrypted_data.to_vec();
+    let tag = tag.try_into().context("Failed to convert array to tag")?;
     cipher
-        .decrypt_in_place_detached(nonce, aad, &mut plaintext, tag.into())
+        .decrypt_inout_detached(&nonce, aad, (&mut plaintext[..]).into(), &tag)
         .map_err(|e| anyhow!("aes-256-gcm decrypt failed: {:?}", e))?;
 
     Ok(plaintext)
 }
 
 pub fn decrypt(key: &[u8], encrypted_data: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
-    let decrypting_key = Key::<Aes256Gcm>::from_slice(key);
-    let cipher = Aes256Gcm::new(decrypting_key);
-    let nonce = Nonce::from_slice(iv);
+    let decrypting_key =
+        Key::<Aes256Gcm>::try_from(key).context("Failed to convert array to key")?;
+    let cipher = Aes256Gcm::new(&decrypting_key);
+    let nonce = Nonce::try_from(iv).context("Failed to convert array to nonce")?;
     let plain_text = cipher
-        .decrypt(nonce, encrypted_data)
+        .decrypt(&nonce, encrypted_data)
         .map_err(|e| anyhow!("aes-256-gcm decrypt failed: {:?}", e))?;
 
     Ok(plain_text)
 }
 
 pub fn encrypt(key: &[u8], data: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
-    let encrypting_key = Key::<Aes256Gcm>::from_slice(key);
-    let cipher = Aes256Gcm::new(encrypting_key);
-    let nonce = Nonce::from_slice(iv);
+    let encrypting_key =
+        Key::<Aes256Gcm>::try_from(key).context("Failed to convert array to key")?;
+    let cipher = Aes256Gcm::new(&encrypting_key);
+    let nonce = Nonce::try_from(iv).context("Failed to convert array to nonce")?;
     let ciphertext = cipher
-        .encrypt(nonce, data)
+        .encrypt(&nonce, data)
         .map_err(|e| anyhow!("aes-256-gcm encrypt failed: {:?}", e))?;
 
     Ok(ciphertext)

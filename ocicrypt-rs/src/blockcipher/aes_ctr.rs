@@ -3,8 +3,7 @@
 
 use std::io::Read;
 
-use anyhow::{anyhow, Result};
-use ctr::cipher::generic_array::GenericArray;
+use anyhow::{anyhow, Context, Result};
 use ctr::cipher::{KeyIvInit, StreamCipher};
 use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
@@ -80,8 +79,14 @@ impl<R> AESCTRBlockCipher<R> {
         }
 
         let cipher = Aes256Ctr::new(
-            GenericArray::from_slice(symmetric_key.as_slice()),
-            GenericArray::from_slice(nonce.as_slice()),
+            symmetric_key
+                .as_slice()
+                .try_into()
+                .context("Failed to convert symmetric key to array")?,
+            nonce
+                .as_slice()
+                .try_into()
+                .context("Failed to convert nonce to array")?,
         );
         let hmac = HmacSha256::new_from_slice(symmetric_key.as_slice())
             .map_err(|_| anyhow!("Failed to create HMAC"))?;
@@ -405,8 +410,16 @@ mod tests {
         rand_bytes(&mut nonce[..]).unwrap();
 
         let mut crypto_encrypt = Aes256Ctr::new(
-            GenericArray::from_slice(symmetric_key.as_slice()),
-            GenericArray::from_slice(nonce.as_slice()),
+            symmetric_key
+                .as_slice()
+                .try_into()
+                .context("Failed to convert symmetric key to array")
+                .unwrap(),
+            nonce
+                .as_slice()
+                .try_into()
+                .context("Failed to convert nonce to array")
+                .unwrap(),
         );
 
         let openssl_cipher = openssl::symm::Cipher::aes_256_ctr();
@@ -428,8 +441,16 @@ mod tests {
         .unwrap();
 
         let mut crypto_decrypt = Aes256Ctr::new(
-            GenericArray::from_slice(symmetric_key.as_slice()),
-            GenericArray::from_slice(nonce.as_slice()),
+            symmetric_key
+                .as_slice()
+                .try_into()
+                .context("Failed to convert symmetric key to array")
+                .unwrap(),
+            nonce
+                .as_slice()
+                .try_into()
+                .context("Failed to convert nonce to array")
+                .unwrap(),
         );
 
         crypto_decrypt.apply_keystream(&mut buffer);

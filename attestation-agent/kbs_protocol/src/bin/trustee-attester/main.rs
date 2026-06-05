@@ -106,7 +106,7 @@ async fn main() -> Result<()> {
                     false => format!("/{path}"),
                     true => path,
                 };
-                ResourceUri::new("", &resource_path)?
+                ResourceUri::new("", &resource_path, Some("resource"), None)?
             };
             let (_token, _key) = client.get_token().await?; // attest first
             let resource_bytes = client.get_resource(resource).await?;

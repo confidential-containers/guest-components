@@ -24,18 +24,24 @@ in different ways.
 A Resource URI must comply with the following format:
 
 ```plaintext
-kbs+<plugin>://<kbs_host>:<kbs_port>/<repository>/<type>/<tag>
+kbs[+<plugin>]://<kbs_host>:<kbs_port>/<path>[/<path>...][?<query>]
 ```
 
-### Scheme
+The path after the authority consists of one or more slash-separated segments.
+There is no fixed limit on how many segments a URI may contain.
 
-The scheme always begins with `kbs`. Typically the scheme is simply `kbs://`, but a plus sign
-can be used to specify that the resource should be fulfilled by a particular plugin.
+### Plugin
 
-For instance, to represent a resource fulfilled by the Trustee `pkcs11` plugin, the
-scheme would be `kbs+pkcs11://`.
+The optional `<plugin>` field in the scheme identifies which Trustee plugin fulfills the resource.
+If not given, by default `resource` plugin is used.
 
-If no plugin is specified, the CDH will request a resource from the `resource` plugin.
+- `kbs://` — shorthand for the default `resource` plugin.
+- `kbs+<plugin>://` — request the resource from a specific plugin (for example,
+  `kbs+pkcs11://` for the Trustee `pkcs11` plugin).
+
+When a URI is parsed, `kbs://` and `kbs+resource://` are both stored internally
+with plugin name `resource`. When serialized (for example via JSON), the default
+`resource` plugin is omitted and the canonical form is `kbs://`.
 
 ### Host and Port
 
@@ -49,35 +55,54 @@ Multi-KBS workloads may be supported in the future.
 
 Since these fields are ignored, most resource URIs leave them out.
 This results in three slashes in a row.
-For example, `kbs:///repository/type/tag`.
- 
-### Repository, Type, and Tag
+For example, `kbs:///default/cosign-public-key/test`.
 
-Currently resource URIs have three levels of identifiers/scope.
-The terms `repository`, `type`, and `tag` are somewhat arbitrary. 
-These identifiers can be used in any way.
-When using the Trustee resource plugin, these three identifiers
-form the resource path.
-Other plugins can use the identifiers in other ways.
+### Resource path (segments)
 
-Some Trustee plugins expect a longer path with more than three
-parts. Requests to these plugins cannot be represented as
-resource URIs today.
+The path portion of the URI is a sequence of one or more segments separated by
+`/`.
 
-### Query Strings
+A common convention is that `resource` plugin uses three segments — often called `repository`, `type`, and
+`tag` — but these names are arbitrary. Any number of segments is valid as long as
+the path is non-empty.
 
-The resource URI also supports query strings.
+When using the Trustee `resource` plugin, the joined segments form the resource
+path sent to KBS. Other plugins may interpret the segments differently.
+
+### Query strings
+
+The resource URI supports query strings, which are forwarded to the KBS HTTP
+request when present.
 
 ## Examples
 
 * `kbs://example.cckbs.org:8081/alice/decryption-key/1`
 * `kbs:///a/b/c`
 * `kbs+pkcs11:///a/b/c`
+* `kbs:///repo/nested/type/tag/extra` (paths with more than three segments)
+* `kbs:///repo/type/tag?param1=value1&param2=value2`
+
+After parsing and re-serialization, a URI for the default `resource` plugin is
+normalized to the `kbs://` form, for example `kbs:///a/b/c`. URIs with other
+plugins keep an explicit plugin in the scheme, for example
+`kbs+pkcs11:///a/b/c`.
 
 ## Mapping
 
-The resource URI is transformed into an HTTP(S) request.
-Specifically, the request will be made to `http://<kbs_host>:<kbs_port>/kbs/v0/<plugin>/alice/decryption-key/1`.
+The resource URI is transformed into an HTTP(S) request to Trustee.
+The path segments (everything after the authority) are joined with `/` and
+appended after the plugin name:
 
-If no plugin is specified in the resource URI, `resource` will be used.
+```plaintext
+http://<kbs_host>:<kbs_port>/kbs/v0/<plugin>/<segment1>/<segment2>/...
+```
+
+For example, `kbs://example.cckbs.org:8081/alice/decryption-key/1` becomes:
+
+```plaintext
+http://example.cckbs.org:8081/kbs/v0/resource/alice/decryption-key/1
+```
+
+If no plugin is specified in the resource URI (`kbs://`), `resource` is used.
+
 More information on the KBS API can be found [here](https://github.com/confidential-containers/trustee/blob/main/kbs/docs/kbs.yaml).

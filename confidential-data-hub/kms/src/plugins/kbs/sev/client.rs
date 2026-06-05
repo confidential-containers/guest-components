@@ -14,7 +14,7 @@ use crypto::WrapType;
 use protos::grpc::aa::keybroker::{
     key_broker_service_client::KeyBrokerServiceClient, OnlineSecretRequest, RequestDetails,
 };
-use resource_uri::ResourceUri;
+use resource_uri::{ResourcePluginPath, ResourceUri};
 use serde::Deserialize;
 use tokio::{fs, sync::RwLock};
 use tonic::transport::Uri;
@@ -168,7 +168,10 @@ impl Kbc for OnlineSevKbc {
     async fn get_resource(&mut self, rid: ResourceUri) -> Result<Vec<u8>> {
         let reader = ONLINE_SEV_KBC.read().await;
         let kbc = reader.as_ref().expect("Must be initialized");
-        match &rid.r#type[..] {
+        let ResourcePluginPath { r#type, .. } = rid.clone().try_into().map_err(|e| {
+            Error::KbsClientError(format!("online-sev-kbc: parse resource uri failed: {e:?}"))
+        })?;
+        match &r#type[..] {
             "client-id" => Ok(kbc.client_id.hyphenated().to_string().into_bytes()),
             _ => self.get_resource_from_kbs(rid, "resource").await,
         }
