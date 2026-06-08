@@ -27,6 +27,7 @@ pub fn detect_platform() -> bool {
 pub struct AzSnpVtpmAttester;
 
 const EVIDENCE_VERSION: u32 = 1;
+const TPM_REPORT_DATA_SIZE: usize = 32;
 
 /// TPM quote containing PCR values and attestation data.
 ///
@@ -92,7 +93,9 @@ fn pem_to_der(pem: &str) -> Result<Vec<u8>> {
 
 #[async_trait::async_trait]
 impl Attester for AzSnpVtpmAttester {
-    async fn get_evidence(&self, report_data: Vec<u8>) -> anyhow::Result<TeeEvidence> {
+    async fn get_evidence(&self, mut report_data: Vec<u8>) -> anyhow::Result<TeeEvidence> {
+        report_data.resize(TPM_REPORT_DATA_SIZE, 0);
+
         let hcl_report = vtpm::get_report()?;
         let tpm_quote = vtpm::get_quote(&report_data)?.into();
         let certs = imds::get_certs()?;
