@@ -42,9 +42,11 @@ async fn main() {
     let cli = Cli::parse();
 
     match cli {
-        Cli::Stdio => std::io::stdin()
-            .read_exact(&mut report_data)
-            .expect("read input failed"),
+        Cli::Stdio => {
+            std::io::stdin()
+                .read(&mut report_data)
+                .expect("read input failed");
+        }
         Cli::Commandline { data } => {
             let len = data.len().min(64);
             report_data[..len].copy_from_slice(&data.as_bytes()[..len]);
