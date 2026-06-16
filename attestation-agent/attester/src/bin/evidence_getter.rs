@@ -5,6 +5,7 @@
 
 use attester::{detect_attestable_devices, detect_tee_type, BoxedAttester};
 use clap::Parser;
+use kbs_types::Tee;
 use std::io::Read;
 use tokio::fs;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -36,7 +37,6 @@ async fn main() {
         .with_writer(std::io::stderr)
         .init();
 
-    // report_data on all platforms is 64 bytes length.
     let mut report_data = vec![0u8; 64];
 
     let cli = Cli::parse();
@@ -57,6 +57,14 @@ async fn main() {
             report_data[..len].copy_from_slice(&content[..len]);
         }
     }
+
+    // Some platforms may impose platform-specific limits on report_data.
+    report_data = match detect_tee_type() {
+        Tee::AzSnpVtpm => report_data[..32].to_vec(),
+        Tee::AzTdxVtpm => report_data[..32].to_vec(),
+        _ => report_data.clone(),
+    };
+
 
     let evidence = TryInto::<BoxedAttester>::try_into(detect_tee_type())
         .expect("Failed to initialize attester.")
