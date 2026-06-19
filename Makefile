@@ -74,12 +74,15 @@ endif
 CDH := confidential-data-hub
 AA := attestation-agent
 ASR := api-server-rest
+ATTESTER_DIR := attester
+INITDATA_VALIDATOR := initdata-validator
 
 BUILD_DIR := target/$(ARCH)-unknown-linux-$(LIBC)/release
 
 CDH_BINARY := $(BUILD_DIR)/$(CDH)
 AA_BINARY := $(BUILD_DIR)/$(AA)
 ASR_BINARY := $(BUILD_DIR)/$(ASR)
+INITDATA_VALIDATOR_BINARY := $(BUILD_DIR)/$(INITDATA_VALIDATOR)
 
 build: $(CDH_BINARY) $(ASR_BINARY) $(AA_BINARY)
 	@echo guest components built for $(TEE_PLATFORM) succeeded!
@@ -91,6 +94,10 @@ $(CDH_BINARY):
 $(AA_BINARY):
 	@echo build $(AA) for $(TEE_PLATFORM)
 	cd $(AA) && $(MAKE) ttrpc=true ARCH=$(ARCH) LIBC=$(LIBC) ATTESTER=$(ATTESTER)
+
+$(INITDATA_VALIDATOR_BINARY):
+	@echo build $(INITDATA_VALIDATOR) for $(TEE_PLATFORM)
+	cd $(AA)/$(ATTESTER_DIR) && $(MAKE) ARCH=$(ARCH) LIBC=$(LIBC) ATTESTER=$(ATTESTER)
 
 $(ASR_BINARY):
 	@echo build $(ASR) for $(TEE_PLATFORM)
