@@ -61,12 +61,9 @@ async fn main() {
     }
 
     // Some platforms may impose platform-specific limits on report_data.
-    report_data = match detect_tee_type() {
-        Tee::AzSnpVtpm => report_data[..32].to_vec(),
-        Tee::AzTdxVtpm => report_data[..32].to_vec(),
-        _ => report_data.clone(),
-    };
-
+    if let Tee::AzSnpVtpm | Tee:AzTdxVtpm = detect_tee_type() {
+       report_data.truncate(32);
+    }
 
     let evidence = TryInto::<BoxedAttester>::try_into(detect_tee_type())
         .expect("Failed to initialize attester.")
