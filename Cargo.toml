@@ -30,7 +30,7 @@ bincode = "2.0.1"
 cfg-if = "1.0.4"
 chrono = "0.4.44"
 clap = "~4.6.1"
-config = "0.15.19"
+config = "0.15.23"
 const_format = "0.2.36"
 ctr = "0.10.0"
 hex = "0.4.3"
@@ -50,7 +50,7 @@ ring = "0.17"
 rsa = "0.9.10"
 rstest = "0.26"
 serde = { version = "1.0", features = ["derive"] }
-serde_with = { version = "3.20.0", features = ["base64", "hex"] }
+serde_with = { version = "3.21.0", features = ["base64", "hex"] }
 serde_json = "1.0"
 serial_test = "3"
 sha2 = "0.11.0"
