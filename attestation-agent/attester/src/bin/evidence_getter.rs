@@ -25,6 +25,14 @@ enum Cli {
     File { path: String },
 }
 
+/// Some CPU TEE platforms may impose platform-specific limits on report_data.
+fn adjust_report_data(tee: Tee, report_data: &[u8]) -> Vec<u8> {
+    match tee {
+        Tee::AzSnpVtpm | Tee::AzTdxVtpm => report_data[..report_data.len().min(32)].to_vec(),
+        _ => report_data.to_vec(),
+    }
+}
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     let env_filter = match std::env::var_os("RUST_LOG") {
@@ -60,14 +68,10 @@ async fn main() {
         }
     }
 
-    // Some platforms may impose platform-specific limits on report_data.
-    if let Tee::AzSnpVtpm | Tee:AzTdxVtpm = detect_tee_type() {
-       report_data.truncate(32);
-    }
-
-    let evidence = TryInto::<BoxedAttester>::try_into(detect_tee_type())
+    let tee = detect_tee_type();
+    let evidence = TryInto::<BoxedAttester>::try_into(tee)
         .expect("Failed to initialize attester.")
-        .get_evidence(report_data.clone())
+        .get_evidence(adjust_report_data(tee, &report_data))
         .await
         .expect("get evidence failed");
     println!("{:?}:{evidence}", detect_tee_type());
