@@ -185,13 +185,13 @@ async fn initialize_aa_client() -> Result<Option<AttestationAgentServiceClient>>
     use anyhow::anyhow;
 
     const AA_SOCKET_FILE: &str =
-        "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock";
+        "/run/confidential-containers/attestation-agent/attestation-agent.sock";
 
     if !Path::new(AA_SOCKET_FILE).exists() {
         return Ok(None);
     }
 
-    let c = ttrpc::r#async::Client::connect(AA_SOCKET_FILE)
+    let c = ttrpc::r#async::Client::connect(&format!("unix://{AA_SOCKET_FILE}"))
         .await
         .map_err(|e| Error::AttestationAgentClientError {
             source: anyhow!("failed to connect to attestation agent: {e:?}"),
