@@ -9,7 +9,7 @@ use strum::EnumString;
 use tempfile::tempdir_in;
 use thiserror::Error;
 
-const TSM_REPORT_PATH: &str = "/sys/kernel/config/tsm/report";
+pub const TSM_REPORT_PATH: &str = "/sys/kernel/config/tsm/report";
 
 #[derive(Error, Debug)]
 pub enum TsmReportError {
