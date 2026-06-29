@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-//! Get Rserouce gRPC client
+//! Get Resource gRPC client
 
 use anyhow::*;
 use async_trait::async_trait;

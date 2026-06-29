@@ -91,7 +91,7 @@ sigstore_config_uri = "kbs:///default/sigstore-config/test"
 # policy file.
 #
 # Now it supports two different forms:
-# - `KBS URI`: the iamge security policy will be fetched from KBS.
+# - `KBS URI`: the image security policy will be fetched from KBS.
 # - `Local Path`: the security policy will be fetched from somewhere locally.
 # e.g. `file:///etc/image-policy.json`.
 #

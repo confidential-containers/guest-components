@@ -37,7 +37,7 @@ pub async fn decrypt_image_layer_annotation(
     let annotation_packet: AnnotationPacket = serde_json::from_str(annotation)?;
 
     // Sample KBC is still used in enclave-cc legacy e2e test. Native key provider
-    // will still support this until it is decided to be depreciated.
+    // will still support this until it is decided to be deprecated.
     if CHANNEL.read().await.is_none() {
         initialize_channel(kbs_addr, kbc).await?;
     }

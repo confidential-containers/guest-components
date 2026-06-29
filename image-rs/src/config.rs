@@ -157,7 +157,7 @@ pub struct ImageConfig {
     #[serde(default = "Option::default")]
     pub image_pull_proxy: Option<ProxyConfig>,
 
-    /// To pull an image from a registry with a self-signed ceritifcate,
+    /// To pull an image from a registry with a self-signed certificate,
     /// supply the corresponding trusted root cert (in PEM format) here.
     #[serde(default = "Vec::default")]
     pub extra_root_certificates: Vec<String>,

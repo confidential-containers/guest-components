@@ -153,7 +153,7 @@ struct AliProviderArgs {
 #[cfg(feature = "ehsm")]
 #[derive(Args)]
 struct EhsmProviderArgs {
-    /// path of the crendential file
+    /// path of the credential file
     #[arg(short, long)]
     credential_file_path: String,
 
