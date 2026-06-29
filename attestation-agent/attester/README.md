@@ -26,6 +26,7 @@ echo $EVIDENCE_STRING | ../../target/release/evidence_getter stdio
 ```
 
 Here, `$EVIDENCE_STRING` is a string/bytes of up to 64 bytes.
+(Some platforms may impose platform-specific limits on evidence)
 
 ## Adding TPM quote to evidence
 

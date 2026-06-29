@@ -60,7 +60,7 @@ trait Client: Send + Sync {
 
 impl SecureChannel {
     /// Create a new [`SecureChannel`], the input parameter:
-    /// * `decrypt_config`: s string with format `provider:attestation-agent:<kbc_name>::<kbs_uri>`.
+    /// * `decrypt_config`: a string with format `provider:attestation-agent:<kbc_name>::<kbs_uri>`.
     ///   This parameter is only used when in native secure channel (for enclave-cc)
     pub fn new(_kbc_name: &str, _kbs_uri: &str, work_dir: &Path) -> Result<Self> {
         let client: Box<dyn Client> = {
@@ -75,7 +75,7 @@ impl SecureChannel {
                     info!("secure channel uses gRPC");
                     Box::<grpc::Grpc>::default()
                 } else  {
-                    compile_error!("At last one feature of `keywrap-grpc`, `keywrap-ttrpc`, and `keywrap-native` must be enabled.");
+                    compile_error!("At least one feature of `keywrap-grpc`, `keywrap-ttrpc`, and `keywrap-native` must be enabled.");
                 }
             }
         };

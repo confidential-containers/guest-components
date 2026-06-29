@@ -5,6 +5,7 @@
 
 use attester::{detect_attestable_devices, detect_tee_type, BoxedAttester};
 use clap::Parser;
+use kbs_types::Tee;
 use std::io::Read;
 use tokio::fs;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -24,6 +25,14 @@ enum Cli {
     File { path: String },
 }
 
+/// Some CPU TEE platforms may impose platform-specific limits on report_data.
+fn adjust_report_data(tee: Tee, report_data: &[u8]) -> Vec<u8> {
+    match tee {
+        Tee::AzSnpVtpm | Tee::AzTdxVtpm => report_data[..report_data.len().min(32)].to_vec(),
+        _ => report_data.to_vec(),
+    }
+}
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     let env_filter = match std::env::var_os("RUST_LOG") {
@@ -36,15 +45,16 @@ async fn main() {
         .with_writer(std::io::stderr)
         .init();
 
-    // report_data on all platforms is 64 bytes length.
     let mut report_data = vec![0u8; 64];
 
     let cli = Cli::parse();
 
     match cli {
-        Cli::Stdio => std::io::stdin()
-            .read_exact(&mut report_data)
-            .expect("read input failed"),
+        Cli::Stdio => {
+            std::io::stdin()
+                .read(&mut report_data)
+                .expect("read input failed");
+        }
         Cli::Commandline { data } => {
             let len = data.len().min(64);
             report_data[..len].copy_from_slice(&data.as_bytes()[..len]);
@@ -58,9 +68,10 @@ async fn main() {
         }
     }
 
-    let evidence = TryInto::<BoxedAttester>::try_into(detect_tee_type())
+    let tee = detect_tee_type();
+    let evidence = TryInto::<BoxedAttester>::try_into(tee)
         .expect("Failed to initialize attester.")
-        .get_evidence(report_data.clone())
+        .get_evidence(adjust_report_data(tee, &report_data))
         .await
         .expect("get evidence failed");
     println!("{:?}:{evidence}", detect_tee_type());

@@ -15,7 +15,7 @@ const GPG_KEY_ID_SUFFIX_BYTES_LENGTH_IN_SIG: usize = 8;
 
 // SigKeyIDs is a util helper struct, used to compare
 // whether the keyID of the key which verified the signature
-// is consistant with the keyID recorded in the signature itself.
+// is consistent with the keyID recorded in the signature itself.
 #[derive(Default)]
 struct SigKeyIDs {
     pub trusted_key_id: Vec<u8>,
