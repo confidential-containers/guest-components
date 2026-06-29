@@ -33,7 +33,7 @@ pub enum ResourceType {
     Policy,
 
     /// used to configure the storage path of public keys used
-    /// by simple signing when doing iamge signature verification
+    /// by simple signing when doing image signature verification
     #[strum(serialize = "sigstore-config")]
     SigstoreConfig,
 

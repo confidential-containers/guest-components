@@ -226,7 +226,7 @@ impl AttestationAPIs for AttestationAgent {
     /// - `events`: a event slice. Any single event will be calculated into a hash digest to extend the current
     /// platform's RTMR.
     /// - `register_index`: a target PCR that will be used to extend RTMR. Note that different platform
-    /// would have its own strategy to map a PCR index into a architectual RTMR index. If not given, a default one
+    /// would have its own strategy to map a PCR index into an architectural RTMR index. If not given, a default one
     /// will be used.
     async fn extend_runtime_measurement(
         &self,
