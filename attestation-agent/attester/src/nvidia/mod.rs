@@ -35,6 +35,7 @@ fn ensure_sdk_init() -> Result<()> {
 }
 
 #[derive(Debug, Deserialize, Display, EnumString, PartialEq, Serialize)]
+#[serde(rename_all(serialize = "UPPERCASE"))]
 #[strum(ascii_case_insensitive)]
 enum Architecture {
     #[serde(alias = "BLACKWELL")]
