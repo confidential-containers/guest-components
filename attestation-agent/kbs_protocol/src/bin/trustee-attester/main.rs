@@ -79,6 +79,10 @@ async fn main() -> Result<()> {
     // a kbs_protocol client with evidence_provider
     let mut client_builder = KbsClientBuilder::with_evidence_provider(evidence_provider, &url);
 
+    // Sets TeeKeyAlgorithm to ML-KEM if pqc-experimental feature enabled.
+    #[cfg(feature = "pqc-experimental")]
+    client_builder.set_tee_key_algorithm(TeeKeyAlgorithm::MlKem768A192Kw);
+
     // if a certificate is given, use it
     if let Some(cf) = cert_file {
         debug!("Reading certificate from cert_file {}", cf.display());
