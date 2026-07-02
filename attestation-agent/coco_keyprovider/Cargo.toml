@@ -18,6 +18,8 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 futures = "0.3.32"
 jwt-simple.workspace = true
+kbs_protocol = { path = "../kbs_protocol" }
+# log.workspace = true
 protos = { path = "../../protos", default-features = false, features = [
     "grpc",
 ] }
