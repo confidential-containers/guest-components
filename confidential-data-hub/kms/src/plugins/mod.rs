@@ -14,6 +14,9 @@ const _IN_GUEST_DEFAULT_KEY_PATH: &str = "/run/confidential-containers/cdh/kbs/k
 #[cfg(feature = "aliyun")]
 pub mod aliyun;
 
+#[cfg(feature = "aws")]
+pub mod aws;
+
 pub mod kbs;
 
 #[cfg(feature = "ehsm")]
@@ -24,6 +27,10 @@ pub enum DecryptorProvider {
     #[cfg(feature = "aliyun")]
     #[strum(ascii_case_insensitive)]
     Aliyun,
+
+    #[cfg(feature = "aws")]
+    #[strum(ascii_case_insensitive)]
+    Aws,
 
     #[strum(ascii_case_insensitive)]
     #[cfg(feature = "ehsm")]
@@ -43,6 +50,11 @@ pub async fn new_decryptor(
             aliyun::AliyunKmsClient::from_provider_settings(&_provider_settings).await?,
         ) as Box<dyn Decrypter>),
 
+        #[cfg(feature = "aws")]
+        DecryptorProvider::Aws => Ok(Box::new(
+            aws::AwsKmsClient::from_provider_settings(&_provider_settings).await?,
+        ) as Box<dyn Decrypter>),
+
         #[cfg(feature = "ehsm")]
         DecryptorProvider::Ehsm => Ok(Box::new(
             ehsm::EhsmKmsClient::from_provider_settings(&_provider_settings).await?,
@@ -58,6 +70,10 @@ pub enum VaultProvider {
     #[cfg(feature = "aliyun")]
     #[strum(ascii_case_insensitive)]
     Aliyun,
+
+    #[cfg(feature = "aws")]
+    #[strum(ascii_case_insensitive)]
+    Aws,
 }
 
 /// Create a new [`Getter`] by given provider name and [`ProviderSettings`]
@@ -73,6 +89,11 @@ pub async fn new_getter(
         #[cfg(feature = "aliyun")]
         VaultProvider::Aliyun => Ok(Box::new(
             aliyun::AliyunKmsClient::from_provider_settings(&_provider_settings).await?,
+        ) as Box<dyn Getter>),
+
+        #[cfg(feature = "aws")]
+        VaultProvider::Aws => Ok(Box::new(
+            aws::AwsKmsClient::from_provider_settings(&_provider_settings).await?,
         ) as Box<dyn Getter>),
     }
 }

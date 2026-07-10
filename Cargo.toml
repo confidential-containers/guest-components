@@ -24,6 +24,8 @@ anyhow = "1.0"
 assert-json-diff = "2.0"
 assert_cmd = "2"
 async-trait = "0.1.89"
+aws-sdk-kms = { version = "1.109", default-features = false, features = ["behavior-version-latest", "default-https-client", "rt-tokio"] }
+aws-sdk-secretsmanager = { version = "1.109", default-features = false, features = ["behavior-version-latest", "default-https-client", "rt-tokio"] }
 base64 = "0.22.1"
 base64-serde = "0.8"
 bincode = "2.0.1"

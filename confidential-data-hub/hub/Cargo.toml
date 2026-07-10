@@ -97,6 +97,9 @@ default = ["aliyun", "kbs", "bin", "ttrpc", "grpc", "cli"]
 # support aliyun stacks (KMS, ..)
 aliyun = ["kms/aliyun"]
 
+# support aws stacks (KMS, Secrets Manager)
+aws = ["kms/aws"]
+
 # support coco-KBS to provide confidential resources
 kbs = ["kms/kbs"]
 

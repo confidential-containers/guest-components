@@ -15,11 +15,13 @@ use confidential_data_hub::secret::{
 use crypto::WrapType;
 #[cfg(feature = "aliyun")]
 use kms::plugins::aliyun::AliyunKmsClient;
+#[cfg(feature = "aws")]
+use kms::plugins::aws::AwsKmsClient;
 #[cfg(feature = "ehsm")]
 use kms::plugins::ehsm::EhsmKmsClient;
 use kms::{Encrypter, ProviderSettings};
 use rand::RngExt;
-#[cfg(feature = "ehsm")]
+#[cfg(any(feature = "ehsm", feature = "aws"))]
 use serde_json::Value;
 use tokio::{fs, io::AsyncWriteExt};
 use zeroize::Zeroizing;
@@ -126,6 +128,10 @@ enum EnvelopeArgs {
     #[cfg(feature = "ehsm")]
     Ehsm(EhsmProviderArgs),
 
+    /// AWS KMS driver to seal the envelope
+    #[cfg(feature = "aws")]
+    Aws(AwsProviderArgs),
+
     /// Dummy driver to prevent the unreachable pattern for neither aliyun nor ehsm
     Dummy,
 }
@@ -160,6 +166,19 @@ struct EhsmProviderArgs {
     /// endpoint of eHSM service
     #[arg(short, long)]
     endpoint: String,
+}
+
+#[cfg(feature = "aws")]
+#[derive(Args)]
+struct AwsProviderArgs {
+    /// AWS region of the KMS key, e.g. `us-east-1`
+    #[arg(short, long)]
+    region: String,
+
+    /// path of the credential file (JSON with `access_key_id`,
+    /// `secret_access_key` and optional `session_token`)
+    #[arg(short, long)]
+    credential_file_path: String,
 }
 
 #[tokio::main]
@@ -199,6 +218,10 @@ async fn unseal_secret(unseal_args: &UnsealArgs) {
         ),
         "ehsm" => env::set_var(
             "EHSM_IN_GUEST_KEY_PATH",
+            unseal_args.key_path.as_ref().expect("Key Path Required"),
+        ),
+        "aws" => env::set_var(
+            "AWS_IN_GUEST_KEY_PATH",
             unseal_args.key_path.as_ref().expect("Key Path Required"),
         ),
         "kbs" => env::set_var(
@@ -365,6 +388,31 @@ async fn handle_envelope_provider(
                 .export_provider_settings()
                 .expect("aliyun export provider_settings fail");
             (Box::new(client), provider_settings, "ehsm".into())
+        }
+        #[cfg(feature = "aws")]
+        EnvelopeArgs::Aws(arg) => {
+            let cred = fs::read_to_string(&arg.credential_file_path)
+                .await
+                .expect("read aws credential file");
+            let cred_parsed: Value =
+                serde_json::from_str(&cred).expect("parse aws credential file");
+            let access_key_id = cred_parsed
+                .get("access_key_id")
+                .and_then(Value::as_str)
+                .expect("get access_key_id string");
+            let secret_access_key = cred_parsed
+                .get("secret_access_key")
+                .and_then(Value::as_str)
+                .expect("get secret_access_key string");
+            let session_token = cred_parsed.get("session_token").and_then(Value::as_str);
+
+            let client =
+                AwsKmsClient::new(&arg.region, access_key_id, secret_access_key, session_token)
+                    .expect("create aws client");
+            let provider_settings = client
+                .export_provider_settings()
+                .expect("aws export provider_settings failed");
+            (Box::new(client), provider_settings, "aws".into())
         }
         _ => {
             panic!("no kms provider is supported, please rebuild the secret cli tool!")

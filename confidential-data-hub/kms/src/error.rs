@@ -13,6 +13,10 @@ pub enum Error {
     #[error("Aliyun KMS error: {0}")]
     AliyunKmsError(String),
 
+    #[cfg(feature = "aws")]
+    #[error("AWS KMS/Secrets Manager error: {0}")]
+    AwsKmsError(String),
+
     #[error("Kbs client error: {0}")]
     KbsClientError(String),
 
