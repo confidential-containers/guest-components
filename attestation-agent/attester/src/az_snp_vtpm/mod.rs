@@ -9,6 +9,7 @@ use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
 use kbs_types::HashAlgorithm;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, hex::Hex, serde_as};
+use tokio::task::spawn_blocking;
 use tracing::{debug, info};
 
 type UrlSafeBase64 = Base64<serde_with::base64::UrlSafe>;
@@ -90,22 +91,26 @@ fn pem_to_der(pem: &str) -> Result<Vec<u8>> {
     Ok(der)
 }
 
+fn get_evidence_sync(report_data: &[u8]) -> anyhow::Result<TeeEvidence> {
+    let hcl_report = vtpm::get_report()?;
+    let tpm_quote = vtpm::get_quote(&report_data)?.into();
+    let certs = imds::get_certs()?;
+    let vcek = pem_to_der(&certs.vcek)?;
+
+    let evidence = Evidence {
+        version: EVIDENCE_VERSION,
+        tpm_quote,
+        hcl_report,
+        vcek,
+    };
+
+    Ok(serde_json::to_value(&evidence)?)
+}
+
 #[async_trait::async_trait]
 impl Attester for AzSnpVtpmAttester {
     async fn get_evidence(&self, report_data: Vec<u8>) -> anyhow::Result<TeeEvidence> {
-        let hcl_report = vtpm::get_report()?;
-        let tpm_quote = vtpm::get_quote(&report_data)?.into();
-        let certs = imds::get_certs()?;
-        let vcek = pem_to_der(&certs.vcek)?;
-
-        let evidence = Evidence {
-            version: EVIDENCE_VERSION,
-            tpm_quote,
-            hcl_report,
-            vcek,
-        };
-
-        Ok(serde_json::to_value(&evidence)?)
+        spawn_blocking(move || get_evidence_sync(&report_data)).await?
     }
 
     fn supports_runtime_measurement(&self) -> bool {
@@ -113,7 +118,8 @@ impl Attester for AzSnpVtpmAttester {
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> anyhow::Result<InitDataResult> {
-        utils::extend_pcr(init_data_digest, utils::INIT_DATA_PCR)?;
+        let digest = init_data_digest.to_vec();
+        spawn_blocking(move || utils::extend_pcr_sync(&digest, utils::INIT_DATA_PCR)).await??;
         Ok(InitDataResult::Ok)
     }
 
@@ -122,7 +128,8 @@ impl Attester for AzSnpVtpmAttester {
         event_digest: Vec<u8>,
         register_index: u64,
     ) -> Result<()> {
-        utils::extend_pcr(&event_digest, register_index as u8)?;
+        spawn_blocking(move || utils::extend_pcr_sync(&event_digest, register_index as u8))
+            .await??;
         Ok(())
     }
 
@@ -143,7 +150,7 @@ pub(crate) mod utils {
 
     pub const INIT_DATA_PCR: u8 = 8;
 
-    pub fn extend_pcr(digest: &[u8], pcr: u8) -> Result<()> {
+    pub fn extend_pcr_sync(digest: &[u8], pcr: u8) -> Result<()> {
         let sha256_digest: [u8; 32] = digest.try_into().context("expected sha256 digest")?;
         if pcr > 23 {
             bail!("Invalid PCR index: {pcr}");

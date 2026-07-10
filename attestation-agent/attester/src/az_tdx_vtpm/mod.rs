@@ -11,6 +11,7 @@ use kbs_types::HashAlgorithm;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use std::result::Result::Ok;
+use tokio::task::spawn_blocking;
 use tracing::debug;
 
 type UrlSafeBase64 = Base64<serde_with::base64::UrlSafe>;
@@ -51,26 +52,31 @@ struct Evidence {
     td_quote: Vec<u8>,
 }
 
+fn get_evidence_sync(report_data: &[u8]) -> anyhow::Result<TeeEvidence> {
+    let hcl_report_bytes = vtpm::get_report_with_report_data(&report_data)?;
+    let hcl_report = hcl::HclReport::new(hcl_report_bytes.clone())?;
+    let td_report = hcl_report.try_into()?;
+    let td_quote = imds::get_td_quote(&td_report)?;
+    let tpm_quote = vtpm::get_quote(&report_data)?.into();
+
+    let evidence = Evidence {
+        version: EVIDENCE_VERSION,
+        tpm_quote,
+        hcl_report: hcl_report_bytes,
+        td_quote,
+    };
+    Ok(serde_json::to_value(&evidence)?)
+}
+
 #[async_trait::async_trait]
 impl Attester for AzTdxVtpmAttester {
     async fn get_evidence(&self, report_data: Vec<u8>) -> Result<TeeEvidence> {
-        let hcl_report_bytes = vtpm::get_report_with_report_data(&report_data)?;
-        let hcl_report = hcl::HclReport::new(hcl_report_bytes.clone())?;
-        let td_report = hcl_report.try_into()?;
-        let td_quote = imds::get_td_quote(&td_report)?;
-        let tpm_quote = vtpm::get_quote(&report_data)?.into();
-
-        let evidence = Evidence {
-            version: EVIDENCE_VERSION,
-            tpm_quote,
-            hcl_report: hcl_report_bytes,
-            td_quote,
-        };
-        Ok(serde_json::to_value(&evidence)?)
+        spawn_blocking(move || get_evidence_sync(&report_data)).await?
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> anyhow::Result<InitDataResult> {
-        utils::extend_pcr(init_data_digest, utils::INIT_DATA_PCR)?;
+        let digest = init_data_digest.to_vec();
+        spawn_blocking(move || utils::extend_pcr_sync(&digest, utils::INIT_DATA_PCR)).await??;
         Ok(InitDataResult::Ok)
     }
 
@@ -83,7 +89,8 @@ impl Attester for AzTdxVtpmAttester {
         event_digest: Vec<u8>,
         register_index: u64,
     ) -> Result<()> {
-        utils::extend_pcr(&event_digest, register_index as u8)?;
+        spawn_blocking(move || utils::extend_pcr_sync(&event_digest, register_index as u8))
+            .await??;
         Ok(())
     }
 
