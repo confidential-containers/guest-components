@@ -29,7 +29,7 @@ pub fn detect_platform() -> bool {
 #[derive(Debug, Default)]
 pub struct AzTdxVtpmAttester;
 
-const EVIDENCE_VERSION: u32 = 1;
+const EVIDENCE_VERSION: u32 = 2;
 
 /// Attestation evidence for Azure TDX vTPM.
 ///
