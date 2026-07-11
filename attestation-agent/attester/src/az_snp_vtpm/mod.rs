@@ -27,7 +27,7 @@ pub fn detect_platform() -> bool {
 #[derive(Debug, Default)]
 pub struct AzSnpVtpmAttester;
 
-const EVIDENCE_VERSION: u32 = 1;
+const EVIDENCE_VERSION: u32 = 2;
 
 /// TPM quote containing PCR values and attestation data.
 ///
@@ -92,8 +92,8 @@ fn pem_to_der(pem: &str) -> Result<Vec<u8>> {
 }
 
 fn get_evidence_sync(report_data: &[u8]) -> anyhow::Result<TeeEvidence> {
-    let hcl_report = vtpm::get_report()?;
-    let tpm_quote = vtpm::get_quote(&report_data)?.into();
+    let hcl_report = vtpm::get_report_with_report_data(report_data)?;
+    let tpm_quote = vtpm::get_quote(report_data)?.into();
     let certs = imds::get_certs()?;
     let vcek = pem_to_der(&certs.vcek)?;
 
