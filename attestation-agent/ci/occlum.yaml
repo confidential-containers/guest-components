@@ -1,7 +1,0 @@
-includes:
-  - base.yaml
-targets:
-  - target: /bin
-    copy:
-      - files:
-        - ../../../target/debug/evidence_getter
