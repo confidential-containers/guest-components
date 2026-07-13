@@ -1,0 +1,169 @@
+[package]
+name = "image-rs"
+version = "0.1.0"
+description = "The OCI Images Rust Crate"
+repository = "https://github.com/confidential-containers/guest-components/tree/main/image-rs"
+readme = "README.md"
+license = "Apache-2.0"
+authors = ["The image-rs Authors"]
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+async-compression = { version = "0.4.37", features = [
+    "futures-io",
+    "tokio",
+    "gzip",
+    "zstd",
+] }
+async-trait.workspace = true
+base64.workspace = true
+cfg-if.workspace = true
+devicemapper = { version = "0.34.6", optional = true }
+filetime = "0.2"
+flate2 = "1.1"
+futures = { version = "0.3.32", optional = true }
+futures-util = "0.3"
+hex.workspace = true
+kbc = { path = "../attestation-agent/kbc", default-features = false, optional = true }
+loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27" }
+nix = { workspace = true, features = ["mount", "fs"] }
+oci-client = { git = "https://github.com/oras-project/rust-oci-client", rev = "83092a67ebcaeed832eae090895a1c178d867344", default-features = false, optional = true }
+oci-spec = "0.10.0"
+ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = [
+    "async-io",
+], optional = true }
+pathrs = "0.2.4"
+protos = { path = "../protos", optional = true, default-features = false }
+reqwest = { workspace = true, features = ["json"], optional = true }
+resource_uri = { path = "../attestation-agent/deps/resource_uri", optional = true }
+pgp = { version = "0.19", optional = true }
+serde = { workspace = true, features = ["serde_derive", "rc"] }
+serde_json.workspace = true
+serde_yaml = { version = "0.9", optional = true }
+sha2.workspace = true
+sigstore = { version = "0.13.0", default-features = false, optional = true }
+strum.workspace = true
+strum_macros = "0.28"
+astral-tokio-tar = "0.6.2"
+thiserror.workspace = true
+tokio.workspace = true
+tokio-util = "0.7.18"
+toml.workspace = true
+tonic = { workspace = true, optional = true }
+tracing.workspace = true
+ttrpc = { workspace = true, features = ["async"], optional = true }
+url = "2.5.4"
+walkdir = "2"
+xattr = "1"
+zstd = "0.13"
+
+[build-dependencies]
+anyhow.workspace = true
+
+[dev-dependencies]
+cfg-if.workspace = true
+criterion = "0.8.2"
+nix = { workspace = true, features = ["user"] }
+ring.workspace = true
+rsa.workspace = true
+rstest.workspace = true
+serial_test = "3.4.0"
+strum.workspace = true
+tempfile.workspace = true
+testcontainers.workspace = true
+test-utils = { path = "libs/test-utils" }
+tokio = { workspace = true, features = ["process"] }
+
+[features]
+default = [
+    "signature-cosign-rustls",
+    "keywrap-grpc",
+    "oci-client-rustls",
+    "signature-simple-xrss",
+]
+
+# This will be based on `ring` dependency
+kata-cc-rustls-tls = [
+    "encryption-ring",
+    "keywrap-ttrpc",
+    "signature-cosign-rustls",
+    "signature-simple",
+    "kbs",
+    "oci-client/rustls-tls",
+    "reqwest?/rustls",
+]
+# This will be based on `openssl` dependency
+kata-cc-native-tls = [
+    "encryption-openssl",
+    "keywrap-ttrpc",
+    "signature-cosign-native",
+    "signature-simple",
+    "kbs",
+    "oci-client/native-tls",
+    "reqwest?/native-tls",
+]
+
+encryption = ["ocicrypt-rs/block-cipher"]
+encryption-ring = [
+    "ocicrypt-rs/block-cipher-ring",
+    "kbc?/rust-crypto",
+    "encryption",
+]
+encryption-openssl = [
+    "ocicrypt-rs/block-cipher-openssl",
+    "kbc?/openssl",
+    "encryption",
+]
+
+keywrap-cmd = ["ocicrypt-rs/keywrap-keyprovider-cmd"]
+
+keywrap-grpc = ["ocicrypt-rs/keywrap-keyprovider-grpc", "tonic", "protos/grpc"]
+keywrap-native = [
+    "ocicrypt-rs/keywrap-keyprovider-native",
+    "kbc/cc_kbc",
+    "kbc/sample_kbc",
+    "kbc/sgx-attester",
+    "resource_uri",
+]
+keywrap-ttrpc = [
+    "ocicrypt-rs/keywrap-keyprovider-ttrpc",
+    "dep:ttrpc",
+    "protos/ttrpc",
+]
+
+# Enable keywrap-jwe to decrypt image
+keywrap-jwe = ["ocicrypt-rs/keywrap-jwe"]
+
+signature = []
+signature-cosign = [
+    "signature",
+    "futures",
+    "sigstore/registry",
+    "sigstore/cosign",
+]
+signature-cosign-rustls = [
+    "signature-cosign",
+    "sigstore/rustls-tls",
+    "sigstore/rustls-tls-native-roots",
+]
+signature-cosign-native = ["signature-cosign", "sigstore/native-tls"]
+
+oci-client-rustls = ["oci-client/rustls-tls"]
+oci-client-native = ["oci-client/native-tls"]
+
+signature-simple-xrss = ["signature-simple", "reqwest/query"]
+signature-simple = ["signature", "pgp", "serde_yaml"]
+
+# This features controls whether kbs uri scheme is supported in resource location, s.t. `kbs://...`
+# it will try to connect to a service with `GetResource` API, typically `Confidential Data Hub`.
+# The concrete way is via ttrpc (aligns with feature `keywrap-ttrpc`), gRPC (aligns with `keywrap-grpc`)
+# or directly connects to KBS (aligns with feature `keywrap-native`. This way is used in enclave-cc)
+kbs = []
+
+verity = ["devicemapper"]
+
+[[bench]]
+name = "image-pull"
+harness = false
+test = false

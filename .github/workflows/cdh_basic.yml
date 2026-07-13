@@ -1,0 +1,75 @@
+name: confidential-data-hub basic build and unit tests
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - 'image-rs/**'
+      - 'confidential-data-hub/**'
+      - '.github/workflows/cdh_basic.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  pull_request:
+    paths:
+      - 'image-rs/**'
+      - 'confidential-data-hub/**'
+      - '.github/workflows/cdh_basic.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  create:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  basic_ci:
+    if: github.event_name != 'push'
+    name: Check
+    defaults:
+      run:
+        working-directory: ./confidential-data-hub
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-s390x
+          - ubuntu-24.04-arm
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Code checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          components: rustfmt, clippy
+
+      - name: Install cryptsetup and zfs
+        run: |
+          sudo apt-get update && sudo apt-get install -y cryptsetup pkg-config zfsutils-linux
+
+      - name: Build and install
+        run: |
+          mkdir -p ${HOME}/.local/bin
+          LIBC=gnu make RESOURCE_PROVIDER=kbs,sev && LIBC=gnu make install PREFIX=${HOME}/.local
+
+      - name: Run cargo fmt check
+        run: cargo fmt -p kms -p confidential-data-hub -- --check
+
+      - name: Run rust lint check
+        run: cargo clippy -p kms -p confidential-data-hub -- -D warnings
+
+      - name: Run cargo test
+        run: |
+          sudo -E PATH=$PATH -s RUST_LOG=warn cargo test --features kbs,aliyun,sev,bin -p kms -p confidential-data-hub -- --nocapture

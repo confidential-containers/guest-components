@@ -1,0 +1,90 @@
+// Copyright (c) 2023 Alibaba Cloud
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+use attester::{detect_attestable_devices, detect_tee_type, BoxedAttester};
+use clap::Parser;
+use kbs_types::Tee;
+use std::io::Read;
+use tokio::fs;
+use tracing_subscriber::{fmt, EnvFilter};
+
+#[derive(Debug, Parser)]
+#[command(author)]
+enum Cli {
+    /// Read report data from stdin. The input must be 64 bytes in length
+    Stdio,
+
+    /// Read report data from commandline. If the length of input is longer than
+    /// 64 bytes, the input will be truncated. If shorter, it will be padded by `\0`.
+    Commandline { data: String },
+
+    /// Read report data from the given file. If the length of input is longer than
+    /// 64 bytes, the input will be truncated. If shorter, it will be padded by `\0`.
+    File { path: String },
+}
+
+/// Some CPU TEE platforms may impose platform-specific limits on report_data.
+fn adjust_report_data(tee: Tee, report_data: &[u8]) -> Vec<u8> {
+    match tee {
+        Tee::AzSnpVtpm | Tee::AzTdxVtpm => report_data[..report_data.len().min(32)].to_vec(),
+        _ => report_data.to_vec(),
+    }
+}
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
+    let env_filter = match std::env::var_os("RUST_LOG") {
+        Some(_) => EnvFilter::try_from_default_env().expect("RUST_LOG is present but invalid"),
+        None => EnvFilter::new("info"),
+    };
+
+    fmt()
+        .with_env_filter(env_filter)
+        .with_writer(std::io::stderr)
+        .init();
+
+    let mut report_data = vec![0u8; 64];
+
+    let cli = Cli::parse();
+
+    match cli {
+        Cli::Stdio => {
+            std::io::stdin()
+                .read(&mut report_data)
+                .expect("read input failed");
+        }
+        Cli::Commandline { data } => {
+            let len = data.len().min(64);
+            report_data[..len].copy_from_slice(&data.as_bytes()[..len]);
+        }
+        Cli::File { path } => {
+            let content = fs::read(path)
+                .await
+                .expect("read report data from file failed");
+            let len = content.len().min(64);
+            report_data[..len].copy_from_slice(&content[..len]);
+        }
+    }
+
+    let tee = detect_tee_type();
+    let evidence = TryInto::<BoxedAttester>::try_into(tee)
+        .expect("Failed to initialize attester.")
+        .get_evidence(adjust_report_data(tee, &report_data))
+        .await
+        .expect("get evidence failed");
+    println!("{:?}:{evidence}", detect_tee_type());
+
+    for tee in detect_attestable_devices() {
+        let attester =
+            TryInto::<BoxedAttester>::try_into(tee).expect("Failed to initialize device attester");
+
+        let evidence = attester
+            .get_evidence(report_data.clone())
+            .await
+            .expect("get additional evidence failed");
+
+        println!("{tee:?}:{evidence}");
+    }
+}

@@ -1,0 +1,45 @@
+name: attestation-agent occlum_sgx tests
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'attestation-agent/attester/src/sgx_dcap'
+      - 'attestation-agent/ci/occlum**'
+      - '.github/workflows/aa_occlum_sgx.yml'
+  pull_request:
+    paths:
+      - 'attestation-agent/attester/src/sgx_dcap'
+      - 'attestation-agent/ci/occlum**'
+      - '.github/workflows/aa_occlum_sgx.yml'
+  create:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  occlum_sgx_ci:
+    if: github.event_name != 'push'
+    runs-on: sgx
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: true
+
+      - name: Compile Occlum Example
+        run: cd attestation-agent && /home/xynnn/.cargo/bin/cargo build -p attester --bin evidence_getter --no-default-features --features bin,sgx-attester
+
+      - name: Run Occlum instance
+        run: |
+          docker run --rm -i --device /dev/sgx_enclave --device /dev/sgx_provision -v ~/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf -v $(pwd):/home occlum/occlum:latest-ubuntu20.04 bash -c "cd /home/attestation-agent/ci && ./occlum.sh"

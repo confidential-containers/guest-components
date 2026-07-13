@@ -1,0 +1,251 @@
+# The ttrpc sock of CDH that is used to listen to the requests
+socket = "unix:///run/confidential-containers/cdh.sock"
+
+# KBC related configs.
+[kbc]
+# Required. The KBC name. It could be `cc_kbc`, `online_sev_kbc` or
+# `offline_fs_kbc`. All the items under `[credentials]` will be
+# retrieved using the kbc.
+name = "cc_kbc"
+
+# Required. The URL of KBS. If `name` is either `cc_kbc` or
+# `online_sev_kbc`, this URL will be used to connect to the
+# CoCoKBS (for cc_kbc) or Simple-KBS (for online_sev_kbc). If
+# `name` is `offline_fs_kbc`, This URL will be ignored.
+url = "http://example.io:8080"
+
+# Optional. The public key cert of KBS. If not given, CDH will
+# try to use HTTP to connect the server.
+kbs_cert = """
+-----BEGIN CERTIFICATE-----
+MIIFTDCCAvugAwIBAgIBADBGBgkqhkiG9w0BAQowOaAPMA0GCWCGSAFlAwQCAgUA
+oRwwGgYJKoZIhvcNAQEIMA0GCWCGSAFlAwQCAgUAogMCATCjAwIBATB7MRQwEgYD
+VQQLDAtFbmdpbmVlcmluZzELMAkGA1UEBhMCVVMxFDASBgNVBAcMC1NhbnRhIENs
+YXJhMQswCQYDVQQIDAJDQTEfMB0GA1UECgwWQWR2YW5jZWQgTWljcm8gRGV2aWNl
+czESMBAGA1UEAwwJU0VWLU1pbGFuMB4XDTIzMDEyNDE3NTgyNloXDTMwMDEyNDE3
+NTgyNlowejEUMBIGA1UECwwLRW5naW5lZXJpbmcxCzAJBgNVBAYTAlVTMRQwEgYD
+VQQHDAtTYW50YSBDbGFyYTELMAkGA1UECAwCQ0ExHzAdBgNVBAoMFkFkdmFuY2Vk
+IE1pY3JvIERldmljZXMxETAPBgNVBAMMCFNFVi1WQ0VLMHYwEAYHKoZIzj0CAQYF
+K4EEACIDYgAExmG1ZbuoAQK93USRyZQcsyobfbaAEoKEELf/jK39cOVJt1t4s83W
+XM3rqIbS7qHUHQw/FGyOvdaEUs5+wwxpCWfDnmJMAQ+ctgZqgDEKh1NqlOuuKcKq
+2YAWE5cTH7sHo4IBFjCCARIwEAYJKwYBBAGceAEBBAMCAQAwFwYJKwYBBAGceAEC
+BAoWCE1pbGFuLUIwMBEGCisGAQQBnHgBAwEEAwIBAzARBgorBgEEAZx4AQMCBAMC
+AQAwEQYKKwYBBAGceAEDBAQDAgEAMBEGCisGAQQBnHgBAwUEAwIBADARBgorBgEE
+AZx4AQMGBAMCAQAwEQYKKwYBBAGceAEDBwQDAgEAMBEGCisGAQQBnHgBAwMEAwIB
+CDARBgorBgEEAZx4AQMIBAMCAXMwTQYJKwYBBAGceAEEBEDDhCejDUx6+dlvehW5
+cmmCWmTLdqI1L/1dGBFdia1HP46MC82aXZKGYSutSq37RCYgWjueT+qCMBE1oXDk
+d1JOMEYGCSqGSIb3DQEBCjA5oA8wDQYJYIZIAWUDBAICBQChHDAaBgkqhkiG9w0B
+AQgwDQYJYIZIAWUDBAICBQCiAwIBMKMDAgEBA4ICAQACgCai9x8DAWzX/2IelNWm
+ituEBSiq9C9eDnBEckQYikAhPasfagnoWFAtKu/ZWTKHi+BMbhKwswBS8W0G1ywi
+cUWGlzigI4tdxxf1YBJyCoTSNssSbKmIh5jemBfrvIBo1yEd+e56ZJMdhN8e+xWU
+bvovUC2/7Dl76fzAaACLSorZUv5XPJwKXwEOHo7FIcREjoZn+fKjJTnmdXce0LD6
+9RHr+r+ceyE79gmK31bI9DYiJoL4LeGdXZ3gMOVDR1OnDos5lOBcV+quJ6JujpgH
+d9g3Sa7Du7pusD9Fdap98ocZslRfFjFi//2YdVM4MKbq6IwpYNB+2PCEKNC7SfbO
+NgZYJuPZnM/wViES/cP7MZNJ1KUKBI9yh6TmlSsZZOclGJvrOsBZimTXpATjdNMt
+cluKwqAUUzYQmU7bf2TMdOXyA9iH5wIpj1kWGE1VuFADTKILkTc6LzLzOWCofLxf
+onhTtSDtzIv/uel547GZqq+rVRvmIieEuEvDETwuookfV6qu3D/9KuSr9xiznmEg
+xynud/f525jppJMcD/ofbQxUZuGKvb3f3zy+aLxqidoX7gca2Xd9jyUy5Y/83+ZN
+bz4PZx81UJzXVI9ABEh8/xilATh1ZxOePTBJjN7lgr0lXtKYjV/43yyxgUYrXNZS
+oLSG2dLCK9mjjraPjau34Q==
+-----END CERTIFICATE-----
+"""
+
+# credentials are items that will be retrieved from KBS when CDH
+# is launched. `resource_uri` refers to the KBS resource uri and
+# `path` is where to place the file.
+# `path` must be with prefix `/run/confidential-containers/cdh/kbs`,
+# or it will be blocked by CDH.
+[[credentials]]
+path = "/run/confidential-containers/cdh/kbs/kms-credential/aliyun/ecsRamRole.json"
+resource_uri = "kbs:///default/aliyun/ecs_ram_role"
+
+[[credentials]]
+path = "/run/confidential-containers/cdh/kbs/test/file"
+resource_uri = "kbs:///default/test/file"
+
+[image]
+
+# The maximum number of layers downloaded concurrently when
+# pulling one specific image.
+#
+# This defaults to 3.
+max_concurrent_layer_downloads_per_image = 3
+
+# Sigstore config file URI for simple signing scheme.
+#
+# When `image_security_policy_uri` is set and `SimpleSigning` (signedBy) is
+# used in the policy, the signatures of the images would be used for image
+# signature validation. This policy will record where the signatures is.
+#
+# Now it supports two different forms:
+# - `KBS URI`: the sigstore config file will be fetched from KBS,
+# e.g. `kbs:///default/sigstore-config/test`.
+# - `Local Path`: the sigstore config file will be fetched from somewhere locally,
+# e.g. `file:///etc/simple-signing.yaml`.
+#
+# By default this value is not set.
+sigstore_config_uri = "kbs:///default/sigstore-config/test"
+
+# If any image security policy would be used to control the image pulling
+# like signature verification, this field is used to set the URI of the
+# policy file.
+#
+# Now it supports two different forms:
+# - `KBS URI`: the image security policy will be fetched from KBS.
+# - `Local Path`: the security policy will be fetched from somewhere locally.
+# e.g. `file:///etc/image-policy.json`.
+#
+# The policy follows the format of
+# <https://github.com/containers/image/blob/main/docs/containers-policy.json.5.md>.
+#
+# At the same time, some enhencements based on CoCo is used, that is the
+# `keyPath` field can be filled with a KBS URI like `kbs:///default/key/1`
+#
+# By default this value is not set.
+image_security_policy_uri = "kbs:///default/security-policy/test"
+
+# If any credential auth (Base) would be used to connect to download
+# image from private registry, this field is used to set the URI of the
+# credential file.
+#
+# Now it supports two different forms:
+# - `KBS URI`: the registry auth will be fetched from KBS,
+# e.g. `kbs:///default/credential/test`.
+# - `Local Path`: the registry auth will be fetched from somewhere locally,
+# e.g. `file:///etc/image-registry-auth.json`.
+#
+# By default this value is not set.
+#
+# Note that if an environment variable `CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS`
+# is set, the value of the environment variable will be used.
+authenticated_registry_credentials_uri = "kbs:///default/credential/test"
+
+# Registry configuration supports defining registry blocking, mirroring,
+# and remapping rules. This field points to a registry configuration file,
+# which can either be stored locally in the rootfs or retrieved from the KBS.
+#
+# See https://github.com/confidential-containers/guest-components/blob/main/image-rs/docs/registry_configuration.md
+# for more details about the registry configuration file.
+#
+# Now it supports two different forms:
+# - `KBS URI`: the registry configuration will be fetched from KBS,
+# e.g. `kbs:///default/registry-configuration/test`.
+# - `Local Path`: the registry configuration will be fetched from somewhere locally,
+# e.g. `file:///etc/registry-configuration.json`.
+#
+# By default this value is not set.
+registry_configuration_uri = "kbs:///default/registry-configuration/test"
+
+# Registry configuration supports registry blocking, mirroring and remapping rules.
+# This field points to a registry configuration file, which can either be stored locally
+# in the rootfs or retrieved from initdata.
+#
+# By default this value is not set.
+[image.registry_config]
+unqualified-search-registries = ["docker.io", "example1.com"]
+
+[[image.registry_config.registry]]
+prefix = "example.com/banned"
+blocked = true
+
+[[image.registry_config.registry]]
+prefix = "example.com/foo"
+insecure = false
+blocked = false
+location = "internal-registry-for-example.com/bar"
+
+[[image.registry_config.registry.mirror]]
+location = "example-mirror-0.local/mirror-for-foo"
+
+[[image.registry_config.registry.mirror]]
+location = "example-mirror-1.local/mirrors/foo"
+insecure = true
+
+[[image.registry_config.registry]]
+location = "docker.io"
+
+[[image.registry_config.registry.mirror]]
+location = "123456.mirror.aliyuncs.com"
+
+# To support registries with self-signed or privately-signed TLS certificates,
+# or HTTPS proxies that use such certificates. This config item adds extra
+# trusted root CA certificates (in PEM format).
+#
+# IMPORTANT: This works by adding the cert as a trusted root CA. Therefore:
+# - Supply the CA certificate that signed the registry's (or proxy's) TLS certificate.
+# - If using a self-signed certificate, it must have the CA:true Basic Constraints
+#   extension (i.e., it acts as both CA and leaf). Plain self-signed leaf certificates
+#   (without CA:true) are NOT supported when using rustls (the default TLS backend).
+# - These certificates are trusted for both direct registry connections and
+#   connections through an HTTPS proxy (see [image.image_pull_proxy] below).
+#
+# By default this value is not set.
+extra_root_certificates = ["""
+-----BEGIN CERTIFICATE-----
+MIIFTDCCAvugAwIBAgIBADBGBgkqhkiG9w0BAQowOaAPMA0GCWCGSAFlAwQCAgUA
+oRwwGgYJKoZIhvcNAQEIMA0GCWCGSAFlAwQCAgUAogMCATCjAwIBATB7MRQwEgYD
+VQQLDAtFbmdpbmVlcmluZzELMAkGA1UEBhMCVVMxFDASBgNVBAcMC1NhbnRhIENs
+YXJhMQswCQYDVQQIDAJDQTEfMB0GA1UECgwWQWR2YW5jZWQgTWljcm8gRGV2aWNl
+czESMBAGA1UEAwwJU0VWLU1pbGFuMB4XDTIzMDEyNDE3NTgyNloXDTMwMDEyNDE3
+NTgyNlowejEUMBIGA1UECwwLRW5naW5lZXJpbmcxCzAJBgNVBAYTAlVTMRQwEgYD
+VQQHDAtTYW50YSBDbGFyYTELMAkGA1UECAwCQ0ExHzAdBgNVBAoMFkFkdmFuY2Vk
+IE1pY3JvIERldmljZXMxETAPBgNVBAMMCFNFVi1WQ0VLMHYwEAYHKoZIzj0CAQYF
+K4EEACIDYgAExmG1ZbuoAQK93USRyZQcsyobfbaAEoKEELf/jK39cOVJt1t4s83W
+XM3rqIbS7qHUHQw/FGyOvdaEUs5+wwxpCWfDnmJMAQ+ctgZqgDEKh1NqlOuuKcKq
+2YAWE5cTH7sHo4IBFjCCARIwEAYJKwYBBAGceAEBBAMCAQAwFwYJKwYBBAGceAEC
+BAoWCE1pbGFuLUIwMBEGCisGAQQBnHgBAwEEAwIBAzARBgorBgEEAZx4AQMCBAMC
+AQAwEQYKKwYBBAGceAEDBAQDAgEAMBEGCisGAQQBnHgBAwUEAwIBADARBgorBgEE
+AZx4AQMGBAMCAQAwEQYKKwYBBAGceAEDBwQDAgEAMBEGCisGAQQBnHgBAwMEAwIB
+CDARBgorBgEEAZx4AQMIBAMCAXMwTQYJKwYBBAGceAEEBEDDhCejDUx6+dlvehW5
+cmmCWmTLdqI1L/1dGBFdia1HP46MC82aXZKGYSutSq37RCYgWjueT+qCMBE1oXDk
+d1JOMEYGCSqGSIb3DQEBCjA5oA8wDQYJYIZIAWUDBAICBQChHDAaBgkqhkiG9w0B
+AQgwDQYJYIZIAWUDBAICBQCiAwIBMKMDAgEBA4ICAQACgCai9x8DAWzX/2IelNWm
+ituEBSiq9C9eDnBEckQYikAhPasfagnoWFAtKu/ZWTKHi+BMbhKwswBS8W0G1ywi
+cUWGlzigI4tdxxf1YBJyCoTSNssSbKmIh5jemBfrvIBo1yEd+e56ZJMdhN8e+xWU
+bvovUC2/7Dl76fzAaACLSorZUv5XPJwKXwEOHo7FIcREjoZn+fKjJTnmdXce0LD6
+9RHr+r+ceyE79gmK31bI9DYiJoL4LeGdXZ3gMOVDR1OnDos5lOBcV+quJ6JujpgH
+d9g3Sa7Du7pusD9Fdap98ocZslRfFjFi//2YdVM4MKbq6IwpYNB+2PCEKNC7SfbO
+NgZYJuPZnM/wViES/cP7MZNJ1KUKBI9yh6TmlSsZZOclGJvrOsBZimTXpATjdNMt
+cluKwqAUUzYQmU7bf2TMdOXyA9iH5wIpj1kWGE1VuFADTKILkTc6LzLzOWCofLxf
+onhTtSDtzIv/uel547GZqq+rVRvmIieEuEvDETwuookfV6qu3D/9KuSr9xiznmEg
+xynud/f525jppJMcD/ofbQxUZuGKvb3f3zy+aLxqidoX7gca2Xd9jyUy5Y/83+ZN
+bz4PZx81UJzXVI9ABEh8/xilATh1ZxOePTBJjN7lgr0lXtKYjV/43yyxgUYrXNZS
+oLSG2dLCK9mjjraPjau34Q==
+-----END CERTIFICATE-----
+"""]
+
+# The path to store the pulled image layer data.
+#
+# This value defaults to `/run/image-rs/`.
+work_dir = "/run/image-rs"
+
+[image.image_pull_proxy]
+
+# HTTPS proxy that will be used to pull image.
+#
+# If the proxy itself uses a self-signed or privately-signed TLS certificate,
+# add its CA certificate via `extra_root_certificates` (see above). The same
+# rustls limitations apply: plain self-signed leaf certs (without CA:true) are
+# not supported
+#
+# By default this value is not set.
+https_proxy = "http://127.0.0.1:5432"
+
+# HTTP proxy that will be used to pull image
+#
+# By default this value is not set.
+http_proxy = "http://127.0.0.1:5432"
+
+# No proxy env that will be used to pull image.
+#
+# This will ensure that when we access the image registry with specified
+# IPs, both `https_proxy` and `http_proxy` will not be used.
+#
+# If neither `https_proxy` nor `http_proxy` is not set, this field will do nothing.
+#
+# By default this value is not set.
+no_proxy = "192.168.0.1,localhost"
+
+[log]
+# log level
+level = "info"

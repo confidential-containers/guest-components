@@ -1,0 +1,13 @@
+[log]
+level = "warn"
+
+[token_configs]
+[token_configs.coco_as]
+url = "http://127.0.0.1:8000"
+
+[token_configs.kbs]
+url = "https://127.0.0.1:8080"
+
+[eventlog_config]
+init_pcr = 17
+enable_eventlog = false

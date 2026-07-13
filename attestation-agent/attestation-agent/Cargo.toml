@@ -1,0 +1,113 @@
+[package]
+name = "attestation-agent"
+version = "0.1.0"
+authors = ["The Attestation Agent Authors"]
+publish = false
+edition = "2021"
+license = "Apache-2.0"
+
+[[bin]]
+name = "grpc-aa"
+required-features = ["bin", "grpc"]
+
+[[bin]]
+name = "ttrpc-aa"
+required-features = ["bin", "ttrpc"]
+
+[[bin]]
+name = "ttrpc-aa-client"
+required-features = ["bin", "ttrpc"]
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+attester = { path = "../attester", default-features = false }
+crypto = { path = "../deps/crypto" }
+base64.workspace = true
+byteorder = "1.5.0"
+clap = { workspace = true, features = ["derive"], optional = true }
+config.workspace = true
+const_format.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true, optional = true }
+hex.workspace = true
+kbs_protocol = { path = "../kbs_protocol", default-features = false, optional = true }
+kbs-types.workspace = true
+protos = { path = "../../protos", default-features = false, optional = true }
+reqwest = { workspace = true, features = ["json"], optional = true }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+shadow-rs = { workspace = true, optional = true }
+strum.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["fs", "sync"] }
+toml.workspace = true
+tonic = { workspace = true, optional = true }
+ttrpc = { workspace = true, features = ["async"], optional = true }
+
+[dev-dependencies]
+rstest.workspace = true
+serial_test.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[build-dependencies]
+shadow-rs.workspace = true
+
+[features]
+default = ["rust-crypto", "ttrpc", "grpc"]
+
+# Attestation Token support
+token = []
+
+# KBS Token
+kbs = ["kbs_protocol/background_check", "token"]
+
+# CoCoAS Attestation Token
+coco_as = ["reqwest", "token"]
+
+all-attesters = [
+    "tdx-attester",
+    "sgx-attester",
+    "az-snp-vtpm-attester",
+    "az-tdx-vtpm-attester",
+    "snp-attester",
+    "se-attester",
+    "cca-attester",
+    "tpm-attester",
+]
+tdx-attester = ["kbs_protocol?/tdx-attester", "attester/tdx-attester"]
+tdx-attester-libtdx = [
+    "kbs_protocol?/tdx-attester-libtdx",
+    "attester/tdx-attester",
+    "attester/tdx-attest-dcap-ioctls",
+]
+sgx-attester = ["kbs_protocol?/sgx-attester", "attester/sgx-attester"]
+az-snp-vtpm-attester = [
+    "kbs_protocol?/az-snp-vtpm-attester",
+    "attester/az-snp-vtpm-attester",
+]
+az-tdx-vtpm-attester = [
+    "kbs_protocol?/az-tdx-vtpm-attester",
+    "attester/az-tdx-vtpm-attester",
+]
+snp-attester = ["kbs_protocol?/snp-attester", "attester/snp-attester"]
+se-attester = ["kbs_protocol?/se-attester", "attester/se-attester"]
+cca-attester = ["kbs_protocol?/cca-attester", "attester/cca-attester"]
+csv-attester = ["kbs_protocol?/csv-attester", "attester/csv-attester"]
+hygon-dcu-attester = [
+    "kbs_protocol?/hygon-dcu-attester",
+    "attester/hygon-dcu-attester",
+]
+tpm-attester = ["kbs_protocol?/tpm-attester", "attester/tpm-attester"]
+nvidia-attester = ["kbs_protocol?/nvidia-attester", "attester/nvidia-attester"]
+
+# Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
+rust-crypto = ["kbs_protocol?/rust-crypto"]
+openssl = ["kbs_protocol?/openssl"]
+
+# Binary RPC type
+bin = ["clap", "shadow-rs", "tracing-subscriber", "tokio/rt-multi-thread"]
+grpc = ["tokio/signal", "tonic", "protos/grpc"]
+ttrpc = ["dep:ttrpc", "tokio/signal", "protos/ttrpc"]

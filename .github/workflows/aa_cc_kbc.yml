@@ -1,0 +1,83 @@
+name: attestation-agent cc_kbc tests
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'attestation-agent/kbc/cc_kbc/**'
+      - 'attestation-agent/kbs_protocol/**'
+      - 'attestation-agent/lib/**'
+      - '.github/workflows/aa_cc_kbc.yml'
+  pull_request:
+    paths:
+      - 'attestation-agent/kbc/cc_kbc/**'
+      - 'attestation-agent/kbs_protocol/**'
+      - 'attestation-agent/lib/**'
+      - '.github/workflows/aa_cc_kbc.yml'
+  create:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cc_kbc_ci:
+    if: github.event_name != 'push'
+    name: Check
+    defaults:
+      run:
+        working-directory: ./attestation-agent
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+        include:
+          - instance: ubuntu-24.04
+            attester: snp-attester
+          - instance: ubuntu-24.04
+            attester: tdx-attester
+          - instance: ubuntu-24.04
+            attester: az-snp-vtpm-attester
+          - instance: ubuntu-24.04
+            attester: az-tdx-vtpm-attester
+          - instance: ubuntu-24.04-arm
+            attester: cca-attester
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Code checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          components: rustfmt, clippy
+
+      - name: Update apt source list
+        run: |
+          sudo apt-get update
+
+      - name: Install TPM dependencies
+        run: |
+          sudo apt-get install -y libtss2-dev
+        if: matrix.instance == 'ubuntu-24.04'
+
+      - name: Build and install with ${{ matrix.attester }} feature
+        run: |
+          make ATTESTER=${{ matrix.attester }} && make install
+
+      - name: Run rust lint check
+        run: cargo clippy -p kbc --all-targets --features cc_kbc,${{ matrix.attester }},rust-crypto -- -D warnings
+
+      - name: Run cargo test
+        run: cargo test --features cc_kbc,${{ matrix.attester }},rust-crypto -p kbc

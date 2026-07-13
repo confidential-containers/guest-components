@@ -1,0 +1,75 @@
+name: trustee-attester basic build
+
+on:
+  pull_request:
+    paths:
+      - 'attestation-agent/**'
+      - '.github/workflows/trustee-attester.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  create:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trustee_attester_ci:
+    name: Check
+    defaults:
+      run:
+        working-directory: ./attestation-agent/kbs_protocol/
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-s390x
+          - ubuntu-24.04-arm
+        include:
+          - instance: ubuntu-24.04
+            cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,all-attesters,bin"
+          - instance: ubuntu-24.04-s390x
+            cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,se-attester,bin"
+          - instance: ubuntu-24.04-arm
+            cargo_test_opts: "-p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,cca-attester,bin"
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Code checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          components: rustfmt, clippy
+
+      - name: Install TPM dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libtss2-dev
+        if: matrix.instance == 'ubuntu-24.04'
+
+      - name: Install dm-verity dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdevmapper-dev
+
+      - name: Run cargo build
+        run: cargo build ${{ matrix.cargo_test_opts }}
+
+      - name: Run cargo test
+        run: cargo test ${{ matrix.cargo_test_opts }}
+
+      - name: Run cargo fmt check
+        run: cargo fmt --all -- --check
+
+      - name: Run rust clippy
+        run: cargo clippy ${{ matrix.cargo_test_opts }}

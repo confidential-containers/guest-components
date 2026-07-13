@@ -1,0 +1,98 @@
+name: attestation-agent basic build and unit tests
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - 'attestation-agent/**'
+      - '.github/workflows/aa_basic.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  pull_request:
+    paths:
+      - 'attestation-agent/**'
+      - '.github/workflows/aa_basic.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  create:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  basic_ci:
+    if: github.event_name != 'push'
+    name: Check
+    defaults:
+      run:
+        working-directory: ./attestation-agent
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-s390x
+          - ubuntu-24.04-arm
+        include:
+          - instance: ubuntu-24.04
+            make_args: ""
+            cargo_test_opts: "--features openssl,rust-crypto,all-attesters,kbs,coco_as,ttrpc,grpc"
+          - instance: ubuntu-24.04-s390x
+            make_args: "ATTESTER=se-attester TEE_PLATFORM=se"
+            cargo_test_opts: "--no-default-features --features openssl,passport,se-attester,kbs,coco_as"
+          - instance: ubuntu-24.04-arm
+            make_args: "ATTESTER=cca-attester TEE_PLATFORM=cca"
+            cargo_test_opts: "--no-default-features --features openssl,rust-crypto,passport,cca-attester,kbs,coco_as,ttrpc,grpc"
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Code checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          components: rustfmt, clippy
+
+      - name: Install TPM dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libtss2-dev
+        if: matrix.instance == 'ubuntu-24.04'
+
+      - name: Install dm-verity dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdevmapper-dev
+
+      - name: Gnu build and install with ttrpc
+        run: |
+          mkdir -p ${HOME}/.local/bin
+          eval make ttrpc=true ${MAKE_ARGS} && make install PREFIX=${HOME}/.local
+        env:
+          MAKE_ARGS: ${{ matrix.make_args }}
+
+      - name: Musl build with all platform
+        run: |
+          make LIBC=musl ttrpc=true ATTESTER=none
+        if: matrix.instance == 'ubuntu-24.04'
+
+      - name: Run cargo test
+        run: |
+          sudo -E PATH=$PATH -s cargo test ${{ matrix.cargo_test_opts }} -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p crypto -p resource_uri
+
+      - name: Run cargo fmt check
+        run: cargo fmt --all -- --check
+
+      - name: Run rust lint check
+        run: |
+          sudo -E PATH=$PATH -s make lint

@@ -1,0 +1,190 @@
+// Copyright (c) 2024 Alibaba Cloud
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+//! This tool is to test ttrpc Confidential Data Hub
+
+#![allow(non_snake_case)]
+
+use base64::{engine::general_purpose::STANDARD, Engine};
+use clap::{Args, Parser, Subcommand};
+use confidential_data_hub::storage::volume_type::Storage;
+
+use protos::ttrpc::cdh::{
+    api::{GetResourceRequest, ImagePullRequest, SecureMountRequest, UnsealSecretInput},
+    api_ttrpc::{
+        GetResourceServiceClient, ImagePullServiceClient, SealedSecretServiceClient,
+        SecureMountServiceClient,
+    },
+    keyprovider::KeyProviderKeyWrapProtocolInput,
+    keyprovider_ttrpc::KeyProviderServiceClient,
+};
+use ttrpc::context;
+
+const NANO_PER_SECOND: i64 = 1000 * 1000 * 1000;
+
+#[derive(Parser)]
+#[command(name = "cdh_client_ttrpc")]
+#[command(bin_name = "cdh_client_ttrpc")]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    operation: Operation,
+
+    /// ttrpc socket path
+    #[arg(short, long, default_value_t = String::from("unix:///run/confidential-containers/cdh.sock"))]
+    socket: String,
+
+    /// request timeout (second)
+    #[arg(short, long, default_value_t = 50)]
+    timeout: i64,
+}
+
+#[derive(Subcommand)]
+#[command(author, version, about, long_about = None)]
+enum Operation {
+    /// Unseal the given sealed secret
+    UnsealSecret(UnsealSecretArgs),
+
+    /// Unwrap the image encryption key
+    UnwrapKey(UnwrapKeyArgs),
+
+    /// Get Resource from KBS
+    GetResource(GetResourceArgs),
+
+    /// Secure mount
+    SecureMount(SecureMountArgs),
+
+    /// Pull image
+    PullImage(PullImageArgs),
+}
+
+#[derive(Args)]
+#[command(author, version, about, long_about = None)]
+struct UnsealSecretArgs {
+    /// path to the file which contains the sealed secret
+    #[arg(short, long)]
+    secret_path: String,
+}
+
+#[derive(Args)]
+#[command(author, version, about, long_about = None)]
+struct UnwrapKeyArgs {
+    /// path to the file which contains the AnnotationPacket
+    #[arg(short, long)]
+    annotation_path: String,
+}
+
+#[derive(Args)]
+#[command(author, version, about, long_about = None)]
+struct GetResourceArgs {
+    /// KBS Resource URI to the target resource
+    #[arg(short, long)]
+    resource_uri: String,
+}
+
+#[derive(Args)]
+#[command(author, version, about, long_about = None)]
+struct SecureMountArgs {
+    /// path to the file which contains the Storage object.
+    #[arg(short, long)]
+    storage_path: String,
+}
+
+#[derive(Args)]
+#[command(author, version, about, long_about = None)]
+struct PullImageArgs {
+    /// Reference of the image
+    #[arg(short, long)]
+    image_url: String,
+
+    /// Path to store the image bundle
+    #[arg(short, long)]
+    bundle_path: String,
+}
+
+#[tokio::main]
+async fn main() {
+    let args = Cli::parse();
+    let inner = ttrpc::asynchronous::Client::connect(&args.socket)
+        .await
+        .expect("connect ttrpc socket");
+
+    match args.operation {
+        Operation::UnsealSecret(arg) => {
+            let client = SealedSecretServiceClient::new(inner);
+            let secret = tokio::fs::read(arg.secret_path).await.expect("read file");
+            let req = UnsealSecretInput {
+                secret,
+                ..Default::default()
+            };
+            let res = client
+                .unseal_secret(context::with_timeout(args.timeout * NANO_PER_SECOND), &req)
+                .await
+                .expect("request to CDH");
+            let res = STANDARD.encode(res.plaintext);
+            println!("{res}");
+        }
+        Operation::UnwrapKey(arg) => {
+            let client = KeyProviderServiceClient::new(inner);
+            let KeyProviderKeyWrapProtocolInput = tokio::fs::read(arg.annotation_path)
+                .await
+                .expect("read file");
+            let req = KeyProviderKeyWrapProtocolInput {
+                KeyProviderKeyWrapProtocolInput,
+                ..Default::default()
+            };
+            let res = client
+                .un_wrap_key(context::with_timeout(args.timeout * NANO_PER_SECOND), &req)
+                .await
+                .expect("request to CDH");
+            let res = STANDARD.encode(res.KeyProviderKeyWrapProtocolOutput);
+            println!("{res}");
+        }
+        Operation::GetResource(arg) => {
+            let client = GetResourceServiceClient::new(inner);
+            let req = GetResourceRequest {
+                ResourcePath: arg.resource_uri,
+                ..Default::default()
+            };
+            let res = client
+                .get_resource(context::with_timeout(args.timeout * NANO_PER_SECOND), &req)
+                .await
+                .expect("request to CDH");
+            let res = STANDARD.encode(res.Resource);
+            println!("{res}");
+        }
+        Operation::SecureMount(arg) => {
+            let client = SecureMountServiceClient::new(inner);
+            let storage_manifest = tokio::fs::read(arg.storage_path).await.expect("read file");
+            let storage: Storage =
+                serde_json::from_slice(&storage_manifest).expect("deserialize Storage");
+            let req = SecureMountRequest {
+                volume_type: storage.volume_type,
+                flags: storage.flags,
+                options: storage.options,
+                mount_point: storage.mount_point,
+                ..Default::default()
+            };
+            let _ = client
+                .secure_mount(context::with_timeout(args.timeout * NANO_PER_SECOND), &req)
+                .await
+                .expect("request to CDH");
+            println!("mount succeeded!");
+        }
+        Operation::PullImage(arg) => {
+            let client = ImagePullServiceClient::new(inner);
+            let req = ImagePullRequest {
+                image_url: arg.image_url,
+                bundle_path: arg.bundle_path,
+                ..Default::default()
+            };
+            let manifest_digest = client
+                .pull_image(context::with_timeout(args.timeout * NANO_PER_SECOND), &req)
+                .await
+                .expect("request to CDH");
+            println!("Image pulled: {manifest_digest}")
+        }
+    }
+}

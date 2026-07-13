@@ -1,0 +1,40 @@
+[package]
+name = "coco_keyprovider"
+version = "0.1.0"
+authors = ["The Attestation Agent Authors"]
+publish = false
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+aes-gcm.workspace = true
+anyhow.workspace = true
+base64.workspace = true
+clap = { workspace = true, features = ["derive"] }
+ctr.workspace = true
+daemonize = "0.5.0"
+shadow-rs.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+futures = "0.3.32"
+jwt-simple.workspace = true
+protos = { path = "../../protos", default-features = false, features = [
+    "grpc",
+] }
+rand.workspace = true
+reqwest.workspace = true
+resource_uri.path = "../deps/resource_uri"
+serde.workspace = true
+serde_json.workspace = true
+strum.workspace = true
+tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
+tonic.workspace = true
+uuid = { workspace = true, features = ["fast-rng", "v4"] }
+
+[build-dependencies]
+shadow-rs.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+
+[features]

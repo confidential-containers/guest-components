@@ -1,0 +1,69 @@
+.TH trustee-attester 1
+.LO 1
+
+.SH NAME
+trustee-attester \- attest and fetch secrets from Trustee
+
+.SH SYNOPSIS
+.B trustee-attester
+\-\-url <URL-of-Trustee> [ OPTIONS ] get-resource \-\-path <resource-path> [ RESOURCE-OPTIONS ]
+
+.SH DESCRIPTION
+trustee-attester is a simple client to easily attest and fetch secrets
+(a.k.a confidential resources) from Trustee.
+
+.SH OPTIONS
+.B    \-\-url  <URL-of-Trustee>   [\-\-cert-file  <path-to-certificate>]
+
+.B    \-\-url  <URL-of-Trustee>
+Format of <URL-of-Trustee> is <protocol>://<host>:<port>
+where <protocol> is
+.B http
+or
+.B https
+
+.B    \-\-cert-file  <path-to-certificate>
+Optional. When <protocol> is https, add a certificate to verify the Trustee server.
+
+.SH SUBCOMMAND
+.IR get-resource
+\-\-path <resource-path> [\-\-initdata <initdata-string>]
+
+.RS
+Do attestation and get a secret from Trustee.
+<resource-path> is a of format <repo>/<type>/<name>
+
+It is assumed that the secret was uploaded to Trustee, with the
+exact same <resource-path>, before trustee-attester runs.
+
+Plaintext initdata can optionally be passed as a string with the
+.B \-\-initdata
+flag. The verifier will generally expect its hash to be measured,
+e.g. in PCR8 when using the TPM attester.
+
+For more information look at
+https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md
+
+.SH EXAMPLES
+trustee-attester --url http://10.0.0.4:50000 get-resource --path default/secrets/secret1
+
+trustee-attester --url https://10.0.0.4:50000 --cert-file /etc/trustee-attester/server_cert.pem
+get-resource --path myrepo/keys/mykey1
+
+trustee-attester --url http://10.0.0.4:50000 get-resource --path default/secrets/secret2
+--initdata 'version = "0.1.0"
+.br
+algorithm = "sha256"
+.br
+[data]
+.br
+key1 = "value1"'
+
+.SH NOTES
+.B trustee-attester
+is a part of https://github.com/confidential-containers/guest-components.
+
+User must have privileges to request an attestation-report from the hardware.
+
+.B Trustee
+can be found here https://github.com/confidential-containers/trustee

@@ -1,0 +1,226 @@
+name: Publish artifacts with ORAS
+
+on:
+  push:
+    branches:
+    - main
+
+permissions:
+  contents: read
+
+jobs:
+  publish-aa:
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      matrix:
+        platform: [
+          { tee: none,        arch: x86_64,  libc: musl, runner: ubuntu-24.04 },
+          { tee: none,        arch: s390x,   libc: gnu, runner: ubuntu-24.04-s390x },
+          { tee: none,        arch: aarch64, libc: gnu, runner: ubuntu-24.04 },
+          { tee: amd,         arch: x86_64,  libc: musl, runner: ubuntu-24.04 },
+          { tee: az-cvm-vtpm, arch: x86_64,  libc: gnu, runner: ubuntu-24.04 },
+          { tee: tdx,         arch: x86_64,  libc: musl, runner: ubuntu-24.04 },
+          { tee: cca,         arch: x86_64,  libc: musl, runner: ubuntu-24.04 },
+          { tee: cca,         arch: aarch64, libc: gnu, runner: ubuntu-24.04 },
+          { tee: se,          arch: s390x,   libc: gnu, runner: ubuntu-24.04-s390x },
+          { tee: none,        arch: powerpc64le,  libc: gnu, runner: ubuntu-24.04-ppc64le },
+        ]
+    runs-on: ${{ matrix.platform.runner }}
+    env:
+      TEE_PLATFORM: ${{ matrix.platform.tee }}
+      LIBC: ${{ matrix.platform.libc }}
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+      RUST_TARGET: ${{ matrix.platform.arch }}-unknown-linux-${{ matrix.platform.libc }}
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      with:
+        egress-policy: audit
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
+      with:
+        version: 1.2.0
+
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+      with:
+        target: ${{ env.RUST_TARGET }}
+
+    - name: Update apt source list
+      run: |
+        sudo apt-get update
+
+    - name: Install tpm dependencies
+      if: matrix.platform.tee == 'az-cvm-vtpm'
+      run: |
+        sudo apt-get install -y --no-install-recommends libtss2-dev
+
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+    - name: Build AA
+      env:
+        ARCH: ${{ matrix.platform.arch }}
+        LIBC: ${{ matrix.platform.libc }}
+      run: |
+        make ./target/${{ env.RUST_TARGET }}/release/attestation-agent
+
+    - name: Publish with ORAS
+      id: publish
+      env:
+        OCI_ARCH: ${{ matrix.platform.arch == 'x86_64' && 'amd64' || matrix.platform.arch == 'aarch64' && 'arm64' || matrix.platform.arch == 'powerpc64le' && 'ppc64le' || matrix.platform.arch }}
+      run: |
+        mkdir oras
+        cd oras
+        cp ../target/${{ env.RUST_TARGET }}/release/attestation-agent .
+        tar cJf attestation-agent.tar.xz attestation-agent
+        arch="${{ matrix.platform.arch }}"
+        # After building for target powerpc64le, tag and push the image as ppc64le to match standard arch naming.
+        [ "$arch" = "powerpc64le" ] && arch="ppc64le"
+        arch_tag="${{ github.sha }}-${{ matrix.platform.tee }}_${arch}"
+        image="${REGISTRY}/${IMAGE_NAME}/attestation-agent"
+        tag="${{ github.sha }}-${{ matrix.platform.tee }}"
+        oras push "${image}:${arch_tag}" attestation-agent.tar.xz
+        # We need to create the platform annotations with docker, since oras 1.2 doesn't support
+        # pushing with platform yet.
+        docker manifest create "${image}:${tag}" --amend "${image}:${arch_tag}"
+        docker manifest annotate --arch "$OCI_ARCH" --os linux "${image}:${tag}" "${image}:${arch_tag}"
+        docker manifest push "${image}:${tag}"
+        # add image and digest to output for attestation
+        echo "image=${image}" >> "$GITHUB_OUTPUT"
+        digest="$(oras manifest fetch "${image}:${arch_tag}" --descriptor | jq -r .digest)"
+        echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+      with:
+        subject-name: ${{ steps.publish.outputs.image }}
+        subject-digest: ${{ steps.publish.outputs.digest }}
+        push-to-registry: true
+
+  publish-cdh-and-asr:
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      matrix:
+        arch:
+        - x86_64
+        - s390x
+        - aarch64
+        - powerpc64le
+        include:
+        - arch: x86_64
+          libc: musl
+          instance: ubuntu-24.04
+        - arch: s390x
+          libc: gnu
+          instance: ubuntu-24.04-s390x
+        - arch: aarch64
+          libc: gnu
+          instance: ubuntu-24.04-arm
+        - arch: powerpc64le
+          libc: gnu
+          instance: ubuntu-24.04-ppc64le
+    runs-on: ${{ matrix.instance }}
+    env:
+      LIBC: ${{ matrix.libc }}
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+      RUST_TARGET: ${{ matrix.arch }}-unknown-linux-${{ matrix.libc }}
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      with:
+        egress-policy: audit
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
+      with:
+        version: 1.2.0
+
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+    - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+      with:
+        target: ${{ env.RUST_TARGET }}
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          libdevmapper-dev pkg-config
+        if [ "${{ matrix.arch }}" = "powerpc64le" ]; then
+          sudo apt-get install -y libclang-dev cmake protobuf-compiler
+        fi
+
+    - name: Build CDH
+      env:
+        ARCH: ${{ matrix.arch }}
+        LIBC: ${{ matrix.libc }}
+      run: make ./target/${{ env.RUST_TARGET }}/release/confidential-data-hub
+
+    - name: Build ASR
+      env:
+        ARCH: ${{ matrix.arch }}
+        LIBC: ${{ matrix.libc }}
+      run: make ./target/${{ env.RUST_TARGET }}/release/api-server-rest
+
+    - name: Publish CDH + ASR with ORAS
+      id: publish
+      run: |
+        arch="${{ matrix.arch }}"
+        # After building for target powerpc64le, tag and push the image as ppc64le to match standard arch naming.
+        [ "$arch" = "powerpc64le" ] && arch="ppc64le"
+        tag="${{ github.sha }}-${arch}"
+        mkdir oras
+        cd oras
+        cp ../target/${{ env.RUST_TARGET }}/release/{confidential-data-hub,api-server-rest} .
+
+        tar cJf confidential-data-hub.tar.xz confidential-data-hub
+        image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/confidential-data-hub"
+        oras push "${image}:${tag}" confidential-data-hub.tar.xz
+        echo "cdh-image=${image}" >> "$GITHUB_OUTPUT"
+        digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
+        echo "cdh-digest=${digest}" >> "$GITHUB_OUTPUT"
+
+        tar cJf api-server-rest.tar.xz api-server-rest
+        image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api-server-rest"
+        oras push "${image}:${tag}" api-server-rest.tar.xz
+        echo "asr-image=${image}" >> "$GITHUB_OUTPUT"
+        digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
+        echo "asr-digest=${digest}" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+      with:
+        subject-name: ${{ steps.publish.outputs.cdh-image }}
+        subject-digest: ${{ steps.publish.outputs.cdh-digest }}
+        push-to-registry: true
+
+    - uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+      with:
+        subject-name: ${{ steps.publish.outputs.asr-image }}
+        subject-digest: ${{ steps.publish.outputs.asr-digest }}
+        push-to-registry: true

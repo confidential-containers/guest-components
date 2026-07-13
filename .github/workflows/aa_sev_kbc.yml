@@ -1,0 +1,68 @@
+name: attestation-agent online_sev_kbc tests
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'attestation-agent/kbc/online_sev_kbc/**'
+  pull_request:
+    paths:
+      - 'attestation-agent/kbc/online_sev_kbc/**'
+  create:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  online_sev_kbc_ci:
+    if: github.event_name != 'push'
+    name: Check
+    defaults:
+      run:
+        working-directory: ./attestation-agent
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+        kbc:
+          - online_sev_kbc
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Code checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt
+
+      - name: Build and install with ${{ matrix.kbc }} feature
+        run: |
+          sudo apt-get update
+          make KBC=${{ matrix.kbc }} && make install
+
+      - name: Musl build with ${{ matrix.kbc }} feature
+        run: |
+          make LIBC=musl KBC=${{ matrix.kbc }}
+
+      - name: Run cargo test with ${{ matrix.kbc }} feature
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
+        with:
+          command: test
+          args: -p kbc --no-default-features --features ${{ matrix.kbc }},rust-crypto

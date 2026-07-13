@@ -1,0 +1,53 @@
+// Copyright (c) 2022 Intel Corporation
+// Copyright (c) 2022 Alibaba Cloud
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+//! Test for decryption of image layers.
+
+pub mod common;
+
+/// Ocicrypt-rs config for grpc
+#[cfg(all(feature = "kbs", feature = "encryption", feature = "keywrap-grpc"))]
+const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_grpc.conf";
+
+/// Ocicrypt-rs config for ttrpc
+#[cfg(all(feature = "kbs", feature = "encryption", feature = "keywrap-ttrpc"))]
+const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_ttrpc.conf";
+
+#[cfg(all(
+    feature = "kbs",
+    feature = "encryption",
+    any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
+))]
+#[rstest::rstest]
+#[case("ghcr.io/confidential-containers/test-container:unencrypted")]
+#[case("ghcr.io/confidential-containers/test-container:encrypted")]
+#[tokio::test]
+#[serial_test::serial]
+async fn test_decrypt_layers(#[case] image: &str) {
+    common::prepare_test(common::OFFLINE_FS_KBC_RESOURCES_FILE).await;
+    // Init CDH
+    let _cdh = common::start_confidential_data_hub()
+        .await
+        .expect("Failed to start confidential data hub!");
+
+    // Set env for ocicrypt-rs. The env is needed by ocicrypt-rs
+    // to communicate with CDH
+    let manifest_dir = std::env!("CARGO_MANIFEST_DIR");
+    let keyprovider_config = format!("{manifest_dir}/{OCICRYPT_CONFIG}");
+    std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
+
+    let work_dir = tempfile::tempdir().unwrap();
+    let bundle_dir = tempfile::tempdir().unwrap();
+
+    let mut image_client = image_rs::image::ImageClient::new(work_dir.path().to_path_buf());
+    image_client
+        .pull_image(image, bundle_dir.path(), &None, &None)
+        .await
+        .expect("failed to download image");
+    common::umount_bundle(&bundle_dir);
+
+    common::clean().await;
+}

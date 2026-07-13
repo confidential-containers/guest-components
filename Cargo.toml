@@ -1,0 +1,77 @@
+[workspace]
+resolver = "2"
+members = [
+    "api-server-rest",
+    "attestation-agent/attestation-agent",
+    "attestation-agent/kbc",
+    "attestation-agent/kbs_protocol",
+    "attestation-agent/attester",
+    "attestation-agent/deps/resource_uri",
+    "attestation-agent/deps/crypto",
+    "attestation-agent/deps/sev",
+    "attestation-agent/coco_keyprovider",
+    "confidential-data-hub/hub",
+    "confidential-data-hub/kms",
+    "image-rs",
+    "ocicrypt-rs",
+    "protos",
+]
+
+[workspace.dependencies]
+aes = "0.9.1"
+aes-gcm = "0.11.0-rc.4"
+anyhow = "1.0"
+assert-json-diff = "2.0"
+assert_cmd = "2"
+async-trait = "0.1.89"
+base64 = "0.22.1"
+base64-serde = "0.8"
+bincode = "2.0.1"
+cfg-if = "1.0.4"
+chrono = "0.4.44"
+clap = "~4.6.1"
+config = "0.15.23"
+const_format = "0.2.36"
+ctr = "0.10.0"
+hex = "0.4.3"
+hmac = "0.13.0"
+jwt-simple = { version = "0.12", default-features = false, features = [
+    "pure-rust",
+] }
+kbs-types = "0.15.0"
+nix = "0.31"
+openssl = "0.10"
+prost = "0.14"
+protobuf = "3.7.2"
+rand = "0.10.1"
+reqwest = { version = "0.13", default-features = false }
+resource_uri = { path = "attestation-agent/deps/resource_uri" }
+ring = "0.17"
+rsa = "0.9.10"
+rstest = "0.26"
+serde = { version = "1.0", features = ["derive"] }
+serde_with = { version = "3.21.0", features = ["base64", "hex"] }
+serde_json = "1.0"
+serial_test = "3"
+sha2 = "0.11.0"
+shadow-rs = "2.0.0"
+strum = { version = "0.28", features = ["derive"] }
+tempfile = "3.25"
+testcontainers = "0.27.3"
+thiserror = "2.0"
+tokio = "1.52"
+toml = "1.0.3"
+tonic = "0.14"
+tonic-build = "0.14"
+tonic-prost = "0.14"
+tonic-prost-build = "0.14"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+ttrpc = "0.9.0"
+ttrpc-codegen = "0.6.0"
+url = "2.5.4"
+uuid = "1"
+zeroize = "1.8.2"
+
+[patch.crates-io]
+kbs-types = { git = "https://github.com/56ht86hrd5-ai/kbs-types.git", branch = "feat/add-dpu-tee" }

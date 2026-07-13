@@ -1,0 +1,95 @@
+name: ocicrypt-rs build
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'ocicrypt-rs/**'
+      - '.github/workflows/ocicrypt_rs_build.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  pull_request:
+    paths:
+      - 'ocicrypt-rs/**'
+      - '.github/workflows/ocicrypt_rs_build.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  create:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    if: github.event_name != 'push'
+    name: Check
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+    runs-on: ${{ matrix.instance }}
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Code checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          components: rustfmt, clippy
+
+      - name: Run cargo build
+        run: cargo build -p ocicrypt-rs --all-features
+
+      - name: Run cargo build - keywrap-none
+        run: cargo build -p ocicrypt-rs --no-default-features
+
+      - name: Run cargo build - block cipher openssl
+        run: cargo build -p ocicrypt-rs --no-default-features --features=block-cipher-openssl
+
+      - name: Run cargo build - block cipher ring
+        run: cargo build -p ocicrypt-rs --no-default-features --features=block-cipher-ring
+
+      - name: Run cargo build - keywrap-jwe
+        run: cargo build -p ocicrypt-rs --no-default-features --features=keywrap-jwe
+
+      - name: Run cargo build - keywrap-keyprovider
+        run: cargo build -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider
+
+      - name: Run cargo test
+        run: cargo test -p ocicrypt-rs --all-features
+
+      - name: Run cargo test - keywrap-none
+        run: cargo test -p ocicrypt-rs --no-default-features
+
+      - name: Run cargo test - keywrap-jwe
+        run: cargo test -p ocicrypt-rs --no-default-features --features=keywrap-jwe
+
+      - name: Run cargo test - keywrap-keyprovider-cmd
+        run: cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-cmd
+
+      - name: Run cargo test - keywrap-keyprovider-grpc
+        run: cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-grpc
+
+      - name: Run cargo test - keywrap-keyprovider-ttrpc
+        run: cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-ttrpc
+
+      - name: Run cargo test - keywrap-keyprovider-native
+        run: cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-native
+
+      - name: Run cargo fmt check
+        run: cargo fmt -p ocicrypt-rs -- --check
+
+      - name: Run rust lint check
+        run: cargo clippy -p ocicrypt-rs --all-targets --all-features -- -D warnings

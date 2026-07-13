@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package dkms_api;
+
+message EncryptRequest {
+  string KeyId = 1;
+  bytes Plaintext = 2;
+  string Algorithm = 3;
+  bytes Aad = 4;
+  bytes Iv = 5;
+  string PaddingMode = 6;
+}
+
+message EncryptResponse {
+  string KeyId = 1;
+  bytes CiphertextBlob = 2;
+  bytes Iv = 3;
+  string RequestId = 4;
+  string Algorithm = 5;
+  string PaddingMode = 6;
+}
+
+message DecryptRequest {
+  bytes CiphertextBlob = 1;
+  string KeyId = 2;
+  string Algorithm = 3;
+  bytes Aad = 4;
+  bytes Iv = 5;
+  string PaddingMode = 6;
+}
+
+message DecryptResponse {
+  string KeyId = 1;
+  bytes Plaintext = 2;
+  string RequestId = 3;
+  string Algorithm = 4;
+  string PaddingMode = 5;
+}
+
+message GetSecretValueRequest {
+  string SecretName = 1;
+  string VersionStage = 2;
+  string VersionId = 3;
+  bool FetchExtendedConfig = 4;
+}
+
+message GetSecretValueResponse {
+  string SecretName = 1;
+  string SecretType = 2;
+  string SecretData = 3;
+  string SecretDataType = 4;
+  repeated string VersionStages = 5;
+  string VersionId = 6;
+  string CreateTime = 7;
+  string RequestId = 8;
+  string LastRotationDate = 9;
+  string NextRotationDate = 10;
+  string ExtendedConfig = 11;
+  string AutomaticRotation = 12;
+  string RotationInterval = 13;
+}
+
+message Error {
+  int32 StatusCode = 1;
+  string ErrorCode = 2;
+  string ErrorMessage = 3;
+  string RequestId = 4;
+}

@@ -1,0 +1,29 @@
+name: Generate vendored content for the release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  generate-and-publish-vendored-code:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Generate and publish cargo vendored tarball
+        run: |
+          tag=$(echo $GITHUB_REF | sed 's|refs/tags/||')
+          tarball_name="guest-components-${tag}-vendor.tar.gz"
+          mkdir -p .cargo
+          cargo vendor --locked >> .cargo/config.toml
+
+          tar -cvzf ${tarball_name} vendor .cargo/config.toml 
+          gh release upload ${tag} ${tarball_name}
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,133 @@
+name: image-rs build
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'image-rs/**'
+      - '.github/workflows/image_rs_build.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  pull_request:
+    paths:
+      - 'image-rs/**'
+      - '.github/workflows/image_rs_build.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  create:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    if: github.event_name != 'push'
+    name: Check
+    defaults:
+      run:
+        working-directory: ./image-rs
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-s390x
+          - ubuntu-24.04-arm
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Code checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          components: rustfmt, clippy
+
+      - name: Install nettle-sys building dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y clang llvm pkg-config nettle-dev libprotobuf-dev
+
+      - name: Install TPM dependencies
+        run: |
+          sudo apt-get install -y libtss2-dev
+        if: matrix.instance == 'ubuntu-24.04'
+
+      - name: Install dm-verity dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdevmapper-dev
+        if: matrix.instance == 'ubuntu-24.04'
+      
+      - name: Install cryptsetup
+        run: |
+          sudo apt-get install -y cryptsetup pkg-config
+        if: matrix.instance == 'ubuntu-24.04'  || matrix.instance == 'ubuntu-24.04-arm'
+
+      - name: Install cross-compliation support dependencies
+        run: |
+          sudo apt install -y gcc-powerpc64le-linux-gnu
+          rustup target add powerpc64le-unknown-linux-gnu
+        if: matrix.instance == 'ubuntu-24.04'
+
+      - name: Run cargo fmt check
+        run: cargo fmt -p image-rs -- --check
+
+      - name: Run rust lint check (all platforms)
+        run: |
+          cargo clippy -p image-rs --all-targets --features=default -- -D warnings
+          cargo clippy -p image-rs --all-targets --features=kata-cc-rustls-tls --no-default-features -- -D warnings
+          cargo clippy -p image-rs --all-targets --features=kata-cc-native-tls --no-default-features -- -D warnings
+          cargo clippy -p image-rs --all-targets --features=kata-cc-native-tls,signature-simple-xrss --no-default-features -- -D warnings
+
+      - name: Run rust lint check (x86_64 only)
+        run: |
+            cargo clippy -p image-rs --all-targets --features=kata-cc-native-tls --no-default-features -- -D warnings
+        if: matrix.instance == 'ubuntu-24.04'
+
+      - name: Run cargo build
+        run: cargo build -p image-rs --features default
+
+      - name: Run cargo build, cross-compiling for powerpc64le
+        run: |
+          sudo -E PATH=$PATH -s RUSTFLAGS=" -C linker=powerpc64le-linux-gnu-gcc" cargo build --target powerpc64le-unknown-linux-gnu -p image-rs --features default
+        if: matrix.instance == 'ubuntu-24.04'
+
+      - name: Run cargo test - default
+        run: |
+          sudo -E PATH=$PATH -s cargo test -p image-rs --features default
+
+      - name: Run cargo test - kata-cc (rust-tls version) with keywrap-grpc + keywrap-jwe
+        run: |
+          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-ring,keywrap-grpc,signature-cosign-rustls,signature-simple,kbs,oci-client/rustls-tls,keywrap-jwe
+
+      - name: Run cargo test - kata-cc (native-tls version) with keywrap-grpc + keywrap-jwe
+        run: |
+          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=encryption-openssl,keywrap-grpc,signature-cosign-native,signature-simple,kbs,oci-client/native-tls,keywrap-jwe
+
+      - name: Run cargo test - kata-cc (rust-tls version) with keywrap-ttrpc (default) + keywrap-jwe
+        run: |
+          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-rustls-tls,keywrap-jwe
+
+      - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe
+        run: |
+          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-native-tls,keywrap-jwe
+      
+      - name: Clean test cache
+        run: |
+          sudo -E PATH=$PATH -s cargo clean
+
+      - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe and with signatures from XRSS registry extension
+        env:
+          AUTH_PASSWORD: ${{ secrets.SH_ICR_API_KEY }}
+        run: |
+          sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-native-tls,keywrap-jwe,signature-simple-xrss

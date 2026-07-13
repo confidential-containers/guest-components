@@ -1,0 +1,81 @@
+[package]
+name = "kbs_protocol"
+version = "0.1.0"
+authors = ["The Attestation Agent Authors"]
+publish = false
+edition = "2021"
+license = "Apache-2.0"
+build = "build.rs"
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+attester = { path = "../attester", default-features = false }
+base64.workspace = true
+serde_json_canonicalizer = { version = "0.3", optional = true }
+clap = { workspace = true, features = ["derive"], optional = true }
+crypto = { path = "../deps/crypto", default-features = false }
+jwt-simple.workspace = true
+kbs-types.workspace = true
+protobuf = { workspace = true, optional = true }
+protos = { path = "../../protos", default-features = false, optional = true }
+reqwest = { workspace = true, default-features = false, features = [
+    "cookies",
+    "json",
+] }
+resource_uri.path = "../deps/resource_uri"
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+shadow-rs = { version = "2.0.0", default-features = false }
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true, optional = true }
+ttrpc = { workspace = true, optional = true }
+url.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+serial_test.workspace = true
+tempfile.workspace = true
+testcontainers.workspace = true
+tokio = { workspace = true, features = ["rt", "macros", "fs", "process"] }
+
+[build-dependencies]
+shadow-rs.workspace = true
+
+[[bin]]
+name = "trustee-attester"
+required-features = ["bin"]
+
+[features]
+default = ["background_check", "passport", "rust-crypto", "all-attesters"]
+
+passport = []
+# Allow to connect Attestation-Agent with TTRPC to get evidence, token, etc.
+aa_ttrpc = ["passport", "ttrpc/async", "protos/ttrpc"]
+
+background_check = ["tokio/time", "serde_json_canonicalizer"]
+all-attesters = ["attester/all-attesters"]
+tdx-attester = ["attester/tdx-attester"]
+tdx-attester-libtdx = [
+    "attester/tdx-attester",
+    "attester/tdx-attest-dcap-ioctls",
+]
+sgx-attester = ["attester/sgx-attester"]
+az-snp-vtpm-attester = ["attester/az-snp-vtpm-attester"]
+az-tdx-vtpm-attester = ["attester/az-tdx-vtpm-attester"]
+snp-attester = ["attester/snp-attester"]
+csv-attester = ["attester/csv-attester"]
+hygon-dcu-attester = ["attester/hygon-dcu-attester"]
+cca-attester = ["attester/cca-attester"]
+se-attester = ["attester/se-attester"]
+tpm-attester = ["attester/tpm-attester"]
+nvidia-attester = ["attester/nvidia-attester"]
+
+rust-crypto = ["reqwest/rustls", "crypto/rust-crypto"]
+openssl = ["reqwest/native-tls-vendored", "crypto/openssl"]
+
+bin = ["tokio/rt", "tokio/macros", "clap", "tracing-subscriber"]
