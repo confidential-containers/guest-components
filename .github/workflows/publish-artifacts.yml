@@ -55,6 +55,7 @@ jobs:
 
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
+        persist-credentials: false
         fetch-depth: 0
         fetch-tags: true
 
@@ -72,13 +73,15 @@ jobs:
         sudo apt-get install -y --no-install-recommends libtss2-dev
 
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        persist-credentials: false
 
     - name: Build AA
       env:
         ARCH: ${{ matrix.platform.arch }}
         LIBC: ${{ matrix.platform.libc }}
       run: |
-        make ./target/${{ env.RUST_TARGET }}/release/attestation-agent
+        make ./target/$RUST_TARGET/release/attestation-agent
 
     - name: Publish with ORAS
       id: publish
@@ -87,7 +90,7 @@ jobs:
       run: |
         mkdir oras
         cd oras
-        cp ../target/${{ env.RUST_TARGET }}/release/attestation-agent .
+        cp ../target/$RUST_TARGET/release/attestation-agent .
         tar cJf attestation-agent.tar.xz attestation-agent
         arch="${{ matrix.platform.arch }}"
         # After building for target powerpc64le, tag and push the image as ppc64le to match standard arch naming.
@@ -162,6 +165,8 @@ jobs:
         version: 1.2.0
 
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        persist-credentials: false
 
     - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
       with:
@@ -180,13 +185,13 @@ jobs:
       env:
         ARCH: ${{ matrix.arch }}
         LIBC: ${{ matrix.libc }}
-      run: make ./target/${{ env.RUST_TARGET }}/release/confidential-data-hub
+      run: make ./target/$RUST_TARGET/release/confidential-data-hub
 
     - name: Build ASR
       env:
         ARCH: ${{ matrix.arch }}
         LIBC: ${{ matrix.libc }}
-      run: make ./target/${{ env.RUST_TARGET }}/release/api-server-rest
+      run: make ./target/$RUST_TARGET/release/api-server-rest
 
     - name: Publish CDH + ASR with ORAS
       id: publish
@@ -197,17 +202,17 @@ jobs:
         tag="${{ github.sha }}-${arch}"
         mkdir oras
         cd oras
-        cp ../target/${{ env.RUST_TARGET }}/release/{confidential-data-hub,api-server-rest} .
+        cp ../target/$RUST_TARGET/release/{confidential-data-hub,api-server-rest} .
 
         tar cJf confidential-data-hub.tar.xz confidential-data-hub
-        image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/confidential-data-hub"
+        image="${{ env.REGISTRY }}/$IMAGE_NAME/confidential-data-hub"
         oras push "${image}:${tag}" confidential-data-hub.tar.xz
         echo "cdh-image=${image}" >> "$GITHUB_OUTPUT"
         digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
         echo "cdh-digest=${digest}" >> "$GITHUB_OUTPUT"
 
         tar cJf api-server-rest.tar.xz api-server-rest
-        image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api-server-rest"
+        image="${{ env.REGISTRY }}/$IMAGE_NAME/api-server-rest"
         oras push "${image}:${tag}" api-server-rest.tar.xz
         echo "asr-image=${image}" >> "$GITHUB_OUTPUT"
         digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"

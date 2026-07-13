@@ -89,10 +89,13 @@ jobs:
         egress-policy: audit
 
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        persist-credentials: false
 
     - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
       with:
         target: ${{ env.RUST_TARGET }}
+        cache: false
         # This action injects RUSTFLAGS="-D warnings" by default, which leaks
         # into every cargo invocation in the job — including third-party crates
         # built from source by the NVIDIA Attestation SDK (its vendored regorus
