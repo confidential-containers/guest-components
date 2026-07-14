@@ -73,9 +73,10 @@ max_concurrent_layer_downloads_per_image = 3
 
 # Sigstore config file URI for simple signing scheme.
 #
-# When `image_security_policy_uri` is set and `SimpleSigning` (signedBy) is
-# used in the policy, the signatures of the images would be used for image
-# signature validation. This policy will record where the signatures is.
+# When `image_security_policy_uri` or `image_security_policy` is set and
+# `SimpleSigning` (signedBy) is used in the policy, the signatures of the
+# images would be used for image signature validation. This policy will
+# record where the signatures is.
 #
 # Now it supports two different forms:
 # - `KBS URI`: the sigstore config file will be fetched from KBS,
@@ -103,6 +104,25 @@ sigstore_config_uri = "kbs:///default/sigstore-config/test"
 #
 # By default this value is not set.
 image_security_policy_uri = "kbs:///default/security-policy/test"
+
+# The image security policy can also be specified directly as a string
+# (for example via init-data) instead of referencing it via a URI.
+# If both `image_security_policy_uri` and this field are set, the URI
+# takes priority.
+#
+# The policy follows the same format as described above for
+# `image_security_policy_uri`.
+#
+# By default this value is not set.
+# image_security_policy = """
+# {
+#     "default": [
+#         {
+#             "type": "reject"
+#         }
+#     ]
+# }
+# """
 
 # If any credential auth (Base) would be used to connect to download
 # image from private registry, this field is used to set the URI of the
