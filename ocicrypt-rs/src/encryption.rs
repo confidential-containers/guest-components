@@ -174,6 +174,7 @@ pub fn decrypt_layer_key_opts_data(
     annotations: Option<&BTreeMap<String, String>>,
 ) -> Result<Vec<u8>> {
     let mut priv_key_given = false;
+    let mut keyprovider_tried = false;
     let annotations = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);
 
     for (annotations_id, scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
@@ -187,6 +188,11 @@ pub fn decrypt_layer_key_opts_data(
                 priv_key_given = true;
             }
 
+            let is_keyprovider = scheme.starts_with("provider.");
+            if is_keyprovider {
+                keyprovider_tried = true;
+            }
+
             let opts_data = pre_unwrap_key(keywrapper, dc, &b64_annotation)?;
             if !opts_data.is_empty() {
                 return Ok(opts_data);
@@ -195,7 +201,7 @@ pub fn decrypt_layer_key_opts_data(
         }
     }
 
-    if !priv_key_given {
+    if !priv_key_given && !keyprovider_tried {
         return Err(anyhow!("missing private key needed for decryption"));
     }
 
