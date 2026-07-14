@@ -15,6 +15,7 @@ az-snp-vtpm = { version = "0.8.1", default-features = false, features = [
 az-tdx-vtpm = { version = "0.8.1", default-features = false, features = [
     "attester",
 ], optional = true }
+azure-guest-attestation-sdk = { git = "https://github.com/Azure/azure-guest-attestation-sdk", rev = "e606728446cb66d681913983cbe5563c919dd94b", optional = true }
 base64.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
 cfg-if.workspace = true
@@ -53,7 +54,7 @@ picky-asn1 = { version = "0.10.1", optional = true }
 picky-asn1-der = { version = "0.5.6", optional = true }
 picky-asn1-x509 = { version = "0.15.4", optional = true }
 tss-esapi = { version = "7.5", optional = true }
-
+zerocopy = { version = "0.8.54", optional = true }
 
 [dev-dependencies]
 tokio.workspace = true
@@ -86,7 +87,7 @@ tdx-attest-dcap-ioctls = ["tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
 nvidia-attester = ["nv-attestation-sdk"]
 az-snp-vtpm-attester = ["az-snp-vtpm", "pem-rfc7468"]
-az-tdx-vtpm-attester = ["az-snp-vtpm-attester", "az-tdx-vtpm"]
+az-tdx-vtpm-attester = ["az-snp-vtpm-attester", "az-tdx-vtpm", "azure-guest-attestation-sdk", "zerocopy"]
 snp-attester = ["sev"]
 csv-attester = ["hygon", "codicon", "hyper", "hyper-tls"]
 hygon-dcu-attester = ["hygon"]
