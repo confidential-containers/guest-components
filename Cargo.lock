@@ -388,6 +388,7 @@ dependencies = [
  "async-trait",
  "az-snp-vtpm",
  "az-tdx-vtpm",
+ "azure-guest-attestation-sdk",
  "base64 0.22.1",
  "cfg-if",
  "clap",
@@ -422,6 +423,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tss-esapi",
+ "zerocopy",
 ]
 
 [[package]]
@@ -558,6 +560,27 @@ dependencies = [
  "thiserror 2.0.18",
  "ureq",
  "zerocopy",
+]
+
+[[package]]
+name = "azure-guest-attestation-sdk"
+version = "0.1.0"
+source = "git+https://github.com/Azure/azure-guest-attestation-sdk?rev=e606728446cb66d681913983cbe5563c919dd94b#e606728446cb66d681913983cbe5563c919dd94b"
+dependencies = [
+ "aes-gcm 0.10.3",
+ "base64 0.22.1",
+ "bitfield-struct",
+ "digest 0.10.7",
+ "hex",
+ "rand 0.8.6",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha1",
+ "sha2 0.10.9",
+ "tracing",
+ "tracing-subscriber",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -720,6 +743,17 @@ name = "bitfield-macros"
 version = "0.19.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f48d6ace212fdf1b45fd6b566bb40808415344642b76c3224c07c8df9da81e97"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "bitfield-struct"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adc0846593a56638b74e136a45610f9934c052e14761bebca6b092d5522599e3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7885,6 +7919,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-serde"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "704b1aeb7be0d0a84fc9828cae51dab5970fee5088f83d1dd7ee6f6246fc6ff1"
+dependencies = [
+ "serde",
+ "tracing-core",
+]
+
+[[package]]
 name = "tracing-subscriber"
 version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7894,12 +7938,15 @@ dependencies = [
  "nu-ansi-term",
  "once_cell",
  "regex-automata",
+ "serde",
+ "serde_json",
  "sharded-slab",
  "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",
  "tracing-log",
+ "tracing-serde",
 ]
 
 [[package]]
@@ -8917,18 +8964,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.48"
+version = "0.8.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eed437bf9d6692032087e337407a86f04cd8d6a16a37199ed57949d415bd68e9"
+checksum = "b7cbbc0a705a0fd05cc3676525980d2bf5a9bc4adac6d6475209a7887cf59d19"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.48"
+version = "0.8.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70e3cd084b1788766f53af483dd21f93881ff30d7320490ec3ef7526d203bad4"
+checksum = "e2e817b7b52d0c7358d3246da9d69935ebb18116b2b102b4230dac079b4862f5"
 dependencies = [
  "proc-macro2",
  "quote",
