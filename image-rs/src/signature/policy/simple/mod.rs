@@ -90,13 +90,20 @@ impl SignatureValidator {
         let sigs = self.get_signatures(image, auth).await?;
         let mut reject_reasons: Vec<anyhow::Error> = Vec::new();
 
-        for sig in sigs.iter() {
-            match judge_single_signature(
-                image,
-                parameters.signed_identity.as_ref(),
-                &pubkey_ring,
-                sig.to_vec(),
-            ) {
+        for sig in sigs {
+            let image = image.clone();
+            let signed_identity = parameters.signed_identity.clone();
+            let pubkey_ring = pubkey_ring.clone();
+            // OpenPGP signature verification is CPU-intensive (key parsing, packet
+            // parsing, and cryptographic operations), so we dispatch it to the
+            // blocking thread pool to avoid starving the async executor.
+            let result = tokio::task::spawn_blocking(move || {
+                judge_single_signature(&image, signed_identity.as_ref(), &pubkey_ring, sig)
+            })
+            .await
+            .context("signature verification task panicked")?;
+
+            match result {
                 // One accepted signature is enough.
                 Result::Ok(()) => {
                     return Ok(());
