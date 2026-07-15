@@ -6,6 +6,7 @@
 use anyhow::*;
 use oci_client::secrets::RegistryAuth;
 use serde::*;
+use std::sync::Arc;
 use strum_macros::Display;
 
 use base64::Engine;
@@ -74,17 +75,20 @@ impl SignatureValidator {
             );
         }
 
-        let pubkey_ring = match (&parameters.key_path, &parameters.key_data) {
+        let pubkey_ring: Arc<[u8]> = match (&parameters.key_path, &parameters.key_data) {
             (None, None) => bail!("Neither keyPath or keyData specified."),
             (Some(_), Some(_)) => bail!("Both keyPath and keyData specified."),
-            (None, Some(key_data)) => base64::engine::general_purpose::STANDARD.decode(key_data)?,
+            (None, Some(key_data)) => base64::engine::general_purpose::STANDARD
+                .decode(key_data)?
+                .into(),
             (Some(key_path), None) => self
                 .resource_provider
                 .get_resource(key_path)
                 .await
                 .map_err(|e| {
                     anyhow!("Read SignedBy keyPath failed: {:?}, path: {}", e, key_path)
-                })?,
+                })?
+                .into(),
         };
 
         let sigs = self.get_signatures(image, auth).await?;
@@ -93,12 +97,12 @@ impl SignatureValidator {
         for sig in sigs {
             let image = image.clone();
             let signed_identity = parameters.signed_identity.clone();
-            let pubkey_ring = pubkey_ring.clone();
+            let pubkey_ring = Arc::clone(&pubkey_ring);
             // OpenPGP signature verification is CPU-intensive (key parsing, packet
             // parsing, and cryptographic operations), so we dispatch it to the
             // blocking thread pool to avoid starving the async executor.
             let result = tokio::task::spawn_blocking(move || {
-                judge_single_signature(&image, signed_identity.as_ref(), &pubkey_ring, sig)
+                judge_single_signature(&image, signed_identity.as_ref(), pubkey_ring.as_ref(), sig)
             })
             .await
             .context("signature verification task panicked or was cancelled")?;
