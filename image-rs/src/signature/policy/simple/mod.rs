@@ -101,7 +101,7 @@ impl SignatureValidator {
                 judge_single_signature(&image, signed_identity.as_ref(), &pubkey_ring, sig)
             })
             .await
-            .context("signature verification task panicked")?;
+            .context("signature verification task panicked or was cancelled")?;
 
             match result {
                 // One accepted signature is enough.
