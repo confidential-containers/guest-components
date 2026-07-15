@@ -12,6 +12,11 @@ use image_rs::config::ImageConfig;
 use serde::Deserialize;
 use tracing::debug;
 
+#[cfg(any(feature = "ttrpc", feature = "grpc"))]
+mod ocicrypt_config;
+#[cfg(any(feature = "ttrpc", feature = "grpc"))]
+pub use ocicrypt_config::OCICRYPT_KEYPROVIDER_CONFIG_ENV;
+
 cfg_if::cfg_if! {
     if #[cfg(feature = "ttrpc")] {
         pub const DEFAULT_CDH_SOCKET_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
@@ -166,7 +171,7 @@ impl CdhConfig {
 }
 
 impl CdhConfig {
-    pub fn set_configuration_envs(&self) {
+    pub fn set_configuration_envs(&self) -> Result<()> {
         if env::var("AA_KBC_PARAMS").is_err() {
             env::set_var(
                 "AA_KBC_PARAMS",
@@ -181,6 +186,14 @@ impl CdhConfig {
         if self.skip_sealed_secret_verification {
             env::set_var("SKIP_SEALED_SECRET_VERIFICATION", "true");
         }
+
+        // Only meaningful when an RPC server exposing the KeyProvider service
+        // is compiled in. Library-only builds (e.g. cdh-oneshot) have no
+        // UnwrapKey RPC listener, so a generated config would point ocicrypt-rs
+        // at a socket nobody serves.
+        #[cfg(any(feature = "ttrpc", feature = "grpc"))]
+        self.ensure_ocicrypt_keyprovider_config()?;
+        Ok(())
     }
 }
 

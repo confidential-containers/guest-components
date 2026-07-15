@@ -7,12 +7,17 @@ APIs.
 
 The APIs are defined in the [proto file](./hub/protos/). 
 
-Note that CDH supports decryption of encrypted images. 
-To enable this you need to set environment `OCICRYPT_KEYPROVIDER_CONFIG`  to point to the [ocicrypt configuration file](./hub/src/image/ocicrypt_config.json) at startup, for example 
+Note that CDH supports decryption of encrypted images.
+When `OCICRYPT_KEYPROVIDER_CONFIG` is unset, CDH writes a default ocicrypt
+keyprovider config that maps the `attestation-agent` provider to CDH's own
+socket (from the CDH config). Operators can still override by pointing
+`OCICRYPT_KEYPROVIDER_CONFIG` at a custom file, for example:
 
 ```shell
 OCICRYPT_KEYPROVIDER_CONFIG=<path-to-ocicrypt_config.json> confidential-data-hub
 ```
+
+An example config file is at [hub/src/image/ocicrypt_config.json](./hub/src/image/ocicrypt_config.json).
 
 ### Build
 

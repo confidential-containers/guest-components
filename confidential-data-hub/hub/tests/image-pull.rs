@@ -33,10 +33,6 @@ async fn test_pull_image(#[case] image_ref: &str) {
         std::env!("CARGO_MANIFEST_DIR")
     );
 
-    let keyprovider_config = format!(
-        "{}/../../image-rs/test_data/ocicrypt_keyprovider_ttrpc.conf",
-        std::env!("CARGO_MANIFEST_DIR")
-    );
     let _cdh = tokio::process::Command::new(cdh_path)
         .arg("-c")
         .arg(format!(
@@ -44,7 +40,6 @@ async fn test_pull_image(#[case] image_ref: &str) {
             std::env!("CARGO_MANIFEST_DIR")
         ))
         .env("RUST_LOG", "info")
-        .env("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config)
         .kill_on_drop(true)
         .spawn()
         .unwrap();
