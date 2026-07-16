@@ -340,6 +340,41 @@ some_undefined_field = "unknown value"
         skip_sealed_secret_verification: false,
     })
     )]
+    #[case(
+        r#"
+[kbc]
+name = "offline_fs_kbc"
+
+[image]
+image_security_policy = """
+{
+    "default": [
+        {
+            "type": "reject"
+        }
+    ]
+}
+"""
+"#,
+    Some(CdhConfig {
+        log: LogConfig::default(),
+        kbc: KbsConfig {
+            name: "offline_fs_kbc".to_string(),
+            url: "".to_string(),
+            kbs_cert: None,
+        },
+        credentials: vec![],
+        image: ImageConfig {
+                image_security_policy: Some(
+                    "{\n    \"default\": [\n        {\n            \"type\": \"reject\"\n        }\n    ]\n}\n"
+                        .to_string(),
+                ),
+                ..Default::default()
+        },
+        socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
+        skip_sealed_secret_verification: false,
+    })
+    )]
     #[serial]
     fn read_config(#[case] config: &str, #[case] expected: Option<CdhConfig>) {
         let mut file = tempfile::Builder::new()
