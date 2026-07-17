@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use crate::client::ttrpc_client::CachedTtrpcClient;
 use crate::TTRPC_TIMEOUT;
 use anyhow::*;
 use protos::ttrpc::cdh::api::GetResourceRequest;
@@ -17,28 +18,37 @@ pub const CDH_RESOURCE_URL: &str = "/resource";
 const KBS_PREFIX: &str = "kbs://";
 
 pub struct CDHClient {
-    client: GetResourceServiceClient,
+    client: CachedTtrpcClient<GetResourceServiceClient>,
 }
 
 impl CDHClient {
     pub async fn new(cdh_addr: &str) -> Result<Self> {
-        let inner = ttrpc::asynchronous::Client::connect(cdh_addr)
-            .await
-            .context(format!("ttrpc connect to CDH addr: {cdh_addr} failed!"))?;
-        let client = GetResourceServiceClient::new(inner);
+        let client = CachedTtrpcClient::new(cdh_addr, "CDH", GetResourceServiceClient::new).await?;
 
         Ok(Self { client })
     }
 
     pub async fn get_resource(&self, resource_path: &str) -> Result<Vec<u8>> {
-        let req = GetResourceRequest {
-            ResourcePath: format!("{KBS_PREFIX}{resource_path}"),
-            ..Default::default()
-        };
+        let resource_path = format!("{KBS_PREFIX}{resource_path}");
+
         let res = self
             .client
-            .get_resource(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
+            .call_with_retry(|client| {
+                let resource_path = resource_path.clone();
+
+                async move {
+                    let req = GetResourceRequest {
+                        ResourcePath: resource_path,
+                        ..Default::default()
+                    };
+
+                    client
+                        .get_resource(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
+                        .await
+                }
+            })
             .await?;
+
         Ok(res.Resource)
     }
 }
