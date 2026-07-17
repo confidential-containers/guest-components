@@ -57,7 +57,7 @@ jobs:
         include:
         - arch: x86_64
           oci_arch: amd64
-          libc: musl
+          libc: gnu
           attester: snp-attester,tdx-attester
           measured_rootfs: "yes"
           runner: ubuntu-24.04

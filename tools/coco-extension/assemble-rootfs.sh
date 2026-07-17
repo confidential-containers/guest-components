@@ -36,7 +36,7 @@ repo_root_dir="$(cd "${script_dir}/../.." && pwd)"
 # Target selection. Defaults match a native x86_64 build; the CI workflow
 # overrides these per architecture.
 ARCH="${ARCH:-$(uname -m)}"
-LIBC="${LIBC:-musl}"
+LIBC="${LIBC:-gnu}"
 
 # Attesters and resource providers compiled into the guest components. These are
 # architecture specific (e.g. tdx/snp attesters only build on x86_64, se-attester
@@ -111,12 +111,12 @@ copy_non_glibc_library_closure() {
 
 		dep_name="$(basename "${dep_path}")"
 		case "${dep_name}" in
-			ld-linux-*|libc.so.*|libdl.so.*|libm.so.*|libpthread.so.*|librt.so.*)
+			ld-linux-*|libc.so.*|libdl.so.*|libm.so.*|libpthread.so.*|librt.so.*|linux-vdso*)
 				continue
 				;;
 		esac
 
-		cp -a "${dep_path}" "${dest_dir}/"
+		install -D -m0755 "${dep_path}" "${dest_dir}/${dep_name}"
 	done < <(ldd "${lib}")
 }
 
@@ -136,7 +136,7 @@ build_nvidia_attestation_agent() {
 	[[ -e "${NVAT_LIB_DIR}/libnvat.so" || -e "${NVAT_LIB_DIR}/libnvat.so.1" ]] || \
 		die "NVIDIA SDK libnvat.so not found in ${NVAT_LIB_DIR}"
 
-	info "Building NVIDIA attester variant (ATTESTER=${NV_ATTESTER})"
+	info "Building NVIDIA attester variant (ATTESTER=${NV_ATTESTER} LIBC=${LIBC})"
 	rm -f "${build_dir}/attestation-agent"
 
 	NVAT_USE_SYSTEM_LIB=1 \
