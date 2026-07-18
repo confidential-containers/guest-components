@@ -116,6 +116,10 @@ nc8BTncWI0KGWIzTQasuSEye50R6gc9wZCGIElmhWcu3NYk=
 ```
 - `plaintext`: The file whose content will be sealed.
 
+A prebuilt `secret` CLI (with all KMS providers bundled) is available from the
+[GitHub releases](https://github.com/confidential-containers/guest-components/releases);
+using it lets you skip the build-from-source step below.
+
 Then, let's 
 ```bash
 # define the parameters

@@ -117,6 +117,10 @@ Prepare:
 - `aws-credential.json`: the credential file shown above
 - `plaintext`: the file whose content will be sealed
 
+A prebuilt `secret` CLI (with all KMS providers bundled) is available from the
+[GitHub releases](https://github.com/confidential-containers/guest-components/releases);
+using it lets you skip the build-from-source step below.
+
 ```bash
 KEY_ID=$(cat kms-key-id.txt)
 REGION=$(cat aws-region.txt)
