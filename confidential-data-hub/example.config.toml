@@ -173,9 +173,10 @@ location = "123456.mirror.aliyuncs.com"
 #
 # IMPORTANT: This works by adding the cert as a trusted root CA. Therefore:
 # - Supply the CA certificate that signed the registry's (or proxy's) TLS certificate.
-# - If using a self-signed certificate, it must have the CA:true Basic Constraints
-#   extension (i.e., it acts as both CA and leaf). Plain self-signed leaf certificates
-#   (without CA:true) are NOT supported when using rustls (the default TLS backend).
+# - If using a self-signed certificate, it must NOT have the CA:true Basic
+#   Constraints extension: rustls (the default TLS backend) rejects a CA:true cert
+#   presented as a leaf with a `CaUsedAsEndEntity` error. Use a self-signed cert
+#   with CA:false, or a CA:true cert that signs a separate CA:false server cert.
 # - These certificates are trusted for both direct registry connections and
 #   connections through an HTTPS proxy (see [image.image_pull_proxy] below).
 #
@@ -225,8 +226,8 @@ work_dir = "/run/image-rs"
 #
 # If the proxy itself uses a self-signed or privately-signed TLS certificate,
 # add its CA certificate via `extra_root_certificates` (see above). The same
-# rustls limitations apply: plain self-signed leaf certs (without CA:true) are
-# not supported
+# rustls limitation applies: a self-signed cert must NOT have CA:true, or rustls
+# rejects it with a `CaUsedAsEndEntity` error when it is presented as the leaf.
 #
 # By default this value is not set.
 https_proxy = "http://127.0.0.1:5432"
