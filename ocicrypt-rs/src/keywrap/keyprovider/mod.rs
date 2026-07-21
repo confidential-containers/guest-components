@@ -438,7 +438,7 @@ impl KeyWrapper for KeyProviderKeyWrapper {
         if !enc_config.param.contains_key(&self.provider) {
             return Err(anyhow!(
                 "keyprovider: unknown provider {} for operation {}",
-                &self.provider,
+                self.provider,
                 OpKey::Wrap
             ));
         }
