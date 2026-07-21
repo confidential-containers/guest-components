@@ -213,28 +213,6 @@ fn left_pad_with_zeroes(data: Vec<u8>, target_len: usize) -> Vec<u8> {
     padded
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn default_curve_is_p256() {
-        assert!(matches!(EcKeyPair::default(), EcKeyPair::P256(_)));
-    }
-
-    #[test]
-    fn p521_roundtrip_and_coordinates() {
-        let p521 = EcKeyPair::P521(P521EcKeyPair::default());
-        assert!(matches!(p521.curve(), Curve::P521));
-        assert_eq!(p521.x().expect("x should exist").len(), 66);
-        assert_eq!(p521.y().expect("y should exist").len(), 66);
-
-        let pem = p521.to_pkcs8_pem().expect("serialize pem");
-        let parsed = EcKeyPair::from_pkcs8_pem(&pem).expect("parse pem");
-        assert!(matches!(parsed.curve(), Curve::P521));
-    }
-}
-
 impl Default for P256EcKeyPair {
     fn default() -> Self {
         Self::new().expect("Create P256 key pair failed")
@@ -271,5 +249,27 @@ impl P256EcKeyPair {
         let mut ctx = BigNumContext::new()?;
         public_key.affine_coordinates_gfp(private_key.group(), &mut _x, &mut y, &mut ctx)?;
         Ok(left_pad_with_zeroes(y.to_vec(), 32))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_curve_is_p256() {
+        assert!(matches!(EcKeyPair::default(), EcKeyPair::P256(_)));
+    }
+
+    #[test]
+    fn p521_roundtrip_and_coordinates() {
+        let p521 = EcKeyPair::P521(P521EcKeyPair::default());
+        assert!(matches!(p521.curve(), Curve::P521));
+        assert_eq!(p521.x().expect("x should exist").len(), 66);
+        assert_eq!(p521.y().expect("y should exist").len(), 66);
+
+        let pem = p521.to_pkcs8_pem().expect("serialize pem");
+        let parsed = EcKeyPair::from_pkcs8_pem(&pem).expect("parse pem");
+        assert!(matches!(parsed.curve(), Curve::P521));
     }
 }
