@@ -153,7 +153,7 @@ fn generate_openapi_document() -> std::io::Result<()> {
     struct ApiDoc;
     let mut file = File::create("openapi/api.json")?;
     let json = ApiDoc::openapi().to_pretty_json()?;
-    println!("{}", &json);
+    println!("{}", json);
     file.write_all(json.as_bytes())
 }
 
