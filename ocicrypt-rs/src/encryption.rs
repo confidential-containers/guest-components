@@ -215,7 +215,7 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
     EncLayerFinalizer,
 )> {
     let mut encrypted = false;
-    for (annotations_id, _scheme) in KEY_WRAPPERS_ANNOTATIONS.iter() {
+    for annotations_id in KEY_WRAPPERS_ANNOTATIONS.keys() {
         let anno = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);
         if anno.contains_key(annotations_id) {
             if let Some(decrypt_config) = ec.decrypt_config.as_ref() {
