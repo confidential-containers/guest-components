@@ -1,0 +1,53 @@
+name: TEST musl build (throwaway)
+
+on:
+  push:
+    branches:
+    - ci/test-musl-build
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+        - arch: x86_64
+          libc: musl
+          runner: ubuntu-24.04
+        - arch: aarch64
+          libc: musl
+          runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.platform.runner }}
+    env:
+      RUST_TARGET: ${{ matrix.platform.arch }}-unknown-linux-${{ matrix.platform.libc }}
+      CLI_FEATURES: cli,aliyun,aws,kbs
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        persist-credentials: false
+
+    - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+      with:
+        target: ${{ env.RUST_TARGET }}
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          protobuf-compiler libclang-dev cmake pkg-config
+        if [ "${{ matrix.platform.libc }}" = "musl" ]; then
+          sudo apt-get install -y --no-install-recommends musl-tools
+        fi
+
+    - name: Build secret CLI
+      run: |
+        cargo build \
+          -p confidential-data-hub \
+          --bin secret \
+          --release \
+          --target "$RUST_TARGET" \
+          --no-default-features \
+          --features "$CLI_FEATURES"
