@@ -284,7 +284,7 @@ mod tests {
         assert_eq!(parsed, secret_object);
 
         let jwk = include_str!("./tests/test-key.json");
-        let jwk: Jwk = serde_json::from_str(&jwk).expect("Could not parse signing JWK");
+        let jwk: Jwk = serde_json::from_str(jwk).expect("Could not parse signing JWK");
 
         let kid = "test-key".to_string();
         let kid_cred_path = format!("{SIGNING_CREDENTIALS_PATH}/{}", &kid);
@@ -322,7 +322,7 @@ mod tests {
         };
 
         let jwk = include_str!("./tests/test-key.json");
-        let jwk: Jwk = serde_json::from_str(&jwk).expect("Could not parse signing JWK");
+        let jwk: Jwk = serde_json::from_str(jwk).expect("Could not parse signing JWK");
 
         let kid = "test-key".to_string();
         let kid_cred_path = format!("{SIGNING_CREDENTIALS_PATH}/{}", &kid);
@@ -360,10 +360,10 @@ mod tests {
         };
 
         let jwk = include_str!("./tests/test-key.json");
-        let jwk: Jwk = serde_json::from_str(&jwk).expect("Could not parse signing JWK");
+        let jwk: Jwk = serde_json::from_str(jwk).expect("Could not parse signing JWK");
 
         let jwk2 = include_str!("./tests/test-key-2.json");
-        let jwk2: Jwk = serde_json::from_str(&jwk2).expect("Could not parse signing JWK");
+        let jwk2: Jwk = serde_json::from_str(jwk2).expect("Could not parse signing JWK");
 
         let kid = "test-key".to_string();
         let kid_cred_path = format!("{SIGNING_CREDENTIALS_PATH}/{}", &kid);
