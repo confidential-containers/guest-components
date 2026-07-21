@@ -77,6 +77,7 @@ impl TryFrom<Tee> for BoxedAttester {
             Tee::Tpm => Box::new(tpm::TpmAttester::new()?),
             #[cfg(feature = "nvidia-attester")]
             Tee::Nvidia => Box::<nvidia::NvAttester>::default(),
+            #[allow(unreachable_patterns)]
             _ => bail!("TEE is not supported!"),
         };
 
