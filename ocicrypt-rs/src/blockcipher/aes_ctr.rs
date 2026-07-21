@@ -168,7 +168,7 @@ impl<R: Read> Read for AESCTRBlockCipher<R> {
                     .map_err(|_| {
                         std::io::Error::other(format!(
                             "failed decrypt byte stream, exp hmac: {:?} , actual hmac: {:?}",
-                            &state.exp_hmac,
+                            state.exp_hmac,
                             state.hmac.clone().finalize().into_bytes()
                         ))
                     })?;
