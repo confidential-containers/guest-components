@@ -9,7 +9,13 @@
 pub mod common;
 
 /// Ocicrypt-rs config for grpc
-#[cfg(all(feature = "kbs", feature = "encryption", feature = "keywrap-grpc"))]
+#[cfg(all(
+    feature = "kbs",
+    feature = "encryption",
+    feature = "keywrap-grpc",
+    not(feature = "keywrap-ttrpc"),
+    not(feature = "keywrap-native")
+))]
 const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_grpc.conf";
 
 /// Ocicrypt-rs config for ttrpc
@@ -19,7 +25,10 @@ const OCICRYPT_CONFIG: &str = "test_data/ocicrypt_keyprovider_ttrpc.conf";
 #[cfg(all(
     feature = "kbs",
     feature = "encryption",
-    any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")
+    any(
+        feature = "keywrap-ttrpc",
+        all(feature = "keywrap-grpc", not(feature = "keywrap-native"))
+    )
 ))]
 #[rstest::rstest]
 #[case("ghcr.io/confidential-containers/test-container:unencrypted")]
