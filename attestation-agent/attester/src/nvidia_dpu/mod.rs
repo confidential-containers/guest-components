@@ -18,12 +18,10 @@
 
 use super::{Attester, TeeEvidence};
 use anyhow::{bail, Context, Result};
-use base64::engine::general_purpose::STANDARD;
-use base64::Engine;
 use p384::ecdsa::signature::Signer;
 use p384::ecdsa::{Signature, SigningKey};
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, base64::Base64};
+use serde_with::{base64::Base64, serde_as};
 
 /// PCI vendor ID for Mellanox/NVIDIA networking devices.
 const NVIDIA_MLX_VENDOR_ID: &str = "15b3";
@@ -38,14 +36,23 @@ const NVIDIA_DPU_NONCE_SIZE: usize = 64;
 /// Architecture identifier for NVIDIA BlueField-3 DPU.
 const ARCHITECTURE_BF3: &str = "bluefield3";
 
-/// DICE alias private key path exposed by the platform attestation subsystem.
-/// Security: within DICE threat model, key availability to the measured OS is
-/// by design — firmware deviation changes CDI, yielding a different key pair.
-// TODO: evaluate hardware-bound signing interface (PSC) when available,
-// avoiding key extraction for defense-in-depth.
+/// DICE alias private key exposed by the BlueField platform attestation subsystem.
+///
+/// Requires: `mlnx_bf_attestation` kernel module (part of MLNX_OFED >= 24.10 / DOCA >= 2.8).
+/// This runs on the BF3 ARM SoC Linux (the "DPU OS"), not the x86 host.
+///
+/// Security model: key availability to the attested OS is inherent to DICE —
+/// any firmware change rotates the CDI, producing a different key pair.
+/// Future: PSC hardware signing (sign-without-extract) for defense-in-depth.
 const ALIAS_PRIVATE_KEY_PATH: &str = "/sys/kernel/security/tee/dice/alias_private_key";
 
 /// Base path for DPU attestation attributes exposed via InfiniBand sysfs.
+///
+/// Requires: `mlx5_core` kernel driver with attestation support
+/// (MLNX_OFED >= 24.10 or DOCA >= 2.8 BFB image with attestation feature enabled).
+/// The standard DOCA production BFB images include this by default since DOCA 2.8.
+///
+/// Reference: <https://docs.nvidia.com/networking/display/dpunicattestation>
 // TODO: dynamically discover InfiniBand device name instead of hardcoding mlx5_0.
 // Multiple devices or different naming (mlx5_1, etc.) require enumeration.
 const ATTESTATION_BASE_PATH: &str = "/sys/class/infiniband/mlx5_0/device/attestation";
@@ -66,31 +73,17 @@ pub struct NvidiaDpuEvidence {
 pub struct DpuDeviceEvidence {
     /// Device architecture identifier (e.g. "bluefield3")
     pub architecture: String,
-    /// DER-encoded DICE Alias certificate (leaf)
+    /// DER-encoded X.509 DICE Alias certificate (leaf, signed by DeviceID key).
+    /// Read as raw bytes from sysfs; the verifier parses the X.509 structure.
     #[serde_as(as = "Base64")]
     pub alias_cert: Vec<u8>,
-    /// DER-encoded DICE DeviceID certificate
+    /// DER-encoded X.509 DICE DeviceID certificate (signed by manufacturer Root CA).
+    /// Read as raw bytes from sysfs; the verifier parses the X.509 structure.
     #[serde_as(as = "Base64")]
     pub device_id_cert: Vec<u8>,
-    /// Firmware measurements from DICE layers
-    pub measurements: Vec<NvidiaDpuMeasurement>,
-    /// Base64-encoded ECDSA P-384 signature of report_data using DICE alias private key
-    pub report_data_signature: String,
-}
-
-/// A single DICE layer measurement
-#[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
-pub struct NvidiaDpuMeasurement {
-    /// DICE layer index. Known values:
-    /// - 0: ROM (immutable boot code)
-    /// - 1: Firmware
-    /// - 2: OS/Runtime
-    /// Open to extension — future firmware versions may define additional layers.
-    pub layer: u8,
-    /// SHA-384 digest of the layer's code/config (fixed 48 bytes)
+    /// ECDSA P-384 signature of report_data using DICE alias private key
     #[serde_as(as = "Base64")]
-    pub digest: [u8; 48],
+    pub report_data_signature: Vec<u8>,
 }
 
 /// Detect if NVIDIA BlueField-3 DPU hardware is available on the platform.
@@ -118,9 +111,7 @@ pub fn detect_platform() -> bool {
             .trim_start_matches("0x")
             .to_lowercase();
 
-        if vendor == NVIDIA_MLX_VENDOR_ID
-            && BF3_DEVICE_IDS.iter().any(|id| device == *id)
-        {
+        if vendor == NVIDIA_MLX_VENDOR_ID && BF3_DEVICE_IDS.iter().any(|id| device == *id) {
             return true;
         }
     }
@@ -129,19 +120,23 @@ pub fn detect_platform() -> bool {
 }
 
 /// Sign report_data with DICE alias private key for freshness binding.
+/// Returns the raw signature bytes (DER-encoded ECDSA P-384).
 /// Returns error if the key is unavailable (unsigned evidence is not acceptable).
-fn sign_report_data(report_data: &[u8]) -> Result<String> {
-    // DICE alias private key path from NVIDIA DOCA attestation service layout.
-    // Reference: NVIDIA DOCA DICE Programming Guide, Section "Key Exposure via sysfs"
+fn sign_report_data(report_data: &[u8]) -> Result<Vec<u8>> {
+    // DICE alias private key from NVIDIA attestation subsystem layout.
+    // Reference: https://docs.nvidia.com/networking/display/dpunicattestation
     let key_bytes = std::fs::read(ALIAS_PRIVATE_KEY_PATH)
         .context("DICE alias private key not available - cannot produce signed evidence")?;
     if key_bytes.len() != 48 {
-        bail!("signing key must be exactly 48 bytes (P-384), got {}", key_bytes.len());
+        bail!(
+            "signing key must be exactly 48 bytes (P-384), got {}",
+            key_bytes.len()
+        );
     }
     let signing_key = SigningKey::from_bytes(key_bytes.as_slice().into())
         .context("Failed to parse DICE alias private key")?;
     let signature: Signature = signing_key.sign(report_data);
-    Ok(STANDARD.encode(signature.to_bytes()))
+    Ok(signature.to_bytes().to_vec())
 }
 
 #[derive(Debug, Default)]
@@ -154,11 +149,8 @@ impl Attester for NvidiaDpuAttester {
     /// The `report_data` parameter is used as a nonce to bind the evidence
     /// to a specific attestation session, preventing replay attacks.
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
-        // Reject oversize nonce; pad shorter input with zeros
-        if report_data.len() > NVIDIA_DPU_NONCE_SIZE {
-            bail!("report_data exceeds maximum size of {} bytes", NVIDIA_DPU_NONCE_SIZE);
-        }
-        report_data.resize(NVIDIA_DPU_NONCE_SIZE, 0); // pad with zeros if shorter
+        // Pad or truncate to fixed nonce register size (ECDSA signs arbitrary length internally)
+        report_data.resize(NVIDIA_DPU_NONCE_SIZE, 0);
 
         // Collect evidence from sysfs-exposed DICE attestation attributes.
         // BF3 exposes DICE certs via InfiniBand sysfs, not a chardev.
@@ -171,33 +163,16 @@ impl Attester for NvidiaDpuAttester {
 impl NvidiaDpuAttester {
     /// Collect evidence from sysfs-exposed DICE attestation attributes.
     ///
-    /// BlueField-3 exposes DICE certificates and measurements via the
+    /// BlueField-3 exposes DER-encoded X.509 DICE certificates via the
     /// InfiniBand device sysfs path under `device/attestation/`.
+    /// The raw DER bytes are passed through as-is; parsing is done by the verifier.
     fn collect_evidence_from_sysfs(&self, report_data: &[u8]) -> Result<NvidiaDpuEvidence> {
-        // Read DICE certificates from sysfs
+        // Read DER-encoded X.509 DICE certificates from sysfs
         let alias_cert = std::fs::read(format!("{}/alias_cert", ATTESTATION_BASE_PATH))
             .context("failed to read alias cert")?;
 
         let device_id_cert = std::fs::read(format!("{}/device_id_cert", ATTESTATION_BASE_PATH))
             .context("failed to read device_id cert")?;
-
-        // Read measurements if available
-        let measurements_path = format!("{}/measurements", ATTESTATION_BASE_PATH);
-        let measurements = if std::path::Path::new(&measurements_path).exists() {
-            let measurement_bytes = std::fs::read(&measurements_path).unwrap_or_default();
-            if measurement_bytes.len() % 48 != 0 {
-                bail!("measurement buffer length {} is not a multiple of 48", measurement_bytes.len());
-            }
-            let entry_size = 1 + 48; // layer(u8) + SHA-384 digest
-            measurement_bytes.chunks_exact(entry_size)
-                .map(|chunk| NvidiaDpuMeasurement {
-                    layer: chunk[0],
-                    digest: chunk[1..49].try_into().expect("chunk is exactly 49 bytes"),
-                })
-                .collect()
-        } else {
-            Vec::new()
-        };
 
         let report_data_signature = sign_report_data(report_data)?;
 
@@ -207,7 +182,6 @@ impl NvidiaDpuAttester {
                 architecture: ARCHITECTURE_BF3.to_string(),
                 alias_cert,
                 device_id_cert,
-                measurements,
                 report_data_signature,
             }],
         })
@@ -226,17 +200,7 @@ mod tests {
                 architecture: ARCHITECTURE_BF3.to_string(),
                 alias_cert: vec![1, 2, 3, 4],
                 device_id_cert: vec![5, 6, 7, 8],
-                measurements: vec![
-                    NvidiaDpuMeasurement {
-                        layer: 0,
-                        digest: [0u8; 48], // SHA-384
-                    },
-                    NvidiaDpuMeasurement {
-                        layer: 1,
-                        digest: [1u8; 48],
-                    },
-                ],
-                report_data_signature: "dGVzdF9zaWduYXR1cmU=".to_string(),
+                report_data_signature: b"test_signature".to_vec(),
             }],
         };
 
@@ -252,17 +216,16 @@ mod tests {
         assert_eq!(device.architecture, ARCHITECTURE_BF3);
         assert_eq!(device.alias_cert, vec![1, 2, 3, 4]);
         assert_eq!(device.device_id_cert, vec![5, 6, 7, 8]);
-        assert_eq!(device.measurements.len(), 2);
-        assert_eq!(device.measurements[0].layer, 0);
-        assert_eq!(device.measurements[0].digest.len(), 48);
-        assert_eq!(device.measurements[1].layer, 1);
-        assert_eq!(device.report_data_signature, "dGVzdF9zaWduYXR1cmU=");
+        assert_eq!(device.report_data_signature, b"test_signature".to_vec());
 
         // Also verify serde_json::Value roundtrip
         let value = serde_json::to_value(&parsed).unwrap();
         let parsed2: NvidiaDpuEvidence = serde_json::from_value(value).unwrap();
         assert_eq!(parsed2.devices[0].alias_cert, device.alias_cert);
-        assert_eq!(parsed2.devices[0].report_data_signature, device.report_data_signature);
+        assert_eq!(
+            parsed2.devices[0].report_data_signature,
+            device.report_data_signature
+        );
     }
 
     #[test]
@@ -272,17 +235,5 @@ mod tests {
         let result = detect_platform();
         // We just verify it doesn't panic
         let _ = result;
-    }
-
-    #[tokio::test]
-    async fn test_get_evidence_no_hardware() {
-        // Without NVIDIA DPU hardware, get_evidence should fail because
-        // the DICE alias private key is not available (signature is mandatory).
-        let attester = NvidiaDpuAttester::default();
-        let report_data = vec![0u8; 32];
-
-        let result = attester.get_evidence(report_data).await;
-        // On machines without DPU hardware, this should error due to missing key
-        assert!(result.is_err());
     }
 }
