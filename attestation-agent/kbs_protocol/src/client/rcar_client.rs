@@ -529,7 +529,7 @@ mod test {
                     "Actual error: {e:#?}"
                 );
                 println!("NOTE: the test is skipped due to KBS protocol incompatibility.");
-                return ();
+                return;
             }
         };
 
@@ -605,7 +605,7 @@ mod test {
     #[case(json!({SELECTED_HASH_ALGORITHM_JSON_KEY: {}}), Err(Error::UnexpectedJSONDataType("string".into(), "{}".into())))]
     #[case(json!({SELECTED_HASH_ALGORITHM_JSON_KEY: true}), Err(Error::UnexpectedJSONDataType("string".into(), "true".into())))]
     #[case(json!({SELECTED_HASH_ALGORITHM_JSON_KEY: 99999}), Err(Error::UnexpectedJSONDataType("string".into(), "99999".into())))]
-    #[case(json!({SELECTED_HASH_ALGORITHM_JSON_KEY: 3.141}), Err(Error::UnexpectedJSONDataType("string".into(), "3.141".into())))]
+    #[case(json!({SELECTED_HASH_ALGORITHM_JSON_KEY: 42.141}), Err(Error::UnexpectedJSONDataType("string".into(), "42.141".into())))]
     fn test_get_hash_algorithm(
         #[case] extra_params: Value,
         #[case] expected_result: Result<HashAlgorithm>,
