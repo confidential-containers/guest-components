@@ -29,8 +29,6 @@ where
             new_client,
         };
 
-        this.ensure_client().await?;
-
         Ok(this)
     }
 
