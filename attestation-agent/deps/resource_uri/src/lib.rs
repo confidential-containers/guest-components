@@ -278,8 +278,7 @@ mod tests {
 
         // Conversion to Url
         let url_from_string = url::Url::try_from(url).expect("failed to parse url");
-        let url_from_resource: url::Url =
-            resource.clone().try_into().expect("failed to try into url");
+        let url_from_resource: url::Url = resource.clone().into();
         assert_eq!(url_from_string, url_from_resource);
 
         // Conversion to ResourceUri
