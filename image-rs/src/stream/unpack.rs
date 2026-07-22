@@ -497,17 +497,20 @@ fn fchown_at(fd: BorrowedFd<'_>, uid: u32, gid: u32) -> Result<()> {
 }
 
 /// Set mode on the inode referenced by an `O_PATH` fd (`Root` / `Handle` from pathrs).
+///
+/// The underlying `fchmodat(2)` syscall has no flags argument, so `AT_EMPTY_PATH`
+/// is only honored through the `fchmodat2(2)` syscall introduced in Linux 6.6.
+/// On older guest kernels the libc falls back and rejects `AT_EMPTY_PATH` with
+/// `EINVAL`. `chmod(2)` cannot be issued on an `O_PATH` fd directly either, so
+/// resolve the inode via `/proc/self/fd/<N>`, which works on any kernel as long
+/// as procfs is mounted (always the case in the guest).
 fn fchmodat(fd: BorrowedFd<'_>, mode: u32) -> Result<()> {
-    let ret = unsafe {
-        libc::fchmodat(
-            fd.as_raw_fd(),
-            c"".as_ptr(),
-            mode as libc::mode_t,
-            libc::AT_EMPTY_PATH,
-        )
-    };
+    let proc_path = format!("/proc/self/fd/{}", fd.as_raw_fd());
+    let proc_path =
+        CString::new(proc_path).map_err(|_| anyhow!("procfs path contains null byte"))?;
+    let ret = unsafe { libc::chmod(proc_path.as_ptr(), mode as libc::mode_t) };
     if ret != 0 {
-        bail!("failed to fchmodat: {:?}", io::Error::last_os_error());
+        bail!("failed to chmod: {:?}", io::Error::last_os_error());
     }
     Ok(())
 }
