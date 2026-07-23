@@ -1,0 +1,42 @@
+name: Install NVIDIA Attestation SDK
+description: Build and install the NVIDIA Attestation SDK from source (x86_64 only)
+
+inputs:
+  version:
+    description: NVAT SDK version tag to checkout
+    required: false
+    default: "2026.03.02"
+
+runs:
+  using: composite
+  steps:
+    - name: Install NVIDIA Attestation SDK
+      if: runner.arch == 'X64'
+      shell: bash
+      env:
+        NVAT_VERSION: ${{ inputs.version }}
+      run: |
+        export RUSTFLAGS=""
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          build-essential clang cmake pkg-config libclang-dev \
+          libcurl4-openssl-dev libssl-dev libxml2-dev \
+          libxmlsec1-dev libxmlsec1-openssl
+
+        tmpdir="$(mktemp -d)"
+        git clone --depth=1 --branch "${NVAT_VERSION}" \
+          https://github.com/NVIDIA/attestation-sdk "${tmpdir}/attestation-sdk"
+        cmake -S "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp" \
+          -B "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp/build" \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp/build" --parallel "$(nproc)"
+        sudo cmake --install "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp/build"
+        # The nv-attestation-sdk-sys build script looks for the C header at
+        # /usr/include/nvat.h, but cmake installs it under /usr/local/include.
+        sudo mkdir -p /usr/include
+        sudo ln -sf /usr/local/include/nvat.h /usr/include/nvat.h
+        sudo ln -sf /usr/local/lib/libnvat.so /usr/lib/libnvat.so
+        sudo ldconfig
+        rm -rf "${tmpdir}"
+
+        echo "NVAT_USE_SYSTEM_LIB=1" >> "$GITHUB_ENV"

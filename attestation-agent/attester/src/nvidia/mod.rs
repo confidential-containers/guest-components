@@ -4,13 +4,20 @@
 //
 
 use super::{Attester, TeeEvidence};
-use anyhow::{anyhow, Context, Result};
-use nv_attestation_sdk::{GpuEvidenceSource, Nonce, NvatSdk, SdkOptions, SwitchEvidenceSource};
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::sync::OnceLock;
 use strum::{Display, EnumString};
-use tracing::warn;
 
+cfg_if::cfg_if! {
+    if #[cfg(target_arch = "x86_64")] {
+        use anyhow::anyhow;
+        use nv_attestation_sdk::{GpuEvidenceSource, Nonce, NvatSdk, SdkOptions, SwitchEvidenceSource};
+        use std::sync::OnceLock;
+        use tracing::warn;
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
 static INIT: OnceLock<Result<()>> = OnceLock::new();
 
 const NVIDIA_NONCE_SIZE: usize = 32;
@@ -21,6 +28,7 @@ const NVIDIA_NONCE_SIZE: usize = 32;
 /// Since we have no way of knowing when there will be no
 /// more calls to the SDK, keep the SDK object indefinitely.
 /// This shouldn't cause any problems in the CoCo use case.
+#[cfg(target_arch = "x86_64")]
 fn ensure_sdk_init() -> Result<()> {
     INIT.get_or_init(|| -> Result<()> {
         let opts = SdkOptions::new()?;
@@ -45,6 +53,7 @@ enum Architecture {
     LS10,
 }
 
+#[cfg(target_arch = "x86_64")]
 pub fn detect_platform() -> bool {
     if ensure_sdk_init().is_err() {
         warn!("NVIDIA Attestation SDK could not be initialized.");
@@ -58,6 +67,12 @@ pub fn detect_platform() -> bool {
             false
         }
     }
+}
+
+#[cfg(not(target_arch = "x86_64"))]
+pub fn detect_platform() -> bool {
+    warn!("NVIDIA attestation is only support on x86 for now. NVIDIA devices will not be attested if they are present.");
+    false
 }
 
 /// NRAS knows about "switch" and "gpu" but the expected evidence
@@ -109,6 +124,7 @@ impl Attester for NvAttester {
 }
 
 /// Internal helper for getting evidence from NVIDIA devices.
+#[cfg(target_arch = "x86_64")]
 fn get_device_evidence(report_data: Option<[u8; 32]>) -> Result<Vec<NvDeviceReportAndCert>> {
     ensure_sdk_init()?;
 
@@ -148,4 +164,9 @@ fn get_device_evidence(report_data: Option<[u8; 32]>) -> Result<Vec<NvDeviceRepo
     }
 
     Ok(evidence)
+}
+
+#[cfg(not(target_arch = "x86_64"))]
+fn get_device_evidence(_report_data: Option<[u8; 32]>) -> Result<Vec<NvDeviceReportAndCert>> {
+    Ok(vec![])
 }
