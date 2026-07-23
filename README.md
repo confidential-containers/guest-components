@@ -27,13 +27,13 @@ CoCo Keyprovider. Used to encrypt the container images.
 
 ## Tools
 
-[secret-cli](confidential-data-hub/hub/src/bin/secret_cli.rs)
+[secret-cli](confidential-data-hub/docs/SEALED_SECRET.md)
 Utility for sealing and unsealing sealed secrets
 
-[CDH Client](confidential-data-hub/hub/src/bin)
+[CDH Client](confidential-data-hub/README.md#client-tool)
 A tool for exercising CDH endpoints
 
-[CDH (One Shot)](confidential-data-hub/hub/src/bin/cdh-oneshot.rs)
+[CDH (One Shot)](confidential-data-hub)
 One Shot version of CDH
 
 [CoCo Keyprovider](attestation-agent/coco_keyprovider)
