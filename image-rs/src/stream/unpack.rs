@@ -395,12 +395,10 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
                 }
             })?;
             let ft = FileTime::from_unix_time(mtime, 0);
-            filetime::set_symlink_file_times(layer_dir.join(entry_path), ft, ft).map_err(
-                |source| UnpackError::SetMTimeFailed {
-                    source: source.into(),
-                    path: err_path.to_string(),
-                },
-            )?;
+            set_mtime_best_effort(
+                filetime::set_symlink_file_times(layer_dir.join(entry_path), ft, ft),
+                &err_path,
+            );
         } else if kind.is_hard_link() {
             let handle = layer_root
                 .resolve(&entry_path)
@@ -412,12 +410,10 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
                 }
             })?;
             let ft = FileTime::from_unix_time(mtime, 0);
-            filetime::set_file_times(layer_dir.join(entry_path), ft, ft).map_err(|source| {
-                UnpackError::SetMTimeFailed {
-                    source: source.into(),
-                    path: err_path.to_string(),
-                }
-            })?;
+            set_mtime_best_effort(
+                filetime::set_file_times(layer_dir.join(entry_path), ft, ft),
+                &err_path,
+            );
         } else {
             let handle = layer_root
                 .resolve(&entry_path)
@@ -437,12 +433,10 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
                 })?;
             }
             let ft = FileTime::from_unix_time(mtime, 0);
-            filetime::set_file_times(layer_dir.join(entry_path), ft, ft).map_err(|source| {
-                UnpackError::SetMTimeFailed {
-                    source: source.into(),
-                    path: err_path.to_string(),
-                }
-            })?;
+            set_mtime_best_effort(
+                filetime::set_file_times(layer_dir.join(entry_path), ft, ft),
+                &err_path,
+            );
         }
     }
 
@@ -450,13 +444,11 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
     for (k, v) in dirs.iter() {
         let ret = unsafe { nix::libc::utimes(k.as_ptr(), v.as_ptr()) };
         if ret != 0 {
-            return Err(UnpackError::SetMTimeFailed {
-                source: anyhow!(
-                    "change directory utime error: {:?}",
-                    io::Error::last_os_error(),
-                ),
-                path: k.to_string_lossy().to_string(),
-            });
+            warn!(
+                "skipping directory mtime for {}: {:?} (non-fatal)",
+                k.to_string_lossy(),
+                io::Error::last_os_error(),
+            );
         }
     }
 
@@ -465,13 +457,27 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
     if let Some(times) = root_times {
         let path = layer_dir.display().to_string();
         let ft = FileTime::from_unix_time(times[1].tv_sec, 0);
-        filetime::set_file_times(layer_dir, ft, ft).map_err(|e| UnpackError::SetMTimeFailed {
-            source: e.into(),
-            path,
-        })?;
+        set_mtime_best_effort(filetime::set_file_times(layer_dir, ft, ft), &path);
     }
 
     Ok(())
+}
+
+/// Best-effort application of a file's mtime.
+///
+/// mtime is cosmetic metadata: unlike uid/gid and mode it is neither security- nor
+/// integrity-relevant for a container rootfs. Some layers carry files whose mtime the
+/// kernel or filesystem refuses to set (read-only inodes, timestamps out of range, a
+/// symlink whose target rejects the change). Matching the behaviour of
+/// tar (https://docs.rs/tar/0.4.46/src/tar/entry.rs.html#587-590),
+/// umoci (https://github.com/opencontainers/umoci/blob/f5d1219acaf67127ebacf6306776d3ff465735ea/oci/layer/unpack.go#L223) and
+/// containerd (https://github.com/containerd/containerd/blob/ffcf715dfa5e2c7ee3c9001bcfc27fa0565d376b/pkg/archive/tar.go#L322),
+/// a failure here is logged and skipped rather than aborting the
+/// whole image pull.
+fn set_mtime_best_effort(res: io::Result<()>, path: &str) {
+    if let Err(e) = res {
+        warn!("skipping mtime for {path}: {e:?} (non-fatal)");
+    }
 }
 
 fn dir_times(mtime: i64) -> [timeval; 2] {
