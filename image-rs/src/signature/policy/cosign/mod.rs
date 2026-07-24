@@ -76,10 +76,9 @@ impl CosignParameters {
             .await?;
 
         // check the reference rules (signed identity)
+        let signed_identity = self.signed_identity_rule();
         for payload in payloads {
-            if let Some(rule) = &self.signed_identity {
-                payload.validate_signed_docker_reference(&image.reference, rule)?;
-            }
+            payload.validate_signed_docker_reference(&image.reference, signed_identity)?;
 
             if payload
                 .validate_signed_docker_manifest_digest(&image.manifest_digest.to_string())
@@ -101,6 +100,41 @@ impl CosignParameters {
         Ok(())
     }
 
+    /// Default `signedIdentity` match rule applied when the policy omits the
+    /// field.
+    ///
+    /// Upstream containers/image treats `signedIdentity` as effectively
+    /// mandatory: for `sigstoreSigned` it fills in `matchRepoDigestOrExact` at
+    /// policy-parse time and refuses a policy whose rule ends up nil, so its
+    /// verification path never skips the identity check (see
+    /// <https://github.com/containers/image/blob/main/signature/policy_config_sigstore.go>
+    /// and
+    /// <https://github.com/containers/image/blob/main/signature/policy_eval_sigstore.go>).
+    /// That default assumes
+    /// the signature's `docker-reference` carries a full reference (as produced
+    /// by skopeo/podman). image-rs instead consumes signatures produced by the
+    /// `/usr/bin/cosign` tool, whose `docker-reference` carries only a
+    /// repository (no tag); `matchRepoDigestOrExact` would therefore reject
+    /// legitimate tag-based pulls and is already refused by
+    /// [`Self::check_reference_rule_types`]. `MatchRepository` is the strictest
+    /// rule compatible with such signatures, so it is our default.
+    const DEFAULT_SIGNED_IDENTITY: PolicyReqMatchType = PolicyReqMatchType::MatchRepository;
+
+    /// Resolve the `signedIdentity` match rule to apply for this policy entry.
+    ///
+    /// When the policy omits `signedIdentity` we must NOT skip the identity
+    /// check: doing so would accept any image signed by the trusted key under
+    /// any name, enabling image substitution / version rollback within the
+    /// key's trust domain. Instead we substitute a default rule, mirroring both
+    /// the simple-signing path in this crate and upstream containers/image
+    /// (which never verifies with a nil rule). See [`Self::DEFAULT_SIGNED_IDENTITY`]
+    /// for why our default differs from upstream's `matchRepoDigestOrExact`.
+    fn signed_identity_rule(&self) -> &PolicyReqMatchType {
+        self.signed_identity
+            .as_ref()
+            .unwrap_or(&Self::DEFAULT_SIGNED_IDENTITY)
+    }
+
     /// Check whether this Policy Request Match Type (i.e., signed identity
     /// check type) for the reference is MatchRepository or ExactRepository.
     /// Because cosign-created signatures only contain a repository,
@@ -108,13 +142,11 @@ impl CosignParameters {
     /// Other types are all to be denied.
     /// If it is neither of them, return `Error`. Otherwise, return `Ok()`
     fn check_reference_rule_types(&self) -> Result<()> {
-        match &self.signed_identity {
-            Some(rule) => match rule {
-                PolicyReqMatchType::MatchRepository
-                | PolicyReqMatchType::ExactRepository { .. } => Ok(()),
-                p => Err(anyhow!("Denied by {:?}", p)),
-            },
-            None => Ok(()),
+        match self.signed_identity_rule() {
+            PolicyReqMatchType::MatchRepository | PolicyReqMatchType::ExactRepository { .. } => {
+                Ok(())
+            }
+            p => Err(anyhow!("Denied by {:?}", p)),
         }
     }
 
@@ -351,6 +383,23 @@ mod tests {
             signed_identity: Some(policy_match),
         };
         assert_eq!(parameter.check_reference_rule_types().is_ok(), pass);
+    }
+
+    #[test]
+    fn omitted_signed_identity_defaults_to_match_repository() {
+        let parameter = CosignParameters {
+            key_path: None,
+            key_data: None,
+            signed_identity: None,
+        };
+        // An omitted signedIdentity must NOT skip the identity check; it
+        // resolves to the repository-only default compatible with cosign.
+        assert_eq!(
+            parameter.signed_identity_rule(),
+            &PolicyReqMatchType::MatchRepository,
+        );
+        // The default must satisfy the cosign match-type restriction.
+        assert!(parameter.check_reference_rule_types().is_ok());
     }
 
     #[rstest]
