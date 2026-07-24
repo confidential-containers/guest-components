@@ -93,6 +93,11 @@ jobs:
         run: |
           sudo -E PATH=$PATH -s cargo test ${{ matrix.cargo_test_opts }} -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p crypto -p resource_uri
 
+      - name: Build and test kbs_protocol pqc-experimental feature
+        run: |
+          sudo -E PATH=$PATH -s cargo test -p kbs_protocol --features pqc-experimental -- pqc
+        if: matrix.instance == 'ubuntu-24.04'
+
       - name: Run cargo fmt check
         run: cargo fmt --all -- --check
 

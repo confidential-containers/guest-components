@@ -40,7 +40,7 @@ hmac = "0.13.0"
 jwt-simple = { version = "0.12", default-features = false, features = [
     "pure-rust",
 ] }
-kbs-types = "0.15.0"
+kbs-types = { git = "https://github.com/grant-arqit/kbs-types.git", rev = "2009cbbc2b2c7c069317057deac0a718ca783a6f" }
 nix = "0.31"
 openssl = "0.10"
 prost = "0.14"
