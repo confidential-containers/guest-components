@@ -50,6 +50,7 @@ tempfile = { workspace = true, optional = true }
 tracing.workspace = true
 tracing-subscriber = { workspace = true, optional = true }
 num-traits = { version = "0.2" }
+p384 = { version = "0.13", features = ["ecdsa"], optional = true }
 picky-asn1 = { version = "0.10.1", optional = true }
 picky-asn1-der = { version = "0.5.6", optional = true }
 picky-asn1-x509 = { version = "0.15.4", optional = true }
@@ -86,6 +87,7 @@ tdx-attester = ["scroll", "tsm-report", "iocuddle"]
 tdx-attest-dcap-ioctls = ["tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
 nvidia-attester = ["nv-attestation-sdk"]
+nvidia-dpu-attester = ["p384"]
 az-snp-vtpm-attester = ["az-snp-vtpm", "pem-rfc7468"]
 az-tdx-vtpm-attester = ["az-snp-vtpm-attester", "az-tdx-vtpm", "azure-guest-attestation-sdk", "zerocopy"]
 snp-attester = ["sev"]

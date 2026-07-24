@@ -46,6 +46,9 @@ pub mod tpm;
 #[cfg(feature = "nvidia-attester")]
 pub mod nvidia;
 
+#[cfg(feature = "nvidia-dpu-attester")]
+pub mod nvidia_dpu;
+
 pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
 
 impl TryFrom<Tee> for BoxedAttester {
@@ -77,6 +80,8 @@ impl TryFrom<Tee> for BoxedAttester {
             Tee::Tpm => Box::new(tpm::TpmAttester::new()?),
             #[cfg(feature = "nvidia-attester")]
             Tee::Nvidia => Box::<nvidia::NvAttester>::default(),
+            #[cfg(feature = "nvidia-dpu-attester")]
+            Tee::NvidiaDpu => Box::<nvidia_dpu::NvidiaDpuAttester>::default(),
             _ => bail!("TEE is not supported!"),
         };
 
@@ -217,6 +222,11 @@ pub fn detect_attestable_devices() -> Vec<Tee> {
     #[cfg(feature = "nvidia-attester")]
     if nvidia::detect_platform() {
         additional_devices.push(Tee::Nvidia);
+    }
+
+    #[cfg(feature = "nvidia-dpu-attester")]
+    if nvidia_dpu::detect_platform() {
+        additional_devices.push(Tee::NvidiaDpu);
     }
 
     if sample_device::detect_platform() {
