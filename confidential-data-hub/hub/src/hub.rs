@@ -124,7 +124,9 @@ impl DataHub for Hub {
 
             let aa_client = self
                 .aa_client
-                .get_or_try_init(|| async move { initialize_aa_client().await })
+                .get_or_try_init(
+                    || async move { initialize_aa_client(&self.config.aa.aa_socket).await },
+                )
                 .await?;
 
             let Some(aa_client) = aa_client else {
@@ -183,17 +185,15 @@ async fn initialize_image_client(config: ImageConfig) -> Result<Mutex<ImageClien
 }
 
 #[cfg(feature = "ttrpc")]
-async fn initialize_aa_client() -> Result<Option<AttestationAgentServiceClient>> {
+async fn initialize_aa_client(aa_socket: &str) -> Result<Option<AttestationAgentServiceClient>> {
     use anyhow::anyhow;
 
-    const AA_SOCKET_FILE: &str =
-        "/run/confidential-containers/attestation-agent/attestation-agent.sock";
-
-    if !Path::new(AA_SOCKET_FILE).exists() {
+    let socket_path = aa_socket.strip_prefix("unix://").unwrap_or(aa_socket);
+    if !Path::new(socket_path).exists() {
         return Ok(None);
     }
 
-    let c = ttrpc::r#async::Client::connect(&format!("unix://{AA_SOCKET_FILE}"))
+    let c = ttrpc::r#async::Client::connect(aa_socket)
         .await
         .map_err(|e| Error::AttestationAgentClientError {
             source: anyhow!("failed to connect to attestation agent: {e:?}"),

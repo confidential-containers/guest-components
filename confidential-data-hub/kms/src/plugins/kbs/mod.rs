@@ -35,10 +35,11 @@ impl RealClient {
         let params = env::var("AA_KBC_PARAMS").expect("must be initialized");
         let params = AaKbcParams::try_from(params)
             .map_err(|e| Error::KbsClientError(format!("Failed to parse aa_kbc_params: {e:?}")))?;
+        let aa_socket = env::var("AA_SOCKET").expect("must be initialized");
 
         let c = match &params.kbc[..] {
             #[cfg(feature = "kbs")]
-            "cc_kbc" => RealClient::Cc(cc_kbc::CcKbc::new(&params.uri).await?),
+            "cc_kbc" => RealClient::Cc(cc_kbc::CcKbc::new(&params.uri, &aa_socket).await?),
             #[cfg(feature = "sev")]
             "online_sev_kbc" => RealClient::Sev(sev::OnlineSevKbc::new(&params.uri).await?),
             "offline_fs_kbc" => RealClient::OfflineFs(offline_fs::OfflineFsKbc::new().await?),

@@ -1,6 +1,9 @@
 # The ttrpc sock of CDH that is used to listen to the requests
 socket = "unix:///run/confidential-containers/cdh.sock"
 
+[aa]
+aa_socket = "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock"
+
 # KBC related configs.
 [kbc]
 # Required. The KBC name. It could be `cc_kbc`, `online_sev_kbc` or
