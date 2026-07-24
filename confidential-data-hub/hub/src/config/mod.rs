@@ -25,6 +25,8 @@ cfg_if::cfg_if! {
     }
 }
 
+pub const DEFAULT_AA_SOCKET_ADDR: &str =
+    "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock";
 pub const DEFAULT_LOG_LEVEL: &str = "info";
 
 #[derive(Clone, Deserialize, Debug, PartialEq)]
@@ -74,6 +76,24 @@ impl Default for LogConfig {
     }
 }
 
+fn default_aa_socket_addr() -> String {
+    DEFAULT_AA_SOCKET_ADDR.to_string()
+}
+
+#[derive(Clone, Deserialize, Debug, PartialEq)]
+pub struct AaConfig {
+    #[serde(default = "default_aa_socket_addr")]
+    pub aa_socket: String,
+}
+
+impl Default for AaConfig {
+    fn default() -> Self {
+        Self {
+            aa_socket: DEFAULT_AA_SOCKET_ADDR.to_string(),
+        }
+    }
+}
+
 fn default_socket_addr() -> String {
     DEFAULT_CDH_SOCKET_ADDR.to_string()
 }
@@ -81,6 +101,9 @@ fn default_socket_addr() -> String {
 #[derive(Clone, Deserialize, Debug, PartialEq)]
 pub struct CdhConfig {
     pub kbc: KbsConfig,
+
+    #[serde(default)]
+    pub aa: AaConfig,
 
     #[serde(default)]
     pub credentials: Vec<Credential>,
@@ -113,6 +136,7 @@ impl CdhConfig {
     pub fn default_with_kernel_cmdline() -> Result<Self> {
         Ok(Self {
             kbc: KbsConfig::new()?,
+            aa: AaConfig::default(),
             credentials: Vec::new(),
             socket: default_socket_addr(),
             image: ImageConfig::from_kernel_cmdline(),
@@ -126,6 +150,7 @@ impl CdhConfig {
     pub fn from_file(config_path: &str) -> Result<Self> {
         let c = Config::builder()
             .set_default("socket", DEFAULT_CDH_SOCKET_ADDR)?
+            .set_default("aa.aa_socket", DEFAULT_AA_SOCKET_ADDR)?
             .set_default("kbc.url", "")?
             .add_source(File::with_name(config_path))
             .build()?;
@@ -178,6 +203,9 @@ impl CdhConfig {
                 format!("{}::{}", self.kbc.name, self.kbc.url),
             );
         }
+        if env::var("AA_SOCKET").is_err() {
+            env::set_var("AA_SOCKET", &self.aa.aa_socket);
+        }
         // KBS configurations
         if let Some(kbs_cert) = &self.kbc.kbs_cert {
             env::set_var("KBS_CERT", kbs_cert);
@@ -208,12 +236,18 @@ mod tests {
     use rstest::rstest;
     use serial_test::serial;
 
-    use crate::{config::DEFAULT_CDH_SOCKET_ADDR, CdhConfig, KbsConfig, LogConfig};
+    use crate::{
+        config::DEFAULT_AA_SOCKET_ADDR, config::DEFAULT_CDH_SOCKET_ADDR, AaConfig, CdhConfig,
+        KbsConfig, LogConfig,
+    };
 
     #[rstest]
     #[case(
         r#"
 socket = "unix:///run/confidential-containers/cdh.sock"
+
+[aa]
+aa_socket = "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock"
 
 [kbc]
 name = "offline_fs_kbc"
@@ -244,6 +278,7 @@ https_proxy = "http://127.0.0.1:8080"
     "#,
         Some(CdhConfig {
             log: LogConfig::default(),
+            aa: AaConfig::default(),
             kbc: KbsConfig {
                 name: "offline_fs_kbc".to_string(),
                 url: "".to_string(),
@@ -304,6 +339,7 @@ name = "offline_fs_kbc"
 "#,
     Some(CdhConfig {
         log: LogConfig::default(),
+        aa: AaConfig::default(),
         kbc: KbsConfig {
             name: "offline_fs_kbc".to_string(),
             url: "".to_string(),
@@ -335,6 +371,9 @@ some_undefined_field = "unknown value"
     Some(CdhConfig {
         log: LogConfig {
             level: "warn".to_string(),
+        },
+        aa: AaConfig {
+            aa_socket: DEFAULT_AA_SOCKET_ADDR.to_string(),
         },
         kbc: KbsConfig {
             name: "offline_fs_kbc".to_string(),

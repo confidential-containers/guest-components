@@ -1,5 +1,8 @@
 {
     "socket": "unix:///run/confidential-containers/cdh.sock",
+    "aa": {
+        "aa_socket": "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock"
+    },
     "kbc": {
         "name": "cc_kbc",
         "url": "http://example.io:8080",
