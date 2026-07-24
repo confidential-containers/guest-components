@@ -89,11 +89,12 @@ mod tests {
     use serial_test::serial;
 
     use super::OCICRYPT_KEYPROVIDER_CONFIG_ENV;
-    use crate::{CdhConfig, KbsConfig, LogConfig};
+    use crate::{AaConfig, CdhConfig, KbsConfig, LogConfig};
 
     fn test_config(socket: &str) -> CdhConfig {
         CdhConfig {
             log: LogConfig::default(),
+            aa: AaConfig::default(),
             kbc: KbsConfig {
                 name: "offline_fs_kbc".to_string(),
                 url: "".to_string(),

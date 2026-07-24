@@ -22,10 +22,12 @@ pub struct CcKbc {
 }
 
 impl CcKbc {
-    pub async fn new(kbs_host_url: &str) -> Result<Self> {
-        let token_provider = AATokenProvider::new().await.map_err(|e| {
-            Error::KbsClientError(format!("create AA token provider failed: {e:?}"))
-        })?;
+    pub async fn new(kbs_host_url: &str, aa_socket: &str) -> Result<Self> {
+        let token_provider = AATokenProvider::new_with_socket(aa_socket)
+            .await
+            .map_err(|e| {
+                Error::KbsClientError(format!("create AA token provider failed: {e:?}"))
+            })?;
         let client = kbs_protocol::KbsClientBuilder::with_token_provider(
             Box::new(token_provider),
             kbs_host_url,
