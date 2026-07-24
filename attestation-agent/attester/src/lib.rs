@@ -55,29 +55,127 @@ impl TryFrom<Tee> for BoxedAttester {
         let attester: Box<dyn Attester + Send + Sync> = match value {
             Tee::Sample => Box::<sample::SampleAttester>::default(),
             Tee::SampleDevice => Box::<sample_device::SampleDeviceAttester>::default(),
-            #[cfg(feature = "tdx-attester")]
-            Tee::Tdx => Box::new(tdx::TdxAttester::new()),
-            #[cfg(feature = "sgx-attester")]
-            Tee::Sgx => Box::<sgx_dcap::SgxDcapAttester>::default(),
-            #[cfg(feature = "az-snp-vtpm-attester")]
-            Tee::AzSnpVtpm => Box::<az_snp_vtpm::AzSnpVtpmAttester>::default(),
-            #[cfg(feature = "az-tdx-vtpm-attester")]
-            Tee::AzTdxVtpm => Box::<az_tdx_vtpm::AzTdxVtpmAttester>::default(),
-            #[cfg(feature = "cca-attester")]
-            Tee::Cca => Box::<cca::CcaAttester>::default(),
-            #[cfg(feature = "snp-attester")]
-            Tee::Snp => Box::<snp::SnpAttester>::default(),
-            #[cfg(feature = "csv-attester")]
-            Tee::Csv => Box::<csv::CsvAttester>::default(),
-            #[cfg(feature = "hygon-dcu-attester")]
-            Tee::HygonDcu => Box::<hygon_dcu::DcuAttester>::default(),
-            #[cfg(feature = "se-attester")]
-            Tee::Se => Box::<se::SeAttester>::default(),
-            #[cfg(feature = "tpm-attester")]
-            Tee::Tpm => Box::new(tpm::TpmAttester::new()?),
-            #[cfg(feature = "nvidia-attester")]
-            Tee::Nvidia => Box::<nvidia::NvAttester>::default(),
-            _ => bail!("TEE is not supported!"),
+            Tee::Tdx => {
+                #[cfg(feature = "tdx-attester")]
+                {
+                    Box::new(tdx::TdxAttester::new())
+                }
+
+                #[cfg(not(feature = "tdx-attester"))]
+                {
+                    bail!("`tdx-attester` feature is not enabled!");
+                }
+            }
+            Tee::Sgx => {
+                #[cfg(feature = "sgx-attester")]
+                {
+                    Box::new(sgx_dcap::SgxDcapAttester::default())
+                }
+
+                #[cfg(not(feature = "sgx-attester"))]
+                {
+                    bail!("`sgx-attester` feature is not enabled!");
+                }
+            }
+            Tee::AzSnpVtpm => {
+                #[cfg(feature = "az-snp-vtpm-attester")]
+                {
+                    Box::new(az_snp_vtpm::AzSnpVtpmAttester)
+                }
+
+                #[cfg(not(feature = "az-snp-vtpm-attester"))]
+                {
+                    bail!("`az-snp-vtpm-attester` feature is not enabled!");
+                }
+            }
+            Tee::AzTdxVtpm => {
+                #[cfg(feature = "az-tdx-vtpm-attester")]
+                {
+                    Box::new(az_tdx_vtpm::AzTdxVtpmAttester)
+                }
+
+                #[cfg(not(feature = "az-tdx-vtpm-attester"))]
+                {
+                    bail!("`az-tdx-vtpm-attester` feature is not enabled!");
+                }
+            }
+            Tee::Cca => {
+                #[cfg(feature = "cca-attester")]
+                {
+                    Box::new(cca::CcaAttester::default())
+                }
+
+                #[cfg(not(feature = "cca-attester"))]
+                {
+                    bail!("`cca-attester` feature is not enabled!");
+                }
+            }
+            Tee::Snp => {
+                #[cfg(feature = "snp-attester")]
+                {
+                    Box::new(snp::SnpAttester::default())
+                }
+
+                #[cfg(not(feature = "snp-attester"))]
+                {
+                    bail!("`snp-attester` feature is not enabled!");
+                }
+            }
+            Tee::Csv => {
+                #[cfg(feature = "csv-attester")]
+                {
+                    Box::new(csv::CsvAttester::default())
+                }
+
+                #[cfg(not(feature = "csv-attester"))]
+                {
+                    bail!("`csv-attester` feature is not enabled!");
+                }
+            }
+            Tee::HygonDcu => {
+                #[cfg(feature = "hygon-dcu-attester")]
+                {
+                    Box::new(hygon_dcu::DcuAttester::default())
+                }
+
+                #[cfg(not(feature = "hygon-dcu-attester"))]
+                {
+                    bail!("`hygon-dcu-attester` feature is not enabled!");
+                }
+            }
+            Tee::Se => {
+                #[cfg(feature = "se-attester")]
+                {
+                    Box::new(se::SeAttester::default())
+                }
+
+                #[cfg(not(feature = "se-attester"))]
+                {
+                    bail!("`se-attester` feature is not enabled!");
+                }
+            }
+            Tee::Tpm => {
+                #[cfg(feature = "tpm-attester")]
+                {
+                    Box::new(tpm::TpmAttester::new()?)
+                }
+
+                #[cfg(not(feature = "tpm-attester"))]
+                {
+                    bail!("`tpm-attester` feature is not enabled!");
+                }
+            }
+            Tee::Nvidia => {
+                #[cfg(feature = "nvidia-attester")]
+                {
+                    Box::new(nvidia::NvAttester::default())
+                }
+
+                #[cfg(not(feature = "nvidia-attester"))]
+                {
+                    bail!("`nvidia-attester` feature is not enabled!");
+                }
+            }
         };
 
         Ok(attester)
