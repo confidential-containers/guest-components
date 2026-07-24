@@ -87,7 +87,12 @@ tdx-attest-dcap-ioctls = ["tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
 nvidia-attester = ["nv-attestation-sdk"]
 az-snp-vtpm-attester = ["az-snp-vtpm", "pem-rfc7468"]
-az-tdx-vtpm-attester = ["az-snp-vtpm-attester", "az-tdx-vtpm", "azure-guest-attestation-sdk", "zerocopy"]
+az-tdx-vtpm-attester = [
+    "az-snp-vtpm-attester",
+    "az-tdx-vtpm",
+    "azure-guest-attestation-sdk",
+    "zerocopy",
+]
 snp-attester = ["sev"]
 csv-attester = ["hygon", "codicon", "hyper", "hyper-tls"]
 hygon-dcu-attester = ["hygon"]
