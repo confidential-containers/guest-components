@@ -413,6 +413,7 @@ dependencies = [
  "num-traits",
  "nv-attestation-sdk",
  "occlum_dcap",
+ "p384",
  "pem-rfc7468 1.0.0",
  "picky-asn1",
  "picky-asn1-der",
@@ -4311,9 +4312,8 @@ dependencies = [
 
 [[package]]
 name = "kbs-types"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "010924a5f65328c9609598c895ea506c723e3c72e528aeaba0a9645d8330b718"
+version = "0.17.0"
+source = "git+https://github.com/confidential-containers/kbs-types?rev=b26f44e#b26f44e60a9d542290571c7354ed1855b279ee16"
 dependencies = [
  "base64 0.22.1",
  "ear",
