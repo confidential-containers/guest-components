@@ -46,6 +46,9 @@ pub mod tpm;
 #[cfg(feature = "nvidia-attester")]
 pub mod nvidia;
 
+#[cfg(feature = "nvidia-dpu-attester")]
+pub mod nvidia_dpu;
+
 pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
 
 impl TryFrom<Tee> for BoxedAttester {
@@ -174,6 +177,17 @@ impl TryFrom<Tee> for BoxedAttester {
                 #[cfg(not(feature = "nvidia-attester"))]
                 {
                     bail!("`nvidia-attester` feature is not enabled!");
+                }
+            }
+            Tee::NvidiaDpu => {
+                #[cfg(feature = "nvidia-dpu-attester")]
+                {
+                    Box::new(nvidia_dpu::NvidiaDpuAttester::default())
+                }
+
+                #[cfg(not(feature = "nvidia-dpu-attester"))]
+                {
+                    bail!("`nvidia-dpu-attester` feature is not enabled!");
                 }
             }
         };
