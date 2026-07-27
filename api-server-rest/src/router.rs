@@ -15,7 +15,7 @@ use crate::VERSION;
 use crate::client::{
     aa::{
         AA_AAEL_URL, AA_ADDITIONAL_EVIDENCE_URL, AA_EVIDENCE_URL, AA_ROOT, AA_TOKEN_URL, AAClient,
-        AaelEvent,
+        AaelEvent, is_reserved_aael_domain,
     },
     cdh::{CDH_RESOURCE_URL, CDH_ROOT, CDHClient},
 };
@@ -235,6 +235,11 @@ impl Router {
                                         return self.bad_request();
                                     }
                                 };
+
+                            if is_reserved_aael_domain(&aael_entry.domain) {
+                                return self.forbidden();
+                            }
+
                             match client
                                 .extend_aael_entry(
                                     &aael_entry.domain,

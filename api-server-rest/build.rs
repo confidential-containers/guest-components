@@ -69,13 +69,16 @@ fn _additional_evidence() {}
 
 #[derive(ToSchema)]
 pub struct AaelEvent {
-    /// Attestation Agent Event Log Domain
+    /// Attestation Agent Event Log Domain. Must be non-empty and free of
+    /// whitespace and control characters. The `github.com/confidential-containers`
+    /// namespace is reserved for the guest components themselves.
     pub domain: String,
 
-    /// Attestation Agent Event Log Operation
+    /// Attestation Agent Event Log Operation. Must be non-empty and free of
+    /// whitespace and control characters.
     pub operation: String,
 
-    /// Attestation Agent Event Log Content
+    /// Attestation Agent Event Log Content. Must be free of control characters.
     pub content: String,
 }
 
@@ -86,7 +89,7 @@ pub struct AaelEvent {
     responses(
         (status = 200, description = "success response"),
         (status = 400, description = "bad request for invalid body"),
-        (status = 403, description = "forbid external access"),
+        (status = 403, description = "forbid external access or a reserved event domain"),
         (status = 405, description = "only POST method allowed")
     )
 )]
