@@ -398,6 +398,7 @@ dependencies = [
  "az-snp-vtpm",
  "az-tdx-vtpm",
  "azure-guest-attestation-sdk",
+ "azure-tpm",
  "base64 0.22.1",
  "cfg-if",
  "clap",
@@ -868,14 +869,15 @@ dependencies = [
 [[package]]
 name = "azure-guest-attestation-sdk"
 version = "0.1.0"
-source = "git+https://github.com/Azure/azure-guest-attestation-sdk?rev=e606728446cb66d681913983cbe5563c919dd94b#e606728446cb66d681913983cbe5563c919dd94b"
+source = "git+https://github.com/Azure/azure-guest-attestation-sdk?rev=9c8344cbeeb2c7ab46c1311e983f254a69ab5eec#9c8344cbeeb2c7ab46c1311e983f254a69ab5eec"
 dependencies = [
  "aes-gcm 0.10.3",
+ "azure-tpm",
  "base64 0.22.1",
  "bitfield-struct",
  "digest 0.10.7",
  "hex",
- "rand 0.8.6",
+ "rand 0.9.4",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -883,7 +885,24 @@ dependencies = [
  "sha2 0.10.9",
  "tracing",
  "tracing-subscriber",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "azure-tpm"
+version = "0.1.0"
+source = "git+https://github.com/Azure/azure-guest-attestation-sdk?rev=9c8344cbeeb2c7ab46c1311e983f254a69ab5eec#9c8344cbeeb2c7ab46c1311e983f254a69ab5eec"
+dependencies = [
+ "bitfield-struct",
+ "digest 0.10.7",
+ "hex",
+ "rand 0.9.4",
+ "serde",
+ "serde_json",
+ "sha1",
+ "sha2 0.10.9",
+ "tracing",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

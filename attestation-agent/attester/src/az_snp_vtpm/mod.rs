@@ -6,6 +6,7 @@
 use super::{Attester, InitDataResult, TeeEvidence};
 use anyhow::{bail, Context, Result};
 use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
+use azure_tpm::{Tpm, TpmCommandExt};
 use kbs_types::HashAlgorithm;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, hex::Hex, serde_as};
@@ -141,8 +142,11 @@ impl Attester for AzSnpVtpmAttester {
         HashAlgorithm::Sha256
     }
 
-    // TODO: add get_runtime_measurement function
-    // See https://github.com/confidential-containers/guest-components/issues/1201
+    /// Read the current value of a runtime measurement register (PCR).
+    /// This is the read counterpart of [`extend_runtime_measurement`]
+    async fn get_runtime_measurement(&self, pcr_index: u64) -> Result<Vec<u8>> {
+        spawn_blocking(move || utils::read_pcr_sync(pcr_index)).await?
+    }
 }
 
 pub(crate) mod utils {
@@ -159,6 +163,22 @@ pub(crate) mod utils {
         vtpm::extend_pcr(pcr, &sha256_digest)?;
 
         Ok(())
+    }
+
+    /// Read the current SHA-256 value of PCR `pcr_index`.
+    /// This is the read counterpart of [`extend_pcr_sync`].
+    pub fn read_pcr_sync(pcr_index: u64) -> Result<Vec<u8>> {
+        if pcr_index > 23 {
+            bail!("Invalid PCR index: {pcr_index}");
+        }
+        let tpm = Tpm::open().context("open TPM device")?;
+        let (_, digest) = tpm
+            .read_pcrs_sha256(&[pcr_index as u32])
+            .with_context(|| format!("read SHA-256 PCR {pcr_index} from TPM"))?
+            .into_iter()
+            .next()
+            .context("TPM returned no value for the requested PCR")?;
+        Ok(digest)
     }
 }
 
