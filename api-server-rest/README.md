@@ -34,3 +34,16 @@ $ curl -X POST http://127.0.0.1:8006/aa/aael \
      -d '{"domain":"test","operation":"test","content":"test"}'
 
 ```
+
+## Event log domains
+
+`/aa/aael` lets a container append an entry to the Attestation Agent Event Log,
+which is measured into the TEE and later read by relying parties. Since entries
+carry no producer identity, the `github.com/confidential-containers` domain and
+its sub-paths are reserved for events recorded by the guest components
+themselves (such as CDH's `PullImage` event) and are rejected with `403` on this
+endpoint. Containers should log under a domain they own.
+
+`domain` and `operation` must be non-empty and free of whitespace and control
+characters, and `content` must be free of control characters, so that an entry
+cannot be mistaken for a different one once encoded.
