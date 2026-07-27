@@ -245,32 +245,77 @@ impl EventLog {
     }
 }
 
+/// Check a field that is encoded before a separator in the AAEL plaintext.
+///
+/// An AAEL entry is serialized as `<domain> <operation> <content>`, so the
+/// first two spaces are the field separators. If `domain` or `operation` could
+/// carry whitespace, the caller would get to choose where a consumer of the log
+/// sees the field boundaries: `("a b", "c", "d")` and `("a", "b", "c d")` are
+/// two different events with the same encoding. Control characters would
+/// additionally let a caller inject what looks like extra entries to any
+/// consumer that treats the log as text. Empty fields are rejected because they
+/// produce adjacent separators that no consumer can attribute.
+fn validate_separated_field(field: &str, value: &str) -> Result<()> {
+    if value.is_empty() {
+        bail!("AAEL {field} is empty");
+    }
+
+    if let Some(c) = value.chars().find(|c| c.is_whitespace() || c.is_control()) {
+        bail!("AAEL {field} contains the illegal character {c:?}");
+    }
+
+    Ok(())
+}
+
+pub struct Domain<'a>(&'a str);
+
+impl<'a> TryFrom<&'a str> for Domain<'a> {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        validate_separated_field("domain", value)?;
+        Ok(Domain(value))
+    }
+}
+
+pub struct Operation<'a>(&'a str);
+
+impl<'a> TryFrom<&'a str> for Operation<'a> {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        validate_separated_field("operation", value)?;
+        Ok(Operation(value))
+    }
+}
+
 pub struct Content<'a>(&'a str);
 
 impl<'a> TryFrom<&'a str> for Content<'a> {
     type Error = anyhow::Error;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        if value.chars().any(|c| c == '\n') {
-            bail!("content contains newline");
+        // `content` runs to the end of the entry, so spaces are unambiguous
+        // here, but control characters would still forge entry boundaries.
+        if let Some(c) = value.chars().find(|c| c.is_control()) {
+            bail!("AAEL content contains the illegal character {c:?}");
         }
         Ok(Content(value))
     }
 }
 
 pub struct Event<'a> {
-    domain: &'a str,
-    operation: &'a str,
+    domain: Domain<'a>,
+    operation: Operation<'a>,
     content: Content<'a>,
 }
 
 impl<'a> Event<'a> {
     pub fn new(domain: &'a str, operation: &'a str, content: &'a str) -> Result<Self> {
-        let content = Content::try_from(content)?;
         Ok(Event {
-            domain,
-            operation,
-            content,
+            domain: Domain::try_from(domain)?,
+            operation: Operation::try_from(operation)?,
+            content: Content::try_from(content)?,
         })
     }
 }
@@ -288,20 +333,23 @@ impl<'a> TryFrom<&'a str> for Event<'a> {
             .ok_or(anyhow!("No second space found in event string"))?;
         let second_sp = first_sp + 1 + second_sp_rel;
 
-        let domain = &s[..first_sp];
-        let operation = &s[first_sp + 1..second_sp];
-        let content = &s[second_sp + 1..];
-        Ok(Event {
-            domain,
-            operation,
-            content: Content::try_from(content)?,
-        })
+        // `Domain` and `Operation` cannot hold a space, so splitting on the
+        // first two spaces is the exact inverse of `Display`.
+        Event::new(
+            &s[..first_sp],
+            &s[first_sp + 1..second_sp],
+            &s[second_sp + 1..],
+        )
     }
 }
 
 impl Display for Event<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {} {}", self.domain, self.operation, self.content.0)
+        write!(
+            f,
+            "{} {} {}",
+            self.domain.0, self.operation.0, self.content.0
+        )
     }
 }
 
@@ -374,6 +422,69 @@ mod tests {
         assert!(content.is_err());
     }
 
+    #[rstest]
+    #[case("")]
+    #[case("a b")]
+    #[case("a\nb")]
+    #[case("a\tb")]
+    #[case("a\rb")]
+    #[case("a\u{0}b")]
+    #[case("a\u{a0}b")]
+    fn test_reject_illegal_domain_and_operation(#[case] value: &str) {
+        assert!(Event::new(value, "operation", "content").is_err());
+        assert!(Event::new("domain", value, "content").is_err());
+    }
+
+    #[rstest]
+    #[case("")]
+    #[case("a b c")]
+    #[case(r#"{"image":"registry.example/app:v1", "digest":"sha256:00"}"#)]
+    fn test_accept_content_with_spaces(#[case] content: &str) {
+        let event = Event::new("domain", "operation", content).unwrap();
+        assert_eq!(event.to_string(), format!("domain operation {content}"));
+    }
+
+    #[rstest]
+    #[case("a\nb")]
+    #[case("a\rb")]
+    #[case("a\u{0}b")]
+    fn test_reject_illegal_content(#[case] content: &str) {
+        assert!(Event::new("domain", "operation", content).is_err());
+    }
+
+    /// The WAL crash recovery path re-parses the encoded entry, so `Display`
+    /// and `TryFrom<&str>` have to agree on where the fields start and end.
+    #[rstest]
+    #[case("domain", "operation", "content")]
+    #[case(
+        "github.com/confidential-containers",
+        "PullImage",
+        r#"{"image":"a b"}"#
+    )]
+    #[case("domain", "operation", "")]
+    fn test_event_encoding_round_trip(
+        #[case] domain: &str,
+        #[case] operation: &str,
+        #[case] content: &str,
+    ) {
+        let encoded = Event::new(domain, operation, content).unwrap().to_string();
+        let parsed = Event::try_from(&encoded[..]).unwrap();
+
+        assert_eq!(parsed.domain.0, domain);
+        assert_eq!(parsed.operation.0, operation);
+        assert_eq!(parsed.content.0, content);
+        assert_eq!(parsed.to_string(), encoded);
+    }
+
+    #[rstest]
+    #[case("no-separator")]
+    #[case("only one")]
+    #[case(" operation content")]
+    #[case("domain  content")]
+    fn test_reject_malformed_encoded_event(#[case] encoded: &str) {
+        assert!(Event::try_from(encoded).is_err());
+    }
+
     /// The eventlog will influence the underlying hardware
     #[ignore]
     #[tokio::test]
@@ -396,26 +507,12 @@ mod tests {
             alg: HashAlgorithm::Sha384,
         };
 
-        el.extend_entry(
-            Event {
-                domain: "domain",
-                operation: "operation",
-                content: "content1".try_into().unwrap(),
-            },
-            17,
-        )
-        .await
-        .unwrap();
-        el.extend_entry(
-            Event {
-                domain: "domain",
-                operation: "operation",
-                content: "content2".try_into().unwrap(),
-            },
-            17,
-        )
-        .await
-        .unwrap();
+        el.extend_entry(Event::new("domain", "operation", "content1").unwrap(), 17)
+            .await
+            .unwrap();
+        el.extend_entry(Event::new("domain", "operation", "content2").unwrap(), 17)
+            .await
+            .unwrap();
 
         let expected = tokio::fs::read("./test/aael.bin").await.unwrap();
         assert_eq!(expected, lines.lock().unwrap().to_vec());
@@ -438,11 +535,7 @@ mod tests {
         #[case] digest: &str,
         #[case] hash_alg: HashAlgorithm,
     ) {
-        let event = Event {
-            domain,
-            operation,
-            content: content.try_into().unwrap(),
-        };
+        let event = Event::new(domain, operation, content).unwrap();
 
         let (_, dig) = Into::<Tcg2EventEntry>::into(event).digest(hash_alg);
         let dig_hex = dig.iter().map(|c| format!("{c:02x}")).collect::<String>();
@@ -462,14 +555,7 @@ mod tests {
             BoxedAttester::try_from(tee).expect("Failed to create BoxedAttester from Tee type");
         let mut eventlog = EventLog::new(Arc::new(rtmr_extender), 17).await.unwrap();
         eventlog
-            .extend_entry(
-                Event {
-                    domain: "domain",
-                    operation: "operation",
-                    content: "content".try_into().unwrap(),
-                },
-                17,
-            )
+            .extend_entry(Event::new("domain", "operation", "content").unwrap(), 17)
             .await
             .unwrap();
         drop(eventlog);
@@ -498,14 +584,7 @@ mod tests {
             BoxedAttester::try_from(tee).expect("Failed to create BoxedAttester from Tee type");
         let mut eventlog = EventLog::new(Arc::new(rtmr_extender), 17).await.unwrap();
         eventlog
-            .extend_entry(
-                Event {
-                    domain: "domain",
-                    operation: "operation",
-                    content: "content".try_into().unwrap(),
-                },
-                17,
-            )
+            .extend_entry(Event::new("domain", "operation", "content").unwrap(), 17)
             .await
             .unwrap();
         drop(eventlog);
