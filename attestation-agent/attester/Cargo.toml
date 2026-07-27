@@ -15,7 +15,8 @@ az-snp-vtpm = { version = "0.8.1", default-features = false, features = [
 az-tdx-vtpm = { version = "0.8.1", default-features = false, features = [
     "attester",
 ], optional = true }
-azure-guest-attestation-sdk = { git = "https://github.com/Azure/azure-guest-attestation-sdk", rev = "e606728446cb66d681913983cbe5563c919dd94b", optional = true }
+azure-guest-attestation-sdk = { git = "https://github.com/Azure/azure-guest-attestation-sdk", rev = "9c8344cbeeb2c7ab46c1311e983f254a69ab5eec", optional = true }
+azure-tpm = { git = "https://github.com/Azure/azure-guest-attestation-sdk", rev = "9c8344cbeeb2c7ab46c1311e983f254a69ab5eec", optional = true }
 base64.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
 cfg-if.workspace = true
@@ -89,7 +90,7 @@ tdx-attester = ["scroll", "tsm-report", "iocuddle"]
 tdx-attest-dcap-ioctls = ["tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
 nvidia-attester = ["nv-attestation-sdk"]
-az-snp-vtpm-attester = ["az-snp-vtpm", "pem-rfc7468"]
+az-snp-vtpm-attester = ["az-snp-vtpm", "pem-rfc7468", "azure-tpm"]
 az-tdx-vtpm-attester = [
     "az-snp-vtpm-attester",
     "az-tdx-vtpm",
