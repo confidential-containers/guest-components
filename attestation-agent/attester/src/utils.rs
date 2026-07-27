@@ -63,19 +63,25 @@ pub fn validate_and_pad_data(data: Vec<u8>, expected_size: usize) -> Result<Vec<
 /// The content of this HEADER is:
 ///
 /// 1. EvNoAction entry
-/// 2. Digest sizes with sha384 -> 0x30; sm3 -> 0x20;
+/// 2. Digest sizes with sha256 -> 0x20; sha384 -> 0x30; sm3 -> 0x20;
 ///
-/// The digest algorithm is determined by OVMF, and now:
+/// The digest algorithm is determined by OVMF/platform, and now:
 /// - tdx supports sha384.
 /// - csv supports sm3.
+/// - az_snp_vtpm supports sha256.
+///
+/// All three algorithms are declared so the verifier's parser can size the
+/// per-event digests of every TEE type that emits an AAEL. The TCG2 event
+/// entries are self-describing (each carries its own algorithm id), so the
+/// declaration order here does not need to match the event digest order.
 ///
 /// Let's extend it if RTMR and CCEL are brought for more TEE types.
-pub const EL_HEADER: [u8; 69] = [
+pub const EL_HEADER: [u8; 73] = [
     0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x25, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x29, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x30, 0x00,
-    0x12, 0x00, 0x20, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x0B, 0x00, 0x20, 0x00,
+    0x0C, 0x00, 0x30, 0x00, 0x12, 0x00, 0x20, 0x00, 0x00,
 ];
 
 /// End flag for eventlog
@@ -200,4 +206,47 @@ pub async fn read_eventlog() -> Result<Option<String>> {
     eventlog.extend_from_slice(&EL_END_FLAG);
 
     Ok(Some(STANDARD.encode(eventlog)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::EL_HEADER;
+    use std::collections::HashMap;
+
+    /// Guards the hand-computed byte offsets of the eventlog spec-id header and
+    /// asserts it declares SHA-256, so the verifier parser can size the SHA-256
+    /// digests emitted by vTPM-based attesters (e.g. az_snp_vtpm) instead of
+    /// bailing on the first runtime event.
+    #[test]
+    fn test_el_header_declares_sha256() {
+        // TCG_PCR_EVENT prefix: pcrIndex(4) + eventType(4) + digest[20] + eventDataSize(4) = 32
+        assert_eq!(EL_HEADER.len(), 73);
+
+        // eventType == EV_NO_ACTION (3)
+        assert_eq!(u32::from_le_bytes(EL_HEADER[4..8].try_into().unwrap()), 3);
+
+        // eventDataSize (offset 28) counts the TCG_EfiSpecIDEvent that follows.
+        let event_data_size = u32::from_le_bytes(EL_HEADER[28..32].try_into().unwrap());
+        assert_eq!(event_data_size, 41);
+        assert_eq!(EL_HEADER.len(), 32 + event_data_size as usize);
+
+        // numberOfAlgorithms (offset 56) == 3
+        let num_algs = u32::from_le_bytes(EL_HEADER[56..60].try_into().unwrap());
+        assert_eq!(num_algs, 3);
+
+        // digestSizes entries (u16 algId + u16 digestSize) begin at offset 60.
+        let mut algs = HashMap::new();
+        for i in 0..num_algs as usize {
+            let base = 60 + i * 4;
+            let alg = u16::from_le_bytes(EL_HEADER[base..base + 2].try_into().unwrap());
+            let size = u16::from_le_bytes(EL_HEADER[base + 2..base + 4].try_into().unwrap());
+            algs.insert(alg, size);
+        }
+        assert_eq!(algs.get(&0x000B), Some(&32)); // SHA-256
+        assert_eq!(algs.get(&0x000C), Some(&48)); // SHA-384
+        assert_eq!(algs.get(&0x0012), Some(&32)); // SM3
+
+        // vendorInfoSize (final byte) == 0
+        assert_eq!(*EL_HEADER.last().unwrap(), 0);
+    }
 }
