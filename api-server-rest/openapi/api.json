@@ -41,7 +41,7 @@
             "description": "bad request for invalid body"
           },
           "403": {
-            "description": "forbid external access"
+            "description": "forbid external access or a reserved event domain"
           },
           "405": {
             "description": "only POST method allowed"
@@ -277,15 +277,15 @@
         "properties": {
           "content": {
             "type": "string",
-            "description": "Attestation Agent Event Log Content"
+            "description": "Attestation Agent Event Log Content. Must be free of control characters."
           },
           "domain": {
             "type": "string",
-            "description": "Attestation Agent Event Log Domain"
+            "description": "Attestation Agent Event Log Domain. Must be non-empty and free of\nwhitespace and control characters. The `github.com/confidential-containers`\nnamespace is reserved for the guest components themselves."
           },
           "operation": {
             "type": "string",
-            "description": "Attestation Agent Event Log Operation"
+            "description": "Attestation Agent Event Log Operation. Must be non-empty and free of\nwhitespace and control characters."
           }
         }
       },

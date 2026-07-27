@@ -23,6 +23,24 @@ pub const AA_EVIDENCE_URL: &str = "/evidence";
 pub const AA_ADDITIONAL_EVIDENCE_URL: &str = "/additional-evidence";
 pub const AA_AAEL_URL: &str = "/aael";
 
+/// AAEL domain reserved for events recorded by the guest components
+/// themselves, e.g. the `PullImage` event that CDH records for every image it
+/// pulls. See
+/// <https://github.com/confidential-containers/trustee/blob/main/kbs/docs/confidential-containers-eventlog.md#confidential-containers-event-spec>
+const RESERVED_AAEL_DOMAIN: &str = "github.com/confidential-containers";
+
+/// Whether `domain` belongs to the namespace reserved for the guest components.
+///
+/// AAEL entries carry no producer identity, so a relying party cannot tell a
+/// `PullImage` event recorded by CDH apart from a byte-identical one appended
+/// by the workload. This endpoint is the workload-facing surface, so it must
+/// not be able to speak for the components: the workload could otherwise claim
+/// to be running an image it never pulled. The components reach AA over its
+/// ttrpc socket directly and are unaffected.
+pub fn is_reserved_aael_domain(domain: &str) -> bool {
+    domain == RESERVED_AAEL_DOMAIN || domain.starts_with(&format!("{RESERVED_AAEL_DOMAIN}/"))
+}
+
 pub struct AAClient {
     client: CachedTtrpcClient<AttestationAgentServiceClient>,
 }
@@ -161,5 +179,22 @@ impl AAClient {
             })
             .await?;
         Ok(res.additional_tees)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_reserved_aael_domain;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case("github.com/confidential-containers", true)]
+    #[case("github.com/confidential-containers/cdh", true)]
+    #[case("github.com/confidential-container", false)]
+    #[case("github.com/confidential-containers-evil", false)]
+    #[case("example.com", false)]
+    #[case("", false)]
+    fn test_is_reserved_aael_domain(#[case] domain: &str, #[case] reserved: bool) {
+        assert_eq!(is_reserved_aael_domain(domain), reserved);
     }
 }

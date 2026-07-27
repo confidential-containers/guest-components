@@ -13,8 +13,8 @@ use tracing::{debug, info};
 
 use crate::client::{
     aa::{
-        AAClient, AaelEvent, AA_AAEL_URL, AA_ADDITIONAL_EVIDENCE_URL, AA_EVIDENCE_URL, AA_ROOT,
-        AA_TOKEN_URL,
+        is_reserved_aael_domain, AAClient, AaelEvent, AA_AAEL_URL, AA_ADDITIONAL_EVIDENCE_URL,
+        AA_EVIDENCE_URL, AA_ROOT, AA_TOKEN_URL,
     },
     cdh::{CDHClient, CDH_RESOURCE_URL, CDH_ROOT},
 };
@@ -223,6 +223,9 @@ impl Router {
                                 std::result::Result::Ok(aael_entry) => aael_entry,
                                 Err(e) => return self.internal_error(e.to_string()),
                             };
+                            if is_reserved_aael_domain(&aael_entry.domain) {
+                                return self.forbidden();
+                            }
                             match client
                                 .extend_aael_entry(
                                     &aael_entry.domain,
