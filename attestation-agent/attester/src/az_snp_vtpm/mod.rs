@@ -4,6 +4,7 @@
 //
 
 use super::{Attester, InitDataResult, TeeEvidence};
+use crate::utils::read_eventlog;
 use anyhow::{bail, Context, Result};
 use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
 use azure_tpm::{Tpm, TpmCommandExt};
@@ -70,6 +71,9 @@ impl From<vtpm::Quote> for TpmQuote {
 /// - `hcl_report` - Hardware Compatibility Layer report containing the
 ///    Hardware attestation report from the AMD SEV-SNP platform
 /// - `vcek` - Versioned Chip Endorsement Key certificate (DER-encoded)
+/// - `cc_eventlog` - Base64-encoded runtime eventlog (AAEL in TCG2 encoding),
+///    or `None` when no runtime eventlog has been recorded. Mirrors the shape
+///    used by the TDX attester so the verifier can consume it uniformly.
 #[serde_as]
 #[derive(Serialize, Deserialize)]
 struct Evidence {
@@ -79,6 +83,7 @@ struct Evidence {
     hcl_report: Vec<u8>,
     #[serde_as(as = "UrlSafeBase64")]
     vcek: Vec<u8>,
+    cc_eventlog: Option<String>,
 }
 
 /// Convert a PEM-encoded certificate to DER format
@@ -92,7 +97,10 @@ fn pem_to_der(pem: &str) -> Result<Vec<u8>> {
     Ok(der)
 }
 
-fn get_evidence_sync(report_data: &[u8]) -> anyhow::Result<TeeEvidence> {
+fn get_evidence_sync(
+    report_data: &[u8],
+    cc_eventlog: Option<String>,
+) -> anyhow::Result<TeeEvidence> {
     let hcl_report = vtpm::get_report_with_report_data(report_data)?;
     let tpm_quote = vtpm::get_quote(report_data)?.into();
     let certs = imds::get_certs()?;
@@ -103,6 +111,7 @@ fn get_evidence_sync(report_data: &[u8]) -> anyhow::Result<TeeEvidence> {
         tpm_quote,
         hcl_report,
         vcek,
+        cc_eventlog,
     };
 
     Ok(serde_json::to_value(&evidence)?)
@@ -111,7 +120,10 @@ fn get_evidence_sync(report_data: &[u8]) -> anyhow::Result<TeeEvidence> {
 #[async_trait::async_trait]
 impl Attester for AzSnpVtpmAttester {
     async fn get_evidence(&self, report_data: Vec<u8>) -> anyhow::Result<TeeEvidence> {
-        spawn_blocking(move || get_evidence_sync(&report_data)).await?
+        // Read the runtime eventlog (AAEL) before entering the blocking section:
+        // `read_eventlog` is async, whereas the vTPM calls below are blocking.
+        let cc_eventlog = read_eventlog().await?;
+        spawn_blocking(move || get_evidence_sync(&report_data, cc_eventlog)).await?
     }
 
     fn supports_runtime_measurement(&self) -> bool {
@@ -257,5 +269,44 @@ MIIB0zCCAXqgAwIBAgIJALg0
         };
         let json_out = serde_json::to_value(&out).unwrap();
         assert_eq!(json_out["report"], "3q2-7w==");
+    }
+
+    #[test]
+    fn test_evidence_cc_eventlog_roundtrip() {
+        // With a recorded eventlog: the field is emitted as a plain string and
+        // round-trips back unchanged.
+        let evidence = Evidence {
+            version: EVIDENCE_VERSION,
+            tpm_quote: TpmQuote {
+                signature: vec![0xde, 0xad],
+                message: vec![0xbe, 0xef],
+                pcrs: vec![vec![0x00; 32]],
+            },
+            hcl_report: vec![1, 2, 3],
+            vcek: vec![4, 5, 6],
+            cc_eventlog: Some("AAEL-base64".to_string()),
+        };
+        let value = serde_json::to_value(&evidence).unwrap();
+        assert_eq!(value["cc_eventlog"], "AAEL-base64");
+        let back: Evidence = serde_json::from_value(value).unwrap();
+        assert_eq!(back.cc_eventlog.as_deref(), Some("AAEL-base64"));
+
+        // Without an eventlog: the field serializes as JSON null and round-trips
+        // back to None (matches the TDX attester's shape).
+        let evidence_none = Evidence {
+            version: EVIDENCE_VERSION,
+            tpm_quote: TpmQuote {
+                signature: vec![],
+                message: vec![],
+                pcrs: vec![],
+            },
+            hcl_report: vec![],
+            vcek: vec![],
+            cc_eventlog: None,
+        };
+        let value_none = serde_json::to_value(&evidence_none).unwrap();
+        assert!(value_none.get("cc_eventlog").unwrap().is_null());
+        let back_none: Evidence = serde_json::from_value(value_none).unwrap();
+        assert_eq!(back_none.cc_eventlog, None);
     }
 }
