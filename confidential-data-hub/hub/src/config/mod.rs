@@ -425,6 +425,7 @@ image_security_policy = """
         },
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
         skip_sealed_secret_verification: false,
+        aa: AaConfig::default(),
     })
     )]
     #[serial]
