@@ -60,7 +60,7 @@ tokio.workspace = true
 rstest.workspace = true
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
-nv-attestation-sdk = { git = "https://github.com/NVIDIA/attestation-sdk", tag = "2026.03.02", optional = true }
+nv-attestation-sdk = { git = "https://github.com/NVIDIA/attestation-sdk", tag = "2026.06.09", optional = true }
 
 [[bin]]
 name = "evidence_getter"
