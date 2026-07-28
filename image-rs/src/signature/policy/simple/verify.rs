@@ -41,8 +41,8 @@ impl SigKeyIDs {
             Err(
                 anyhow!(
                     "Key ID not matched. trusted key id is: {:X?}, but key id in signature info is: {:X?}", 
-                    &self.trusted_key_id,
-                    &self.sig_info_key_id
+                    self.trusted_key_id,
+                    self.sig_info_key_id
                 )
             )
         }

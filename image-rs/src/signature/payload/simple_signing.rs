@@ -38,8 +38,8 @@ impl SigPayload {
         if self.manifest_digest() != ref_manifest_digest {
             bail!(
                 "SigPayload's manifest digest does not match, the input is {}, but in SigPayload it is {}",
-                &ref_manifest_digest,
-                &self.manifest_digest()
+                ref_manifest_digest,
+                self.manifest_digest()
             );
         }
         Ok(())

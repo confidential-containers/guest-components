@@ -156,7 +156,7 @@ impl SignatureValidator {
             .base_url(&image.reference)?
             .ok_or_else(|| anyhow!("The sigstore base url is none"))?;
 
-        let sigstore = format!("{}/{}", &sigstore_base_url, &sigstore_name);
+        let sigstore = format!("{sigstore_base_url}/{sigstore_name}");
         let sigstore_uri = url::Url::parse(&sigstore)
             .map_err(|e| anyhow!("Failed to parse sigstore_uri: {:?}", e))?;
 
