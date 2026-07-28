@@ -99,7 +99,7 @@ impl SigstoreConfig {
                     if namespace != ns_config {
                         bail!(
                             "Error parsing sigstore config: {} defined repeatedly.",
-                            &ns_name
+                            ns_name
                         );
                     }
                     continue;
@@ -175,7 +175,7 @@ pub async fn get_sigs_from_specific_sigstore(sigstore_uri: url::Url) -> Result<V
                 anyhow!(
                     "Read Sigstore Dir failed: {:?}, path: {}",
                     e,
-                    &sigstore_dir_path
+                    sigstore_dir_path
                 )
             })?;
             while let Some(entry) = dirs.next_entry().await? {
