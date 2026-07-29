@@ -51,7 +51,7 @@ async fn main() {
 
     match cli {
         Cli::Stdio => {
-            std::io::stdin()
+            let _ = std::io::stdin()
                 .read(&mut report_data)
                 .expect("read input failed");
         }
