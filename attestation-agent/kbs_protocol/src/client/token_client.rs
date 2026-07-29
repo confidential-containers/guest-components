@@ -9,10 +9,10 @@ use resource_uri::ResourceUri;
 use tracing::{debug, warn};
 
 use crate::{
-    api::KbsClientCapabilities,
-    client::{KbsClient, KBS_GET_RESOURCE_MAX_ATTEMPT, KBS_PREFIX},
-    token_provider::TokenProvider,
     Error, Result,
+    api::KbsClientCapabilities,
+    client::{KBS_GET_RESOURCE_MAX_ATTEMPT, KBS_PREFIX, KbsClient},
+    token_provider::TokenProvider,
 };
 
 impl KbsClient<Box<dyn TokenProvider>> {
@@ -72,7 +72,9 @@ impl KbsClientCapabilities for KbsClient<Box<dyn TokenProvider>> {
                 reqwest::StatusCode::UNAUTHORIZED => {
                     warn!(
                         "Authenticating with KBS failed. Get a new token from the token provider: {:#?}",
-                        res.json::<ErrorInformation>().await.map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?
+                        res.json::<ErrorInformation>()
+                            .await
+                            .map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?
                     );
                     self.update_token().await?;
 

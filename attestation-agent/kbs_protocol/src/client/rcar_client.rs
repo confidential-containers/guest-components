@@ -5,7 +5,7 @@
 
 use std::time::Duration;
 
-use anyhow::{bail, Context};
+use anyhow::{Context, bail};
 use async_trait::async_trait;
 use kbs_types::HashAlgorithm;
 use kbs_types::{
@@ -18,14 +18,14 @@ use serde_json::json;
 use tracing::{debug, warn};
 
 use crate::{
+    Error, Result,
     api::KbsClientCapabilities,
     client::{
-        ClientTee, KbsClient, KBS_GET_RESOURCE_MAX_ATTEMPT, KBS_PREFIX, KBS_PROTOCOL_VERSION,
+        ClientTee, KBS_GET_RESOURCE_MAX_ATTEMPT, KBS_PREFIX, KBS_PROTOCOL_VERSION, KbsClient,
     },
     evidence_provider::EvidenceProvider,
     keypair::TeeKeyPair,
     token_provider::Token,
-    Error, Result,
 };
 
 /// When executing get token, RCAR handshake should retry if failed to
@@ -133,7 +133,9 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
                 Ok(_) => break,
                 Err(e) => {
                     if retry_count >= RCAR_MAX_ATTEMPT {
-                        return Err(Error::RcarHandshake(format!("Unable to get token. RCAR handshake retried {RCAR_MAX_ATTEMPT} times. Final attempt failed with: {e:?}")));
+                        return Err(Error::RcarHandshake(format!(
+                            "Unable to get token. RCAR handshake retried {RCAR_MAX_ATTEMPT} times. Final attempt failed with: {e:?}"
+                        )));
                     } else {
                         warn!("RCAR handshake failed: {e:?}, retry {retry_count}...");
                         retry_count += 1;
@@ -401,24 +403,24 @@ impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
 mod test {
     use kbs_types::HashAlgorithm;
     use rstest::rstest;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use std::{env, path::PathBuf, time::Duration};
     use testcontainers::{
+        GenericImage, ImageExt,
         core::{IntoContainerPort, Mount},
         runners::AsyncRunner,
-        GenericImage, ImageExt,
     };
     use tokio::fs;
     use tokio::io::AsyncBufReadExt;
 
     use crate::{
-        evidence_provider::NativeEvidenceProvider, Error, KbsClientBuilder, KbsClientCapabilities,
+        Error, KbsClientBuilder, KbsClientCapabilities, evidence_provider::NativeEvidenceProvider,
     };
 
     use crate::client::rcar_client::{
-        build_request, get_hash_algorithm, get_request_extra_params, Result,
-        DEFAULT_HASH_ALGORITHM, KBS_PROTOCOL_VERSION, SELECTED_HASH_ALGORITHM_JSON_KEY,
-        SUPPORTED_HASH_ALGORITHMS_JSON_KEY,
+        DEFAULT_HASH_ALGORITHM, KBS_PROTOCOL_VERSION, Result, SELECTED_HASH_ALGORITHM_JSON_KEY,
+        SUPPORTED_HASH_ALGORITHMS_JSON_KEY, build_request, get_hash_algorithm,
+        get_request_extra_params,
     };
     use kbs_types::Tee;
 
