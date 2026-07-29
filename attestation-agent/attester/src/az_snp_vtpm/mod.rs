@@ -270,5 +270,4 @@ MIIB0zCCAXqgAwIBAgIJALg0
         let json_out = serde_json::to_value(&out).unwrap();
         assert_eq!(json_out["report"], "3q2-7w==");
     }
-
 }
