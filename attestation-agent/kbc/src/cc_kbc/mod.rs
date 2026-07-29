@@ -4,11 +4,11 @@
 //
 
 use crate::{KbcCheckInfo, KbcInterface};
-use crypto::{decrypt, WrapType};
+use crypto::{WrapType, decrypt};
 use kbs_protocol::{
+    KbsClientBuilder, KbsClientCapabilities,
     client::KbsClient,
     evidence_provider::{EvidenceProvider, NativeEvidenceProvider},
-    KbsClientBuilder, KbsClientCapabilities,
 };
 
 use super::AnnotationPacket;
