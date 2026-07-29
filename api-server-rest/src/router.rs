@@ -5,21 +5,21 @@
 
 use anyhow::*;
 use hyper::body::HttpBody;
-use hyper::{header, Body, Method, Request, Response, StatusCode};
+use hyper::{Body, Method, Request, Response, StatusCode, header};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use tracing::{debug, error, info};
 
+use crate::VERSION;
 use crate::client::{
     aa::{
-        AAClient, AaelEvent, AA_AAEL_URL, AA_ADDITIONAL_EVIDENCE_URL, AA_EVIDENCE_URL, AA_ROOT,
-        AA_TOKEN_URL,
+        AA_AAEL_URL, AA_ADDITIONAL_EVIDENCE_URL, AA_EVIDENCE_URL, AA_ROOT, AA_TOKEN_URL, AAClient,
+        AaelEvent,
     },
-    cdh::{CDHClient, CDH_RESOURCE_URL, CDH_ROOT},
+    cdh::{CDH_RESOURCE_URL, CDH_ROOT, CDHClient},
 };
 use crate::utils::{decode_runtime_data, split_nth_slash};
-use crate::VERSION;
 
 pub struct Router {
     aa_client: Option<AAClient>,
@@ -160,7 +160,7 @@ impl Router {
                             match params.get("token_type") {
                                 Some(token_type) => match client.get_token(token_type).await {
                                     std::result::Result::Ok(results) => {
-                                        return self.octet_stream_response(results)
+                                        return self.octet_stream_response(results);
                                     }
                                     Err(e) => {
                                         error!("Failed to get token: {e:#}");
@@ -183,7 +183,7 @@ impl Router {
                                     };
                                     match client.get_evidence(&runtime_data).await {
                                         std::result::Result::Ok(results) => {
-                                            return self.octet_stream_response(results)
+                                            return self.octet_stream_response(results);
                                         }
                                         Err(e) => {
                                             error!("Failed to get evidence: {e:#}");
@@ -207,7 +207,7 @@ impl Router {
                                     };
                                     match client.get_additional_evidence(&runtime_data).await {
                                         std::result::Result::Ok(results) => {
-                                            return self.octet_stream_response(results)
+                                            return self.octet_stream_response(results);
                                         }
                                         Err(e) => {
                                             error!("Failed to get additional evidence: {e:#}");
@@ -244,7 +244,7 @@ impl Router {
                                 .await
                             {
                                 std::result::Result::Ok(message) => {
-                                    return self.json_response(message)
+                                    return self.json_response(message);
                                 }
                                 Err(e) => {
                                     error!("Failed to extend AAEL entry: {e:#}");
@@ -270,7 +270,7 @@ impl Router {
                         match api {
                             CDH_RESOURCE_URL => match client.get_resource(resource_path).await {
                                 std::result::Result::Ok(results) => {
-                                    return self.octet_stream_response(results)
+                                    return self.octet_stream_response(results);
                                 }
                                 Err(e) => {
                                     error!("Failed to get resource: {e:#}");
