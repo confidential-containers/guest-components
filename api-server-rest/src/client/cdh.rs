@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::client::ttrpc_client::CachedTtrpcClient;
 use crate::TTRPC_TIMEOUT;
+use crate::client::ttrpc_client::CachedTtrpcClient;
 use anyhow::*;
 use protos::ttrpc::cdh::api::GetResourceRequest;
 use protos::ttrpc::cdh::api_ttrpc::GetResourceServiceClient;

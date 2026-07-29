@@ -4,14 +4,14 @@
 //
 
 use clap::Parser;
+use hyper::Server;
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::Server;
 use shadow_rs::shadow;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing::{error, info};
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt::Subscriber};
 
 shadow!(build);
 
