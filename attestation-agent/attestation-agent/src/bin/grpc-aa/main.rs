@@ -6,15 +6,15 @@
 mod server;
 
 use anyhow::*;
-use attestation_agent::{config::Config, initdata::Initdata, AttestationAPIs, AttestationAgent};
+use attestation_agent::{AttestationAPIs, AttestationAgent, config::Config, initdata::Initdata};
 use base64::Engine;
 use clap::Parser;
 use const_format::concatcp;
 use shadow_rs::shadow;
 use std::net::SocketAddr;
-use tokio::signal::unix::{signal, SignalKind};
+use tokio::signal::unix::{SignalKind, signal};
 use tracing::{debug, info};
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt::Subscriber};
 
 shadow!(build);
 
