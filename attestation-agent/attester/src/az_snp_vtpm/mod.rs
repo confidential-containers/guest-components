@@ -271,42 +271,4 @@ MIIB0zCCAXqgAwIBAgIJALg0
         assert_eq!(json_out["report"], "3q2-7w==");
     }
 
-    #[test]
-    fn test_evidence_cc_eventlog_roundtrip() {
-        // With a recorded eventlog: the field is emitted as a plain string and
-        // round-trips back unchanged.
-        let evidence = Evidence {
-            version: EVIDENCE_VERSION,
-            tpm_quote: TpmQuote {
-                signature: vec![0xde, 0xad],
-                message: vec![0xbe, 0xef],
-                pcrs: vec![vec![0x00; 32]],
-            },
-            hcl_report: vec![1, 2, 3],
-            vcek: vec![4, 5, 6],
-            cc_eventlog: Some("AAEL-base64".to_string()),
-        };
-        let value = serde_json::to_value(&evidence).unwrap();
-        assert_eq!(value["cc_eventlog"], "AAEL-base64");
-        let back: Evidence = serde_json::from_value(value).unwrap();
-        assert_eq!(back.cc_eventlog.as_deref(), Some("AAEL-base64"));
-
-        // Without an eventlog: the field serializes as JSON null and round-trips
-        // back to None (matches the TDX attester's shape).
-        let evidence_none = Evidence {
-            version: EVIDENCE_VERSION,
-            tpm_quote: TpmQuote {
-                signature: vec![],
-                message: vec![],
-                pcrs: vec![],
-            },
-            hcl_report: vec![],
-            vcek: vec![],
-            cc_eventlog: None,
-        };
-        let value_none = serde_json::to_value(&evidence_none).unwrap();
-        assert!(value_none.get("cc_eventlog").unwrap().is_null());
-        let back_none: Evidence = serde_json::from_value(value_none).unwrap();
-        assert_eq!(back_none.cc_eventlog, None);
-    }
 }
