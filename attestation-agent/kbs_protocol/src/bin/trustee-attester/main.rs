@@ -7,19 +7,19 @@
 
 use anyhow::Context;
 use anyhow::Result;
-use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use clap::{Parser, Subcommand};
 use shadow_rs::{formatcp, shadow};
 use std::fs;
 use std::path::PathBuf;
 use tracing::debug;
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt::Subscriber};
 
-use kbs_protocol::evidence_provider::NativeEvidenceProvider;
 use kbs_protocol::KbsClientBuilder;
 use kbs_protocol::KbsClientCapabilities;
 use kbs_protocol::ResourceUri;
+use kbs_protocol::evidence_provider::NativeEvidenceProvider;
 
 shadow!(build);
 

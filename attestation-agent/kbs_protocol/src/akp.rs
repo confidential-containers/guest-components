@@ -17,10 +17,10 @@
 //! vectors when those emerge.
 
 use aes_kw::{KeyInit, KwAes192};
-use anyhow::{anyhow, Result};
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use anyhow::{Result, anyhow};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use kbs_types::TeePubKey;
-use ml_kem::{kem::KeyExport, Decapsulate, DecapsulationKey, EncapsulationKey, Kem, MlKem768};
+use ml_kem::{Decapsulate, DecapsulationKey, EncapsulationKey, Kem, MlKem768, kem::KeyExport};
 use sha3_kmac::Kmac256;
 
 /// `kty` value for the Algorithm Key Pair (AKP) key type per
