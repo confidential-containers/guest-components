@@ -5,7 +5,7 @@
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use attester::{detect_attestable_devices, detect_tee_type, BoxedAttester};
+use attester::{BoxedAttester, detect_attestable_devices, detect_tee_type};
 use kbs_types::Tee;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tokio::sync::{Mutex, RwLock};

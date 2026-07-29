@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde::Deserialize;
 
 use super::aa_kbc_params::AaKbcParams;

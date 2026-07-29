@@ -7,13 +7,13 @@ pub mod tcg2;
 
 use std::{
     fmt::Display,
-    fs::{remove_file, File},
+    fs::{File, remove_file},
     io::{Read, Seek, SeekFrom, Write},
     path::Path,
     sync::Arc,
 };
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use attester::BoxedAttester;
 use const_format::concatcp;
 
@@ -119,10 +119,14 @@ impl EventLog {
         match Self::read_wal_cache(alg.digest_len()) {
             Ok(Some(wal_cache)) => {
                 warn!("Recover from a previous crash.");
-                let current_pcr = rtmr_extender.get_runtime_measurement(pcr).await.context("get runtime measurement")?;
+                let current_pcr = rtmr_extender
+                    .get_runtime_measurement(pcr)
+                    .await
+                    .context("get runtime measurement")?;
                 let aael_event = Event::try_from(&wal_cache.event_data[..])?;
                 let rtmr = rtmr_extender.pcr_to_ccmr(pcr);
-                let (tcg2_event_data, tcg2_event_digest) = Self::serialize_tcg2_event(aael_event, rtmr, alg);
+                let (tcg2_event_data, tcg2_event_digest) =
+                    Self::serialize_tcg2_event(aael_event, rtmr, alg);
 
                 // if the PCR has not been extended yet, we should just write eventlog
                 if current_pcr != wal_cache.expected_pcr {
@@ -132,11 +136,15 @@ impl EventLog {
                     let digest_to_be_updated = alg.digest(&pcr_status);
 
                     if digest_to_be_updated != wal_cache.expected_pcr {
-                        bail!("fatal error when recovering. The eventlog file {EVENTLOG_PATH} is probably corrupted, or other process has extend the target PCR {pcr}.")
+                        bail!(
+                            "fatal error when recovering. The eventlog file {EVENTLOG_PATH} is probably corrupted, or other process has extend the target PCR {pcr}."
+                        )
                     }
 
                     // else, update the PCR
-                    rtmr_extender.extend_runtime_measurement(tcg2_event_digest, pcr).await?;
+                    rtmr_extender
+                        .extend_runtime_measurement(tcg2_event_digest, pcr)
+                        .await?;
                 }
 
                 writer.seek(wal_cache.event_offset)?;
@@ -149,13 +157,15 @@ impl EventLog {
                     pcr,
                 })
             }
-            Err(_) => bail!("Failed to read wal cache. This is a significant error caused by a previous crash. Please try delete `{WAL_CACHE}` and restart the attestation agent."),
+            Err(_) => bail!(
+                "Failed to read wal cache. This is a significant error caused by a previous crash. Please try delete `{WAL_CACHE}` and restart the attestation agent."
+            ),
             Ok(None) => Ok(Self {
                 writer,
                 rtmr_extender,
                 alg,
                 pcr,
-            })
+            }),
         }
     }
 
@@ -429,8 +439,20 @@ mod tests {
         "46df8dacf00a07d34a83cdf56d7978697790787cf2ba1432ef7c38f22cd96351",
         HashAlgorithm::Sha256
     )]
-    #[case("domain", "operation", "content", "dad5f0e226318ffa9839b75a472c6aa7fdb5834949d0a0a22990cf04d5692440fb00f3aa0609db7e49cd8d793f670d02", HashAlgorithm::Sha384)]
-    #[case("domain", "operation", "content", "b708d222ca8bd44dfe6ba0c4ca2cbb72379276fba8091025217064be45a813e5d6124ccf073219edb617d1faf007d55061465bdf34b7437dbdc9a7405bd4e9c0", HashAlgorithm::Sha512)]
+    #[case(
+        "domain",
+        "operation",
+        "content",
+        "dad5f0e226318ffa9839b75a472c6aa7fdb5834949d0a0a22990cf04d5692440fb00f3aa0609db7e49cd8d793f670d02",
+        HashAlgorithm::Sha384
+    )]
+    #[case(
+        "domain",
+        "operation",
+        "content",
+        "b708d222ca8bd44dfe6ba0c4ca2cbb72379276fba8091025217064be45a813e5d6124ccf073219edb617d1faf007d55061465bdf34b7437dbdc9a7405bd4e9c0",
+        HashAlgorithm::Sha512
+    )]
     fn test_event_digest(
         #[case] domain: &str,
         #[case] operation: &str,

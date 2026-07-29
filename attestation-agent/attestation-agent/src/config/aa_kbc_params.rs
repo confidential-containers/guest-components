@@ -59,7 +59,9 @@ impl AaKbcParams {
 
     pub fn new() -> Result<Self, ParamError> {
         let Ok(value) = Self::get_value() else {
-            debug!("failed to get aa_kbc_params in either both env or kernel cmdline, use `offline_fs_kbc::null` as default.");
+            debug!(
+                "failed to get aa_kbc_params in either both env or kernel cmdline, use `offline_fs_kbc::null` as default."
+            );
             return Ok(Self::default());
         };
 
