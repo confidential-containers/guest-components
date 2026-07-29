@@ -8,8 +8,8 @@
 use aes_gcm::aes::Aes256;
 use anyhow::*;
 use ctr::{
-    cipher::{KeyIvInit, StreamCipher},
     Ctr128BE,
+    cipher::{KeyIvInit, StreamCipher},
 };
 
 pub fn decrypt(key: &[u8], encrypted_data: &[u8], iv: &[u8]) -> Result<Vec<u8>> {
