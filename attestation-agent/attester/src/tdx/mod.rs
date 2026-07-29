@@ -5,8 +5,8 @@
 
 use super::tsm_report::*;
 use super::{Attester, TeeEvidence};
-use crate::utils::{pad, read_eventlog};
 use crate::InitDataResult;
+use crate::utils::{pad, read_eventlog};
 use anyhow::*;
 use base64::Engine;
 use iocuddle::{Group, Ioctl, WriteRead};

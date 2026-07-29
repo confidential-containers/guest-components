@@ -7,10 +7,10 @@ use super::{Attester, InitDataResult, TeeEvidence};
 pub mod utils;
 
 use self::utils::{
-    detect_tpm_device, extend_pcr, get_ak_handle, get_quote, read_ak_public_key, read_all_pcrs,
-    TpmQuote,
+    TpmQuote, detect_tpm_device, extend_pcr, get_ak_handle, get_quote, read_ak_public_key,
+    read_all_pcrs,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use tracing::info;

@@ -17,7 +17,7 @@
 //! hardware (vendor `15b3`, device `a2dc` for BF3 NIC or `a2da` for SoC bridge).
 
 use super::{Attester, TeeEvidence};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use p384::ecdsa::signature::Signer;
 use p384::ecdsa::{Signature, SigningKey};
 use serde::{Deserialize, Serialize};
