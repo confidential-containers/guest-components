@@ -6,7 +6,7 @@
 use crate::config::kbs::KbsConfig;
 
 use anyhow::*;
-use kbs_protocol::{evidence_provider::NativeEvidenceProvider, KbsClientBuilder, TeeKeyAlgorithm};
+use kbs_protocol::{KbsClientBuilder, TeeKeyAlgorithm, evidence_provider::NativeEvidenceProvider};
 use serde::Serialize;
 
 #[derive(Serialize)]
