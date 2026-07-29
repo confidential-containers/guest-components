@@ -210,8 +210,31 @@ pub async fn read_eventlog() -> Result<Option<String>> {
 
 #[cfg(test)]
 mod tests {
-    use super::EL_HEADER;
+    use super::{trim_ccel, EL_HEADER};
     use std::collections::HashMap;
+
+    // Builds a minimal TCG_PCR_EVENT spec-id header (EV_NO_ACTION, sha1 digest prefix).
+    fn make_spec_id_header(event_data: &[u8]) -> Vec<u8> {
+        let mut v = vec![0u8; 4]; // pcrIndex = 0
+        v.extend_from_slice(&3u32.to_le_bytes()); // eventType = EV_NO_ACTION
+        v.extend_from_slice(&[0u8; 20]); // sha1_digest
+        v.extend_from_slice(&(event_data.len() as u32).to_le_bytes());
+        v.extend_from_slice(event_data);
+        v
+    }
+
+    // Builds a minimal TCG_PCR_EVENT2 with one SHA-256 digest.
+    fn make_sha256_event(target_mr: u32, event_data: &[u8]) -> Vec<u8> {
+        let mut v = Vec::new();
+        v.extend_from_slice(&target_mr.to_le_bytes());
+        v.extend_from_slice(&13u32.to_le_bytes()); // eventType
+        v.extend_from_slice(&1u32.to_le_bytes()); // digestCount = 1
+        v.extend_from_slice(&0x000Bu16.to_le_bytes()); // algId = SHA-256
+        v.extend_from_slice(&[0xABu8; 32]); // digest
+        v.extend_from_slice(&(event_data.len() as u32).to_le_bytes());
+        v.extend_from_slice(event_data);
+        v
+    }
 
     /// Guards the hand-computed byte offsets of the eventlog spec-id header and
     /// asserts it declares SHA-256, so the verifier parser can size the SHA-256
@@ -248,5 +271,66 @@ mod tests {
 
         // vendorInfoSize (final byte) == 0
         assert_eq!(*EL_HEADER.last().unwrap(), 0);
+    }
+
+    #[test]
+    fn trim_ccel_strips_end_flag_and_padding() {
+        let header = make_spec_id_header(&[]);
+        let event = make_sha256_event(7, &[1, 2, 3, 4]);
+        let expected: Vec<u8> = [header.as_slice(), event.as_slice()].concat();
+
+        let mut ccel = expected.clone();
+        ccel.extend_from_slice(&[0xFFu8; 8]); // end flag
+        ccel.extend_from_slice(&[0u8; 64]); // trailing padding
+
+        assert_eq!(trim_ccel(ccel).unwrap(), expected);
+    }
+
+    #[test]
+    fn trim_ccel_zero_end_flag() {
+        let header = make_spec_id_header(&[]);
+        let event = make_sha256_event(7, &[]);
+        let expected: Vec<u8> = [header.as_slice(), event.as_slice()].concat();
+
+        let mut ccel = expected.clone();
+        ccel.extend_from_slice(&[0u8; 8]); // zero end flag
+
+        assert_eq!(trim_ccel(ccel).unwrap(), expected);
+    }
+
+    #[test]
+    fn trim_ccel_no_runtime_events() {
+        let header = make_spec_id_header(&[]);
+        let mut ccel = header.clone();
+        ccel.extend_from_slice(&[0xFFu8; 8]);
+
+        assert_eq!(trim_ccel(ccel).unwrap(), header);
+    }
+
+    #[test]
+    fn trim_ccel_too_short_returns_err() {
+        assert!(trim_ccel(vec![0u8; 4]).is_err());
+    }
+
+    #[test]
+    fn trim_ccel_no_end_flag_returns_err() {
+        // header only, no end flag — loop bails on missing terminator
+        assert!(trim_ccel(make_spec_id_header(&[])).is_err());
+    }
+
+    #[test]
+    fn trim_ccel_unsupported_algorithm_returns_err() {
+        let header = make_spec_id_header(&[]);
+        let mut event = Vec::new();
+        event.extend_from_slice(&7u32.to_le_bytes()); // target_mr
+        event.extend_from_slice(&13u32.to_le_bytes()); // event_type
+        event.extend_from_slice(&1u32.to_le_bytes()); // digestCount = 1
+        event.extend_from_slice(&0x0001u16.to_le_bytes()); // algId = unknown
+        event.extend_from_slice(&[0u8; 20]); // padding (never reached)
+
+        let mut ccel = header;
+        ccel.extend_from_slice(&event);
+
+        assert!(trim_ccel(ccel).is_err());
     }
 }
