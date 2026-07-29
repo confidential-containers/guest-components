@@ -6,8 +6,8 @@
 //! This mod implements aes-256-gcm encryption & decryption.
 use crate::AeadCipher;
 use aes_gcm::{
-    aead::{Aead, AeadInOut},
     Aes256Gcm, Key, KeyInit, Nonce,
+    aead::{Aead, AeadInOut},
 };
 use anyhow::*;
 

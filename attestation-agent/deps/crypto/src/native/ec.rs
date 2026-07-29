@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use openssl::{
     aes::{self, AesKey},
     bn::{BigNum, BigNumContext},
@@ -16,8 +16,8 @@ use openssl::{
 use zeroize::Zeroizing;
 
 use crate::{
-    ec::{Curve, KeyWrapAlgorithm},
     AES_GCM_256_KEY_BITS,
+    ec::{Curve, KeyWrapAlgorithm},
 };
 
 #[derive(Clone, Debug)]
