@@ -4,9 +4,9 @@
 //
 
 use super::{Attester, TeeEvidence};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use base64::Engine;
-use occlum_dcap::{sgx_report_data_t, DcapQuote};
+use occlum_dcap::{DcapQuote, sgx_report_data_t};
 use serde::{Deserialize, Serialize};
 
 const OCCLUM_ENV: &str = "OCCLUM";

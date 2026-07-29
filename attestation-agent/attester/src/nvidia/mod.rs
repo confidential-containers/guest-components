@@ -6,9 +6,9 @@
 #[cfg(target_arch = "x86_64")]
 mod nvat;
 #[cfg(target_arch = "x86_64")]
-pub use nvat::{detect_platform, NvAttester};
+pub use nvat::{NvAttester, detect_platform};
 
 #[cfg(not(target_arch = "x86_64"))]
 mod unsupported;
 #[cfg(not(target_arch = "x86_64"))]
-pub use unsupported::{detect_platform, NvAttester};
+pub use unsupported::{NvAttester, detect_platform};
