@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 
 #[cfg(feature = "pqc-experimental")]
 use crate::akp::{AkpKeyPair, ML_KEM_768_A192KW_ALGORITHM};
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use crypto::{
     ec::{EcKeyPair, KeyWrapAlgorithm, P256EcKeyPair, P521EcKeyPair},
     rsa::{PaddingMode, RSAKeyPair},
@@ -292,7 +292,7 @@ mod tests {
 #[cfg(all(test, feature = "pqc-experimental"))]
 mod pqc_tests {
     use super::*;
-    use crate::akp::{kmac256_kdf, ML_KEM_768_A192KW_ALGORITHM};
+    use crate::akp::{ML_KEM_768_A192KW_ALGORITHM, kmac256_kdf};
     use aes_kw::{KeyInit, KwAes192};
     use ml_kem::{Encapsulate, EncapsulationKey, Key, MlKem768};
 

@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use attester::{detect_attestable_devices, detect_tee_type, BoxedAttester, TeeEvidence};
+use attester::{BoxedAttester, TeeEvidence, detect_attestable_devices, detect_tee_type};
 use kbs_types::Tee;
 
 use super::EvidenceProvider;
