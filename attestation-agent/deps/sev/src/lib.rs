@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::process::Command;
 
 const SECRET_MODULE_NAME: &str = "efi_secret";
