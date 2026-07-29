@@ -5,7 +5,7 @@
 
 use std::fmt::Display;
 
-use aes_gcm::{aead::Aead, aes::Aes256, Aes256Gcm, Key, Nonce};
+use aes_gcm::{Aes256Gcm, Key, Nonce, aead::Aead, aes::Aes256};
 use anyhow::*;
 use strum::EnumString;
 
