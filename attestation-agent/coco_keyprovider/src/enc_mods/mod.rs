@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use base64::Engine;
 use jwt_simple::prelude::Ed25519KeyPair;
 use rand::RngExt;
@@ -210,14 +210,14 @@ pub async fn enc_optsdata_gen_anno(
     let encrypt_optsdata = crypto::encrypt(optsdata, &key, &iv, &algorithm)
         .map_err(|e| anyhow!("Encrypt failed: {:?}", e))?;
 
-    if let (Some(addr), Some(private_key)) = kbs_parameter {
-        if !input_params.sample {
-            // We do not register KEK for sample kbc
-            register_kek(private_key, addr, key, &k_path)
-                .await
-                .context("register KEK failed")?;
-            info!("register KEK succeeded.");
-        }
+    if let (Some(addr), Some(private_key)) = kbs_parameter
+        && !input_params.sample
+    {
+        // We do not register KEK for sample kbc
+        register_kek(private_key, addr, key, &k_path)
+            .await
+            .context("register KEK failed")?;
+        info!("register KEK succeeded.");
     }
 
     let engine = base64::engine::general_purpose::STANDARD;
