@@ -6,11 +6,11 @@
 use std::{collections::BTreeMap, env};
 
 use async_trait::async_trait;
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use chrono::Utc;
 use prost::Message;
 use protos::grpc::cdh::dkms_api;
-use reqwest::{header::HeaderMap, Certificate, ClientBuilder};
+use reqwest::{Certificate, ClientBuilder, header::HeaderMap};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};

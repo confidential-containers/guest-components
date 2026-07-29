@@ -7,9 +7,9 @@ use std::env;
 
 use async_trait::async_trait;
 use kbs_protocol::{
+    KbsClientCapabilities, ResourceUri,
     client::KbsClient as KbsProtocolClient,
     token_provider::{AATokenProvider, TokenProvider},
-    KbsClientCapabilities, ResourceUri,
 };
 use tracing::{info, warn};
 

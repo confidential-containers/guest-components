@@ -8,11 +8,11 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use async_trait::async_trait;
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use bincode::{config::legacy, decode_from_slice};
 use crypto::WrapType;
 use protos::grpc::aa::keybroker::{
-    key_broker_service_client::KeyBrokerServiceClient, OnlineSecretRequest, RequestDetails,
+    OnlineSecretRequest, RequestDetails, key_broker_service_client::KeyBrokerServiceClient,
 };
 use resource_uri::{ResourcePluginPath, ResourceUri};
 use serde::Deserialize;
@@ -21,7 +21,7 @@ use tonic::transport::Uri;
 use uuid::Uuid;
 use zeroize::Zeroizing;
 
-use crate::{plugins::kbs::Kbc, Error, Result};
+use crate::{Error, Result, plugins::kbs::Kbc};
 
 const KEYS_PATH: &str = "/sys/kernel/security/secrets/coco/1ee27366-0c87-43a6-af48-28543eaf7cb0";
 
