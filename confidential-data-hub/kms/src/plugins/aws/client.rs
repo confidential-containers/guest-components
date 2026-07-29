@@ -7,9 +7,9 @@ use std::env;
 
 use async_trait::async_trait;
 use aws_sdk_kms::{
+    Client as KmsClient,
     config::{BehaviorVersion, Credentials, Region},
     primitives::Blob,
-    Client as KmsClient,
 };
 use aws_sdk_secretsmanager::Client as SecretsManagerClient;
 use const_format::concatcp;

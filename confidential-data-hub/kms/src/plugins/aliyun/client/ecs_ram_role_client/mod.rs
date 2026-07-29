@@ -15,7 +15,7 @@ use crate::{Annotations, ProviderSettings};
 use crate::{Error, Result};
 
 use super::sts_token_client::credential::StsCredential;
-use super::{sts_token_client::StsTokenClient, ALIYUN_IN_GUEST_DEFAULT_KEY_PATH};
+use super::{ALIYUN_IN_GUEST_DEFAULT_KEY_PATH, sts_token_client::StsTokenClient};
 
 #[derive(Clone, Debug)]
 pub struct EcsRamRoleClient {

@@ -6,7 +6,7 @@
 //! Credentials to access aliyun KMS
 
 use anyhow::*;
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use openssl::hash::MessageDigest;
 use openssl::pkcs12::Pkcs12;
 use openssl::pkey::PKey;
