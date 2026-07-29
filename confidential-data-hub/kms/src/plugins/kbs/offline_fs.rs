@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use resource_uri::ResourceUri;
 use tokio::fs;
 use tracing::warn;
@@ -70,7 +70,9 @@ impl OfflineFsKbc {
                 ))
             })?;
             if self.resources.insert(k.to_owned(), value).is_some() {
-                warn!("detected duplicated resource definition {k} in file {path} when initializing offline-fs-kbc");
+                warn!(
+                    "detected duplicated resource definition {k} in file {path} when initializing offline-fs-kbc"
+                );
             }
         }
         Ok(())
@@ -82,7 +84,7 @@ mod tests {
     use resource_uri::ResourceUri;
     use rstest::rstest;
 
-    use crate::plugins::kbs::{offline_fs::OfflineFsKbc, Kbc};
+    use crate::plugins::kbs::{Kbc, offline_fs::OfflineFsKbc};
 
     #[rstest]
     #[tokio::test]

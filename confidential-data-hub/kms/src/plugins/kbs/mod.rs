@@ -45,7 +45,11 @@ impl RealClient {
             #[cfg(feature = "sev")]
             "online_sev_kbc" => RealClient::Sev(sev::OnlineSevKbc::new(&params.uri).await?),
             "offline_fs_kbc" => RealClient::OfflineFs(offline_fs::OfflineFsKbc::new().await?),
-            others => return Err(Error::KbsClientError(format!("unknown kbc name {others}, only support `cc_kbc`(feature `kbs`), `online_sev_kbc` (feature `sev`) and `offline_fs_kbc`."))),
+            others => {
+                return Err(Error::KbsClientError(format!(
+                    "unknown kbc name {others}, only support `cc_kbc`(feature `kbs`), `online_sev_kbc` (feature `sev`) and `offline_fs_kbc`."
+                )));
+            }
         };
 
         Ok(c)
