@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::utils::pad;
 use crate::InitDataResult;
+use crate::utils::pad;
 
 use super::{Attester, TeeEvidence};
 use anyhow::*;

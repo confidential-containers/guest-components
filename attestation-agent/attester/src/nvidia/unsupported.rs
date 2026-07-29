@@ -4,7 +4,7 @@
 //
 
 use crate::{Attester, TeeEvidence};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 pub fn detect_platform() -> bool {
     false

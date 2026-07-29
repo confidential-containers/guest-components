@@ -4,7 +4,7 @@
 //
 
 use super::{Attester, InitDataResult, TeeEvidence};
-use crate::az_snp_vtpm::{utils, TpmQuote};
+use crate::az_snp_vtpm::{TpmQuote, utils};
 use anyhow::*;
 use az_tdx_vtpm::{hcl, is_tdx_cvm, tdx::TdReport, vtpm};
 use azure_guest_attestation_sdk::guest_attest::ImdsClient;

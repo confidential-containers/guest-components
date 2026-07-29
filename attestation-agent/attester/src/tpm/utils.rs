@@ -3,24 +3,24 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use base64::Engine;
 use num_traits::cast::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::str::FromStr;
+use tss_esapi::Context as TssContext;
 use tss_esapi::attributes::SessionAttributesBuilder;
 use tss_esapi::constants::SessionType;
 use tss_esapi::handles::{PcrHandle, TpmHandle};
 use tss_esapi::interface_types::algorithm::HashingAlgorithm;
 use tss_esapi::structures::digest_values::DigestValues;
 use tss_esapi::structures::{
-    pcr_selection_list::PcrSelectionListBuilder, pcr_slot::PcrSlot, AttestInfo, PcrSelectionList,
-    Signature, SignatureScheme as TpmSignatureScheme, SymmetricDefinition,
+    AttestInfo, PcrSelectionList, Signature, SignatureScheme as TpmSignatureScheme,
+    SymmetricDefinition, pcr_selection_list::PcrSelectionListBuilder, pcr_slot::PcrSlot,
 };
 use tss_esapi::tcti_ldr::TctiNameConf;
 use tss_esapi::traits::Marshall;
-use tss_esapi::Context as TssContext;
 use tss_esapi::{
     abstraction::{pcr, public::DecodedKey},
     structures::HashScheme,

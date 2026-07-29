@@ -115,15 +115,27 @@ mod test {
     use rstest::rstest;
     use scroll::Pread;
 
-    use crate::tdx::{report::TdReport, TdxAttester};
+    use crate::tdx::{TdxAttester, report::TdReport};
 
     /// This test uses a fixture of tdx-report to check if the get_runtime_measurement function works correctly.
     /// The following test PCRs are mapping to TDX RTMR 0, 1, 2 and 3
     #[rstest]
-    #[case(1, "f4ec1a04670fe7926cd5de4aef9aaa7689ab4ceaa132d7c5242b47f67dfaaea64c372a17ad68fef9a6ac99aabbddabdc")]
-    #[case(2, "4e5f8826653198ab4bc5156fbe4bc99db054c0b8239a16c4b59249fb427f4acc50eed1b46a85c7d526c4e1e47621b14c")]
-    #[case(8, "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")]
-    #[case(16, "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")]
+    #[case(
+        1,
+        "f4ec1a04670fe7926cd5de4aef9aaa7689ab4ceaa132d7c5242b47f67dfaaea64c372a17ad68fef9a6ac99aabbddabdc"
+    )]
+    #[case(
+        2,
+        "4e5f8826653198ab4bc5156fbe4bc99db054c0b8239a16c4b59249fb427f4acc50eed1b46a85c7d526c4e1e47621b14c"
+    )]
+    #[case(
+        8,
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    )]
+    #[case(
+        16,
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    )]
     fn get_runtime_measurement(#[case] pcr_index: u64, #[case] expected: &str) {
         use crate::Attester;
 
