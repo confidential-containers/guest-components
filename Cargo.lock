@@ -4312,8 +4312,9 @@ dependencies = [
 
 [[package]]
 name = "kbs-types"
-version = "0.17.0"
-source = "git+https://github.com/confidential-containers/kbs-types?rev=b26f44e#b26f44e60a9d542290571c7354ed1855b279ee16"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4453d70e4a9a7db181a83661803dc296471957d16cb4ddd2af7a52d17eb234cc"
 dependencies = [
  "base64 0.22.1",
  "ear",
