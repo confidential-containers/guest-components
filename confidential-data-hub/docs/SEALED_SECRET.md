@@ -180,21 +180,16 @@ This will create a sealed secret that points to the resource `secret/key/uri` in
 The secret will be validated with a public key stored in Trustee.
 The public/private keypair should be a JWK with a P256 EC key.
 
-This key should look like this.
-```json
-{
-    "kty": "EC",
-    "d": "_z0AOMG12p1lt...",
-    "use": "sig",
-    "crv": "P-256",
-    "kid": "test",
-    "x": "wjCZnuv_tLKiCt...",
-    "y": "gsSc2YE_O2kmHx...",
-    "alg": "ES256"
-}
+You can generate a keypair with the `keygen` subcommand:
+
+```bash
+cargo run -p confidential-data-hub --bin secret keygen --kid my-signing-key --output-dir ./keys
 ```
-This includes the public and private keypair. Only the public component
-needs to be provisioned to Trustee.
+
+This writes two files: `my-signing-key-private.json` (used for signing)
+and `my-signing-key-public.json` (provisioned to Trustee).
+
+Only the public component needs to be provisioned to Trustee.
 
 ### Create a Kubernetes secret
 
