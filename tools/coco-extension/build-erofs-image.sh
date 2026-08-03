@@ -8,7 +8,7 @@
 # kata's guest extension mount path:
 #
 #   partition 1: EROFS payload
-#   partition 2: dm-verity hash device (only when MEASURED_ROOTFS=yes)
+#   partition 2: dm-verity hash device
 #   root_hash_coco-extension.txt: kernel cmdline verity parameters
 #
 # This intentionally builds the small extension image locally instead of pulling
@@ -30,17 +30,6 @@ ROOTFS_DIR="${ROOTFS_DIR:-${repo_root_dir}/build/coco-extension-rootfs}"
 
 # Where the resulting image and root hash file are written.
 OUTPUT_DIR="${OUTPUT_DIR:-${repo_root_dir}/build/coco-extension-image}"
-
-# On s390x IBM Secure Execution measures the guest through a different mechanism,
-# so the extension is unmeasured (no dm-verity hash partition) there, mirroring
-# kata's base/confidential images. Everywhere else we build a measured rootfs.
-if [[ -z "${MEASURED_ROOTFS:-}" ]]; then
-	if [[ "${ARCH}" == "s390x" ]]; then
-		MEASURED_ROOTFS="no"
-	else
-		MEASURED_ROOTFS="yes"
-	fi
-fi
 
 BUILD_VARIANT="coco-extension"
 IMAGE_NAME="kata-containers-${BUILD_VARIANT}.img"
@@ -107,11 +96,9 @@ calculate_image_size_mb() {
 	fs_size_bytes="$(stat -c "%s" "${fs_image}")"
 	image_size_mb=$(( ((fs_size_bytes + 1048576) / 1048576) + 1 + ROOTFS_START_MB ))
 
-	if [[ "${MEASURED_ROOTFS}" == "yes" ]]; then
-		# Reserve the final ~1% of the disk for the dm-verity hash partition,
-		# matching kata's osbuilder layout.
-		image_size_mb=$(( (image_size_mb * 100 / 99) + 1 ))
-	fi
+	# Reserve the final ~1% of the disk for the dm-verity hash partition,
+	# matching kata's osbuilder layout.
+	image_size_mb=$(( (image_size_mb * 100 / 99) + 1 ))
 
 	remainder=$(( image_size_mb % IMAGE_SIZE_ALIGNMENT_MB ))
 	if [[ "${remainder}" != "0" ]]; then
@@ -130,22 +117,16 @@ create_disk() {
 	rm -f "${image}"
 	truncate -s "${image_size_mb}M" "${image}"
 
-	if [[ "${MEASURED_ROOTFS}" == "yes" ]]; then
-		hash_start_mb=$(( image_size_mb * 99 / 100 ))
-		if [[ "${hash_start_mb}" -le "${ROOTFS_START_MB}" ]]; then
-			die "image too small for measured rootfs layout"
-		fi
-
-		parted -s -a optimal "${image}" -- \
-			mklabel msdos \
-			mkpart primary ext4 "${ROOTFS_START_MB}MiB" "${hash_start_mb}MiB" \
-			mkpart primary ext4 "${hash_start_mb}MiB" 100% \
-			set 1 boot on
-	else
-		parted -s -a optimal "${image}" -- \
-			mklabel msdos \
-			mkpart primary ext4 "${ROOTFS_START_MB}MiB" 100%
+	hash_start_mb=$(( image_size_mb * 99 / 100 ))
+	if [[ "${hash_start_mb}" -le "${ROOTFS_START_MB}" ]]; then
+		die "image too small for dm-verity two-partition layout"
 	fi
+
+	parted -s -a optimal "${image}" -- \
+		mklabel msdos \
+		mkpart primary ext4 "${ROOTFS_START_MB}MiB" "${hash_start_mb}MiB" \
+		mkpart primary ext4 "${hash_start_mb}MiB" 100% \
+		set 1 boot on
 }
 
 attach_loop_device() {
@@ -204,12 +185,6 @@ setup_verity() {
 	local verity_output
 	local kernel_verity_params
 
-	if [[ "${MEASURED_ROOTFS}" != "yes" ]]; then
-		rm -f "${root_hash_file}"
-		info "Unmeasured build; no root hash file expected"
-		return
-	fi
-
 	[[ -b "${device}p2" ]] || die "expected dm-verity hash partition ${device}p2"
 
 	info "Formatting dm-verity hash device"
@@ -231,7 +206,7 @@ build_image() {
 	fs_image="$(mktemp -p "${TMPDIR:-/tmp}" coco-extension-erofs.XXXXXX)"
 	cleanup_paths+=("${fs_image}")
 
-	info "Building ${IMAGE_NAME} (ARCH=${ARCH} MEASURED_ROOTFS=${MEASURED_ROOTFS})"
+	info "Building ${IMAGE_NAME} (ARCH=${ARCH})"
 	make_erofs_payload "${staging_dir}" "${fs_image}"
 	image_size_mb="$(calculate_image_size_mb "${fs_image}")"
 	create_disk "${image}" "${image_size_mb}"
@@ -243,10 +218,8 @@ build_image() {
 
 	setup_verity "${device}" "${root_hash_file}"
 
-	if [[ "${MEASURED_ROOTFS}" == "yes" ]]; then
-		info "Root hash / verity params:"
-		sed 's/^/  /' "${root_hash_file}"
-	fi
+	info "Root hash / verity params:"
+	sed 's/^/  /' "${root_hash_file}"
 
 	info "Image built: ${image}"
 }

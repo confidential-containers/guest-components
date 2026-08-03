@@ -59,19 +59,16 @@ jobs:
           oci_arch: amd64
           libc: gnu
           attester: snp-attester,tdx-attester
-          measured_rootfs: "yes"
           runner: ubuntu-24.04
         - arch: aarch64
           oci_arch: arm64
           libc: gnu
           attester: cca-attester
-          measured_rootfs: "yes"
           runner: ubuntu-24.04-arm
         - arch: s390x
           oci_arch: s390x
           libc: gnu
           attester: se-attester
-          measured_rootfs: "no"
           runner: s390x
     runs-on: ${{ matrix.runner }}
     env:
@@ -80,7 +77,6 @@ jobs:
       ATTESTER: ${{ matrix.attester }}
       # "kbs" enables cc_kbc, the KBS resource provider used on every arch.
       RESOURCE_PROVIDER: kbs
-      MEASURED_ROOTFS: ${{ matrix.measured_rootfs }}
       RUST_TARGET: ${{ matrix.arch }}-unknown-linux-${{ matrix.libc }}
     steps:
     - name: Harden the runner (Audit all outbound calls)
