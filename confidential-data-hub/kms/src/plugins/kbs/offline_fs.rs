@@ -19,6 +19,10 @@ use super::Kbc;
 const KEYS_PATH: &str = "/etc/aa-offline_fs_kbc-keys.json";
 const RESOURCES_PATH: &str = "/etc/aa-offline_fs_kbc-resources.json";
 
+/// Environment variable to specify the path to the extra file.
+/// Split by ',' (if any) to specify multiple file paths.
+const EXTRA_FILE_PATH_ENV_VAR: &str = "OFFLINE_FS_KBC_EXTRA_FILE_PATH";
+
 pub struct OfflineFsKbc {
     /// Stored resources, loaded from file system
     resources: HashMap<String, Vec<u8>>,
@@ -45,6 +49,12 @@ impl OfflineFsKbc {
 
         res.init_with_file(KEYS_PATH).await?;
         res.init_with_file(RESOURCES_PATH).await?;
+
+        if let Ok(extra_file_path) = std::env::var(EXTRA_FILE_PATH_ENV_VAR) {
+            for path in extra_file_path.split(',') {
+                res.init_with_file(path).await?;
+            }
+        }
 
         Ok(res)
     }
