@@ -74,21 +74,25 @@ mod encryption {
     use ocicrypt_rs::helpers::create_decrypt_config;
     use ocicrypt_rs::spec::{
         MEDIA_TYPE_LAYER_ENC, MEDIA_TYPE_LAYER_GZIP_ENC, MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_ENC,
-        MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_GZIP_ENC,
+        MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_GZIP_ENC, MEDIA_TYPE_WASM_ENC,
     };
     use std::io::Read;
 
     impl Decryptor {
         /// Construct Decryptor from media_type.
         pub fn from_media_type(media_type: &str) -> Self {
-            let (media_type, encrypted) = match media_type {
-                MEDIA_TYPE_LAYER_ENC | MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_ENC => {
-                    (manifest::IMAGE_LAYER_MEDIA_TYPE.to_string(), true)
+            let (media_type, encrypted) = if media_type == MEDIA_TYPE_WASM_ENC {
+                (crate::media_type::WASM_LAYER_MEDIA_TYPE.to_string(), true)
+            } else {
+                match media_type {
+                    MEDIA_TYPE_LAYER_ENC | MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_ENC => {
+                        (manifest::IMAGE_LAYER_MEDIA_TYPE.to_string(), true)
+                    }
+                    MEDIA_TYPE_LAYER_GZIP_ENC | MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_GZIP_ENC => {
+                        (manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE.to_string(), true)
+                    }
+                    _ => ("".to_string(), false),
                 }
-                MEDIA_TYPE_LAYER_GZIP_ENC | MEDIA_TYPE_LAYER_NON_DISTRIBUTABLE_GZIP_ENC => {
-                    (manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE.to_string(), true)
-                }
-                _ => ("".to_string(), false),
             };
 
             Decryptor {
@@ -259,6 +263,13 @@ mod encryption {
                         encrypted: true,
                     },
                 },
+                TestData {
+                    media_type: MEDIA_TYPE_WASM_ENC,
+                    result: Decryptor {
+                        media_type: crate::media_type::WASM_LAYER_MEDIA_TYPE.to_string(),
+                        encrypted: true,
+                    },
+                },
             ];
 
             for (i, d) in tests.iter().enumerate() {
@@ -378,6 +389,9 @@ impl Decryptor {
     /// Construct Decryptor from media_type.
     pub fn from_media_type(media_type: &str) -> Self {
         let (media_type, encrypted) = match media_type {
+            crate::media_type::WASM_LAYER_ENC_MEDIA_TYPE => {
+                (crate::media_type::WASM_LAYER_MEDIA_TYPE.to_string(), true)
+            }
             "application/vnd.oci.image.layer.v1.tar+encrypted"
             | "application/vnd.oci.image.layer.nondistributable.v1.tar+encrypted" => {
                 (manifest::IMAGE_LAYER_MEDIA_TYPE.to_string(), true)

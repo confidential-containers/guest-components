@@ -19,8 +19,9 @@ use tokio_util::io::StreamReader;
 
 use crate::decoder::Compression;
 use crate::layer_store::LayerStore;
+use crate::media_type::is_wasm_media_type;
 use crate::meta_store::MetaStore;
-use crate::stream::stream_processing;
+use crate::stream::{stream_processing, wasm_stream_processing};
 use crate::{
     decoder::DecodeError,
     decrypt::{DecryptLayerError, Decryptor},
@@ -207,7 +208,9 @@ impl<'a> PullClient<'a> {
         }
 
         // uncompressed digest should equal to the diff_ids in image_config.
-        if layer_meta.uncompressed_digest != diff_id {
+        // WASM image configs do not carry rootfs.diff_ids, so an empty diff_id
+        // is tolerated (the digest is computed but not verified).
+        if !diff_id.is_empty() && layer_meta.uncompressed_digest != diff_id {
             return Err(PullLayerError::UnequalUncompressedDigest {
                 uncompressed_digest: layer_meta.uncompressed_digest,
                 diff_id,
@@ -228,9 +231,16 @@ impl<'a> PullClient<'a> {
     ) -> PullLayerResult<String> {
         let decoder = Compression::try_from(media_type)?;
         let async_decoder = decoder.async_decompress(input_reader);
-        stream_processing(async_decoder, diff_id, destination)
-            .await
-            .map_err(Into::into)
+
+        if is_wasm_media_type(media_type) {
+            wasm_stream_processing(async_decoder, diff_id, destination)
+                .await
+                .map_err(Into::into)
+        } else {
+            stream_processing(async_decoder, diff_id, destination)
+                .await
+                .map_err(Into::into)
+        }
     }
 }
 
@@ -385,6 +395,100 @@ mod tests {
                 Arc::new(RwLock::new(MetaStore::default()))
             );
         }
+    }
+
+    #[tokio::test]
+    async fn test_async_pull_wasm_layer() {
+        let image_url = "docker.io/rodneydav/wasm-addition:latest";
+        let tempdir = tempfile::tempdir().unwrap();
+        let image = Reference::try_from(image_url.to_string()).expect("create reference failed");
+        let layer_store =
+            LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
+        let client_config = ClientConfig::default();
+
+        let mut client = PullClient::new(
+            image,
+            layer_store,
+            &RegistryAuth::Anonymous,
+            DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+            client_config,
+        )
+        .unwrap();
+        let (image_manifest, _image_digest, _image_config, _manifest_list_digest) =
+            client.pull_manifest().await.unwrap();
+
+        // The WASM config is `{}` (2 bytes) and carries no rootfs.diff_ids,
+        // so an empty diff_id is passed for the single WASM layer.
+        assert_eq!(image_manifest.layers.len(), 1);
+        assert!(is_wasm_media_type(&image_manifest.layers[0].media_type));
+
+        // retry 3 times w/ timeout
+        let mut layer_metas = None;
+        for i in 0..3 {
+            let wait = std::time::Duration::from_secs(i * 2);
+            tokio::time::sleep(wait).await;
+
+            let diff_ids = vec![String::new(); image_manifest.layers.len()];
+            let result = client
+                .async_pull_layers(
+                    image_manifest.layers.clone(),
+                    &diff_ids,
+                    &None,
+                    Arc::new(RwLock::new(MetaStore::default())),
+                )
+                .await;
+            if let Ok(metas) = result {
+                layer_metas = Some(metas);
+                break;
+            }
+        }
+        let layer_metas = layer_metas.expect("failed to pull wasm layers");
+
+        assert_eq!(layer_metas.len(), 1);
+        let module_path = Path::new(&layer_metas[0].store_path).join("module.wasm");
+        assert!(
+            module_path.exists(),
+            "module.wasm should be written to {:?}",
+            module_path
+        );
+        assert!(!layer_metas[0].uncompressed_digest.is_empty());
+    }
+
+    #[cfg(feature = "encryption")]
+    #[tokio::test]
+    async fn test_async_pull_wasm_encrypted_media_type() {
+        let image_url = "docker.io/rodneydav/wasm-addition:encrypted";
+        let tempdir = tempfile::tempdir().unwrap();
+        let image = Reference::try_from(image_url.to_string()).expect("create reference failed");
+        let layer_store =
+            LayerStore::new(tempdir.path().to_path_buf()).expect("create layer store failed");
+        let client_config = ClientConfig::default();
+
+        let mut client = PullClient::new(
+            image,
+            layer_store,
+            &RegistryAuth::Anonymous,
+            DEFAULT_MAX_CONCURRENT_DOWNLOAD,
+            client_config,
+        )
+        .unwrap();
+        let (image_manifest, _image_digest, _image_config, _manifest_list_digest) =
+            client.pull_manifest().await.unwrap();
+
+        assert_eq!(image_manifest.layers.len(), 1);
+        let layer = &image_manifest.layers[0];
+        assert_eq!(
+            layer.media_type,
+            crate::media_type::WASM_LAYER_ENC_MEDIA_TYPE,
+            "layer media type should be the encrypted WASM media type"
+        );
+
+        let decryptor = Decryptor::from_media_type(&layer.media_type);
+        assert!(decryptor.is_encrypted());
+        assert_eq!(
+            decryptor.media_type,
+            crate::media_type::WASM_LAYER_MEDIA_TYPE
+        );
     }
 
     #[tokio::test]
