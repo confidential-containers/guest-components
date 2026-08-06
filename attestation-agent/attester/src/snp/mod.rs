@@ -14,7 +14,7 @@ use sev::firmware::guest::AttestationReport;
 use sev::firmware::guest::Firmware;
 use sev::firmware::host::CertTableEntry;
 use std::path::Path;
-use tracing::debug;
+use tracing::{debug, warn};
 
 mod hostdata;
 
@@ -56,6 +56,8 @@ impl SnpAttester {
 #[async_trait::async_trait]
 impl Attester for SnpAttester {
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
+        debug!("Getting evidence...");
+        
         if report_data.len() > 64 {
             bail!("SNP Attester: Report data must be no more than 64 bytes");
         }
@@ -72,6 +74,8 @@ impl Attester for SnpAttester {
         let certs: Option<Vec<CertTableEntry>>;
 
         if self.supports_tsm_measurements {
+            debug!("TSM Support detected, using Kernel configfs-tsm paths...");
+
             // Use the TSM Report path to generate the attestation report and get the certificate chain.
 
             // Get and verify the TSM Report path instance for SEV-SNP.
@@ -97,6 +101,7 @@ impl Attester for SnpAttester {
                 false => Some(certificates) 
             }
         } else {
+            warn!("TSM Support not detected, falling back to SEV crate...");
             // Use the legacy path via the sev Rust crate to generate the attestation report and get the certificate chain.
             let mut firmware = Firmware::open()?;
             let data = report_data.as_slice().try_into()?;

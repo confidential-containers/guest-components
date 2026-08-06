@@ -24,10 +24,12 @@ pub enum GetHostDataError {
 }
 
 pub fn get_snp_host_data() -> Result<[u8; 32], GetHostDataError> {
+    tracing::debug!("Getting SNP Host Data...");
     let report_data: [u8; 64] = [0; 64];
     let report_bytes: Vec<u8>;
 
     if Path::new(TSM_REPORT_PATH).exists() {
+        tracing::debug!("TSM_REPORT_PATH file exists at {}", TSM_REPORT_PATH);
         // The VMPL value is set to 0, which means the report is generated at the highest privilege level.
         const VMPL: u8 = 0;
 
@@ -38,6 +40,7 @@ pub fn get_snp_host_data() -> Result<[u8; 32], GetHostDataError> {
         report_bytes = tsm_report_path
             .attestation_report(TsmReportData::Sev(VMPL, report_data.to_vec()))?;
     } else {
+        tracing::debug!("No file found at TSM_REPORT_PATH: {}", TSM_REPORT_PATH);
         tracing::debug!("sysfs for SEV-SNP is not supported, which requires kernel version >= 6.16.");
         let mut firmware = Firmware::open()?;
         report_bytes = firmware.get_report(None, Some(report_data), Some(0))?;
