@@ -21,6 +21,7 @@ use tokio::sync::RwLock;
 
 use crate::decoder::Compression;
 use crate::layer_store::LayerStore;
+use crate::media_type::is_wasm_media_type;
 use crate::meta_store::{MetaStore, METAFILE};
 use crate::pull::PullClient;
 use crate::signature::SignatureValidator;
@@ -493,6 +494,31 @@ fn create_image_meta(
 
     let diff_ids = image_data.image_config.rootfs().diff_ids();
     if diff_ids.len() != image_manifest.layers.len() {
+        // WASM images do not carry rootfs.diff_ids in the config. Populate the
+        // diff_ids with empty strings so layer digest verification is skipped.
+        if image_manifest
+            .layers
+            .iter()
+            .any(|layer| is_wasm_media_type(&layer.media_type))
+        {
+            let mut unique_layers = Vec::new();
+            let mut digests = BTreeSet::new();
+
+            for layer in image_manifest.layers.iter() {
+                if digests.contains(&layer.digest) {
+                    continue;
+                }
+
+                digests.insert(&layer.digest);
+                unique_layers.push(layer.clone());
+            }
+
+            return Ok((
+                image_data,
+                unique_layers.clone(),
+                vec![String::new(); unique_layers.len()],
+            ));
+        }
         bail!("Pulled number of layers mismatch with image config diff_ids");
     }
 
