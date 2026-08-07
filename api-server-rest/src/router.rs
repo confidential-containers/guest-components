@@ -9,7 +9,7 @@ use hyper::{header, Body, Method, Request, Response, StatusCode};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::client::{
     aa::{
@@ -162,7 +162,10 @@ impl Router {
                                     std::result::Result::Ok(results) => {
                                         return self.octet_stream_response(results)
                                     }
-                                    Err(e) => return self.internal_error(e.to_string()),
+                                    Err(e) => {
+                                        error!("Failed to get token: {e:#}");
+                                        return self.internal_error(e.to_string());
+                                    }
                                 },
                                 None => return self.bad_request(),
                             }
@@ -182,7 +185,10 @@ impl Router {
                                         std::result::Result::Ok(results) => {
                                             return self.octet_stream_response(results)
                                         }
-                                        Err(e) => return self.internal_error(e.to_string()),
+                                        Err(e) => {
+                                            error!("Failed to get evidence: {e:#}");
+                                            return self.internal_error(e.to_string());
+                                        }
                                     }
                                 }
                                 None => return self.bad_request(),
@@ -203,7 +209,10 @@ impl Router {
                                         std::result::Result::Ok(results) => {
                                             return self.octet_stream_response(results)
                                         }
-                                        Err(e) => return self.internal_error(e.to_string()),
+                                        Err(e) => {
+                                            error!("Failed to get additional evidence: {e:#}");
+                                            return self.internal_error(e.to_string());
+                                        }
                                     }
                                 }
                                 None => return self.bad_request(),
@@ -221,7 +230,10 @@ impl Router {
                                         .map_err(|e| anyhow!("Illegal AAEL eventry format: {e}"))
                                 }) {
                                 std::result::Result::Ok(aael_entry) => aael_entry,
-                                Err(e) => return self.internal_error(e.to_string()),
+                                Err(e) => {
+                                    error!("Failed to parse AAEL entry request: {e:#}");
+                                    return self.internal_error(e.to_string());
+                                }
                             };
                             match client
                                 .extend_aael_entry(
@@ -234,7 +246,10 @@ impl Router {
                                 std::result::Result::Ok(message) => {
                                     return self.json_response(message)
                                 }
-                                Err(e) => return self.internal_error(e.to_string()),
+                                Err(e) => {
+                                    error!("Failed to extend AAEL entry: {e:#}");
+                                    return self.internal_error(e.to_string());
+                                }
                             }
                         }
 
@@ -251,12 +266,16 @@ impl Router {
                             .body(Body::from("Resource Feature Not Enabled"))?);
                     };
                     if let Some((api, resource_path)) = split_nth_slash(url_path, 2) {
+                        info!("Get resource");
                         match api {
                             CDH_RESOURCE_URL => match client.get_resource(resource_path).await {
                                 std::result::Result::Ok(results) => {
                                     return self.octet_stream_response(results)
                                 }
-                                Err(e) => return self.internal_error(e.to_string()),
+                                Err(e) => {
+                                    error!("Failed to get resource: {e:#}");
+                                    return self.internal_error(e.to_string());
+                                }
                             },
                             _ => {
                                 return self.not_found();
