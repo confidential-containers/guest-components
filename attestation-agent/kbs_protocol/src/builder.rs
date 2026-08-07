@@ -27,6 +27,7 @@ pub struct KbsClientBuilder<T> {
     tee_key: Option<String>,
     tee_key_algorithm: TeeKeyAlgorithm,
     initdata: Option<String>,
+    attestation_policy_selector: Option<String>,
 }
 
 impl KbsClientBuilder<Box<dyn EvidenceProvider>> {
@@ -42,6 +43,7 @@ impl KbsClientBuilder<Box<dyn EvidenceProvider>> {
             tee_key: None,
             tee_key_algorithm: TeeKeyAlgorithm::default(),
             initdata: None,
+            attestation_policy_selector: None,
         }
     }
 }
@@ -56,6 +58,7 @@ impl KbsClientBuilder<Box<dyn TokenProvider>> {
             tee_key: None,
             tee_key_algorithm: TeeKeyAlgorithm::default(),
             initdata: None,
+            attestation_policy_selector: None,
         }
     }
 }
@@ -83,6 +86,19 @@ impl<T> KbsClientBuilder<T> {
 
     pub fn add_initdata(mut self, initdata: String) -> Self {
         self.initdata = Some(initdata);
+        self
+    }
+
+    /// Set the attestation policy selector which KBS resolves to the attestation
+    /// policies that evaluate this client's evidence.
+    ///
+    /// The accepted values are specific to a KBS deployment, so an attestation
+    /// policy selector has to be known in advance. KBS rejects the RCAR handshake
+    /// of a client that sends an attestation policy selector it does not know,
+    /// while a client that sends no attestation policy selector at all is
+    /// evaluated against the default policy.
+    pub fn set_attestation_policy_selector(mut self, attestation_policy_selector: &str) -> Self {
+        self.attestation_policy_selector = Some(attestation_policy_selector.to_string());
         self
     }
 
@@ -126,6 +142,7 @@ impl<T> KbsClientBuilder<T> {
                 .context("Build KBS http client")?,
             kbs_host_url: self.kbs_host_url,
             _initdata: self.initdata,
+            _attestation_policy_selector: self.attestation_policy_selector,
         };
 
         Ok(client)
@@ -162,5 +179,29 @@ x13TMfDeczAFBgMrZXADQQBpP6ABBkzVj3mF55nWUtP5vxwq3t91wqQJ6NyC7WsT
         .add_kbs_cert(cert)
         .build()
         .expect("build client failed");
+    }
+
+    #[rstest]
+    #[case(None)]
+    #[case(Some("alice"))]
+    #[tokio::test]
+    async fn test_build_client_with_attestation_policy_selector(
+        #[case] attestation_policy_selector: Option<&str>,
+    ) {
+        let mut builder = KbsClientBuilder::with_evidence_provider(
+            Box::<MockedEvidenceProvider>::default(),
+            "test.io",
+        );
+
+        if let Some(attestation_policy_selector) = attestation_policy_selector {
+            builder = builder.set_attestation_policy_selector(attestation_policy_selector);
+        }
+
+        let client = builder.build().expect("build client failed");
+
+        assert_eq!(
+            client._attestation_policy_selector.as_deref(),
+            attestation_policy_selector
+        );
     }
 }

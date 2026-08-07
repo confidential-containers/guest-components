@@ -6,6 +6,10 @@ url = "http://127.0.0.1:8000"
 [token_configs.kbs]
 url = "https://127.0.0.1:8080"
 tee_key_algorithm = "ECDH-ES+A256KW-P256"
+# The hint that KBS resolves to the attestation policies that evaluate this guest's
+# evidence. Empty by default, which leaves the selection to KBS. The accepted
+# values are specific to a KBS deployment and an unknown id is rejected.
+# attestation_policy_selector = "alice"
 cert = '''
 -----BEGIN CERTIFICATE-----
 MIIDljCCAn6gAwIBAgIUR/UNh13GFam4emgludtype/S9BIwDQYJKoZIhvcNAQEL
