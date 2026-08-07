@@ -94,7 +94,7 @@ impl Router {
     }
 
     pub async fn route(
-        &mut self,
+        &self,
         remote_addr: SocketAddr,
         req: Request<Body>,
     ) -> Result<Response<Body>> {
