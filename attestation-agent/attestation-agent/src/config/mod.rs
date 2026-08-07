@@ -182,6 +182,7 @@ M9QaC1mzQ/OStg==
 -----END CERTIFICATE-----
 ".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
+                attestation_policy_selector: String::new(),
             })
         },
         eventlog_config: EventlogConfig {
@@ -224,6 +225,7 @@ M9QaC1mzQ/OStg==
 -----END CERTIFICATE-----
 ".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
+                attestation_policy_selector: String::new(),
             })
         },
         eventlog_config: EventlogConfig {
@@ -245,6 +247,7 @@ M9QaC1mzQ/OStg==
                 url: "https://127.0.0.1:8080".to_string(),
                 cert: Some("cert".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
+                attestation_policy_selector: String::new(),
             })
         },
         eventlog_config: EventlogConfig {
@@ -264,6 +267,27 @@ M9QaC1mzQ/OStg==
                 url: "https://127.0.0.1:8080".to_string(),
                 cert: Some("cert".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
+                attestation_policy_selector: String::new(),
+            })
+        },
+        eventlog_config: EventlogConfig {
+            init_pcr: 17,
+            enable_eventlog: false,
+        },
+        log: LogConfig { level: "warn".to_string() },
+    })]
+    #[case(
+    "test/config7.toml",
+    Config {
+        token_configs: TokenConfigs {
+            #[cfg(feature = "coco_as")]
+            coco_as: None,
+            #[cfg(feature = "kbs")]
+            kbs: Some(crate::config::kbs::KbsConfig {
+                url: "https://127.0.0.1:8080".to_string(),
+                cert: Some("cert".to_string()),
+                tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
+                attestation_policy_selector: "alice".to_string(),
             })
         },
         eventlog_config: EventlogConfig {

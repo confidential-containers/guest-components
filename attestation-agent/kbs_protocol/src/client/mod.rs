@@ -49,6 +49,10 @@ pub struct KbsClient<T> {
 
     /// initdata toml plaintext (if any)
     pub(crate) _initdata: Option<String>,
+
+    /// id selecting the attestation policies that evaluate this client's
+    /// evidence (if any)
+    pub(crate) _attestation_policy_selector: Option<String>,
 }
 
 pub const KBS_PROTOCOL_VERSION: &str = "0.4.0";
