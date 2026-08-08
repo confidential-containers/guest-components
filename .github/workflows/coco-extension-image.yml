@@ -40,8 +40,10 @@ env:
   # stops baking pause into the coco extension.
   PAUSE_IMAGE_REPO: docker://registry.k8s.io/pause
   PAUSE_IMAGE_VERSION: "3.10"
-  NVAT_VERSION: "2026.03.02"
   UMOCI_VERSION: v0.6.0
+  # The C++ SDK is linked by the Rust bindings, so the two have to be the same
+  # release; the crate pin below is the single source of truth for both.
+  NVAT_CARGO_MANIFEST: attestation-agent/attester/Cargo.toml
 
 jobs:
   build:
@@ -115,9 +117,17 @@ jobs:
     - name: Install NVIDIA Attestation SDK
       if: ${{ matrix.arch == 'x86_64' }}
       run: |
+        nvat_version="$(sed -n \
+          's/^nv-attestation-sdk[[:space:]]*=.*tag[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' \
+          "${NVAT_CARGO_MANIFEST}")"
+        [ -n "${nvat_version}" ] || {
+          echo "failed to read the nv-attestation-sdk tag from ${NVAT_CARGO_MANIFEST}" >&2
+          exit 1
+        }
+
         tmpdir="$(mktemp -d)"
         git clone https://github.com/NVIDIA/attestation-sdk "${tmpdir}/attestation-sdk"
-        git -C "${tmpdir}/attestation-sdk" fetch --depth=1 origin "${NVAT_VERSION}"
+        git -C "${tmpdir}/attestation-sdk" fetch --depth=1 origin "${nvat_version}"
         git -C "${tmpdir}/attestation-sdk" checkout FETCH_HEAD
         cmake -S "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp" \
           -B "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp/build" \
