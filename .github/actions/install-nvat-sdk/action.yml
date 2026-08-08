@@ -3,9 +3,12 @@ description: Build and install the NVIDIA Attestation SDK from source (x86_64 on
 
 inputs:
   version:
-    description: NVAT SDK version tag to checkout
+    description: >
+      NVAT SDK version tag to checkout. Defaults to the tag the
+      nv-attestation-sdk crate is pinned to, so the C++ library and the Rust
+      bindings that link it cannot drift apart.
     required: false
-    default: "2026.03.02"
+    default: ""
 
 runs:
   using: composite
@@ -15,13 +18,26 @@ runs:
       shell: bash
       env:
         NVAT_VERSION: ${{ inputs.version }}
+        CARGO_MANIFEST: ${{ github.workspace }}/attestation-agent/attester/Cargo.toml
       run: |
         export RUSTFLAGS=""
+
+        if [ -z "${NVAT_VERSION}" ]; then
+          NVAT_VERSION="$(sed -n \
+            's/^nv-attestation-sdk[[:space:]]*=.*tag[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' \
+            "${CARGO_MANIFEST}")"
+          [ -n "${NVAT_VERSION}" ] || {
+            echo "failed to read the nv-attestation-sdk tag from ${CARGO_MANIFEST}" >&2
+            exit 1
+          }
+        fi
+        echo "Using NVIDIA Attestation SDK ${NVAT_VERSION}"
+
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
           build-essential clang cmake pkg-config libclang-dev \
           libcurl4-openssl-dev libssl-dev libxml2-dev \
-          libxmlsec1-dev libxmlsec1-openssl
+          libxmlsec1-dev zlib1g-dev
 
         tmpdir="$(mktemp -d)"
         git clone --depth=1 --branch "${NVAT_VERSION}" \
