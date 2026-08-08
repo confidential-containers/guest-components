@@ -38,6 +38,10 @@ const RCAR_RETRY_TIMEOUT_SECOND: u64 = 1;
 /// JSON object added to a 'Request's extra parameters.
 const SUPPORTED_HASH_ALGORITHMS_JSON_KEY: &str = "supported-hash-algorithms";
 
+/// JSON key in a 'Request's extra parameters with which the client selects
+/// the attestation policies that evaluate its evidence.
+const POLICY_SELECTOR_JSON_KEY: &str = "policy-selector";
+
 /// JSON object returned in the Challenge whose value is based on
 /// SUPPORTED_HASH_ALGORITHMS_JSON_KEY and the TEE.
 const SELECTED_HASH_ALGORITHM_JSON_KEY: &str = "selected-hash-algorithm";
@@ -54,10 +58,14 @@ struct AttestationResponseData {
     token: String,
 }
 
-async fn get_request_extra_params() -> serde_json::Value {
+async fn get_request_extra_params(policy_selector: Option<&str>) -> serde_json::Value {
     let supported_hash_algorithms = HashAlgorithm::list_all();
 
-    let extra_params = json!({SUPPORTED_HASH_ALGORITHMS_JSON_KEY: supported_hash_algorithms});
+    let mut extra_params = json!({SUPPORTED_HASH_ALGORITHMS_JSON_KEY: supported_hash_algorithms});
+
+    if let Some(policy_selector) = policy_selector {
+        extra_params[POLICY_SELECTOR_JSON_KEY] = json!(policy_selector);
+    }
 
     extra_params
 }
@@ -86,8 +94,8 @@ fn serialize_json_canonically<T: Serialize>(value: T) -> anyhow::Result<Vec<u8>>
     Ok(serde_json_canonicalizer::to_vec(&value)?)
 }
 
-async fn build_request(tee: Tee) -> Request {
-    let extra_params = get_request_extra_params().await;
+async fn build_request(tee: Tee, policy_selector: Option<&str>) -> Request {
+    let extra_params = get_request_extra_params(policy_selector).await;
 
     // Note that the Request includes the list of supported hash algorithms.
     // The Challenge response will return which TEE-specific algorithm should
@@ -230,7 +238,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             ClientTee::_Initialized(tee) => *tee,
         };
 
-        let request = build_request(tee).await;
+        let request = build_request(tee, self._policy_selector.as_deref()).await;
 
         debug!("send auth request {request:?} to {auth_endpoint}");
 
@@ -417,8 +425,8 @@ mod test {
 
     use crate::client::rcar_client::{
         build_request, get_hash_algorithm, get_request_extra_params, Result,
-        DEFAULT_HASH_ALGORITHM, KBS_PROTOCOL_VERSION, SELECTED_HASH_ALGORITHM_JSON_KEY,
-        SUPPORTED_HASH_ALGORITHMS_JSON_KEY,
+        DEFAULT_HASH_ALGORITHM, KBS_PROTOCOL_VERSION, POLICY_SELECTOR_JSON_KEY,
+        SELECTED_HASH_ALGORITHM_JSON_KEY, SUPPORTED_HASH_ALGORITHMS_JSON_KEY,
     };
     use kbs_types::Tee;
 
@@ -540,12 +548,23 @@ mod test {
         println!("Get key: {key:?}");
     }
 
+    #[rstest]
+    #[case(None)]
+    #[case(Some("alice"))]
     #[tokio::test]
     #[serial_test::serial]
-    async fn test_get_request_extra_params() {
-        let extra_params = get_request_extra_params().await;
+    async fn test_get_request_extra_params(#[case] policy_selector: Option<&str>) {
+        let extra_params = get_request_extra_params(policy_selector).await;
 
         assert!(extra_params.is_object());
+
+        assert_eq!(
+            extra_params
+                .get(POLICY_SELECTOR_JSON_KEY)
+                .and_then(Value::as_str),
+            policy_selector,
+            "the id is only sent when it is set"
+        );
 
         let algos_json = extra_params
             .get(SUPPORTED_HASH_ALGORITHMS_JSON_KEY)
@@ -565,9 +584,12 @@ mod test {
         }
     }
 
+    #[rstest]
+    #[case(None)]
+    #[case(Some("alice"))]
     #[tokio::test]
     #[serial_test::serial]
-    async fn test_build_request() {
+    async fn test_build_request(#[case] policy_selector: Option<&str>) {
         let tees = vec![
             Tee::AzSnpVtpm,
             Tee::AzTdxVtpm,
@@ -580,14 +602,21 @@ mod test {
         ];
 
         let expected_version = String::from(KBS_PROTOCOL_VERSION);
-        let expected_extra_params = get_request_extra_params().await;
+        let expected_extra_params = get_request_extra_params(policy_selector).await;
 
         for tee in tees {
-            let request = build_request(tee).await;
+            let request = build_request(tee, policy_selector).await;
 
             assert_eq!(request.version, expected_version);
             assert_eq!(request.tee, tee);
             assert_eq!(request.extra_params, expected_extra_params);
+            assert_eq!(
+                request
+                    .extra_params
+                    .get(POLICY_SELECTOR_JSON_KEY)
+                    .and_then(Value::as_str),
+                policy_selector
+            );
         }
     }
 

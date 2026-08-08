@@ -20,6 +20,15 @@ pub struct KbsConfig {
 
     #[serde(default)]
     pub tee_key_algorithm: TeeKeyAlgorithm,
+
+    /// The hint that KBS resolves to the attestation policies that evaluate this
+    /// guest's evidence. The accepted values are specific to a KBS
+    /// deployment, so this has to be agreed with the KBS administrator.
+    ///
+    /// Empty by default, which leaves the policy selection to KBS. An empty
+    /// policy_selector is not sent, because KBS rejects a policy_selector it does not know.
+    #[serde(default)]
+    pub policy_selector: String,
 }
 
 impl KbsConfig {
@@ -35,6 +44,7 @@ impl KbsConfig {
             url: aa_kbc_params.uri,
             cert: None,
             tee_key_algorithm: TeeKeyAlgorithm::default(),
+            policy_selector: String::new(),
         })
     }
 }

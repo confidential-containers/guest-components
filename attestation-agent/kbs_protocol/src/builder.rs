@@ -27,6 +27,7 @@ pub struct KbsClientBuilder<T> {
     tee_key: Option<String>,
     tee_key_algorithm: TeeKeyAlgorithm,
     initdata: Option<String>,
+    policy_selector: Option<String>,
 }
 
 impl KbsClientBuilder<Box<dyn EvidenceProvider>> {
@@ -42,6 +43,7 @@ impl KbsClientBuilder<Box<dyn EvidenceProvider>> {
             tee_key: None,
             tee_key_algorithm: TeeKeyAlgorithm::default(),
             initdata: None,
+            policy_selector: None,
         }
     }
 }
@@ -56,6 +58,7 @@ impl KbsClientBuilder<Box<dyn TokenProvider>> {
             tee_key: None,
             tee_key_algorithm: TeeKeyAlgorithm::default(),
             initdata: None,
+            policy_selector: None,
         }
     }
 }
@@ -83,6 +86,18 @@ impl<T> KbsClientBuilder<T> {
 
     pub fn add_initdata(mut self, initdata: String) -> Self {
         self.initdata = Some(initdata);
+        self
+    }
+
+    /// Set the policy selector which KBS resolves to the attestation policies that
+    /// evaluate this client's evidence.
+    ///
+    /// The accepted values are specific to a KBS deployment, so a policy selector has to
+    /// be known in advance. KBS rejects the RCAR handshake of a client that
+    /// sends a policy selector it does not know, while a client that sends no policy selector at all
+    /// is evaluated against the default policy.
+    pub fn set_policy_selector(mut self, policy_selector: &str) -> Self {
+        self.policy_selector = Some(policy_selector.to_string());
         self
     }
 
@@ -126,6 +141,7 @@ impl<T> KbsClientBuilder<T> {
                 .context("Build KBS http client")?,
             kbs_host_url: self.kbs_host_url,
             _initdata: self.initdata,
+            _policy_selector: self.policy_selector,
         };
 
         Ok(client)
@@ -162,5 +178,24 @@ x13TMfDeczAFBgMrZXADQQBpP6ABBkzVj3mF55nWUtP5vxwq3t91wqQJ6NyC7WsT
         .add_kbs_cert(cert)
         .build()
         .expect("build client failed");
+    }
+
+    #[rstest]
+    #[case(None)]
+    #[case(Some("alice"))]
+    #[tokio::test]
+    async fn test_build_client_with_policy_selector(#[case] policy_selector: Option<&str>) {
+        let mut builder = KbsClientBuilder::with_evidence_provider(
+            Box::<MockedEvidenceProvider>::default(),
+            "test.io",
+        );
+
+        if let Some(policy_selector) = policy_selector {
+            builder = builder.set_policy_selector(policy_selector);
+        }
+
+        let client = builder.build().expect("build client failed");
+
+        assert_eq!(client._policy_selector.as_deref(), policy_selector);
     }
 }

@@ -20,6 +20,7 @@ pub struct KbsTokenGetter {
     kbs_host_url: String,
     cert: Option<String>,
     tee_key_algorithm: TeeKeyAlgorithm,
+    policy_selector: String,
 }
 
 impl KbsTokenGetter {
@@ -33,6 +34,10 @@ impl KbsTokenGetter {
             builder = builder.add_kbs_cert(cert);
         }
         builder = builder.set_tee_key_algorithm(self.tee_key_algorithm);
+
+        if !self.policy_selector.is_empty() {
+            builder = builder.set_policy_selector(&self.policy_selector);
+        }
 
         if let Some(initdata) = initdata {
             builder = builder.add_initdata(initdata.to_string());
@@ -57,6 +62,7 @@ impl KbsTokenGetter {
             kbs_host_url: config.url.clone(),
             cert: config.cert.clone(),
             tee_key_algorithm: config.tee_key_algorithm,
+            policy_selector: config.policy_selector.clone(),
         }
     }
 }
