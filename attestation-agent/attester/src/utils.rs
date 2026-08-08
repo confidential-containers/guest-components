@@ -5,8 +5,8 @@
 
 use std::{env, path::Path};
 
-use anyhow::{bail, Result};
-use base64::{engine::general_purpose::STANDARD, Engine};
+use anyhow::{Result, bail};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use tokio::{fs::File, io::AsyncReadExt};
 use tracing::debug;
 

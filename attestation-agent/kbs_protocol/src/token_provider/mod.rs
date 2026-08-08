@@ -13,7 +13,7 @@ pub use aa::*;
 
 use anyhow::*;
 use async_trait::async_trait;
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use jwt_simple::{
     claims::JWTClaims,
     prelude::{Clock, UnixTimeStamp},
@@ -54,16 +54,16 @@ impl Token {
 
     pub fn check_valid(&self) -> Result<()> {
         let now = Clock::now_since_epoch();
-        if let Some(exp) = self.exp {
-            if exp < now {
-                bail!("token expired");
-            }
+        if let Some(exp) = self.exp
+            && exp < now
+        {
+            bail!("token expired");
         }
 
-        if let Some(nbf) = self.nbf {
-            if nbf > now {
-                bail!("before validity");
-            }
+        if let Some(nbf) = self.nbf
+            && nbf > now
+        {
+            bail!("before validity");
         }
 
         Ok(())

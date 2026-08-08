@@ -6,9 +6,9 @@
 use crate::config::coco_as::CoCoASConfig;
 
 use anyhow::*;
-use attester::{detect_tee_type, BoxedAttester};
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use attester::{BoxedAttester, detect_tee_type};
 use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 
 #[derive(Default)]
 pub struct CoCoASTokenGetter {

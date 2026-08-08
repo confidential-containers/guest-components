@@ -5,8 +5,8 @@
 
 use super::tsm_report::*;
 use super::{Attester, TeeEvidence};
-use crate::utils::{pad, read_eventlog};
 use crate::InitDataResult;
+use crate::utils::{pad, read_eventlog};
 use anyhow::*;
 use base64::Engine;
 use iocuddle::{Group, Ioctl, WriteRead};
@@ -176,12 +176,8 @@ impl Attester for TdxAttester {
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> Result<InitDataResult> {
         let mr_configid = match self.supports_tsm_measurements {
-            true => {
-                let mrconfigid = std::fs::read(Path::new(TDX_TSM_SYSFS_PATH).join("mrconfigid"))
-                    .context("Failed to read MRCONFIGID via sysfs")?;
-
-                mrconfigid
-            }
+            true => std::fs::read(Path::new(TDX_TSM_SYSFS_PATH).join("mrconfigid"))
+                .context("Failed to read MRCONFIGID via sysfs")?,
             false => {
                 let report = self.ioctl_get_report()?;
                 report.tdinfo.mrconfigid.to_vec()

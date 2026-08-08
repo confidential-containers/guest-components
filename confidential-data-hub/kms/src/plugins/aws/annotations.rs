@@ -47,7 +47,7 @@ pub struct AwsSecretAnnotations {
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
 
     use super::{AwsCryptAnnotations, AwsProviderSettings, AwsSecretAnnotations};
 

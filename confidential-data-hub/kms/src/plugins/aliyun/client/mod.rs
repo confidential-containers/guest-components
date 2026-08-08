@@ -74,7 +74,7 @@ impl AliyunKmsClient {
                 None => {
                     return Err(Error::AliyunKmsError(
                         "client type value is not str.".to_string(),
-                    ))
+                    ));
                 }
             }
         } else {
@@ -155,7 +155,7 @@ impl AliyunKmsClient {
 impl Encrypter for AliyunKmsClient {
     async fn encrypt(&mut self, data: &[u8], key_id: &str) -> Result<(Vec<u8>, Annotations)> {
         match &mut self {
-            AliyunKmsClient::ClientKey { ref mut inner } => inner.encrypt(data, key_id).await,
+            AliyunKmsClient::ClientKey { inner } => inner.encrypt(data, key_id).await,
             AliyunKmsClient::EcsRamRole { .. } => Err(Error::AliyunKmsError(
                 "Encrypter does not suppot accessing through Aliyun EcsRamRole".to_string(),
             )),
@@ -175,7 +175,7 @@ impl Decrypter for AliyunKmsClient {
         annotations: &Annotations,
     ) -> Result<Vec<u8>> {
         match &mut self {
-            AliyunKmsClient::ClientKey { ref mut inner } => {
+            AliyunKmsClient::ClientKey { inner } => {
                 inner.decrypt(ciphertext, key_id, annotations).await
             }
             AliyunKmsClient::EcsRamRole { .. } => Err(Error::AliyunKmsError(
@@ -192,11 +192,11 @@ impl Decrypter for AliyunKmsClient {
 impl Getter for AliyunKmsClient {
     async fn get_secret(&self, name: &str, annotations: &Annotations) -> Result<Vec<u8>> {
         match &self {
-            AliyunKmsClient::ClientKey { ref inner } => inner.get_secret(name, annotations).await,
+            AliyunKmsClient::ClientKey { inner } => inner.get_secret(name, annotations).await,
             AliyunKmsClient::EcsRamRole {
-                ref ecs_ram_role_client,
+                ecs_ram_role_client,
             } => ecs_ram_role_client.get_secret(name, annotations).await,
-            AliyunKmsClient::StsToken { ref client } => client.get_secret(name, annotations).await,
+            AliyunKmsClient::StsToken { client } => client.get_secret(name, annotations).await,
         }
     }
 }
@@ -204,10 +204,10 @@ impl Getter for AliyunKmsClient {
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
-    use serde_json::{json, Map, Value};
+    use serde_json::{Map, Value, json};
 
     use crate::{
-        plugins::aliyun::client::AliyunKmsClient, Annotations, Decrypter, Encrypter, Getter,
+        Annotations, Decrypter, Encrypter, Getter, plugins::aliyun::client::AliyunKmsClient,
     };
 
     #[rstest]

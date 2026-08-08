@@ -15,13 +15,13 @@ const CSV_INCLUDE_CERT_CHAIN_ENV: &str = "CSV_INCLUDE_CERT_CHAIN_IN_ATTESTATION_
 use crate::utils::read_eventlog;
 
 use super::{Attester, TeeEvidence};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use codicon::Decoder;
 use csv_rs::{
     api::guest::{AttestationReport, AttestationReportWrapper, CsvGuest},
     certs::{ca, csv},
 };
-use hyper::{body::HttpBody, Client};
+use hyper::{Client, body::HttpBody};
 use hyper_tls::HttpsConnector;
 use kbs_types::HashAlgorithm;
 use serde::{Deserialize, Serialize};

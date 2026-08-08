@@ -4,22 +4,22 @@
 //
 
 use crate::{
-    ec::{Curve, KeyWrapAlgorithm},
     AES_GCM_256_KEY_BITS,
+    ec::{Curve, KeyWrapAlgorithm},
 };
 
 use aes_kw::{KeyInit, KwAes256};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use p256::{
+    EncodedPoint as P256EncodedPoint, FieldBytes as P256FieldBytes, PublicKey as P256PublicKey,
+    SecretKey as P256SecretKey,
     ecdh::diffie_hellman as diffie_hellman_p256,
     elliptic_curve::sec1::FromEncodedPoint,
     pkcs8::{DecodePrivateKey, EncodePrivateKey, LineEnding},
-    EncodedPoint as P256EncodedPoint, FieldBytes as P256FieldBytes, PublicKey as P256PublicKey,
-    SecretKey as P256SecretKey,
 };
 use p521::{
-    ecdh::diffie_hellman as diffie_hellman_p521, EncodedPoint as P521EncodedPoint,
-    FieldBytes as P521FieldBytes, PublicKey as P521PublicKey, SecretKey as P521SecretKey,
+    EncodedPoint as P521EncodedPoint, FieldBytes as P521FieldBytes, PublicKey as P521PublicKey,
+    SecretKey as P521SecretKey, ecdh::diffie_hellman as diffie_hellman_p521,
 };
 use zeroize::Zeroizing;
 

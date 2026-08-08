@@ -4,7 +4,7 @@
 //
 
 use crate::{Attester, TeeEvidence};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use nv_attestation_sdk::{GpuEvidenceSource, Nonce, NvatSdk, SdkOptions, SwitchEvidenceSource};
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;

@@ -11,8 +11,8 @@ use protos::ttrpc::aa::attestation_agent::{
 use protos::ttrpc::aa::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use serde::Deserialize;
 
-use crate::client::ttrpc_client::CachedTtrpcClient;
 use crate::TTRPC_TIMEOUT;
+use crate::client::ttrpc_client::CachedTtrpcClient;
 
 /// ROOT path for Confidential Data Hub API
 pub const AA_ROOT: &str = "/aa";
@@ -123,8 +123,12 @@ impl AAClient {
 
         let res = match res {
             0 => "{\"success\":\"true\"}",
-            1 => "{\"success\":\"false\",\"message\": \"The platform does not support runtime measurement\"}",
-            2 => "{\"success\":\"false\",\"message\": \"Attestation Agent does not enable eventlog recording\"}",
+            1 => {
+                "{\"success\":\"false\",\"message\": \"The platform does not support runtime measurement\"}"
+            }
+            2 => {
+                "{\"success\":\"false\",\"message\": \"Attestation Agent does not enable eventlog recording\"}"
+            }
             _ => "{\"success\":\"false\",\"message\": \"Unknown runtime measurement result\"}",
         };
 

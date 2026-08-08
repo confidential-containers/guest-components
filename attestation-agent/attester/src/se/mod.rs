@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use super::{utils::validate_and_pad_data, Attester, TeeEvidence};
+use super::{Attester, TeeEvidence, utils::validate_and_pad_data};
 use anyhow::*;
 use pv::{
     misc,

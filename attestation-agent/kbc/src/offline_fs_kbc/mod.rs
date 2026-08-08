@@ -8,7 +8,7 @@ use crate::{KbcCheckInfo, KbcInterface};
 pub mod common;
 use common::*;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
 use base64::Engine;
 use crypto::WrapType;

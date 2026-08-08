@@ -10,7 +10,7 @@ use shadow_rs::shadow;
 use std::{fs::File, net::SocketAddr, path::PathBuf};
 use tokio::fs;
 use tracing::{debug, info};
-use tracing_subscriber::{fmt::Subscriber, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt::Subscriber};
 
 shadow!(build);
 

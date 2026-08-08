@@ -302,7 +302,9 @@ pub fn detect_tee_type() -> Tee {
     // Kept as the last entry after all vTPM TEE attesters (i.e., az-*-vtpm-attester).
     #[cfg(feature = "tpm-attester")]
     if tpm::detect_platform() {
-        tracing::warn!("The TPM device was detected, but please note that it is not bound to the TEE, so there may be security risks.");
+        tracing::warn!(
+            "The TPM device was detected, but please note that it is not bound to the TEE, so there may be security risks."
+        );
         return Tee::Tpm;
     }
 
@@ -348,7 +350,9 @@ pub fn detect_attestable_devices() -> Vec<Tee> {
         not(feature = "az-tdx-vtpm-attester")
     ))]
     if detect_tee_type() != Tee::Tpm && tpm::detect_platform() {
-        tracing::warn!("The TPM device was detected as an additional device, but please note that it is not bound to the TEE, so there may be security risks.");
+        tracing::warn!(
+            "The TPM device was detected as an additional device, but please note that it is not bound to the TEE, so there may be security risks."
+        );
         additional_devices.push(Tee::Tpm);
     }
 

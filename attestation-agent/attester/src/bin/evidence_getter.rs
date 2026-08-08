@@ -3,12 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use attester::{detect_attestable_devices, detect_tee_type, BoxedAttester};
+use attester::{BoxedAttester, detect_attestable_devices, detect_tee_type};
 use clap::Parser;
 use kbs_types::Tee;
 use std::io::Read;
 use tokio::fs;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 
 #[derive(Debug, Parser)]
 #[command(author)]
@@ -51,7 +51,7 @@ async fn main() {
 
     match cli {
         Cli::Stdio => {
-            std::io::stdin()
+            let _ = std::io::stdin()
                 .read(&mut report_data)
                 .expect("read input failed");
         }

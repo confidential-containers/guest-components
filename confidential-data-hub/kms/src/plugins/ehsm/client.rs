@@ -8,8 +8,8 @@ use std::env;
 use ehsm_client::{api::KMS, client::EHSMClient};
 
 use async_trait::async_trait;
-use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use const_format::concatcp;
 use serde_json::Value;
 use tokio::fs;
@@ -157,7 +157,7 @@ mod tests {
     use rstest::rstest;
     use serde_json::json;
 
-    use crate::{plugins::ehsm::client::EhsmKmsClient, Decrypter, Encrypter};
+    use crate::{Decrypter, Encrypter, plugins::ehsm::client::EhsmKmsClient};
 
     #[ignore]
     #[tokio::test]

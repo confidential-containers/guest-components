@@ -5,7 +5,7 @@
 
 use crate::{KbcCheckInfo, KbcInterface};
 use base64::Engine;
-use crypto::{decrypt, WrapType};
+use crypto::{WrapType, decrypt};
 
 use anyhow::*;
 use async_trait::async_trait;

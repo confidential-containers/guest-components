@@ -13,17 +13,17 @@ use std::{
 use anyhow::bail;
 use chrono::Utc;
 use credential::StsCredential;
-use rand::{distr::Alphanumeric, RngExt};
-use reqwest::{header::HeaderMap, ClientBuilder};
+use rand::{RngExt, distr::Alphanumeric};
+use reqwest::{ClientBuilder, header::HeaderMap};
 use serde::Deserialize;
 use serde_json::Value;
 use tokio::fs;
 use tracing::error;
 
 use crate::{
+    Annotations, ProviderSettings,
     error::{Error, Result},
     plugins::aliyun::annotations::AliSecretAnnotations,
-    Annotations, ProviderSettings,
 };
 
 #[derive(Debug, Clone)]
