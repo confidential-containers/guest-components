@@ -12,6 +12,10 @@
 #   * packed into a "FROM scratch" OCI container image (see Dockerfile), and
 #   * turned into an EROFS + dm-verity disk image (see build-erofs-image.sh).
 #
+# The binaries and the bundled cryptsetup are linked against the host's glibc,
+# and the extension ships no libc of its own, so this script is meant to run
+# inside the builder image (Dockerfile.builder) rather than on the CI runner.
+#
 # The layout mirrors what kata-containers' kata-deploy-binaries.sh
 # (install_image_coco_extension) produces, so the resulting image is a drop-in
 # for kata's own rootfs-image-coco-extension asset:
