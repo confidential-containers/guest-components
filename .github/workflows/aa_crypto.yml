@@ -18,6 +18,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   crypto_ci:
     permissions:
@@ -59,7 +61,11 @@ jobs:
         run: cargo fmt -p crypto -- --check
 
       - name: Run rust lint check (${{ matrix.suites }})
-        run: cargo clippy -p crypto --no-default-features --features ${{ matrix.suites }} -- -D warnings
+        env:
+          SUITES: ${{ matrix.suites }}
+        run: cargo clippy -p crypto --no-default-features --features ${SUITES} -- -D warnings
 
       - name: Run cargo test (${{ matrix.suites }})
-        run: cargo test -p crypto --no-default-features --features ${{ matrix.suites }}
+        env:
+          SUITES: ${{ matrix.suites }}
+        run: cargo test -p crypto --no-default-features --features ${SUITES}

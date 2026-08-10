@@ -21,6 +21,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   ci:
     permissions:
@@ -130,7 +132,7 @@ jobs:
           sudo -E PATH=$PATH -s cargo clean
 
       - name: Run cargo test - kata-cc (native-tls version) with keywrap-ttrpc (default) + keywrap-jwe and with signatures from XRSS registry extension
-        env:
-          AUTH_PASSWORD: ${{ secrets.SH_ICR_API_KEY }}
         run: |
           sudo -E PATH=$PATH -s cargo test -p image-rs --no-default-features --features=kata-cc-native-tls,keywrap-jwe,signature-simple-xrss
+        env:
+          AUTH_PASSWORD: ${{ secrets.SH_ICR_API_KEY }} # zizmor: ignore[secrets-outside-env]

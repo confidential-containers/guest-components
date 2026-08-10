@@ -22,6 +22,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   basic_ci:
     permissions:
@@ -94,12 +96,14 @@ jobs:
         if: matrix.instance == 'ubuntu-24.04'
 
       - name: Run cargo test
+        env:
+          CARGO_TEST_OPTS: ${{ matrix.cargo_test_opts }}
         run: |
-          sudo -E PATH=$PATH -s cargo test ${{ matrix.cargo_test_opts }} -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p crypto -p resource_uri
+          sudo -E PATH=${PATH} -s cargo test ${CARGO_TEST_OPTS} -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p crypto -p resource_uri
 
       - name: Build and test kbs_protocol pqc-experimental feature
         run: |
-          sudo -E PATH=$PATH -s cargo test -p kbs_protocol --features pqc-experimental -- pqc
+          sudo -E PATH=${PATH} -s cargo test -p kbs_protocol --features pqc-experimental -- pqc
         if: matrix.instance == 'ubuntu-24.04'
 
       - name: Run cargo fmt check
@@ -107,4 +111,4 @@ jobs:
 
       - name: Run rust lint check
         run: |
-          sudo -E PATH=$PATH -s make lint
+          sudo -E PATH=${PATH} -s make lint

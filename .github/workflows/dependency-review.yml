@@ -9,11 +9,16 @@
 name: 'Dependency Review'
 on: [pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   dependency-review:
+    name: Dependency Review
     runs-on: ubuntu-latest
     steps:
       - name: Harden the runner (Audit all outbound calls)

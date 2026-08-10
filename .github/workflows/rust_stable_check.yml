@@ -5,11 +5,16 @@ on:
   schedule:
     - cron: '0 3 * * 6'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
 jobs:
   clippy:
+    name: Run clippy (${{ matrix.package }})
     strategy:
       fail-fast: false
       matrix:
@@ -62,4 +67,7 @@ jobs:
         uses: ./.github/actions/install-nvat-sdk
 
       - name: Run rust lint checks (${{matrix.package}})
-        run: cargo clippy -p ${{matrix.package}} ${{matrix.feature-parameters}} -- -D warnings
+        env:
+          PACKAGE: ${{matrix.package}}
+          FEATURE_PARAMETERS: ${{matrix.feature-parameters}}
+        run: cargo clippy -p ${PACKAGE} ${FEATURE_PARAMETERS} -- -D warnings

@@ -22,6 +22,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   cc_kbc_ci:
     permissions:
@@ -76,11 +78,17 @@ jobs:
         if: matrix.instance == 'ubuntu-24.04'
 
       - name: Build and install with ${{ matrix.attester }} feature
+        env:
+          ATTESTER: ${{ matrix.attester }}
         run: |
-          make ATTESTER=${{ matrix.attester }} && make install
+          make ATTESTER=${ATTESTER} && make install
 
       - name: Run rust lint check
-        run: cargo clippy -p kbc --all-targets --features cc_kbc,${{ matrix.attester }},rust-crypto -- -D warnings
+        env:
+          ATTESTER: ${{ matrix.attester }}
+        run: cargo clippy -p kbc --all-targets --features cc_kbc,${ATTESTER},rust-crypto -- -D warnings
 
       - name: Run cargo test
-        run: cargo test --features cc_kbc,${{ matrix.attester }},rust-crypto -p kbc
+        env:
+          ATTESTER: ${{ matrix.attester }}
+        run: cargo test --features cc_kbc,${ATTESTER},rust-crypto -p kbc
