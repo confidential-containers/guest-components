@@ -292,3 +292,218 @@ impl Router {
         self.not_found()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hyper::{body::to_bytes, Method, Request, StatusCode};
+    use rstest::rstest;
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+    fn loopback() -> SocketAddr {
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 12345)
+    }
+
+    fn remote() -> SocketAddr {
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)), 12345)
+    }
+
+    fn router_no_clients() -> Router {
+        Router::new(None, None, "resource".to_string())
+    }
+
+    async fn body_str(resp: Response<Body>) -> String {
+        let bytes = to_bytes(resp.into_body()).await.unwrap();
+        String::from_utf8_lossy(&bytes).into_owned()
+    }
+
+    async fn get_info(router: &Router) -> Response<Body> {
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri("/info")
+            .body(Body::empty())
+            .unwrap();
+        router.route(loopback(), req).await.unwrap()
+    }
+
+    #[tokio::test]
+    async fn json_response_has_correct_status_and_content_type() {
+        let router = router_no_clients();
+        let resp = router.json_response(r#"{"ok":true}"#.to_string()).unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(
+            resp.headers().get(header::CONTENT_TYPE).unwrap(),
+            "application/json"
+        );
+        assert_eq!(body_str(resp).await, r#"{"ok":true}"#);
+    }
+
+    #[tokio::test]
+    async fn octet_stream_response_has_correct_status_and_content_type() {
+        let router = router_no_clients();
+        let data: &[u8] = b"binary-data";
+        let resp = router.octet_stream_response(data.to_vec()).unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(
+            resp.headers().get(header::CONTENT_TYPE).unwrap(),
+            "application/octet-stream"
+        );
+        let body_bytes = to_bytes(resp.into_body()).await.unwrap();
+        assert_eq!(body_bytes.as_ref(), data);
+    }
+
+    #[rstest]
+    #[case(
+        |r: &Router| r.forbidden(),
+        StatusCode::FORBIDDEN,
+        "Forbidden"
+    )]
+    #[case(
+        |r: &Router| r.not_allowed(),
+        StatusCode::METHOD_NOT_ALLOWED,
+        "Method Not Allowed"
+    )]
+    #[case(
+        |r: &Router| r.not_found(),
+        StatusCode::NOT_FOUND,
+        "URL NOT FOUND"
+    )]
+    #[case(
+        |r: &Router| r.bad_request(),
+        StatusCode::BAD_REQUEST,
+        "BAD REQUEST"
+    )]
+    #[case(
+        |r: &Router| r.internal_error("something went wrong".to_string()),
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "something went wrong"
+    )]
+    #[tokio::test]
+    async fn error_response_builder(
+        #[case] build: fn(&Router) -> Result<Response<Body>>,
+        #[case] expected_status: StatusCode,
+        #[case] expected_body: &str,
+    ) {
+        let router = router_no_clients();
+        let resp = build(&router).unwrap();
+        assert_eq!(resp.status(), expected_status);
+        assert_eq!(body_str(resp).await, expected_body);
+    }
+
+    #[rstest]
+    #[case(remote(), "/info", StatusCode::FORBIDDEN)]
+    #[case(loopback(), "/unknown", StatusCode::NOT_FOUND)]
+    #[tokio::test]
+    async fn ip_guard(
+        #[case] addr: SocketAddr,
+        #[case] uri: &str,
+        #[case] expected_status: StatusCode,
+    ) {
+        let router = router_no_clients();
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri(uri)
+            .body(Body::empty())
+            .unwrap();
+        let resp = router.route(addr, req).await.unwrap();
+        assert_eq!(resp.status(), expected_status);
+    }
+
+    #[tokio::test]
+    async fn info_get_returns_200_json() {
+        let router = router_no_clients();
+        let resp = get_info(&router).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(
+            resp.headers().get(header::CONTENT_TYPE).unwrap(),
+            "application/json"
+        );
+    }
+
+    #[tokio::test]
+    async fn info_response_contains_version_and_feature() {
+        let router = router_no_clients();
+        let val: serde_json::Value =
+            serde_json::from_str(&body_str(get_info(&router).await).await).unwrap();
+        assert!(val.get("version").is_some(), "version field missing");
+        assert_eq!(val["feature"], "resource");
+        assert!(val.get("tee").is_none(), "tee should be absent without AA client");
+        assert!(
+            val.get("additional_tees").is_none(),
+            "additional_tees should be absent without AA client"
+        );
+    }
+
+    #[rstest]
+    #[case(Method::POST)]
+    #[case(Method::PUT)]
+    #[case(Method::DELETE)]
+    #[case(Method::PATCH)]
+    #[tokio::test]
+    async fn info_non_get_returns_405(#[case] method: Method) {
+        let router = router_no_clients();
+        let req = Request::builder()
+            .method(method)
+            .uri("/info")
+            .body(Body::empty())
+            .unwrap();
+        let resp = router.route(loopback(), req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::METHOD_NOT_ALLOWED);
+    }
+
+    #[rstest]
+    #[case("/")]
+    #[case("/unknown")]
+    #[case("/foo/bar")]
+    #[tokio::test]
+    async fn unknown_root_path_returns_404(#[case] path: &str) {
+        let router = router_no_clients();
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri(path)
+            .body(Body::empty())
+            .unwrap();
+        let resp = router.route(loopback(), req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[rstest]
+    #[case(Method::GET, "/aa/token?token_type=kbs")]
+    #[case(Method::GET, "/aa/evidence?runtime_data=aGVsbG8")]
+    #[case(Method::GET, "/aa/additional-evidence?runtime_data=aGVsbG8")]
+    #[case(Method::GET, "/aa/aael")]
+    #[case(Method::POST, "/aa/aael")]
+    #[case(Method::GET, "/aa/unknown-route")]
+    #[tokio::test]
+    async fn aa_endpoint_without_client_returns_404(
+        #[case] method: Method,
+        #[case] uri: &str,
+    ) {
+        let router = router_no_clients();
+        let req = Request::builder()
+            .method(method)
+            .uri(uri)
+            .body(Body::empty())
+            .unwrap();
+        let resp = router.route(loopback(), req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+        assert_eq!(body_str(resp).await, "Attestation Feature Not Enabled");
+    }
+
+    #[rstest]
+    #[case("/cdh/resource/default/key/test")]
+    #[case("/cdh/resource")]
+    #[case("/cdh/unknown/foo/bar")]
+    #[tokio::test]
+    async fn cdh_endpoint_without_client_returns_404(#[case] uri: &str) {
+        let router = router_no_clients();
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri(uri)
+            .body(Body::empty())
+            .unwrap();
+        let resp = router.route(loopback(), req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+        assert_eq!(body_str(resp).await, "Resource Feature Not Enabled");
+    }
+}
