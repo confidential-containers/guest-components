@@ -52,13 +52,19 @@ jobs:
           components: rustfmt
 
       - name: Build and install with ${{ matrix.kbc }} feature
+        env:
+          KBC: ${{ matrix.kbc }}
         run: |
           sudo apt-get update
-          make KBC=${{ matrix.kbc }} && make install
+          make KBC=${KBC} && make install
 
       - name: Musl build with ${{ matrix.kbc }} feature
+        env:
+          KBC: ${{ matrix.kbc }}
         run: |
-          make LIBC=musl KBC=${{ matrix.kbc }}
+          make LIBC=musl KBC=${KBC}
 
       - name: Run cargo test with ${{ matrix.kbc }} feature
-        run: cargo test -p kbc --no-default-features --features ${{ matrix.kbc }},rust-crypto
+        env:
+          KBC: ${{ matrix.kbc }}
+        run: cargo test -p kbc --no-default-features --features ${KBC},rust-crypto

@@ -4,6 +4,10 @@ on:
   release:
     types: [published]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -13,8 +17,9 @@ env:
 
 jobs:
   build-and-push-images:
+    name: Build and push images
     permissions:
-      packages: write
+      packages: write # push container images to ghcr.io
     strategy:
       fail-fast: false
       matrix:
@@ -57,9 +62,10 @@ jobs:
           tags: ${{ env.IMAGE }}:${{ github.sha }}-${{ matrix.platform.arch }}
 
   merge-manifests:
+    name: Merge multi-arch manifests
     needs: build-and-push-images
     permissions:
-      packages: write
+      packages: write # push multi-arch manifest to ghcr.io
     runs-on: ubuntu-24.04
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -78,9 +84,11 @@ jobs:
           password: ${{secrets.GITHUB_TOKEN}}
 
       - name: Create and push multi-arch manifests
+        env:
+          GIT_SHA: ${{ github.sha }}
         run: |
-          for tag in "${{ github.sha }}" latest; do
+          for tag in "${GIT_SHA}" latest; do
             docker buildx imagetools create --tag "${IMAGE}:${tag}" \
-              "${IMAGE}:${{ github.sha }}-amd64" \
-              "${IMAGE}:${{ github.sha }}-arm64"
+              "${IMAGE}:${GIT_SHA}-amd64" \
+              "${IMAGE}:${GIT_SHA}-arm64"
           done

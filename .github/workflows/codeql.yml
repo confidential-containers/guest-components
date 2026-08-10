@@ -20,6 +20,10 @@ on:
   schedule:
     - cron: "0 0 * * 1"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -28,9 +32,9 @@ jobs:
     name: Analyze
     runs-on: ubuntu-latest
     permissions:
-      actions: read
+      actions: read # required for CodeQL to enumerate workflow runs
       contents: read
-      security-events: write
+      security-events: write # required to upload SARIF results to code-scanning
 
     strategy:
       fail-fast: false

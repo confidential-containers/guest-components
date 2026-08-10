@@ -5,16 +5,21 @@ on:
     branches:
     - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
 jobs:
   publish-aa:
+    name: Publish attestation-agent
     permissions:
       contents: read
-      packages: write
-      id-token: write
-      attestations: write
+      packages: write # push OCI artifacts to ghcr.io
+      id-token: write # required for OIDC-based attestation signing
+      attestations: write # required to create build attestations
     strategy:
       matrix:
         platform: [
@@ -81,28 +86,30 @@ jobs:
         ARCH: ${{ matrix.platform.arch }}
         LIBC: ${{ matrix.platform.libc }}
       run: |
-        make ./target/$RUST_TARGET/release/attestation-agent
+        make ./target/${RUST_TARGET}/release/attestation-agent
 
     - name: Publish with ORAS
       id: publish
       env:
         OCI_ARCH: ${{ matrix.platform.arch == 'x86_64' && 'amd64' || matrix.platform.arch == 'aarch64' && 'arm64' || matrix.platform.arch == 'powerpc64le' && 'ppc64le' || matrix.platform.arch }}
+        GIT_SHA: ${{ github.sha }}
+        ARCH: ${{ matrix.platform.arch }}
       run: |
         mkdir oras
         cd oras
-        cp ../target/$RUST_TARGET/release/attestation-agent .
+        cp ../target/${RUST_TARGET}/release/attestation-agent .
         tar cJf attestation-agent.tar.xz attestation-agent
-        arch="${{ matrix.platform.arch }}"
+        arch="${ARCH}"
         # After building for target powerpc64le, tag and push the image as ppc64le to match standard arch naming.
         [ "$arch" = "powerpc64le" ] && arch="ppc64le"
-        arch_tag="${{ github.sha }}-${{ matrix.platform.tee }}_${arch}"
+        arch_tag="${GIT_SHA}-${TEE_PLATFORM}_${arch}"
         image="${REGISTRY}/${IMAGE_NAME}/attestation-agent"
-        tag="${{ github.sha }}-${{ matrix.platform.tee }}"
+        tag="${GIT_SHA}-${TEE_PLATFORM}"
         oras push "${image}:${arch_tag}" attestation-agent.tar.xz
         # We need to create the platform annotations with docker, since oras 1.2 doesn't support
         # pushing with platform yet.
         docker manifest create "${image}:${tag}" --amend "${image}:${arch_tag}"
-        docker manifest annotate --arch "$OCI_ARCH" --os linux "${image}:${tag}" "${image}:${arch_tag}"
+        docker manifest annotate --arch "${OCI_ARCH}" --os linux "${image}:${tag}" "${image}:${arch_tag}"
         docker manifest push "${image}:${tag}"
         # add image and digest to output for attestation
         echo "image=${image}" >> "$GITHUB_OUTPUT"
@@ -116,11 +123,12 @@ jobs:
         push-to-registry: true
 
   publish-cdh-and-asr:
+    name: Publish CDH and api-server-rest
     permissions:
       contents: read
-      packages: write
-      id-token: write
-      attestations: write
+      packages: write # push OCI artifacts to ghcr.io
+      id-token: write # required for OIDC-based attestation signing
+      attestations: write # required to create build attestations
     strategy:
       matrix:
         arch:
@@ -173,11 +181,13 @@ jobs:
         target: ${{ env.RUST_TARGET }}
 
     - name: Install dependencies
+      env:
+        ARCH: ${{ matrix.arch }}
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
           libdevmapper-dev pkg-config
-        if [ "${{ matrix.arch }}" = "powerpc64le" ]; then
+        if [ "${ARCH}" = "powerpc64le" ]; then
           sudo apt-get install -y libclang-dev cmake protobuf-compiler
         fi
 
@@ -185,34 +195,37 @@ jobs:
       env:
         ARCH: ${{ matrix.arch }}
         LIBC: ${{ matrix.libc }}
-      run: make ./target/$RUST_TARGET/release/confidential-data-hub
+      run: make ./target/${RUST_TARGET}/release/confidential-data-hub
 
     - name: Build ASR
       env:
         ARCH: ${{ matrix.arch }}
         LIBC: ${{ matrix.libc }}
-      run: make ./target/$RUST_TARGET/release/api-server-rest
+      run: make ./target/${RUST_TARGET}/release/api-server-rest
 
     - name: Publish CDH + ASR with ORAS
       id: publish
+      env:
+        GIT_SHA: ${{ github.sha }}
+        ARCH: ${{ matrix.arch }}
       run: |
-        arch="${{ matrix.arch }}"
+        arch="${ARCH}"
         # After building for target powerpc64le, tag and push the image as ppc64le to match standard arch naming.
         [ "$arch" = "powerpc64le" ] && arch="ppc64le"
-        tag="${{ github.sha }}-${arch}"
+        tag="${GIT_SHA}-${arch}"
         mkdir oras
         cd oras
-        cp ../target/$RUST_TARGET/release/{confidential-data-hub,api-server-rest} .
+        cp ../target/${RUST_TARGET}/release/{confidential-data-hub,api-server-rest} .
 
         tar cJf confidential-data-hub.tar.xz confidential-data-hub
-        image="${{ env.REGISTRY }}/$IMAGE_NAME/confidential-data-hub"
+        image="${REGISTRY}/${IMAGE_NAME}/confidential-data-hub"
         oras push "${image}:${tag}" confidential-data-hub.tar.xz
         echo "cdh-image=${image}" >> "$GITHUB_OUTPUT"
         digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
         echo "cdh-digest=${digest}" >> "$GITHUB_OUTPUT"
 
         tar cJf api-server-rest.tar.xz api-server-rest
-        image="${{ env.REGISTRY }}/$IMAGE_NAME/api-server-rest"
+        image="${REGISTRY}/${IMAGE_NAME}/api-server-rest"
         oras push "${image}:${tag}" api-server-rest.tar.xz
         echo "asr-image=${image}" >> "$GITHUB_OUTPUT"
         digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
