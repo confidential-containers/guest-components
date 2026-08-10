@@ -260,9 +260,9 @@ async fn unseal_secret(unseal_args: &UnsealArgs) {
     let blob = secret.unseal().await.expect("unseal failed");
 
     // Write the unsealed secret to the filesystem
-    let output_file_name = Path::new(&format!("{}.unsealed", &unseal_args.file_path)).to_owned();
+    let output_file_name = Path::new(&format!("{}.unsealed", unseal_args.file_path)).to_owned();
     if output_file_name.exists() {
-        panic!("{}", format!("{:?} already exists", &output_file_name));
+        panic!("{}", format!("{:?} already exists", output_file_name));
     }
     let mut output_file = fs::File::create(&output_file_name)
         .await
@@ -275,7 +275,7 @@ async fn unseal_secret(unseal_args: &UnsealArgs) {
 
     println!(
         "unseal success, secret is saved in newly generated file: '{:?}'",
-        &output_file_name
+        output_file_name
     );
 }
 
@@ -403,10 +403,10 @@ fn generate_keys(args: &KeygenArgs) {
     let public_path = output_dir.join(format!("{}-public.json", args.kid));
 
     if private_path.exists() {
-        panic!("{:?} already exists", &private_path);
+        panic!("{:?} already exists", private_path);
     }
     if public_path.exists() {
-        panic!("{:?} already exists", &public_path);
+        panic!("{:?} already exists", public_path);
     }
 
     std::fs::write(
