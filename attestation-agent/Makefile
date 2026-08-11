@@ -117,13 +117,37 @@ TARGET := $(TARGET_DIR)/$(BIN_NAME)
 lint: $(LINT_OPTION)
 
 lint-default:
-	cd attestation-agent && cargo clippy --features kbs,coco_as,bin,grpc,ttrpc,all-attesters
+	cargo clippy -p attestation-agent --features kbs,coco_as,bin,grpc,ttrpc,all-attesters -- -D warnings
+	cargo clippy -p attester --all-targets --features all-attesters,bin -- -D warnings
+	cargo clippy -p coco_keyprovider --all-targets -- -D warnings
+	cargo clippy -p kbc --all-targets --features cc_kbc,all-attesters,rust-crypto -- -D warnings
+	cargo clippy -p kbs_protocol --all-targets --no-default-features \
+		--features background_check,passport,rust-crypto,all-attesters,bin,aa_ttrpc -- -D warnings
+	cargo clippy -p crypto --all-targets --features rust-crypto -- -D warnings
+	cargo clippy -p resource_uri --all-targets -- -D warnings
+	cargo clippy -p sev --all-targets -- -D warnings
 
 lint-s390x:
-	cd attestation-agent && cargo clippy --no-default-features --features openssl,kbs,coco_as,bin,grpc,ttrpc
+	cargo clippy -p attestation-agent --no-default-features --features openssl,kbs,coco_as,bin,grpc,ttrpc -- -D warnings
+	cargo clippy -p attester --all-targets --no-default-features --features se-attester,bin -- -D warnings
+	cargo clippy -p coco_keyprovider --all-targets -- -D warnings
+	cargo clippy -p kbc --all-targets --no-default-features --features cc_kbc,se-attester,openssl -- -D warnings
+	cargo clippy -p kbs_protocol --all-targets --no-default-features \
+		--features background_check,passport,openssl,se-attester,bin,aa_ttrpc -- -D warnings
+	cargo clippy -p crypto --all-targets --no-default-features --features openssl -- -D warnings
+	cargo clippy -p resource_uri --all-targets -- -D warnings
+	cargo clippy -p sev --all-targets -- -D warnings
 
 lint-aarch64:
-	cd attestation-agent && cargo clippy --no-default-features --features openssl,rust-crypto,cca-attester,kbs,coco_as,bin,grpc,ttrpc
+	cargo clippy -p attestation-agent --no-default-features --features openssl,rust-crypto,cca-attester,kbs,coco_as,bin,grpc,ttrpc -- -D warnings
+	cargo clippy -p attester --all-targets --no-default-features --features cca-attester,bin -- -D warnings
+	cargo clippy -p coco_keyprovider --all-targets -- -D warnings
+	cargo clippy -p kbc --all-targets --no-default-features --features cc_kbc,cca-attester,rust-crypto -- -D warnings
+	cargo clippy -p kbs_protocol --all-targets --no-default-features \
+		--features background_check,passport,rust-crypto,cca-attester,bin,aa_ttrpc -- -D warnings
+	cargo clippy -p crypto --all-targets --features rust-crypto -- -D warnings
+	cargo clippy -p resource_uri --all-targets -- -D warnings
+	cargo clippy -p sev --all-targets -- -D warnings
 
 install: 
 	install -D -m0755 $(TARGET) $(DESTDIR)/$(BIN_NAME)
