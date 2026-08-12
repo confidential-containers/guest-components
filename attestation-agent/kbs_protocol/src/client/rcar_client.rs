@@ -176,7 +176,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         let primary_runtime_data_serialized =
             serialize_json_canonically(&primary_runtime_data_json)
                 .context("serialize runtime data failed")?;
-        debug!("Primary runtime data (serialized): {primary_runtime_data_serialized:#?}");
+        debug!("Primary runtime data (serialized): {primary_runtime_data_serialized:?}");
         
         let primary_runtime_digest = hash_algorithm.digest(&primary_runtime_data_serialized);
 
@@ -210,7 +210,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             }
             _ => primary_runtime_digest,
         };
-        debug!("Primary runtime data (final): {primary_runtime_data:#?}");
+        debug!("Primary runtime data (final): {primary_runtime_data:?}");
         let primary_evidence = self.provider.primary_evidence(primary_runtime_data).await?;
         debug!("Primary evidence from runtime data: {primary_evidence:#?}");
         let guest_evidence = CompositeEvidence {

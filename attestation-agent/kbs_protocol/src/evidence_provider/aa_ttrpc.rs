@@ -45,6 +45,7 @@ impl EvidenceProvider for AAEvidenceProvider {
             RuntimeData: runtime_data,
             ..Default::default()
         };
+        debug!("Requesting primary evidence with runtime data: {:?}", req.RuntimeData);
         let res = self
             .client
             .get_evidence(
@@ -53,8 +54,12 @@ impl EvidenceProvider for AAEvidenceProvider {
             )
             .await
             .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e}")))?;
+        debug!("Received primary evidence response: {:?}", res.Evidence);
+
         let evidence = serde_json::from_slice(&res.Evidence)
             .map_err(|e| Error::AAEvidenceProvider(format!("illegal evidence format: {e}")))?;
+
+        debug!("Parsed primary evidence: {:?}", evidence);
         Ok(evidence)
     }
 
