@@ -54,8 +54,7 @@ The `TEE_PLATFORM` parameter can be
 - `fs`: for platforms with encrypted root filesystems (i.e. s390x)
 - `tdx`: for Intel TDX
 - `az-tdx-vtpm`: for Intel TDX with Azure vTPM
-- `snp`: for AMD SEV-SNP
-- `amd`: for both AMD SEV(-ES) and AMD SEV-SNP
+- `snp`/`amd`: for AMD SEV-SNP
 - `az-snp-vtpm`: for AMD SEV-SNP with Azure vTPM
 - `se`: for IBM Secure Execution (SE)
 

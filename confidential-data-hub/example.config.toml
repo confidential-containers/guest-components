@@ -6,15 +6,14 @@ aa_socket = "unix:///run/confidential-containers/attestation-agent/attestation-a
 
 # KBC related configs.
 [kbc]
-# Required. The KBC name. It could be `cc_kbc`, `online_sev_kbc` or
+# Required. The KBC name. It could be `cc_kbc` or
 # `offline_fs_kbc`. All the items under `[credentials]` will be
 # retrieved using the kbc.
 name = "cc_kbc"
 
-# Required. The URL of KBS. If `name` is either `cc_kbc` or
-# `online_sev_kbc`, this URL will be used to connect to the
-# CoCoKBS (for cc_kbc) or Simple-KBS (for online_sev_kbc). If
-# `name` is `offline_fs_kbc`, This URL will be ignored.
+# Required. The URL of KBS. If `name` is `cc_kbc`, 
+# this URL will be used to connect to the CoCoKBS (for cc_kbc).
+# If `name` is `offline_fs_kbc`, This URL will be ignored.
 url = "http://example.io:8080"
 
 # Optional. The public key cert of KBS. If not given, CDH will

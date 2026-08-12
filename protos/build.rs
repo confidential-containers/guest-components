@@ -53,10 +53,7 @@ fn main() {
             .protoc_arg("--experimental_allow_proto3_optional")
             .out_dir("src/grpc/aa")
             .compile_protos(
-                &[
-                    "./protos/attestation-agent/online-sev.proto",
-                    "./protos/attestation-agent/attestation-agent.proto",
-                ],
+                &["./protos/attestation-agent/attestation-agent.proto"],
                 &["./protos/attestation-agent"],
             )
             .expect("grpc proto files build");

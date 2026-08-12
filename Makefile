@@ -28,31 +28,14 @@ else ifeq ($(TEE_PLATFORM), tdx)
   ATTESTER = tdx-attester
 else ifeq ($(TEE_PLATFORM), az-cvm-vtpm)
   ATTESTER = az-snp-vtpm-attester,az-tdx-vtpm-attester
-else ifeq ($(TEE_PLATFORM), sev)
-  ATTESTER = none
-  ifeq ($(NO_RESOURCE_PROVIDER), true)
-    RESOURCE_PROVIDER :=
-  else
-    RESOURCE_PROVIDER = sev
-  endif
 else ifeq ($(TEE_PLATFORM), snp)
   ATTESTER = snp-attester
 else ifeq ($(TEE_PLATFORM), se)
   ATTESTER = se-attester
 else ifeq ($(TEE_PLATFORM), all)
   ATTESTER = all-attesters
-  ifeq ($(NO_RESOURCE_PROVIDER), true)
-    RESOURCE_PROVIDER :=
-  else
-    RESOURCE_PROVIDER = sev,kbs
-  endif
 else ifeq ($(TEE_PLATFORM), amd)
   ATTESTER = snp-attester
-  ifeq ($(NO_RESOURCE_PROVIDER), true)
-    RESOURCE_PROVIDER :=
-  else
-    RESOURCE_PROVIDER = sev,kbs
-  endif
 else ifeq ($(TEE_PLATFORM), cca)
   ATTESTER = cca-attester
 endif

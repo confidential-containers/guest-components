@@ -4,7 +4,6 @@ CoCo Keyprovider is a very simple keyprovider tool, which can help to generate C
 The encrypted image can be decrypted using the following Key Broker Client (KBC):
  * cc-kbc
  * offline-fs-kbc
- * online-sev-kbc
  * sample kbc (toy KBC still supported for historical reason)
 
 The following guide will help make an encrypted image using [skopeo](https://github.com/containers/skopeo) and CoCo keyprovider, inspect the image as well as decrypt it.
@@ -125,9 +124,9 @@ Let's start with the simplest example possible, which is to encrypt an image usi
 $ skopeo copy --insecure-policy --encryption-key provider:attestation-agent:sample=true docker://busybox oci:busybox_encrypted:sample
 ```
 
-#### Example 2: encrypting for Offline fs and Online SEV KBC
+#### Example 2: encrypting for Offline fs KBC
 
-For `offline-fs-kbc` and `online-sev-kbc` the KBS address is ommitted and the encryption key created upfront. This key can be then provisioned in a KBS as, for example, on the [simple-kbs](https://github.com/confidential-containers/simple-kbs) for `online-sev-kbc`.
+For `offline-fs-kbc`, the KBS address is ommitted and the encryption key created upfront. This key can be then provisioned in a KBS.
 
 So create a random 32-bytes key file:
 
@@ -198,7 +197,7 @@ Another way to ensure the image is encrypted is to use offline_fs_kbc to test, w
 
 ## Decryption
 
-Let's show how the image created on [example two](#example-2-encrypting-for-offline-fs-offline-sev-and-online-sev-kbc) can be decrypted.
+Let's show how the image created on [example two](#example-2-encrypting-for-offline-fs-kbc) can be decrypted.
 
 Build and run Attestation Agent (AA) at localhost on port 48888:
 

@@ -4306,20 +4306,15 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.22.1",
- "bincode 2.0.1",
  "crypto",
  "kbs_protocol",
- "protos",
  "resource_uri",
  "rstest",
  "serde",
  "serde_json",
- "sev 0.1.0",
  "strum 0.28.0",
  "tokio",
- "tonic",
  "url",
- "uuid",
  "zeroize",
 ]
 
@@ -4415,10 +4410,8 @@ dependencies = [
  "aws-sdk-kms",
  "aws-sdk-secretsmanager",
  "base64 0.22.1",
- "bincode 2.0.1",
  "chrono",
  "const_format",
- "crypto",
  "ehsm_client",
  "hex",
  "kbs_protocol",
@@ -4431,7 +4424,6 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
- "sev 0.1.0",
  "sha2 0.11.0",
  "strum 0.28.0",
  "thiserror 2.0.19",
@@ -4441,8 +4433,6 @@ dependencies = [
  "tonic-build",
  "tracing",
  "url",
- "uuid",
- "zeroize",
 ]
 
 [[package]]
@@ -7258,13 +7248,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.3",
-]
-
-[[package]]
-name = "sev"
-version = "0.1.0"
-dependencies = [
- "anyhow",
 ]
 
 [[package]]
