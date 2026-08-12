@@ -16,6 +16,7 @@ use scroll::Pread;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::debug;
+use zerocopy::{FromBytes, Immutable, IntoBytes};
 
 mod report;
 mod rtmr;
@@ -68,6 +69,7 @@ impl TdxAttester {
 }
 
 #[repr(C)]
+#[derive(FromBytes, IntoBytes, Immutable)]
 struct TdxReportReq {
     report_data: [u8; 64],
     d: [u8; 1024],

@@ -22,7 +22,7 @@ clap = { workspace = true, features = ["derive"], optional = true }
 cfg-if.workspace = true
 crypto.path = "../deps/crypto"
 hex.workspace = true
-iocuddle = { version = "0.2.0", optional = true }
+iocuddle = { version = "0.3.0", optional = true }
 kbs-types.workspace = true
 occlum_dcap = { git = "https://github.com/occlum/occlum", tag = "v0.29.7", optional = true }
 pem-rfc7468 = { version = "1", optional = true, features = ["alloc"] }
@@ -55,7 +55,7 @@ picky-asn1 = { version = "0.10.1", optional = true }
 picky-asn1-der = { version = "0.5.6", optional = true }
 picky-asn1-x509 = { version = "0.15.4", optional = true }
 tss-esapi = { version = "7.5", optional = true }
-zerocopy = { version = "0.8.54", optional = true }
+zerocopy = { version = "0.8.54", optional = true, features = ["derive"] }
 
 [dev-dependencies]
 tokio.workspace = true
@@ -87,7 +87,7 @@ all-attesters = [
 # quotes. It's an unconditional dependency for tdx-attester since that is the preferred way to
 # generate TDX quotes with upstream kernels.
 tsm-report = ["tempfile"]
-tdx-attester = ["scroll", "tsm-report", "iocuddle"]
+tdx-attester = ["scroll", "tsm-report", "iocuddle", "zerocopy"]
 tdx-attest-dcap-ioctls = ["tdx-attest-rs"]
 sgx-attester = ["occlum_dcap"]
 nvidia-attester = ["nv-attestation-sdk"]
