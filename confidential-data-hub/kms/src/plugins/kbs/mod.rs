@@ -8,9 +8,6 @@
 #[cfg(feature = "kbs")]
 mod cc_kbc;
 
-#[cfg(feature = "sev")]
-mod sev;
-
 mod offline_fs;
 
 use std::{env, sync::Arc, sync::LazyLock};
@@ -25,8 +22,6 @@ use crate::{Annotations, Error, Getter, Result};
 enum RealClient {
     #[cfg(feature = "kbs")]
     Cc(cc_kbc::CcKbc),
-    #[cfg(feature = "sev")]
-    Sev(sev::OnlineSevKbc),
     OfflineFs(offline_fs::OfflineFsKbc),
 }
 
@@ -42,12 +37,10 @@ impl RealClient {
                 let aa_socket = env::var("AA_SOCKET").expect("must be initialized");
                 RealClient::Cc(cc_kbc::CcKbc::new(&params.uri, &aa_socket).await?)
             }
-            #[cfg(feature = "sev")]
-            "online_sev_kbc" => RealClient::Sev(sev::OnlineSevKbc::new(&params.uri).await?),
             "offline_fs_kbc" => RealClient::OfflineFs(offline_fs::OfflineFsKbc::new().await?),
             others => {
                 return Err(Error::KbsClientError(format!(
-                    "unknown kbc name {others}, only support `cc_kbc`(feature `kbs`), `online_sev_kbc` (feature `sev`) and `offline_fs_kbc`."
+                    "unknown kbc name {others}, only support `cc_kbc`(feature `kbs`) and `offline_fs_kbc`."
                 )));
             }
         };
@@ -68,9 +61,7 @@ pub trait Kbc: Send + Sync {
 /// and `get_resource()` will happen to the static variable [`KBS_CLIENT`].
 ///
 /// Why we use a static variable here is the initialization of kbc is not
-/// idempotent. For example online-sev-kbc will delete a file on local
-/// filesystem, so we should try to reuse the online-sev-kbc created at the
-/// first time.
+/// idempotent.
 pub struct KbcClient;
 
 #[async_trait]
@@ -91,8 +82,6 @@ impl Getter for KbcClient {
         match client {
             #[cfg(feature = "kbs")]
             RealClient::Cc(c) => c.get_resource(resource_uri).await,
-            #[cfg(feature = "sev")]
-            RealClient::Sev(c) => c.get_resource(resource_uri).await,
             RealClient::OfflineFs(c) => c.get_resource(resource_uri).await,
         }
     }

@@ -10,22 +10,13 @@ license = "Apache-2.0"
 anyhow.workspace = true
 async-trait.workspace = true
 base64.workspace = true
-bincode = { workspace = true, optional = true }
 crypto = { path = "../deps/crypto", default-features = false }
 kbs_protocol = { path = "../kbs_protocol", default-features = false, optional = true }
-protos = { path = "../../protos", default-features = false, optional = true }
 resource_uri.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-sev = { path = "../deps/sev", optional = true }
 strum.workspace = true
-tokio = { workspace = true, features = [
-    "macros",
-    "rt-multi-thread",
-], optional = true }
-tonic = { workspace = true, optional = true }
 url.workspace = true
-uuid = { workspace = true, features = ["serde", "v4"], optional = true }
 zeroize.workspace = true
 
 [dev-dependencies]
@@ -51,7 +42,6 @@ tpm-attester = ["kbs_protocol/tpm-attester"]
 
 sample_kbc = []
 offline_fs_kbc = []
-online_sev_kbc = ["sev", "protos/grpc", "uuid", "bincode", "tokio", "tonic"]
 
 # Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
 rust-crypto = ["crypto/rust-crypto", "kbs_protocol?/rust-crypto"]

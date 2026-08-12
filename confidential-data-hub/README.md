@@ -28,7 +28,7 @@ git clone https://github.com/confidential-containers/guest-components
 cd guest-components/confidential-data-hub
 make
 ```
-This will build CDH with `RESOURCE_PROVIDER=kbs,sev` and `KMS_PROVIDER=aliyun,ehsm`
+This will build CDH with `RESOURCE_PROVIDER=kbs` and `KMS_PROVIDER=aliyun`
 
 You can explicitly specify the confidential resource provider and KMS_PROVIDER plugin during the build.
 For example if you only want to include `aliyun` KMS_PROVIDER: 
@@ -61,10 +61,9 @@ Confidential resource providers (flag `RESOURCE_PROVIDER`)
 | Feature name        |           Note                                                     |
 | ------------------- | -----------------------------------------------------------------  |
 | kbs                 | For TDX/SNP/Azure-SNP-vTPM based on KBS Attestation Protocol       |
-| sev                 | For SEV based on efi secret pre-attestation                        |
 
 Note:
-- If no `RESOURCE_PROVIDER` flag is given, then all the resource providers will be enabled by default
+- If no `RESOURCE_PROVIDER` flag is given, then `kbs` will be enabled by default
 
 KMS_PROVIDER plugins (flag `KMS_PROVIDER`)
 

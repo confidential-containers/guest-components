@@ -16,7 +16,7 @@ from Trustee's REST API. The mapping between these is described below.
 Technically, the Resource URI is not tied to any specific KBS, but this document
 mainly focuses on Trustee and the CC_KBC and describes how the resource URI
 relates to Trustee.
-Some legacy code, such as the SEV KBC or the FS KBC may fulfill resource URIs
+Some legacy code, such as the FS KBC may fulfill resource URIs
 in different ways.
 
 ## Specification

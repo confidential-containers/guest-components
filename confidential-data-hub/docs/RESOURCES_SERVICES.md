@@ -4,13 +4,11 @@ decryption keys and policy files from the Key Broker Service (KBS).
 Currently workloads can get resources via CDH from the following providers:
 
 * [CoCo KBS](https://github.com/confidential-containers/trustee/tree/main/kbs)
-* AMD SEV based on EFI secret pre-attestation (via [simple-kbs](https://github.com/confidential-containers/simple-kbs))
 
 The CDH service should be configured with one of the following Key Broker Client (KBC) that establish
 the interface with the provider:
 
 * `cc_kbc` - for CoCo KBS
-* `online_sev_kbc` - for AMD SEV with simple-kbs
 * `offline_fs_kbc` - for reading from the system's local filesystem
 
 For more information about configuring CDH, please refer to [this section](../README.md#configuration-file) in the [README.md](../README.md).
