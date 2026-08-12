@@ -8,13 +8,8 @@ LIBC ?= musl
 
 ATTESTER ?=
 
-NO_RESOURCE_PROVIDER ?=
-
-ifeq ($(NO_RESOURCE_PROVIDER), true)
-  RESOURCE_PROVIDER :=
-else
-  RESOURCE_PROVIDER ?= kbs
-endif
+# Enable the `kbs` cargo feature (cc_kbc / CoCo KBS). offline_fs_kbc is always built.
+ENABLE_KBS ?= true
 
 ifeq ($(ARCH), ppc64le)
   ARCH=powerpc64le
@@ -69,7 +64,7 @@ build: $(CDH_BINARY) $(ASR_BINARY) $(AA_BINARY)
 
 $(CDH_BINARY):
 	@echo build $(CDH) for $(TEE_PLATFORM)
-	cd $(CDH) && $(MAKE) RESOURCE_PROVIDER=$(RESOURCE_PROVIDER) ARCH=$(ARCH) LIBC=$(LIBC)
+	cd $(CDH) && $(MAKE) ENABLE_KBS=$(ENABLE_KBS) ARCH=$(ARCH) LIBC=$(LIBC)
 
 $(AA_BINARY):
 	@echo build $(AA) for $(TEE_PLATFORM)

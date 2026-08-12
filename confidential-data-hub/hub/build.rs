@@ -23,14 +23,18 @@ fn main() {
             enabled_features.join(", ")
         }
 
-        let resource_providers = feature_list(vec!["KBS", "SEV"]);
+        let kbs = if env::var("CARGO_FEATURE_KBS").is_ok() {
+            "enabled"
+        } else {
+            "disabled"
+        };
         let kms = feature_list(vec!["ALIYUN", "EHSM"]);
 
         let out_dir = env::var("OUT_DIR").unwrap();
         let dest_path = Path::new(&out_dir).join("version");
         let mut f = File::create(dest_path).unwrap();
 
-        writeln!(f, "resource providers: {resource_providers}").unwrap();
+        writeln!(f, "kbs: {kbs}").unwrap();
         write!(f, "kms plugins: {kms}").unwrap();
     }
 

@@ -28,23 +28,23 @@ git clone https://github.com/confidential-containers/guest-components
 cd guest-components/confidential-data-hub
 make
 ```
-This will build CDH with `RESOURCE_PROVIDER=kbs` and `KMS_PROVIDER=aliyun`
+This will build CDH with `kbs` enabled and `KMS_PROVIDER=aliyun`.
 
-You can explicitly specify the confidential resource provider and KMS_PROVIDER plugin during the build.
-For example if you only want to include `aliyun` KMS_PROVIDER: 
+You can explicitly specify KMS_PROVIDER plugins during the build.
+For example if you only want to include `aliyun` KMS_PROVIDER:
 
 ```shell
 make KMS_PROVIDER=aliyun
 ```
 
-If you don't want to include any KMS_PROVIDER(s) and want to use only `kbs` as the resource provider:
+If you don't want to include any KMS_PROVIDER(s) (still with `cc_kbc` / CoCo KBS):
 ```shell
-make RESOURCE_PROVIDER=kbs KMS_PROVIDER=none
+make KMS_PROVIDER=none
 ```
 
-If you don't want to include any RESOURCE_PROVIDER(s):
+If you only want the builtin `offline_fs_kbc` (no `cc_kbc`):
 ```shell
-make RESOURCE_PROVIDER=none
+make ENABLE_KBS=false
 ```
 
 The default CDH runs as a service daemon. If you want to build CDH to an one-shot binary (run once and exit), use flag `ONE_SHOT=true`
@@ -56,14 +56,15 @@ Please refer to [Supported Features](#supported-features) for the options.
 
 ### Supported Features
 
-Confidential resource providers (flag `RESOURCE_PROVIDER`)
+CoCo KBS / `cc_kbc` (flag `ENABLE_KBS`)
 
-| Feature name        |           Note                                                     |
-| ------------------- | -----------------------------------------------------------------  |
-| kbs                 | For TDX/SNP/Azure-SNP-vTPM based on KBS Attestation Protocol       |
+| Value  | Note                                                                 |
+| ------ | -------------------------------------------------------------------- |
+| true   | Enable cargo feature `kbs` (`cc_kbc` with KBS attestation protocol). Default. |
+| false  | Build without `cc_kbc`. `offline_fs_kbc` is still available.         |
 
 Note:
-- If no `RESOURCE_PROVIDER` flag is given, then `kbs` will be enabled by default
+- Omit `ENABLE_KBS` to keep the default (`true`). Only set it when disabling.
 
 KMS_PROVIDER plugins (flag `KMS_PROVIDER`)
 
