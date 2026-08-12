@@ -42,15 +42,20 @@ pub struct SnpAttester {
 
 impl Default for SnpAttester {
     fn default() -> Self {
+        debug!("Creating default SnpAttester...");
         Self::new()
     }
 }
 
 impl SnpAttester {
     pub fn new() -> Self {
+        debug!("Creating new SnpAttester...");
+
         let supports_tsm_measurements = Path::new(TSM_REPORT_PATH).exists();
         if !supports_tsm_measurements {
-            debug!("sysfs for SEV-SNP is not supported, which requires kernel version >= 6.16. The legacy path via the sev Rust crate will be used.");
+            warn!("Configfs-tsm path {} does not exist, which means the kernel version is < 6.16. The legacy path via the sev Rust crate will be used.", TSM_REPORT_PATH);
+        } else {
+            debug!("Configfs-tsm path {} exists, sysfs for SEV-SNP is supported, which requires kernel version >= 6.16. The TSM Report path will be used.", TSM_REPORT_PATH);
         }
 
         Self {
