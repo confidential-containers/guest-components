@@ -1,0 +1,670 @@
+name: Rust CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  create:
+  workflow_dispatch:
+  schedule:
+    # Weekly clippy against Rust stable (Sunday 03:00 UTC)
+    - cron: "0 3 * * 6"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect changed paths
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      workspace: ${{ steps.filter.outputs.workspace }}
+      aa: ${{ steps.filter.outputs.aa }}
+      aa_cc_kbc: ${{ steps.filter.outputs.aa_cc_kbc }}
+      aa_sev_kbc: ${{ steps.filter.outputs.aa_sev_kbc }}
+      aa_crypto: ${{ steps.filter.outputs.aa_crypto }}
+      aa_keyprovider: ${{ steps.filter.outputs.aa_keyprovider }}
+      cdh: ${{ steps.filter.outputs.cdh }}
+      asr: ${{ steps.filter.outputs.asr }}
+      image_rs: ${{ steps.filter.outputs.image_rs }}
+      ocicrypt_rs: ${{ steps.filter.outputs.ocicrypt_rs }}
+      rust: ${{ steps.filter.outputs.rust }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            workspace:
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'Makefile'
+              - 'rust-toolchain.toml'
+              - '.github/workflows/rust.yml'
+              - '.github/actions/**'
+            aa:
+              - 'attestation-agent/**'
+            aa_cc_kbc:
+              - 'attestation-agent/kbc/cc_kbc/**'
+              - 'attestation-agent/kbs_protocol/**'
+            aa_sev_kbc:
+              - 'attestation-agent/kbc/online_sev_kbc/**'
+            aa_crypto:
+              - 'attestation-agent/deps/crypto/**'
+            aa_keyprovider:
+              - 'attestation-agent/coco_keyprovider/**'
+            cdh:
+              - 'confidential-data-hub/**'
+              - 'image-rs/**'
+            asr:
+              - 'api-server-rest/**'
+            image_rs:
+              - 'image-rs/**'
+            ocicrypt_rs:
+              - 'ocicrypt-rs/**'
+            rust:
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'Makefile'
+              - 'rust-toolchain.toml'
+              - '.github/workflows/rust.yml'
+              - '.github/actions/**'
+              - 'attestation-agent/**'
+              - 'confidential-data-hub/**'
+              - 'api-server-rest/**'
+              - 'image-rs/**'
+              - 'ocicrypt-rs/**'
+              - 'protos/**'
+
+  fmt:
+    name: cargo fmt
+    needs: changes
+    # Skip main-push CI (same as historical workflows); always allow manual/tag.
+    if: |
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'create' ||
+        needs.changes.outputs.rust == 'true'
+      )
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-rust-ci
+        with:
+          components: rustfmt
+
+      - name: Run cargo fmt
+        run: make fmt
+
+  aa:
+    name: attestation-agent (${{ matrix.instance }})
+    needs: changes
+    if: |
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'create' ||
+        needs.changes.outputs.workspace == 'true' ||
+        needs.changes.outputs.aa == 'true'
+      )
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-s390x
+          - ubuntu-24.04-arm
+        include:
+          - instance: ubuntu-24.04
+            make_args: ""
+          - instance: ubuntu-24.04-s390x
+            make_args: "ATTESTER=se-attester TEE_PLATFORM=se"
+          - instance: ubuntu-24.04-arm
+            make_args: "ATTESTER=cca-attester TEE_PLATFORM=cca"
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-rust-ci
+        with:
+          install-tpm: "true"
+          install-dmverity: "true"
+          install-nvat: ${{ matrix.instance == 'ubuntu-24.04' && 'true' || 'false' }}
+
+      - name: Gnu build and install with ttrpc
+        working-directory: ./attestation-agent
+        env:
+          MAKE_ARGS: ${{ matrix.make_args }}
+        run: |
+          mkdir -p ${HOME}/.local/bin
+          eval make ttrpc=true ${MAKE_ARGS} && make install PREFIX=${HOME}/.local
+
+      - name: Musl build with all platform
+        if: matrix.instance == 'ubuntu-24.04'
+        working-directory: ./attestation-agent
+        run: make LIBC=musl ttrpc=true ATTESTER=none
+
+      - name: Run cargo test
+        working-directory: ./attestation-agent
+        run: sudo -E PATH=$PATH -s make test
+
+      - name: Build and test kbs_protocol pqc-experimental feature
+        if: matrix.instance == 'ubuntu-24.04'
+        working-directory: ./attestation-agent
+        run: sudo -E PATH=$PATH -s make test-pqc
+
+      - name: Run rust lint check
+        working-directory: ./attestation-agent
+        run: sudo -E PATH=$PATH -s make lint
+
+  aa-cc-kbc:
+    name: aa cc_kbc (${{ matrix.attester }})
+    needs: changes
+    if: |
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'create' ||
+        needs.changes.outputs.workspace == 'true' ||
+        needs.changes.outputs.aa_cc_kbc == 'true'
+      )
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - instance: ubuntu-24.04
+            attester: snp-attester
+          - instance: ubuntu-24.04
+            attester: tdx-attester
+          - instance: ubuntu-24.04
+            attester: az-snp-vtpm-attester
+          - instance: ubuntu-24.04
+            attester: az-tdx-vtpm-attester
+          - instance: ubuntu-24.04-arm
+            attester: cca-attester
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-rust-ci
+        with:
+          install-tpm: "true"
+
+      - name: Build and install with ${{ matrix.attester }}
+        working-directory: ./attestation-agent
+        run: make ATTESTER=${{ matrix.attester }} && make install
+
+  aa-sev-kbc:
+    name: aa online_sev_kbc
+    needs: changes
+    if: |
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'create' ||
+        needs.changes.outputs.workspace == 'true' ||
+        needs.changes.outputs.aa_sev_kbc == 'true'
+      )
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-rust-ci
+        with:
+          components: rustfmt
+
+      - name: Build and install with online_sev_kbc
+        working-directory: ./attestation-agent
+        run: |
+          sudo apt-get update
+          make KBC=online_sev_kbc && make install
+
+      - name: Musl build with online_sev_kbc
+        working-directory: ./attestation-agent
+        run: make LIBC=musl KBC=online_sev_kbc
+
+      - name: Run cargo test with online_sev_kbc
+        working-directory: ./attestation-agent
+        run: cargo test -p kbc --no-default-features --features online_sev_kbc,rust-crypto
+
+  aa-crypto:
+    name: aa crypto (${{ matrix.instance }} / ${{ matrix.suite }})
+    needs: changes
+    if: |
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'create' ||
+        needs.changes.outputs.workspace == 'true' ||
+        needs.changes.outputs.aa_crypto == 'true'
+      )
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+        suite:
+          - rust-crypto
+          - openssl
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-rust-ci
+
+      - name: Clippy crypto (${{ matrix.suite }})
+        run: |
+          cargo clippy -p crypto --no-default-features --features ${{ matrix.suite }} -- -D warnings
+
+      - name: Test crypto (${{ matrix.suite }})
+        run: cargo test -p crypto --no-default-features --features ${{ matrix.suite }}
+
+  aa-keyprovider:
+    name: coco_keyprovider (${{ matrix.instance }})
+    needs: changes
+    if: |
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'create' ||
+        needs.changes.outputs.workspace == 'true' ||
+        needs.changes.outputs.aa_keyprovider == 'true'
+      )
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-rust-ci
+
+      - name: Clippy coco_keyprovider
+        run: cargo clippy --manifest-path attestation-agent/coco_keyprovider/Cargo.toml -- -D warnings
+
+      - name: Build coco_keyprovider
+        run: cargo build --manifest-path attestation-agent/coco_keyprovider/Cargo.toml
+
+      - name: Test coco_keyprovider
+        run: cargo test --manifest-path attestation-agent/coco_keyprovider/Cargo.toml
+
+  trustee-attester:
+    name: trustee-attester (${{ matrix.instance }})
+    needs: changes
+    if: |
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'create' ||
+        needs.changes.outputs.workspace == 'true' ||
+        needs.changes.outputs.aa == 'true'
+      )
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-s390x
+          - ubuntu-24.04-arm
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-rust-ci
+        with:
+          install-tpm: "true"
+          install-dmverity: "true"
+          install-nvat: ${{ matrix.instance == 'ubuntu-24.04' && 'true' || 'false' }}
+
+      - name: Build and test trustee-attester
+        working-directory: ./attestation-agent
+        run: make test-trustee-attester
+
+      - name: Clippy trustee-attester
+        working-directory: ./attestation-agent
+        run: |
+          case "$(uname -m)" in
+            s390x)
+              feats='--no-default-features --features background_check,passport,openssl,se-attester,bin'
+              ;;
+            aarch64)
+              feats='--no-default-features --features background_check,passport,openssl,cca-attester,bin'
+              ;;
+            *)
+              feats='--no-default-features --features background_check,passport,openssl,all-attesters,bin'
+              ;;
+          esac
+          cargo clippy -p kbs_protocol --bin trustee-attester $feats -- -D warnings
+
+  cdh:
+    name: confidential-data-hub (${{ matrix.instance }})
+    needs: changes
+    if: |
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'create' ||
+        needs.changes.outputs.workspace == 'true' ||
+        needs.changes.outputs.cdh == 'true'
+      )
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-s390x
+          - ubuntu-24.04-arm
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-rust-ci
+        with:
+          install-zfs: "true"
+
+      - name: Build and install
+        working-directory: ./confidential-data-hub
+        run: |
+          mkdir -p ${HOME}/.local/bin
+          LIBC=gnu make RESOURCE_PROVIDER=kbs,sev && LIBC=gnu make install PREFIX=${HOME}/.local
+
+      - name: Lint
+        working-directory: ./confidential-data-hub
+        run: LIBC=gnu make lint
+
+      - name: Test
+        working-directory: ./confidential-data-hub
+        run: sudo -E PATH=$PATH -s LIBC=gnu make test
+
+  asr:
+    name: api-server-rest (${{ matrix.instance }})
+    needs: changes
+    if: |
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'create' ||
+        needs.changes.outputs.workspace == 'true' ||
+        needs.changes.outputs.asr == 'true'
+      )
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-s390x
+          - ubuntu-24.04-arm
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-rust-ci
+
+      - name: Build and install with default features
+        working-directory: ./api-server-rest
+        run: |
+          mkdir -p ${HOME}/.local/bin
+          make && make install PREFIX=${HOME}/.local
+
+      - name: Musl build with default features
+        if: ${{ !endsWith(matrix.instance, 's390x') }}
+        working-directory: ./api-server-rest
+        run: make LIBC=musl
+
+      - name: Lint
+        working-directory: ./api-server-rest
+        run: make lint
+
+      - name: Test
+        working-directory: ./api-server-rest
+        run: make test
+
+  image-rs:
+    name: image-rs (${{ matrix.instance }})
+    needs: changes
+    if: |
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'create' ||
+        needs.changes.outputs.workspace == 'true' ||
+        needs.changes.outputs.image_rs == 'true'
+      )
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-s390x
+          - ubuntu-24.04-arm
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-rust-ci
+        with:
+          install-nettle: "true"
+          install-tpm: ${{ matrix.instance == 'ubuntu-24.04' && 'true' || 'false' }}
+          install-dmverity: ${{ matrix.instance == 'ubuntu-24.04' && 'true' || 'false' }}
+          install-cryptsetup: ${{ (matrix.instance == 'ubuntu-24.04' || matrix.instance == 'ubuntu-24.04-arm') && 'true' || 'false' }}
+
+      - name: Install cross-compilation support
+        if: matrix.instance == 'ubuntu-24.04'
+        run: |
+          sudo apt-get install -y gcc-powerpc64le-linux-gnu
+          rustup target add powerpc64le-unknown-linux-gnu
+
+      - name: Lint
+        working-directory: ./image-rs
+        run: make lint
+
+      - name: Build
+        working-directory: ./image-rs
+        run: make build
+
+      - name: Cross-compile for powerpc64le
+        if: matrix.instance == 'ubuntu-24.04'
+        run: |
+          sudo -E PATH=$PATH -s RUSTFLAGS=" -C linker=powerpc64le-linux-gnu-gcc" \
+            cargo build --target powerpc64le-unknown-linux-gnu -p image-rs --features default
+
+      - name: Test
+        working-directory: ./image-rs
+        run: sudo -E PATH=$PATH -s make test
+
+      - name: Clean test cache
+        run: sudo -E PATH=$PATH -s cargo clean
+
+      - name: Test XRSS signature extension
+        env:
+          AUTH_PASSWORD: ${{ secrets.SH_ICR_API_KEY }}
+        working-directory: ./image-rs
+        run: sudo -E PATH=$PATH -s make test-xrss
+
+  ocicrypt-rs:
+    name: ocicrypt-rs (${{ matrix.instance }})
+    needs: changes
+    if: |
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'create' ||
+        needs.changes.outputs.workspace == 'true' ||
+        needs.changes.outputs.ocicrypt_rs == 'true'
+      )
+    strategy:
+      fail-fast: false
+      matrix:
+        instance:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+    runs-on: ${{ matrix.instance }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup-rust-ci
+
+      - name: Lint
+        working-directory: ./ocicrypt-rs
+        run: make lint
+
+      - name: Build and test feature matrix
+        working-directory: ./ocicrypt-rs
+        run: make test
+
+  rust-stable-clippy:
+    name: clippy on Rust stable (${{ matrix.package }})
+    if: github.event_name == 'schedule'
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - api-server-rest
+          - coco_keyprovider
+          - crypto
+          - resource_uri
+          - kbs_protocol
+          - confidential-data-hub
+          - kms
+          - image-rs
+          - ocicrypt-rs
+        include:
+          - package: attestation-agent
+            feature-parameters: "--no-default-features --features rust-crypto,kbs,all-attesters,bin,ttrpc"
+          - package: kbc
+            feature-parameters: "--no-default-features --features openssl,cc_kbc,all-attesters"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Update apt repositories
+        run: sudo apt-get update
+
+      - name: Install TPM dependencies
+        run: sudo apt-get install -y libtss2-dev
+
+      - name: Install dm-verity dependencies
+        run: sudo apt-get install -y libdevmapper-dev
+
+      - name: Install NVIDIA Attestation SDK
+        if: contains(fromJSON('["attestation-agent", "kbc", "kbs_protocol"]'), matrix.package)
+        uses: ./.github/actions/install-nvat-sdk
+
+      - name: Run rust lint checks (${{ matrix.package }})
+        run: cargo clippy -p ${{ matrix.package }} ${{ matrix.feature-parameters }} -- -D warnings
