@@ -61,7 +61,7 @@ First, build the CDH. To faster the build, disable all KMS providers and let ena
 KBS resources provider:
 
 ```shell
-$ make RESOURCE_PROVIDER=kbs KMS_PROVIDER=none
+$ make KMS_PROVIDER=none
 ```
 
 Create the resources file (**/etc/aa-offline_fs_kbc-resources.json**) and add the **default/key/1**

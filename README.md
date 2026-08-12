@@ -58,11 +58,12 @@ The `TEE_PLATFORM` parameter can be
 - `az-snp-vtpm`: for AMD SEV-SNP with Azure vTPM
 - `se`: for IBM Secure Execution (SE)
 
-by default, `kbs`/`sev` as a resource provider will be built in Confidential Data Hub. If you do not want enable any
-default except for only builtin `offline-fs-kbc`, you can build with `NO_RESOURCE_PROVIDER` flag set to `true`.
+By default, the `kbs` feature (`cc_kbc` / CoCo KBS) is enabled in Confidential
+Data Hub. `offline_fs_kbc` is always built. To build without `cc_kbc`, set
+`ENABLE_KBS=false`:
 
 ```shell
-make build TEE_PLATFORM=$(TEE_PLATFORM) NO_RESOURCE_PROVIDER=true
+make build TEE_PLATFORM=$(TEE_PLATFORM) ENABLE_KBS=false
 ```
 
 ### Optional build parameters
