@@ -10,7 +10,7 @@ mod cc_kbc;
 
 mod offline_fs;
 
-use std::{env, sync::Arc, sync::LazyLock};
+use std::{env, sync::Arc};
 
 use async_trait::async_trait;
 use attestation_agent::config::aa_kbc_params::AaKbcParams;
@@ -19,14 +19,21 @@ use tokio::sync::Mutex;
 
 use crate::{Annotations, Error, Getter, Result};
 
-enum RealClient {
-    #[cfg(feature = "kbs")]
-    Cc(cc_kbc::CcKbc),
-    OfflineFs(offline_fs::OfflineFsKbc),
+#[async_trait]
+pub trait Kbc: Send + Sync {
+    async fn get_resource(&mut self, _rid: ResourceUri) -> Result<Vec<u8>>;
 }
 
-impl RealClient {
-    async fn new() -> Result<Self> {
+/// A fake KbcClient to carry the [`Getter`] semantics. The real `new()`
+/// and `get_resource()` will happen to the static variable [`KBS_CLIENT`].
+pub enum KbcClient {
+    #[cfg(feature = "kbs")]
+    Cc(Arc<Mutex<cc_kbc::CcKbc>>),
+    OfflineFs(Arc<Mutex<offline_fs::OfflineFsKbc>>),
+}
+
+impl KbcClient {
+    pub async fn new() -> Result<Self> {
         let params = env::var("AA_KBC_PARAMS").expect("must be initialized");
         let params = AaKbcParams::try_from(params)
             .map_err(|e| Error::KbsClientError(format!("Failed to parse aa_kbc_params: {e:?}")))?;
@@ -35,9 +42,13 @@ impl RealClient {
             #[cfg(feature = "kbs")]
             "cc_kbc" => {
                 let aa_socket = env::var("AA_SOCKET").expect("must be initialized");
-                RealClient::Cc(cc_kbc::CcKbc::new(&params.uri, &aa_socket).await?)
+                Self::Cc(Arc::new(Mutex::new(
+                    cc_kbc::CcKbc::new(&params.uri, &aa_socket).await?,
+                )))
             }
-            "offline_fs_kbc" => RealClient::OfflineFs(offline_fs::OfflineFsKbc::new().await?),
+            "offline_fs_kbc" => {
+                Self::OfflineFs(Arc::new(Mutex::new(offline_fs::OfflineFsKbc::new().await?)))
+            }
             others => {
                 return Err(Error::KbsClientError(format!(
                     "unknown kbc name {others}, only support `cc_kbc`(feature `kbs`) and `offline_fs_kbc`."
@@ -49,53 +60,16 @@ impl RealClient {
     }
 }
 
-static KBS_CLIENT: LazyLock<Arc<Mutex<Option<RealClient>>>> =
-    LazyLock::new(|| Arc::new(Mutex::new(None)));
-
-#[async_trait]
-pub trait Kbc: Send + Sync {
-    async fn get_resource(&mut self, _rid: ResourceUri) -> Result<Vec<u8>>;
-}
-
-/// A fake KbcClient to carry the [`Getter`] semantics. The real `new()`
-/// and `get_resource()` will happen to the static variable [`KBS_CLIENT`].
-///
-/// Why we use a static variable here is the initialization of kbc is not
-/// idempotent.
-pub struct KbcClient;
-
 #[async_trait]
 impl Getter for KbcClient {
     async fn get_secret(&self, name: &str, _annotations: &Annotations) -> Result<Vec<u8>> {
         let resource_uri = ResourceUri::try_from(name)
             .map_err(|_| Error::KbsClientError(format!("illegal kbs resource uri: {name}")))?;
-        let real_client = KBS_CLIENT.clone();
-        let mut client = real_client.lock().await;
 
-        if client.is_none() {
-            let c = RealClient::new().await?;
-            *client = Some(c);
-        }
-
-        let client = client.as_mut().expect("must be initialized");
-
-        match client {
+        match self {
             #[cfg(feature = "kbs")]
-            RealClient::Cc(c) => c.get_resource(resource_uri).await,
-            RealClient::OfflineFs(c) => c.get_resource(resource_uri).await,
+            Self::Cc(c) => c.lock().await.get_resource(resource_uri).await,
+            Self::OfflineFs(c) => c.lock().await.get_resource(resource_uri).await,
         }
-    }
-}
-
-impl KbcClient {
-    pub async fn new() -> Result<Self> {
-        let client = KBS_CLIENT.clone();
-        let mut client = client.lock().await;
-        if client.is_none() {
-            let c = RealClient::new().await?;
-            *client = Some(c);
-        }
-
-        Ok(KbcClient {})
     }
 }
