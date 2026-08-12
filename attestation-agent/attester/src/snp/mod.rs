@@ -30,7 +30,7 @@ struct SnpEvidence {
     cert_chain: Option<Vec<CertTableEntry>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct SnpAttester {   
     /// Linux TSM sysfs is used to read and write runtime measurement registers,
     /// and also read the registers like MRCONFIGID. This ability starts with kernel version 6.16.
@@ -40,11 +40,17 @@ pub struct SnpAttester {
     supports_tsm_measurements: bool,
 }
 
+impl Default for SnpAttester {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SnpAttester {
     pub fn new() -> Self {
         let supports_tsm_measurements = Path::new(TSM_REPORT_PATH).exists();
         if !supports_tsm_measurements {
-            debug!("sysfs for SEV-SNP is not supported, which requires kernel version >= 6.16.");
+            debug!("sysfs for SEV-SNP is not supported, which requires kernel version >= 6.16. The legacy path via the sev Rust crate will be used.");
         }
 
         Self {
