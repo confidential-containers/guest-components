@@ -116,7 +116,7 @@ impl TryFrom<Tee> for BoxedAttester {
             Tee::Snp => {
                 #[cfg(feature = "snp-attester")]
                 {
-                    Box::new(snp::SnpAttester::default())
+                    Box::new(snp::SnpAttester::new())
                 }
 
                 #[cfg(not(feature = "snp-attester"))]
