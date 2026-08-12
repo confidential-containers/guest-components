@@ -67,7 +67,7 @@ impl SnpAttester {
 #[async_trait::async_trait]
 impl Attester for SnpAttester {
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
-        debug!("Getting evidence...");
+        debug!("Getting evidence using {:?} ...", self);
         
         if report_data.len() > 64 {
             bail!("SNP Attester: Report data must be no more than 64 bytes");
