@@ -15,6 +15,7 @@ use kbs_types::{
 use resource_uri::ResourceUri;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use tracing::field::debug;
 use tracing::{debug, warn};
 
 use crate::{
@@ -171,9 +172,12 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             "nonce": runtime_data.nonce,
             "additional-evidence": additional_evidence,
         });
+        debug!("Primary runtime data: {primary_runtime_data_json:#?}");
         let primary_runtime_data_serialized =
             serialize_json_canonically(&primary_runtime_data_json)
                 .context("serialize runtime data failed")?;
+        debug!("Primary runtime data (serialized): {primary_runtime_data_serialized:#?}");
+        
         let primary_runtime_digest = hash_algorithm.digest(&primary_runtime_data_serialized);
 
         let primary_runtime_data = match tee {
@@ -206,8 +210,9 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             }
             _ => primary_runtime_digest,
         };
-
+        debug!("Primary runtime data (final): {primary_runtime_data:#?}");
         let primary_evidence = self.provider.primary_evidence(primary_runtime_data).await?;
+        debug!("Primary evidence from runtime data: {primary_evidence:#?}");
         let guest_evidence = CompositeEvidence {
             primary_evidence,
             additional_evidence,
