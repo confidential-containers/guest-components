@@ -101,10 +101,11 @@ In the current implementation, KBC name and KBS URI are passed by the implemente
 
 These two information should not be placed in the layer annotation as part of the container image. There are two main reasons: 
 
-1. **Flexibility**: not binding KBC name and KBS URI to container image can improve the cross platform portability of container image. (for example, suppose a KBC can only support the SEV platform. If the KBC name or KBS URI is written to the layer annotation when encrypting a container image, it means that the encrypted container image can only run on the SEV platform).
-2. **Security**: layer annotation is public plaintext data. Without additional encryption protection, an attacker can launch DoS attacks by using KBS URI to prevent the tenant from starting any confidential container based on the KBS; Without additional integrity protection, an attacker can tamper with the contents and induce potential security problems in the process of decrypting the image layer.
+1. **Flexibility**: keeping KBC name and KBS URI out of the image means the same encrypted image can be deployed against different KBC/KBS configurations without being rebuilt.
+2. **Security**: layer annotation is public plaintext data. Without additional encryption protection, an attacker can launch DoS attacks by using a KBS URI to prevent the tenant from starting any confidential container based on that KBS; without additional integrity protection, an attacker can tamper with the contents and induce potential security problems while decrypting the image layer.
 
-**! ! ATTENTION ! ! : **However, it must be noted here that for the first reason mentioned above, we do not rule out the possibility that there may be KBCs supporting various platforms (EAA protocol KBC is trying to do so). In this case, placing KBC name in layer annotation will not affect the cross platform portability of container image, but will support the complex scenarios such as "different layers of a same container image use different KBS protocol to encrypt" more flexibly. Therefore, the current AA code implementation retains the scalability of multiple KBC instances at runtime in order to better support the above possible changes in the future.
+> [!WARNING]
+> Layer annotations should stay independent of any particular KBC. In the current CoCo guest stack, image pull and layer decryption are handled by CDH, which obtains KBC/KBS configuration from CDH config (or related guest parameters), not from the image layers.
 
 ### Passed by ocicrypt instead of kata-agent
 
