@@ -99,8 +99,6 @@ jobs:
       ARCH: ${{ matrix.arch }}
       LIBC: ${{ matrix.libc }}
       ATTESTER: ${{ matrix.attester }}
-      # "kbs" enables cc_kbc, the KBS resource provider used on every arch.
-      RESOURCE_PROVIDER: kbs
       UBUNTU_VERSION: ${{ matrix.ubuntu }}
       VARIANT: ubuntu${{ matrix.ubuntu }}
     steps:
@@ -193,7 +191,6 @@ jobs:
           -e ARCH \
           -e LIBC \
           -e ATTESTER \
-          -e RESOURCE_PROVIDER \
           -e PAUSE_IMAGE_REPO \
           -e PAUSE_IMAGE_VERSION \
           -e HOME=/tmp \

@@ -42,19 +42,19 @@ repo_root_dir="$(cd "${script_dir}/../.." && pwd)"
 ARCH="${ARCH:-$(uname -m)}"
 LIBC="${LIBC:-gnu}"
 
-# Attesters and resource providers compiled into the guest components. These are
-# architecture specific (e.g. tdx/snp attesters only build on x86_64, se-attester
-# only on s390x), so the caller is expected to set ATTESTER accordingly.
+# Attesters compiled into the guest components. These are architecture specific
+# (e.g. tdx/snp attesters only build on x86_64, se-attester only on s390x), so
+# the caller is expected to set ATTESTER accordingly.
 ATTESTER="${ATTESTER:-none}"
 NV_ATTESTER="${NV_ATTESTER:-${ATTESTER},nvidia-attester}"
-RESOURCE_PROVIDER="${RESOURCE_PROVIDER:-kbs}"
+# Optional: set ENABLE_KBS=false to build without cc_kbc. Default is enabled.
 INCLUDE_NVIDIA_ATTESTER="${INCLUDE_NVIDIA_ATTESTER:-auto}"
 INCLUDE_CRYPTSETUP="${INCLUDE_CRYPTSETUP:-yes}"
 NVAT_LIB_DIR="${NVAT_LIB_DIR:-/usr/local/lib}"
 
 # TEE_PLATFORM is intentionally left empty so the top-level Makefile does not
-# override the ATTESTER/RESOURCE_PROVIDER values passed in the environment. This
-# mirrors kata's build-static-coco-guest-components.sh.
+# override the ATTESTER value passed in the environment. This mirrors kata's
+# build-static-coco-guest-components.sh.
 TEE_PLATFORM="${TEE_PLATFORM:-}"
 
 # Pause image to bundle. Kept in sync with kata's versions.yaml (.externals.pause).
@@ -83,7 +83,7 @@ build_guest_components() {
 		ARCH="${ARCH}" \
 		LIBC="${LIBC}" \
 		ATTESTER="${ATTESTER}" \
-		RESOURCE_PROVIDER="${RESOURCE_PROVIDER}"
+		${ENABLE_KBS:+ENABLE_KBS="${ENABLE_KBS}"}
 
 	# Strip to keep the extension image small; the debug info is not shippable.
 	local strip_bin="strip"
