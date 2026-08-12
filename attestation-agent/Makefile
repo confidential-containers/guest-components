@@ -108,6 +108,18 @@ else
     LINT_OPTION = lint-default
 endif
 
+# Feature sets mirror historical aa_basic / trustee-attester CI matrices.
+ifeq ($(ARCH), s390x)
+  TEST_FEATURES ?= --no-default-features --features openssl,passport,se-attester,kbs,coco_as
+  TRUSTEE_FEATURES ?= -p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,se-attester,bin
+else ifeq ($(ARCH), aarch64)
+  TEST_FEATURES ?= --no-default-features --features openssl,rust-crypto,passport,cca-attester,kbs,coco_as,ttrpc,grpc
+  TRUSTEE_FEATURES ?= -p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,cca-attester,bin
+else
+  TEST_FEATURES ?= --features openssl,rust-crypto,all-attesters,kbs,coco_as,ttrpc,grpc
+  TRUSTEE_FEATURES ?= -p kbs_protocol --bin trustee-attester --no-default-features --features background_check,passport,openssl,all-attesters,bin
+endif
+
 build:
 	cd attestation-agent && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features)" $(binary) $(LIBC_FLAG)
 	mv $(TARGET_DIR)/$(binary_name) $(TARGET)
@@ -124,6 +136,7 @@ lint-default:
 	cargo clippy -p kbs_protocol --all-targets --no-default-features \
 		--features background_check,passport,rust-crypto,all-attesters,bin,aa_ttrpc -- -D warnings
 	cargo clippy -p crypto --all-targets --features rust-crypto -- -D warnings
+	cargo clippy -p crypto --all-targets --no-default-features --features openssl -- -D warnings
 	cargo clippy -p resource_uri --all-targets -- -D warnings
 	cargo clippy -p sev --all-targets -- -D warnings
 
@@ -146,8 +159,23 @@ lint-aarch64:
 	cargo clippy -p kbs_protocol --all-targets --no-default-features \
 		--features background_check,passport,rust-crypto,cca-attester,bin,aa_ttrpc -- -D warnings
 	cargo clippy -p crypto --all-targets --features rust-crypto -- -D warnings
+	cargo clippy -p crypto --all-targets --no-default-features --features openssl -- -D warnings
 	cargo clippy -p resource_uri --all-targets -- -D warnings
 	cargo clippy -p sev --all-targets -- -D warnings
+
+test:
+	cargo test $(TEST_FEATURES) -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p crypto -p resource_uri
+
+test-crypto:
+	cargo test -p crypto --no-default-features --features rust-crypto
+	cargo test -p crypto --no-default-features --features openssl
+
+test-trustee-attester:
+	cargo build $(TRUSTEE_FEATURES)
+	cargo test $(TRUSTEE_FEATURES)
+
+test-pqc:
+	cargo test -p kbs_protocol --features pqc-experimental -- pqc
 
 install: 
 	install -D -m0755 $(TARGET) $(DESTDIR)/$(BIN_NAME)
