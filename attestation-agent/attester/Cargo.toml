@@ -62,6 +62,9 @@ tokio.workspace = true
 rstest.workspace = true
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
+# When bumping this tag, check the crate's release notes on GitHub for its
+# corresponding libnvat/libnvat-dev version, and update the `version` input
+# default in .github/actions/install-nvat-sdk/action.yml to match.
 nv-attestation-sdk = { git = "https://github.com/NVIDIA/attestation-sdk", tag = "2026.06.09", optional = true }
 
 [[bin]]
