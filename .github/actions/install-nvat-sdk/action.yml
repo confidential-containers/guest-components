@@ -1,14 +1,19 @@
 name: Install NVIDIA Attestation SDK
-description: Build and install the NVIDIA Attestation SDK from source (x86_64 only)
+description: Install the NVIDIA Attestation SDK (libnvat-dev) from NVIDIA's apt repository (x86_64 only)
 
 inputs:
   version:
     description: >
-      NVAT SDK version tag to checkout. Defaults to the tag the
-      nv-attestation-sdk crate is pinned to, so the C++ library and the Rust
-      bindings that link it cannot drift apart.
+      libnvat-dev version to install. Should match the NVAT release used by
+      the "nv-attestation-sdk" crate dependency in
+      attestation-agent/attester/Cargo.toml (see that crate's GitHub release
+      notes for its corresponding libnvat/libnvat-dev version).
     required: false
-    default: ""
+    default: "1.2.2"
+  cuda-keyring-version:
+    description: cuda-keyring package version used to register NVIDIA's apt repository
+    required: false
+    default: "1.1-1"
 
 runs:
   using: composite
@@ -18,41 +23,15 @@ runs:
       shell: bash
       env:
         NVAT_VERSION: ${{ inputs.version }}
-        CARGO_MANIFEST: ${{ github.workspace }}/attestation-agent/attester/Cargo.toml
+        CUDA_KEYRING_VERSION: ${{ inputs.cuda-keyring-version }}
       run: |
-        export RUSTFLAGS=""
-
-        if [ -z "${NVAT_VERSION}" ]; then
-          NVAT_VERSION="$(sed -n \
-            's/^nv-attestation-sdk[[:space:]]*=.*tag[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' \
-            "${CARGO_MANIFEST}")"
-          [ -n "${NVAT_VERSION}" ] || {
-            echo "failed to read the nv-attestation-sdk tag from ${CARGO_MANIFEST}" >&2
-            exit 1
-          }
-        fi
-        echo "Using NVIDIA Attestation SDK ${NVAT_VERSION}"
+        tmpdir="$(mktemp -d)"
+        curl -fsSL -o "${tmpdir}/cuda-keyring.deb" \
+          "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_${CUDA_KEYRING_VERSION}_all.deb"
+        sudo dpkg -i "${tmpdir}/cuda-keyring.deb"
+        rm -rf "${tmpdir}"
 
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends \
-          build-essential clang cmake pkg-config libclang-dev \
-          libcurl4-openssl-dev libssl-dev libxml2-dev \
-          libxmlsec1-dev zlib1g-dev
-
-        tmpdir="$(mktemp -d)"
-        git clone --depth=1 --branch "${NVAT_VERSION}" \
-          https://github.com/NVIDIA/attestation-sdk "${tmpdir}/attestation-sdk"
-        cmake -S "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp" \
-          -B "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp/build" \
-          -DCMAKE_BUILD_TYPE=Release
-        cmake --build "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp/build" --parallel "$(nproc)"
-        sudo cmake --install "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp/build"
-        # The nv-attestation-sdk-sys build script looks for the C header at
-        # /usr/include/nvat.h, but cmake installs it under /usr/local/include.
-        sudo mkdir -p /usr/include
-        sudo ln -sf /usr/local/include/nvat.h /usr/include/nvat.h
-        sudo ln -sf /usr/local/lib/libnvat.so /usr/lib/libnvat.so
-        sudo ldconfig
-        rm -rf "${tmpdir}"
+        sudo apt-get install -y --no-install-recommends "libnvat-dev=${NVAT_VERSION}*"
 
         echo "NVAT_USE_SYSTEM_LIB=1" >> "$GITHUB_ENV"
