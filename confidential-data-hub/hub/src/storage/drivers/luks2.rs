@@ -759,19 +759,22 @@ fn store_persistent_metadata(
         .context("flush persistent LUKS2 metadata")
 }
 
-fn new_persistent_header_file() -> Result<NamedTempFile> {
-    std::fs::create_dir_all(LUKS_HEADERS_STORAGE_DIR)
-        .context("create protected LUKS2 header directory")?;
+fn new_persistent_header_file_in(directory: &Path) -> Result<NamedTempFile> {
+    std::fs::create_dir_all(directory).context("create protected LUKS2 header directory")?;
     let header = tempfile::Builder::new()
         .prefix("persistent-")
         .suffix(LUKS_HEADER_FILE_SUFFIX)
-        .tempfile_in(LUKS_HEADERS_STORAGE_DIR)
+        .tempfile_in(directory)
         .context("create protected detached LUKS2 header")?;
     header
         .as_file()
         .set_len(PERSISTENT_HEADER_BYTES as u64)
         .context("size protected detached LUKS2 header")?;
     Ok(header)
+}
+
+fn new_persistent_header_file() -> Result<NamedTempFile> {
+    new_persistent_header_file_in(Path::new(LUKS_HEADERS_STORAGE_DIR))
 }
 
 fn copy_header_and_hmac(
@@ -812,17 +815,33 @@ fn persist_header(
     Ok(mac.finalize().into_bytes().into())
 }
 
+fn load_verified_header_in(
+    device: &File,
+    record: &PersistentMetadataRecord,
+    auth_key: &[u8],
+    volume_id: &PersistentVolumeId,
+    header_directory: &Path,
+) -> Result<NamedTempFile> {
+    let header = new_persistent_header_file_in(header_directory)?;
+    copy_header_and_hmac(device, header.as_file(), auth_key, volume_id)?
+        .verify_slice(&record.header_mac)
+        .map_err(|_| anyhow::anyhow!("persistent LUKS2 header authentication failed"))?;
+    Ok(header)
+}
+
 fn load_verified_header(
     device: &File,
     record: &PersistentMetadataRecord,
     auth_key: &[u8],
     volume_id: &PersistentVolumeId,
 ) -> Result<NamedTempFile> {
-    let header = new_persistent_header_file()?;
-    copy_header_and_hmac(device, header.as_file(), auth_key, volume_id)?
-        .verify_slice(&record.header_mac)
-        .map_err(|_| anyhow::anyhow!("persistent LUKS2 header authentication failed"))?;
-    Ok(header)
+    load_verified_header_in(
+        device,
+        record,
+        auth_key,
+        volume_id,
+        Path::new(LUKS_HEADERS_STORAGE_DIR),
+    )
 }
 
 fn initialize_persistent_header(
@@ -1586,6 +1605,7 @@ mod tests {
 
     #[test]
     fn persistent_header_tampering_is_rejected() {
+        let header_directory = tempfile::tempdir().unwrap();
         let device = tempfile::tempfile().unwrap();
         device.set_len(PERSISTENT_DATA_OFFSET_BYTES + 4096).unwrap();
         let header = tempfile::tempfile().unwrap();
@@ -1598,10 +1618,13 @@ mod tests {
         let record = prepared
             .with_header(persist_header(&device, &header, &key, &id).unwrap())
             .unwrap();
-        assert!(load_verified_header(&device, &record, &key, &id).is_ok());
+        assert!(
+            load_verified_header_in(&device, &record, &key, &id, header_directory.path(),).is_ok()
+        );
 
         device.write_all_at(b"X", 4).unwrap();
-        let error = load_verified_header(&device, &record, &key, &id).unwrap_err();
+        let error = load_verified_header_in(&device, &record, &key, &id, header_directory.path())
+            .unwrap_err();
         assert!(error
             .to_string()
             .contains("persistent LUKS2 header authentication failed"));
