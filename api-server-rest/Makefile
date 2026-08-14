@@ -73,6 +73,12 @@ build:
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)
 
+lint:
+	cargo clippy -p api-server-rest --all-targets -- -D warnings
+
+test:
+	cargo test -p api-server-rest
+
 install: 
 	install -D -m0755 $(TARGET) $(DESTDIR)/$(BIN_NAME)
 

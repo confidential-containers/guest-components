@@ -25,8 +25,6 @@ DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
 binary ?=
 binary_name ?=
-ATTESTER ?=
-features ?= coco_as,kbs
 OPENSSL ?=
 
 ifeq ($(SOURCE_ARCH), ppc64le)
@@ -37,22 +35,42 @@ ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
   OPENSSL=1
 endif
 
-ifeq ($(ttrpc), false)
-    binary = --bin grpc-aa
-    features += bin,grpc
-    binary_name = grpc-aa
+ifeq ($(ARCH), s390x)
+    ATTESTER ?= se-attester
+else ifeq ($(ARCH), aarch64)
+    ATTESTER ?= cca-attester
 else
-    binary = --bin ttrpc-aa
-    features += bin,ttrpc
-    binary_name = ttrpc-aa
+    ATTESTER ?= all-attesters
 endif
 
-ifdef ATTESTER
-    ifneq ($(ATTESTER), none)
-        features += $(ATTESTER)
-    endif
+ifeq ($(ttrpc), false)
+    binary = --bin grpc-aa
+    binary_name = grpc-aa
+    RPC = grpc
 else
-    features += all-attesters
+    binary = --bin ttrpc-aa
+    binary_name = ttrpc-aa
+    RPC = ttrpc
+endif
+
+ifdef OPENSSL
+    CRYPTO := openssl
+else
+    CRYPTO := rust-crypto
+endif
+
+ifeq ($(ATTESTER), none)
+    AA_FEATURES := kbs,coco_as,bin,$(RPC),$(CRYPTO)
+    AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(CRYPTO)
+    ATTESTER_PKG_FEATURES := bin
+    KBC_FEATURES := cc_kbc,$(CRYPTO)
+    KBS_PROTOCOL_FEATURES := background_check,passport,$(CRYPTO),bin,aa_ttrpc,pqc-experimental
+else
+    AA_FEATURES := kbs,coco_as,bin,$(RPC),$(CRYPTO),$(ATTESTER)
+    AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(CRYPTO),$(ATTESTER)
+    ATTESTER_PKG_FEATURES := $(ATTESTER),bin
+    KBC_FEATURES := cc_kbc,$(ATTESTER),$(CRYPTO)
+    KBS_PROTOCOL_FEATURES := background_check,passport,$(CRYPTO),$(ATTESTER),bin,aa_ttrpc,pqc-experimental
 endif
 
 ifeq ($(LIBC), musl)
@@ -96,55 +114,31 @@ ifneq ($(RUSTFLAGS_ARGS),)
     RUST_FLAGS := RUSTFLAGS="$(RUSTFLAGS_ARGS)"
 endif
 
-ifdef OPENSSL
-    features := $(features),openssl
-else
-    features := $(features),rust-crypto
-endif
-
-ifeq ($(ARCH), $(filter $(ARCH), s390x aarch64))
-    LINT_OPTION = lint-$(ARCH)
-else
-    LINT_OPTION = lint-default
-endif
-
 build:
-	cd attestation-agent && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(features)" $(binary) $(LIBC_FLAG)
+	cd attestation-agent && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(AA_FEATURES)" $(binary) $(LIBC_FLAG)
 	mv $(TARGET_DIR)/$(binary_name) $(TARGET)
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)
 
-lint: $(LINT_OPTION)
-
-lint-default:
-	cargo clippy -p attestation-agent --features kbs,coco_as,bin,grpc,ttrpc,all-attesters -- -D warnings
-	cargo clippy -p attester --all-targets --features all-attesters,bin -- -D warnings
+lint:
+	cargo clippy -p attestation-agent --all-targets --no-default-features --features "$(AA_CHECK_FEATURES)" -- -D warnings
+	cargo clippy -p attester --all-targets --no-default-features --features "$(ATTESTER_PKG_FEATURES)" -- -D warnings
 	cargo clippy -p coco_keyprovider --all-targets -- -D warnings
-	cargo clippy -p kbc --all-targets --features cc_kbc,all-attesters,rust-crypto -- -D warnings
+	cargo clippy -p kbc --all-targets --no-default-features --features "$(KBC_FEATURES)" -- -D warnings
 	cargo clippy -p kbs_protocol --all-targets --no-default-features \
-		--features background_check,passport,rust-crypto,all-attesters,bin,aa_ttrpc -- -D warnings
-	cargo clippy -p crypto --all-targets --features rust-crypto -- -D warnings
+		--features "$(KBS_PROTOCOL_FEATURES)" -- -D warnings
+	cargo clippy -p crypto --all-targets --no-default-features --features $(CRYPTO) -- -D warnings
 	cargo clippy -p resource_uri --all-targets -- -D warnings
 
-lint-s390x:
-	cargo clippy -p attestation-agent --no-default-features --features openssl,kbs,coco_as,bin,grpc,ttrpc -- -D warnings
-	cargo clippy -p attester --all-targets --no-default-features --features se-attester,bin -- -D warnings
-	cargo clippy -p coco_keyprovider --all-targets -- -D warnings
-	cargo clippy -p kbc --all-targets --no-default-features --features cc_kbc,se-attester,openssl -- -D warnings
-	cargo clippy -p kbs_protocol --all-targets --no-default-features \
-		--features background_check,passport,openssl,se-attester,bin,aa_ttrpc -- -D warnings
-	cargo clippy -p crypto --all-targets --no-default-features --features openssl -- -D warnings
-	cargo clippy -p resource_uri --all-targets -- -D warnings
-
-lint-aarch64:
-	cargo clippy -p attestation-agent --no-default-features --features openssl,rust-crypto,cca-attester,kbs,coco_as,bin,grpc,ttrpc -- -D warnings
-	cargo clippy -p attester --all-targets --no-default-features --features cca-attester,bin -- -D warnings
-	cargo clippy -p coco_keyprovider --all-targets -- -D warnings
-	cargo clippy -p kbc --all-targets --no-default-features --features cc_kbc,cca-attester,rust-crypto -- -D warnings
-	cargo clippy -p kbs_protocol --all-targets --no-default-features \
-		--features background_check,passport,rust-crypto,cca-attester,bin,aa_ttrpc -- -D warnings
-	cargo clippy -p crypto --all-targets --features rust-crypto -- -D warnings
-	cargo clippy -p resource_uri --all-targets -- -D warnings
+test:
+	cargo test -p attestation-agent --all-targets --no-default-features --features "$(AA_CHECK_FEATURES)"
+	cargo test -p attester --all-targets --no-default-features --features "$(ATTESTER_PKG_FEATURES)"
+	cargo test -p coco_keyprovider --all-targets
+	cargo test -p kbc --all-targets --no-default-features --features "$(KBC_FEATURES)"
+	cargo test -p kbs_protocol --all-targets --no-default-features \
+		--features "$(KBS_PROTOCOL_FEATURES)"
+	cargo test -p crypto --all-targets --no-default-features --features $(CRYPTO)
+	cargo test -p resource_uri --all-targets
 
 install: 
 	install -D -m0755 $(TARGET) $(DESTDIR)/$(BIN_NAME)
@@ -157,5 +151,6 @@ clean:
 
 help:
 	@echo "==========================Help========================================="
+	@echo "build/lint/test share ATTESTER and OPENSSL (ARCH picks the default attester)"
 	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [OPENSSL=1] [ATTESTER=all-attesters]"
 	@echo "install: make install [DESTDIR=/path/to/target] [LIBC=(musl)]"
