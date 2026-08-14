@@ -108,6 +108,12 @@ build:
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)
 
+lint:
+	cargo clippy -p kms -p confidential-data-hub -- -D warnings
+
+test:
+	cargo test --features kbs,aliyun,bin -p kms -p confidential-data-hub -- --nocapture
+
 install: 
 	install -D -m0755 $(TARGET) $(DESTDIR)/$(BIN_NAME)
 

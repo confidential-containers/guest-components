@@ -92,5 +92,27 @@ build-protos:
   fi;
 	cargo build -p protos --features build
 
+fmt:
+	cargo fmt --all -- --check
+
+lint:
+	$(MAKE) -C $(AA) lint
+	$(MAKE) -C $(CDH) LIBC=gnu lint
+	$(MAKE) -C $(ASR) lint
+	$(MAKE) -C image-rs lint
+	$(MAKE) -C ocicrypt-rs lint
+
+# CDH and image-rs integration tests need root (loop/zfs devices, /etc fixtures).
+# sudo -E PATH=$(PATH) $(MAKE) test
+test:
+	@if [ "$$(id -u)" -ne 0 ]; then \
+		echo >&2 "note: CDH/image-rs tests need root; re-run with: sudo -E PATH=\$$PATH $(MAKE) test"; \
+	fi
+	$(MAKE) -C $(AA) test
+	$(MAKE) -C $(CDH) LIBC=gnu test
+	$(MAKE) -C $(ASR) test
+	$(MAKE) -C image-rs test
+	$(MAKE) -C ocicrypt-rs test
+
 clean:
 	rm -rf target
