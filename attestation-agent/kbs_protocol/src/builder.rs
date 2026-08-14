@@ -89,6 +89,9 @@ impl<T> KbsClientBuilder<T> {
     pub fn build(self) -> Result<KbsClient<T>> {
         let mut http_client_builder = reqwest::Client::builder()
             .cookie_store(true)
+            // KBS uses a 5-second keep-alive timeout by default.
+            // Use a shorter idle timeout to avoid reusing stale pooled connections.
+            .pool_idle_timeout(std::time::Duration::from_secs(4))
             .user_agent(format!(
                 "attestation-agent-kbs-client/{}",
                 env!("CARGO_PKG_VERSION")
