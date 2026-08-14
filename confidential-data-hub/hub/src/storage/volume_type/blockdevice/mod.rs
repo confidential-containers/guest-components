@@ -137,11 +137,41 @@ pub struct BlockDeviceParameters {
 }
 
 const MAX_KEY_REFERENCE_BYTES: usize = 64 * 1024;
+const PERSISTENT_OPTION_KEYS: [&str; 11] = [
+    "deviceId",
+    "devicePath",
+    "sourceType",
+    "key",
+    "volumeId",
+    "encryptionType",
+    "dataIntegrity",
+    "mapperName",
+    "targetType",
+    "filesystemType",
+    "mkfsOpts",
+];
 
 fn is_supported_key_reference(key: &str) -> bool {
     !key.is_empty()
         && key.len() <= MAX_KEY_REFERENCE_BYTES
         && (key.starts_with("sealed.") || key.starts_with("kbs://") || key.starts_with("file://"))
+}
+
+fn validate_persistent_option_keys(options: &HashMap<String, String>) -> Result<()> {
+    if options.get("sourceType").map(String::as_str) != Some("persistent") {
+        return Ok(());
+    }
+
+    if options
+        .keys()
+        .any(|key| !PERSISTENT_OPTION_KEYS.contains(&key.as_str()))
+    {
+        return Err(BlockDeviceError::InvalidPersistentConfiguration {
+            reason: "persistent source type contains an unsupported option",
+        });
+    }
+
+    Ok(())
 }
 
 fn validate_persistent_parameters(
@@ -230,6 +260,11 @@ impl BlockDevice {
         _flags: &[String],
         mount_point: &str,
     ) -> Result<()> {
+        // Legacy modes historically ignored extra fields. Persistent mode can
+        // initialize a device, so reject an option the implementation does not
+        // understand before deserialization can silently discard it.
+        validate_persistent_option_keys(options)?;
+
         // construct BlockDeviceParameters
         let parameters = serde_json::to_string(options)?;
         let parameters: BlockDeviceParameters = serde_json::from_str(&parameters)?;
@@ -441,6 +476,7 @@ mod tests {
     #[test]
     fn persistent_boundary_validation_fails_closed() {
         let options = persistent_options();
+        validate_persistent_option_keys(&options).unwrap();
         let parameters = parse_block_device_parameters(&options);
         let volume_id = validate_persistent_parameters(&parameters, "/run/cdh/web-data")
             .unwrap()
@@ -518,6 +554,10 @@ mod tests {
         assert!(validate_persistent_parameters(&parameters, "relative/path").is_err());
         assert!(validate_persistent_parameters(&parameters, "/").is_err());
         assert!(validate_persistent_parameters(&parameters, "/run/../etc").is_err());
+
+        let mut unknown = persistent_options();
+        unknown.insert("grow".to_string(), "true".to_string());
+        assert!(validate_persistent_option_keys(&unknown).is_err());
     }
 
     #[test]
@@ -527,6 +567,8 @@ mod tests {
             options.insert("sourceType".to_string(), source_type.to_string());
             options.remove("volumeId");
             options.insert("key".to_string(), "file://legacy-key".to_string());
+            options.insert("legacyIgnoredField".to_string(), "value".to_string());
+            validate_persistent_option_keys(&options).unwrap();
             let parameters = parse_block_device_parameters(&options);
             assert_eq!(
                 validate_persistent_parameters(&parameters, "/legacy/mount").unwrap(),
