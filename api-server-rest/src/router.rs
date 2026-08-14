@@ -296,7 +296,7 @@ impl Router {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hyper::{body::to_bytes, Method, Request, StatusCode};
+    use hyper::{Method, Request, StatusCode, body::to_bytes};
     use rstest::rstest;
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
@@ -427,7 +427,10 @@ mod tests {
             serde_json::from_str(&body_str(get_info(&router).await).await).unwrap();
         assert!(val.get("version").is_some(), "version field missing");
         assert_eq!(val["feature"], "resource");
-        assert!(val.get("tee").is_none(), "tee should be absent without AA client");
+        assert!(
+            val.get("tee").is_none(),
+            "tee should be absent without AA client"
+        );
         assert!(
             val.get("additional_tees").is_none(),
             "additional_tees should be absent without AA client"
@@ -475,10 +478,7 @@ mod tests {
     #[case(Method::POST, "/aa/aael")]
     #[case(Method::GET, "/aa/unknown-route")]
     #[tokio::test]
-    async fn aa_endpoint_without_client_returns_404(
-        #[case] method: Method,
-        #[case] uri: &str,
-    ) {
+    async fn aa_endpoint_without_client_returns_404(#[case] method: Method, #[case] uri: &str) {
         let router = router_no_clients();
         let req = Request::builder()
             .method(method)
