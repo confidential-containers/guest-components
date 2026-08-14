@@ -46,6 +46,7 @@ use crate::storage::volume_type::blockdevice::SourceType;
 
 /// Algorithm of the integrity hash (dm-integrity format name)
 const HMAC_SHA256: &str = "hmac-sha256";
+const HMAC_SHA256_STATUS: &str = "hmac(sha256)";
 
 const SECTOR_SIZE: u32 = 4096;
 
@@ -414,6 +415,12 @@ pub struct Luks2Formatter {
     pub integrity: bool,
 }
 
+#[derive(Clone, Copy)]
+enum IntegrityInitialization {
+    SkipWipeWithoutJournal,
+    CompleteWithJournal,
+}
+
 impl Luks2Formatter {
     pub fn with_integrity(mut self, integrity: bool) -> Self {
         self.integrity = integrity;
@@ -427,7 +434,13 @@ impl Luks2Formatter {
         header_path: Option<&str>,
         passphrase: &[u8],
     ) -> anyhow::Result<()> {
-        self.encrypt_device_with_payload_alignment(device_path, header_path, None, passphrase)
+        self.encrypt_device_with_payload_alignment(
+            device_path,
+            header_path,
+            None,
+            IntegrityInitialization::SkipWipeWithoutJournal,
+            passphrase,
+        )
     }
 
     fn encrypt_device_with_payload_alignment(
@@ -435,6 +448,7 @@ impl Luks2Formatter {
         device_path: &str,
         header_path: Option<&str>,
         payload_alignment_sectors: Option<u64>,
+        integrity_initialization: IntegrityInitialization,
         passphrase: &[u8],
     ) -> anyhow::Result<()> {
         let sector_size_str = SECTOR_SIZE.to_string();
@@ -471,8 +485,13 @@ impl Luks2Formatter {
         if self.integrity {
             args.push("--integrity");
             args.push(HMAC_SHA256);
-            args.push("--integrity-no-wipe");
-            args.push("--integrity-no-journal");
+            match integrity_initialization {
+                IntegrityInitialization::SkipWipeWithoutJournal => {
+                    args.push("--integrity-no-wipe");
+                    args.push("--integrity-no-journal");
+                }
+                IntegrityInitialization::CompleteWithJournal => {}
+            }
         }
 
         args.push(device_path);
@@ -858,14 +877,25 @@ fn initialize_persistent_header(
         .path()
         .to_str()
         .context("protected LUKS2 header path is not UTF-8")?;
+    let started = Instant::now();
+    info!(
+        device_path,
+        "starting persistent LUKS2 format and complete dm-integrity tag initialization"
+    );
     formatter
         .encrypt_device_with_payload_alignment(
             device_path,
             Some(header_path),
             Some(PERSISTENT_DATA_OFFSET_SECTORS),
+            IntegrityInitialization::CompleteWithJournal,
             key,
         )
         .context("create detached persistent LUKS2 header")?;
+    info!(
+        device_path,
+        elapsed_seconds = started.elapsed().as_secs(),
+        "completed persistent LUKS2 format and dm-integrity tag initialization"
+    );
     let mac = persist_header(device, header.as_file(), auth_key, volume_id)?;
     let initializing = prepared.with_header(mac)?;
     store_persistent_metadata(device, &initializing, auth_key)?;
@@ -897,6 +927,11 @@ fn persistent_mapper_backing_path(output: &str) -> Result<&str> {
         .context("cryptsetup status did not identify the mapper type")?;
     if mapping_type != "LUKS2" {
         bail!("persistent mapper name is active for a non-LUKS2 mapping")
+    }
+    let integrity = parse_cryptsetup_status_field(output, "integrity")
+        .context("cryptsetup status did not identify the mapper integrity algorithm")?;
+    if integrity != HMAC_SHA256_STATUS {
+        bail!("persistent mapper reported unexpected integrity algorithm {integrity:?}")
     }
     parse_cryptsetup_status_field(output, "device")
         .context("cryptsetup status did not identify the mapper backing device")
@@ -1076,8 +1111,8 @@ impl Luks2MountParameters {
             return Err("mapperName is derived from volumeId and must be omitted");
         }
         match self.data_integrity.as_deref() {
-            None | Some("false") => {}
-            Some("true") => return Err("dataIntegrity is not supported by persistent mode yet"),
+            Some("true") => {}
+            None | Some("false") => return Err("persistent mode requires dataIntegrity=true"),
             Some(_) => return Err("dataIntegrity must be true or false"),
         }
         match &self.target_type {
@@ -1125,7 +1160,7 @@ impl Luks2MountParameters {
         let mapper_name = volume_id.mapper_name();
         let mapper_path = format!("/dev/mapper/{mapper_name}");
         let mapper_exists = Path::new(&mapper_path).exists();
-        let formatter = Luks2Formatter::default();
+        let formatter = Luks2Formatter::default().with_integrity(true);
 
         let device = open_persistent_device(device_path)?;
         let auth_key = derive_persistent_auth_key(&key, &volume_id)?;
@@ -1235,7 +1270,7 @@ impl Luks2MountParameters {
                             args: Vec::new(),
                         };
                         fs_formatter
-                            .format(&mapper_path)
+                            .format_with_eager_inode_initialization(&mapper_path)
                             .context("create persistent ext4 filesystem")?;
                         mount_filesystem(&mapper_path, mount_point, filesystem_type)
                             .context("mount initialized persistent filesystem")?;
@@ -1411,7 +1446,7 @@ impl Luks2MountParameters {
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
+    use std::io::{Read, Write};
 
     use serial_test::serial;
     use zeroize::Zeroizing;
@@ -1425,7 +1460,7 @@ mod tests {
 
     fn persistent_parameters() -> Luks2MountParameters {
         Luks2MountParameters {
-            data_integrity: None,
+            data_integrity: Some("true".to_string()),
             mapper_name: None,
             target_type: TargetType::FileSystem {
                 filesystem_type: FsType::Ext4,
@@ -1639,7 +1674,11 @@ mod tests {
         assert!(parameters.validate_persistent().is_err());
 
         let mut parameters = persistent_parameters();
-        parameters.data_integrity = Some("true".to_string());
+        parameters.data_integrity = Some("false".to_string());
+        assert!(parameters.validate_persistent().is_err());
+
+        let mut parameters = persistent_parameters();
+        parameters.data_integrity = None;
         assert!(parameters.validate_persistent().is_err());
 
         let mut parameters = persistent_parameters();
@@ -1668,7 +1707,12 @@ mod tests {
 
     #[test]
     fn parsers_require_exact_mapper_and_mount_identity() {
-        let status = "/dev/mapper/coco-pv-test is active.\n  type: LUKS2\n  device: /dev/vdb\n";
+        let status = concat!(
+            "/dev/mapper/coco-pv-test is active.\n",
+            "  type: LUKS2\n",
+            "  integrity: hmac(sha256)\n",
+            "  device: /dev/vdb\n",
+        );
         assert_eq!(parse_cryptsetup_status_field(status, "type"), Some("LUKS2"));
         assert_eq!(
             parse_cryptsetup_status_field(status, "device"),
@@ -1676,7 +1720,11 @@ mod tests {
         );
         assert_eq!(persistent_mapper_backing_path(status).unwrap(), "/dev/vdb");
         assert!(persistent_mapper_backing_path("type: PLAIN\ndevice: /dev/vdb\n").is_err());
-        assert!(persistent_mapper_backing_path("type: LUKS2\n").is_err());
+        assert!(persistent_mapper_backing_path("type: LUKS2\ndevice: /dev/vdb\n").is_err());
+        assert!(persistent_mapper_backing_path(
+            "type: LUKS2\nintegrity: crc32c\ndevice: /dev/vdb\n"
+        )
+        .is_err());
         assert_eq!(
             parse_cryptsetup_status_field("type: LUKS2\n", "device"),
             None
@@ -1795,6 +1843,20 @@ mod tests {
             .state
     }
 
+    fn device_digest(device_path: &str) -> [u8; 32] {
+        let mut device = File::open(device_path).unwrap();
+        let mut hasher = Sha256::new();
+        let mut buffer = vec![0u8; 1024 * 1024];
+        loop {
+            let count = device.read(&mut buffer).unwrap();
+            if count == 0 {
+                break;
+            }
+            hasher.update(&buffer[..count]);
+        }
+        hasher.finalize().into()
+    }
+
     #[cfg(target_os = "linux")]
     #[tokio::test]
     #[ignore = "requires root, cryptsetup, loop devices, and mount privileges"]
@@ -1820,6 +1882,11 @@ mod tests {
             )
             .await
             .unwrap();
+        let (status, _) = run_command(CRYPTSETUP_BIN, &["status", &mapper_name], None).unwrap();
+        assert_eq!(
+            persistent_mapper_backing_path(&status).unwrap(),
+            device.dev_path()
+        );
         std::fs::write(mount_directory.path().join("sentinel"), b"preserve me").unwrap();
         nix::mount::umount(mount_point).unwrap();
         Luks2Formatter::default()
@@ -1927,6 +1994,125 @@ mod tests {
     }
 
     #[cfg(target_os = "linux")]
+    #[tokio::test]
+    #[ignore = "requires root, loop devices, and block-device access"]
+    #[serial]
+    async fn interrupted_persistent_integrity_format_fails_without_mutation() {
+        let device = TempFileLoopDevice::new(128 * 1024 * 1024).unwrap();
+        let mount_directory = tempfile::tempdir().unwrap();
+        let mount_point = mount_directory.path().to_str().unwrap();
+        let volume_id = PersistentVolumeId::try_from("tenant/workload/interrupted-format").unwrap();
+        let mapper_name = volume_id.mapper_name();
+        let key = b"persistent-interrupted-format-test-key";
+        let source = open_persistent_device(device.dev_path()).unwrap();
+        let auth_key = derive_persistent_auth_key(key, &volume_id).unwrap();
+        let prepared = PersistentMetadataRecord::prepared(&volume_id);
+        store_persistent_metadata(&source, &prepared, &auth_key).unwrap();
+
+        // cryptsetup writes the dm-integrity superblock before it can return a
+        // complete detached header. A power loss there must never authorize a
+        // destructive retry against the now-nonzero device.
+        source
+            .write_all_at(&[0x5a], PERSISTENT_DATA_OFFSET_BYTES)
+            .unwrap();
+        source.sync_all().unwrap();
+        let before = device_digest(device.dev_path());
+
+        let error = persistent_parameters()
+            .do_mount_persistent(
+                device.dev_path(),
+                mount_point,
+                Zeroizing::new(key.to_vec()),
+                volume_id,
+            )
+            .await
+            .unwrap_err();
+
+        assert!(format!("{error:#}")
+            .contains("prepared persistent LUKS2 device contains nonzero payload data"));
+        assert_eq!(device_digest(device.dev_path()), before);
+        assert!(!Path::new(&format!("/dev/mapper/{mapper_name}")).exists());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    #[ignore = "requires root, cryptsetup, loop devices, mkfs, blkid, and mount privileges"]
+    #[serial]
+    async fn persistent_luks2_detects_corrupted_payload() {
+        let device = TempFileLoopDevice::new(128 * 1024 * 1024).unwrap();
+        let mount_directory = tempfile::tempdir().unwrap();
+        let mount_point = mount_directory.path().to_str().unwrap();
+        let volume_id = PersistentVolumeId::try_from("tenant/workload/payload-tamper").unwrap();
+        let mapper_name = volume_id.mapper_name();
+        let mapper_path = format!("/dev/mapper/{mapper_name}");
+        let _resources = PersistentResourcesOnDrop {
+            mapper_name: mapper_name.clone(),
+            mount_point: mount_point.to_string(),
+        };
+        let key = b"persistent-payload-tamper-test-key";
+        let formatter = Luks2Formatter::default().with_integrity(true);
+
+        persistent_parameters()
+            .do_mount_persistent(
+                device.dev_path(),
+                mount_point,
+                Zeroizing::new(key.to_vec()),
+                volume_id.clone(),
+            )
+            .await
+            .unwrap();
+        nix::mount::umount(mount_point).unwrap();
+        formatter.close_device(&mapper_name).unwrap();
+
+        // LUKS2 integrity metadata is at the start of the payload area. Alter a
+        // complete sector well inside the remaining physical payload, then
+        // prove a fresh mapping cannot read through the corrupted data/tag.
+        let corruption_offset = PERSISTENT_DATA_OFFSET_BYTES + 64 * 1024 * 1024;
+        let device_file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(device.dev_path())
+            .unwrap();
+        let mut corrupted_sector = [0u8; SECTOR_SIZE as usize];
+        device_file
+            .read_exact_at(&mut corrupted_sector, corruption_offset)
+            .unwrap();
+        for byte in &mut corrupted_sector {
+            *byte ^= 0xff;
+        }
+        device_file
+            .write_all_at(&corrupted_sector, corruption_offset)
+            .unwrap();
+        device_file.sync_all().unwrap();
+
+        let source = open_persistent_device(device.dev_path()).unwrap();
+        let auth_key = derive_persistent_auth_key(key, &volume_id).unwrap();
+        let record = load_persistent_metadata(&source, &auth_key, &volume_id)
+            .unwrap()
+            .unwrap();
+        let header = load_verified_header(&source, &record, &auth_key, &volume_id).unwrap();
+        formatter
+            .open_device(
+                device.dev_path(),
+                Some(header.path().to_str().unwrap()),
+                &mapper_name,
+                key,
+            )
+            .unwrap();
+
+        let mut mapper = File::open(&mapper_path).unwrap();
+        let mut buffer = vec![0u8; 1024 * 1024];
+        let read_error = loop {
+            match mapper.read(&mut buffer) {
+                Ok(0) => panic!("dm-integrity accepted a corrupted persistent payload"),
+                Ok(_) => {}
+                Err(error) => break error,
+            }
+        };
+        assert_eq!(read_error.raw_os_error(), Some(nix::libc::EIO));
+    }
+
+    #[cfg(target_os = "linux")]
     #[derive(Clone, Copy, Debug)]
     enum PersistentCrashBoundary {
         BeforeMetadata,
@@ -1968,7 +2154,7 @@ mod tests {
                 mount_point: mount_point.to_string(),
             };
             let key = b"persistent-crash-boundary-test-key";
-            let formatter = Luks2Formatter::default();
+            let formatter = Luks2Formatter::default().with_integrity(true);
             let mut expect_sentinel = false;
 
             if matches!(boundary, PersistentCrashBoundary::AfterReadyMetadata) {
@@ -2024,7 +2210,7 @@ mod tests {
                             force: true,
                             args: Vec::new(),
                         }
-                        .format(&mapper_path)
+                        .format_with_eager_inode_initialization(&mapper_path)
                         .unwrap();
                     }
                     if matches!(boundary, PersistentCrashBoundary::AfterFilesystemMount) {

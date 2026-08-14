@@ -441,6 +441,7 @@ mod tests {
             ("targetType".to_string(), "fileSystem".to_string()),
             ("devicePath".to_string(), "/dev/vdb".to_string()),
             ("encryptionType".to_string(), "luks2".to_string()),
+            ("dataIntegrity".to_string(), "true".to_string()),
             ("filesystemType".to_string(), "ext4".to_string()),
             (
                 "key".to_string(),
@@ -521,7 +522,7 @@ mod tests {
         for (name, value) in [
             ("mapperName", "caller-controlled"),
             ("mkfsOpts", "-F /dev/other"),
-            ("dataIntegrity", "true"),
+            ("dataIntegrity", "false"),
         ] {
             let mut invalid = persistent_options();
             invalid.insert(name.to_string(), value.to_string());

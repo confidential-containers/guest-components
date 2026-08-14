@@ -91,8 +91,11 @@ In both modes, the cleartext device or filesystem is only exposed inside the TEE
     It initializes only a completely zero device. CDH authenticates the full
     LUKS2 header before cryptsetup sees a detached copy under `/run`. Two
     authenticated state records support crash recovery but do not provide
-    rollback protection. Persistent mode does not yet support dm-integrity, so
-    payload tamper detection remains the caller's responsibility.
+    rollback protection. Persistent mode requires dm-integrity so modification
+    of mutable ciphertext is detected inside the guest, and keeps its journal
+    enabled so data and authentication-tag writes are crash consistent. First
+    use scans the complete device and initializes every integrity tag before
+    formatting ext4.
 - **ZFS mode**:
   - Always provides a filesystem mount at the given `mount_point`; `targetType` is currently ignored but should be set to `"fileSystem"` for clarity.
   - Adds ZFS-specific options: `pool` (zpool name, defaults to `zpool`) and `dataset` (dataset name, defaults to `zdataset`).

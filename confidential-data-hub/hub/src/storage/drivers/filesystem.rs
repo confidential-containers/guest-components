@@ -72,32 +72,8 @@ impl FsFormatter {
         let args = vec!["-F", "-n", device_path];
         let (stdout, stderr) = run_command(command, &args, None)?;
 
-        // Get the block numbers
-        let delimiter = "Superblock backups stored on blocks:";
-        let start = stdout
-            .find(delimiter)
-            .map(|pos| pos + delimiter.len())
-            .ok_or_else(|| anyhow!("Failed to get the block numbers: {stdout}\n{stderr}"))?;
-
-        let tail = &stdout[start..];
-        let mut nums: Vec<u64> = tail
-            .split(|c: char| c == ',' || c.is_whitespace())
-            .filter_map(|tok| {
-                let tok = tok.trim();
-                if tok.is_empty() {
-                    return None;
-                }
-                tok.trim_matches(|c: char| !c.is_ascii_digit())
-                    .parse::<u64>()
-                    .ok()
-            })
-            .collect();
-
-        nums.push(0);
-        nums.dedup();
-        if nums.is_empty() {
-            bail!("Failed to get the block numbers: {stdout}\n{stderr}");
-        }
+        let nums = ext4_superblock_blocks(&stdout)
+            .map_err(|error| anyhow!("{error}: {stdout}\n{stderr}"))?;
 
         for num in nums {
             let _ = run_command(
@@ -127,6 +103,10 @@ impl FsFormatter {
         self.format_with_args(device_path, &self.args)
     }
 
+    pub fn format_with_eager_inode_initialization(&self, device_path: &str) -> Result<()> {
+        self.format_with_args(device_path, &disable_lazy_itable_init(&self.args))
+    }
+
     fn format_with_args(&self, device_path: &str, format_args: &[String]) -> Result<()> {
         let command = match self.fs_type {
             FsType::Ext4 => {
@@ -149,6 +129,62 @@ impl FsFormatter {
 
         Ok(())
     }
+}
+
+fn ext4_superblock_blocks(output: &str) -> Result<Vec<u64>> {
+    let creation = output
+        .lines()
+        .find(|line| line.starts_with("Creating filesystem with "))
+        .ok_or_else(|| anyhow!("mkfs.ext4 dry run did not describe the filesystem layout"))?;
+    let fields: Vec<_> = creation.split_ascii_whitespace().collect();
+    if fields.len() != 9
+        || fields[..3] != ["Creating", "filesystem", "with"]
+        || fields[5..7] != ["blocks", "and"]
+        || fields[8] != "inodes"
+        || fields[3]
+            .parse::<u64>()
+            .ok()
+            .filter(|count| *count > 0)
+            .is_none()
+        || fields[7]
+            .parse::<u64>()
+            .ok()
+            .filter(|count| *count > 0)
+            .is_none()
+    {
+        bail!("mkfs.ext4 dry run returned a malformed filesystem layout")
+    }
+    if fields[4] != "4k" {
+        bail!("mkfs.ext4 dry run did not select the required 4k block size")
+    }
+
+    let mut blocks = vec![0];
+    let delimiter = "Superblock backups stored on blocks:";
+    let Some(start) = output
+        .find(delimiter)
+        .map(|position| position + delimiter.len())
+    else {
+        return Ok(blocks);
+    };
+    let mut found_backup = false;
+    for token in
+        output[start..].split(|character: char| character == ',' || character.is_whitespace())
+    {
+        if token.is_empty() {
+            continue;
+        }
+        if !token.bytes().all(|byte| byte.is_ascii_digit()) {
+            bail!("mkfs.ext4 dry run returned a malformed backup-superblock list")
+        }
+        blocks.push(token.parse()?);
+        found_backup = true;
+    }
+    if !found_backup {
+        bail!("mkfs.ext4 dry run returned an empty backup-superblock list")
+    }
+    blocks.sort_unstable();
+    blocks.dedup();
+    Ok(blocks)
 }
 
 // Keep explicit caller choices, but default ext4 to eager inode table initialization.
@@ -200,7 +236,46 @@ fn is_dd_installed() -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::disable_lazy_itable_init;
+    use super::{disable_lazy_itable_init, ext4_superblock_blocks};
+
+    #[test]
+    fn ext4_layout_accepts_single_group_without_backup_superblocks() {
+        let output = "Creating filesystem with 28214 4k blocks and 28224 inodes\n";
+        assert_eq!(ext4_superblock_blocks(output).unwrap(), vec![0]);
+    }
+
+    #[test]
+    fn ext4_layout_includes_primary_and_backup_superblocks() {
+        let output = concat!(
+            "Creating filesystem with 268435456 4k blocks and 67108864 inodes\n",
+            "Filesystem UUID: test-only\n",
+            "Superblock backups stored on blocks:\n",
+            "    32768, 98304, 163840\n",
+        );
+        assert_eq!(
+            ext4_superblock_blocks(output).unwrap(),
+            vec![0, 32768, 98304, 163840]
+        );
+    }
+
+    #[test]
+    fn ext4_layout_rejects_non_4k_or_malformed_output() {
+        assert!(ext4_superblock_blocks(
+            "Creating filesystem with 112856 1k blocks and 28224 inodes\n"
+        )
+        .is_err());
+        assert!(ext4_superblock_blocks("Creating filesystem with unknown layout\n").is_err());
+        assert!(ext4_superblock_blocks(concat!(
+            "Creating filesystem with 268435456 4k blocks and 67108864 inodes\n",
+            "Superblock backups stored on blocks: 32768, invalid\n",
+        ))
+        .is_err());
+        assert!(ext4_superblock_blocks(concat!(
+            "Creating filesystem with 268435456 4k blocks and 67108864 inodes\n",
+            "Superblock backups stored on blocks:\n",
+        ))
+        .is_err());
+    }
 
     #[test]
     fn ext4_args_add_lazy_itable_init_when_missing() {

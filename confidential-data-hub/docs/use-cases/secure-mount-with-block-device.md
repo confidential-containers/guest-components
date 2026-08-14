@@ -81,22 +81,33 @@ interrupted. It formats ext4 only in the initializing state after `blkid`
 conclusively reports no filesystem. A ready device without the expected ext4
 filesystem fails closed.
 
-The complete-device scan is paid only on first initialization. Its duration is
-bounded by the backing volume's sequential-read throughput: for example, 1 TB
-at 1 GB/s takes about 16 minutes 40 seconds. CDH logs scan progress every 64 GiB
-so operators can distinguish a large-volume initialization from a stalled
-mount. Initialization requests for different block devices run concurrently;
-requests that resolve to the same device are serialized, including requests
-through different path aliases.
+The complete-device scan and initialization of every dm-integrity tag are paid
+only on first initialization. Total time scales with the backing volume's full
+sequential-read and integrity-initialization throughput. CDH logs the start and
+completion of both phases and zero-scan progress every 64 GiB. Initialization
+requests for different block devices run concurrently; requests that resolve
+to the same device are serialized, including requests through different path
+aliases.
+
+If power is lost while cryptsetup is initializing integrity tags but before it
+returns the complete detached header, the next request fails closed without
+rewriting the nonzero payload. That still-unadmitted volume must be replaced by
+a fresh zero volume. Once the authenticated header is committed, CDH recovers
+the later initialization phases without reformatting an existing ext4
+filesystem.
 
 Persistent mode requires all of the following:
 
 - a stable `volumeId`;
 - `targetType: "fileSystem"` and `filesystemType: "ext4"`;
 - no caller-provided `mapperName` or `mkfsOpts`;
-- `dataIntegrity` omitted or `false`;
+- `dataIntegrity: "true"` so mutable ciphertext is authenticated with
+  dm-integrity;
 - an explicit `sealed.*`, `kbs://`, or `file://` reference to 32 through 4096
   bytes of randomly generated key material.
+
+Persistent mode does not resize volumes. Unknown options, including a growth
+request, are rejected before the block device is opened.
 
 ```json
 {
@@ -106,6 +117,7 @@ Persistent mode requires all of the following:
         "sourceType": "persistent",
         "targetType": "fileSystem",
         "encryptionType": "luks2",
+        "dataIntegrity": "true",
         "filesystemType": "ext4",
         "volumeId": "tenant/workload/volume-name",
         "key": "kbs:///tenant/storage/volume-key"
@@ -119,12 +131,12 @@ The authenticated state slots do not provide anti-rollback protection. A
 storage provider can replay an older valid disk image. Preventing rollback
 requires an external monotonic authority.
 
-Persistent mode authenticates the LUKS2 header and CDH state, not the encrypted
-filesystem payload. Because persistent mode does not yet support
-`dataIntegrity: true`, callers that need tamper detection must add integrity at
-the application layer. The storage provider can still corrupt or replay
-ciphertext, although it cannot replace the authenticated header with a null
-cipher to expose later writes.
+Persistent mode requires journaled dm-integrity so modification of mutable
+ciphertext is detected by the guest and data/tag writes remain crash
+consistent. The authenticated header prevents the host from changing or
+disabling that integrity configuration. The storage provider can still
+withhold data or replay an older complete disk image; preventing rollback
+requires an external monotonic authority.
 
 [luks2-cvm]: https://blog.trailofbits.com/2025/10/30/vulnerabilities-in-luks2-disk-encryption-for-confidential-vms/
 
