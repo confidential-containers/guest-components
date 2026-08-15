@@ -97,3 +97,35 @@ pub async fn new_getter(
         ) as Box<dyn Getter>),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        ProviderSettings,
+        plugins::{new_decryptor, new_getter},
+    };
+
+    #[tokio::test]
+    async fn new_getter_unsupported_provider_returns_error() {
+        let result = new_getter("no_such_provider", ProviderSettings::default()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn new_decryptor_unsupported_provider_returns_error() {
+        let result = new_decryptor("no_such_provider", ProviderSettings::default()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn new_getter_empty_string_provider_returns_error() {
+        let result = new_getter("", ProviderSettings::default()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn new_decryptor_empty_string_provider_returns_error() {
+        let result = new_decryptor("", ProviderSettings::default()).await;
+        assert!(result.is_err());
+    }
+}
