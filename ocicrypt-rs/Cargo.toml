@@ -100,7 +100,6 @@ keywrap-keyprovider-native = [
     "zeroize",
     "kbc/cc_kbc",
     "kbc/rust-crypto",
-    "kbc/sample_kbc",
     "kbc/sgx-attester",
     "resource_uri",
 ]

@@ -6,35 +6,23 @@
 #[macro_use]
 extern crate strum;
 
-use std::collections::HashMap;
-
 use anyhow::*;
 use async_trait::async_trait;
 use resource_uri::ResourceUri;
-use serde::{Deserialize, Serialize};
 
 pub use self::annotation_packet::AnnotationPacket;
 
-// Add your specific kbc declaration here.
-// For example: "pub mod sample_kbc;"
-#[allow(dead_code)]
 #[cfg(feature = "cc_kbc")]
 pub mod cc_kbc;
 
-#[cfg(feature = "offline_fs_kbc")]
 pub mod offline_fs_kbc;
-
-#[cfg(feature = "sample_kbc")]
 pub mod sample_kbc;
 
 pub mod annotation_packet;
 
-// KbcInterface is a standard interface that all KBC modules need to implement.
+/// KbcInterface is a standard interface that all KBC modules need to implement.
 #[async_trait]
 pub trait KbcInterface: Send {
-    /// Get information about KBC plugin.
-    fn check(&self) -> Result<KbcCheckInfo>;
-
     /// Decrypt module specific encrypted payload into plaintext in asynchronous mode.
     /// The reason why this interface consumes the [`AnnotationPacket`] instead of simply
     /// return the key by key id is that some potential KBCs which use specific KMS can not
@@ -45,85 +33,6 @@ pub trait KbcInterface: Send {
     async fn get_resource(&mut self, _resource_uri: ResourceUri) -> Result<Vec<u8>> {
         bail!("Get Resource API of this KBC is unimplement!")
     }
-}
-
-/// A container type for [KbcInterface] trait objects.
-pub type KbcInstance = Box<dyn KbcInterface + Sync + Send>;
-
-/// Status information about KBC modules.
-pub struct KbcCheckInfo {
-    pub kbs_info: HashMap<String, String>,
-    // In the future, more KBC status fields will be expanded here.
-}
-
-type KbcInstantiateFunc = Box<dyn Fn(String) -> KbcInstance + Send + Sync>;
-
-/// A container type to host all registered KBC modules.
-pub struct KbcModuleList {
-    mod_list: HashMap<String, KbcInstantiateFunc>,
-}
-
-impl Default for KbcModuleList {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl KbcModuleList {
-    /// Create a new [KbcModuleList] and register all known KBC modules.
-    pub fn new() -> KbcModuleList {
-        #[allow(unused_mut)]
-        let mut mod_list = HashMap::new();
-
-        #[cfg(feature = "sample_kbc")]
-        {
-            let instantiate_func: KbcInstantiateFunc = Box::new(|kbs_uri: String| -> KbcInstance {
-                Box::new(sample_kbc::SampleKbc::new(kbs_uri))
-            });
-            mod_list.insert("sample_kbc".to_string(), instantiate_func);
-        }
-
-        #[cfg(feature = "cc_kbc")]
-        {
-            let instantiate_func: KbcInstantiateFunc = Box::new(|kbs_uri: String| -> KbcInstance {
-                Box::new(cc_kbc::Kbc::new(kbs_uri).unwrap())
-            });
-            mod_list.insert("cc_kbc".to_string(), instantiate_func);
-        }
-
-        #[cfg(feature = "offline_fs_kbc")]
-        {
-            let instantiate_func: KbcInstantiateFunc = Box::new(|_: String| -> KbcInstance {
-                Box::new(offline_fs_kbc::OfflineFsKbc::new())
-            });
-            mod_list.insert("offline_fs_kbc".to_string(), instantiate_func);
-        }
-
-        KbcModuleList { mod_list }
-    }
-
-    /// Get initialization function for a KBC module.
-    pub fn get_func(&self, kbc_name: &str) -> Result<&KbcInstantiateFunc> {
-        let instantiate_func: &KbcInstantiateFunc =
-            self.mod_list.get(kbc_name).ok_or_else(|| {
-                anyhow!(
-                    "AA does not support the given KBC module! Module: {}",
-                    kbc_name
-                )
-            })?;
-        Ok(instantiate_func)
-    }
-
-    pub fn names(&self) -> Vec<String> {
-        self.mod_list.keys().cloned().collect()
-    }
-}
-
-/// Descriptor for resources managed by attestation agent.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ResourceDescription {
-    name: String,
-    optional: HashMap<String, String>,
 }
 
 pub mod tests {
