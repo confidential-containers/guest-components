@@ -3854,7 +3854,6 @@ dependencies = [
  "devicemapper",
  "filetime",
  "flate2",
- "futures",
  "futures-util",
  "hex",
  "kbc",
