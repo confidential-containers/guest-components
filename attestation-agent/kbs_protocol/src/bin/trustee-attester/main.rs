@@ -81,7 +81,10 @@ async fn main() -> Result<()> {
 
     // Sets TeeKeyAlgorithm to ML-KEM if pqc-experimental feature enabled.
     #[cfg(feature = "pqc-experimental")]
-    client_builder.set_tee_key_algorithm(TeeKeyAlgorithm::MlKem768A192Kw);
+    {
+        client_builder =
+            client_builder.set_tee_key_algorithm(kbs_protocol::TeeKeyAlgorithm::MlKem768A192Kw);
+    }
 
     // if a certificate is given, use it
     if let Some(cf) = cert_file {
