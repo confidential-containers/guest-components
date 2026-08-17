@@ -4,7 +4,7 @@
 
 use anyhow::{anyhow, bail, Context, Result};
 use filetime::FileTime;
-use futures::StreamExt;
+use futures_util::StreamExt;
 use nix::libc;
 use nix::libc::timeval;
 use pathrs::{flags::OpenFlags, InodeType, Root};

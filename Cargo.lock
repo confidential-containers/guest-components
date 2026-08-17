@@ -3860,13 +3860,12 @@ dependencies = [
  "devicemapper",
  "filetime",
  "flate2",
- "futures",
  "futures-util",
  "hex",
  "kbc",
  "loopdev",
  "nix 0.31.3",
- "oci-client 0.16.1",
+ "oci-client 0.17.0",
  "oci-spec 0.10.0",
  "ocicrypt-rs",
  "pathrs",
@@ -4320,7 +4319,6 @@ dependencies = [
  "serde_json",
  "strum 0.28.0",
  "tokio",
- "url",
  "zeroize",
 ]
 
@@ -5051,8 +5049,9 @@ dependencies = [
 
 [[package]]
 name = "oci-client"
-version = "0.16.1"
-source = "git+https://github.com/oras-project/rust-oci-client?rev=83092a67ebcaeed832eae090895a1c178d867344#83092a67ebcaeed832eae090895a1c178d867344"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5261a7fb43d9c53b8e63e6d5e86860719dad253d015d022066c72d585125aed8"
 dependencies = [
  "bytes",
  "chrono",
