@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::{KbcCheckInfo, KbcInterface};
+use crate::KbcInterface;
 
 pub mod common;
 use common::*;
@@ -13,7 +13,6 @@ use async_trait::async_trait;
 use base64::Engine;
 use crypto::WrapType;
 use resource_uri::{ResourcePluginPath, ResourceUri};
-use std::collections::HashMap;
 use zeroize::Zeroizing;
 
 use super::AnnotationPacket;
@@ -22,8 +21,6 @@ const KEYS_PATH: &str = "/etc/aa-offline_fs_kbc-keys.json";
 const RESOURCES_PATH: &str = "/etc/aa-offline_fs_kbc-resources.json";
 
 pub struct OfflineFsKbc {
-    // KBS info for compatibility; unused
-    kbs_info: HashMap<String, String>,
     // Stored keys, loaded from file system; load might fail
     keys: Result<Keys>,
     // Stored resources, loaded from file system; load might fail
@@ -32,12 +29,6 @@ pub struct OfflineFsKbc {
 
 #[async_trait]
 impl KbcInterface for OfflineFsKbc {
-    fn check(&self) -> Result<KbcCheckInfo> {
-        Ok(KbcCheckInfo {
-            kbs_info: self.kbs_info.clone(),
-        })
-    }
-
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
         let key = self.get_key(&annotation_packet.kid.resource_path()).await?;
         let wrap_type = WrapType::try_from(&annotation_packet.wrap_type[..])?;
@@ -68,7 +59,6 @@ impl OfflineFsKbc {
     #[allow(clippy::new_without_default)]
     pub fn new() -> OfflineFsKbc {
         OfflineFsKbc {
-            kbs_info: HashMap::new(),
             keys: load_keys(KEYS_PATH).map_err(|e| anyhow!("Failed to load keys: {}", e)),
             resources: load_resources(RESOURCES_PATH)
                 .map_err(|e| anyhow!("Failed to load resources: {}", e)),
@@ -99,7 +89,6 @@ mod tests {
     #[tokio::test]
     async fn test_get_key() {
         let mut kbc = OfflineFsKbc {
-            kbs_info: HashMap::new(),
             keys: Ok([(KID.to_string(), KEY.to_vec())].iter().cloned().collect()),
             resources: Ok([].iter().cloned().collect()),
         };
@@ -110,7 +99,6 @@ mod tests {
 
     fn kbc_instance() -> OfflineFsKbc {
         OfflineFsKbc {
-            kbs_info: HashMap::new(),
             keys: Err(anyhow!("no keys")),
             resources: Ok([
                 (

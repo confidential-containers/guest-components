@@ -121,7 +121,6 @@ keywrap-grpc = ["ocicrypt-rs/keywrap-keyprovider-grpc", "tonic", "protos/grpc"]
 keywrap-native = [
     "ocicrypt-rs/keywrap-keyprovider-native",
     "kbc/cc_kbc",
-    "kbc/sample_kbc",
     "kbc/sgx-attester",
     "resource_uri",
 ]

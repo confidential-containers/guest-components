@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::{KbcCheckInfo, KbcInterface};
+use crate::KbcInterface;
 use crypto::{WrapType, decrypt};
 use kbs_protocol::{
     KbsClientBuilder, KbsClientCapabilities,
@@ -19,16 +19,11 @@ use resource_uri::ResourceUri;
 use zeroize::Zeroizing;
 
 pub struct Kbc {
-    token: Option<String>,
     kbs_client: KbsClient<Box<dyn EvidenceProvider>>,
 }
 
 #[async_trait]
 impl KbcInterface for Kbc {
-    fn check(&self) -> Result<KbcCheckInfo> {
-        Err(anyhow!("Check API of this KBC is unimplemented."))
-    }
-
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
         let key_data = self.kbs_client.get_resource(annotation_packet.kid).await?;
         let key = Zeroizing::new(key_data);
@@ -56,9 +51,6 @@ impl Kbc {
             &kbs_uri,
         )
         .build()?;
-        Ok(Kbc {
-            token: None,
-            kbs_client,
-        })
+        Ok(Kbc { kbs_client })
     }
 }
