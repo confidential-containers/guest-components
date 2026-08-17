@@ -4,8 +4,8 @@
 //
 
 use super::{Attester, InitDataResult, TeeEvidence};
-use anyhow::{Context, Result, bail};
 use crate::utils::read_eventlog;
+use anyhow::{Context, Result, bail};
 use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
 use azure_tpm::{Tpm, TpmCommandExt};
 use kbs_types::HashAlgorithm;
