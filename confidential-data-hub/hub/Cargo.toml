@@ -104,7 +104,7 @@ aws = ["kms/aws"]
 kbs = ["kms/kbs"]
 
 # support eHSM stacks (KMS, ...)
-ehsm = []
+ehsm = ["kms/ehsm"]
 
 # Binary RPC type
 bin = ["clap", "shadow-rs", "tracing-subscriber"]
