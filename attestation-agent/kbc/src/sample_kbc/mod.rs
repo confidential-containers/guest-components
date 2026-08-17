@@ -3,15 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::{KbcCheckInfo, KbcInterface};
+use crate::KbcInterface;
 use base64::Engine;
 use crypto::{WrapType, decrypt};
 
 use anyhow::*;
 use async_trait::async_trait;
 use resource_uri::{ResourcePluginPath, ResourceUri};
-use std::collections::HashMap;
-use zeroize::Zeroizing;
 
 use super::AnnotationPacket;
 
@@ -53,22 +51,14 @@ pub enum ResourceType {
     Credential,
 }
 
-pub struct SampleKbc {
-    kbs_info: HashMap<String, String>,
-}
+pub struct SampleKbc;
 
 // As a KBS client for attestation-agent,
 // it must implement KbcInterface trait.
 #[async_trait]
 impl KbcInterface for SampleKbc {
-    fn check(&self) -> Result<KbcCheckInfo> {
-        Ok(KbcCheckInfo {
-            kbs_info: self.kbs_info.clone(),
-        })
-    }
-
     async fn decrypt_payload(&mut self, annotation_packet: AnnotationPacket) -> Result<Vec<u8>> {
-        let key = Zeroizing::new(HARDCODED_KEY.to_vec());
+        let key = zeroize::Zeroizing::new(HARDCODED_KEY.to_vec());
         let engine = base64::engine::general_purpose::STANDARD;
         let plain_text = decrypt(
             key,
@@ -100,9 +90,7 @@ impl KbcInterface for SampleKbc {
 }
 
 impl SampleKbc {
-    pub fn new(kbs_uri: String) -> SampleKbc {
-        let mut kbs_info: HashMap<String, String> = HashMap::new();
-        kbs_info.insert("kbs_uri".to_string(), kbs_uri);
-        SampleKbc { kbs_info }
+    pub fn new(_kbs_uri: String) -> SampleKbc {
+        SampleKbc
     }
 }
