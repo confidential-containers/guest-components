@@ -210,7 +210,7 @@ pub async fn read_eventlog() -> Result<Option<String>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{trim_ccel, EL_HEADER};
+    use super::{EL_HEADER, trim_ccel};
     use std::collections::HashMap;
 
     // Builds a minimal TCG_PCR_EVENT spec-id header (EV_NO_ACTION, sha1 digest prefix).
