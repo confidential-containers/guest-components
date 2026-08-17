@@ -15,7 +15,6 @@ pub mod meta_store;
 pub mod pull;
 pub mod registry;
 pub mod resource;
-#[cfg(feature = "signature")]
 pub mod signature;
 pub mod snapshots;
 pub mod stream;

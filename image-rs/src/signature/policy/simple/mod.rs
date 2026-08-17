@@ -79,7 +79,7 @@ impl SignatureValidator {
             (Some(_), Some(_)) => bail!("Both keyPath and keyData specified."),
             (None, Some(key_data)) => base64::engine::general_purpose::STANDARD.decode(key_data)?,
             (Some(key_path), None) => self
-                .resource_provider
+                ._resource_provider
                 .get_resource(key_path)
                 .await
                 .map_err(|e| {
