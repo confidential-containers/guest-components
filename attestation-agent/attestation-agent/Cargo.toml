@@ -73,10 +73,13 @@ all-attesters = [
     "az-snp-vtpm-attester",
     "az-tdx-vtpm-attester",
     "snp-attester",
-    "se-attester",
+    "csv-attester",
+    "hygon-dcu-attester",
     "cca-attester",
+    "se-attester",
     "tpm-attester",
     "nvidia-attester",
+    "nvidia-dpu-attester",
 ]
 tdx-attester = ["kbs_protocol?/tdx-attester", "attester/tdx-attester"]
 tdx-attester-libtdx = [
@@ -103,6 +106,10 @@ hygon-dcu-attester = [
 ]
 tpm-attester = ["kbs_protocol?/tpm-attester", "attester/tpm-attester"]
 nvidia-attester = ["kbs_protocol?/nvidia-attester", "attester/nvidia-attester"]
+nvidia-dpu-attester = [
+    "kbs_protocol?/nvidia-dpu-attester",
+    "attester/nvidia-dpu-attester",
+]
 
 # Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
 rust-crypto = ["kbs_protocol?/rust-crypto"]

@@ -73,8 +73,10 @@ required-features = ["bin"]
 
 [features]
 default = ["all-attesters"]
+
 all-attesters = [
     "tdx-attester",
+    "sgx-attester",
     "az-snp-vtpm-attester",
     "az-tdx-vtpm-attester",
     "snp-attester",
@@ -84,6 +86,7 @@ all-attesters = [
     "se-attester",
     "tpm-attester",
     "nvidia-attester",
+    "nvidia-dpu-attester",
 ]
 
 # tsm-report enables a module that helps attesters to use Linux TSM_REPORTS for generating
