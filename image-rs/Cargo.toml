@@ -47,7 +47,7 @@ strum_macros = "0.28"
 astral-tokio-tar = "0.6.2"
 thiserror.workspace = true
 tokio.workspace = true
-tokio-util = "0.7.18"
+tokio-util = { version = "0.7.18", features = ["io-util"] }
 toml.workspace = true
 tonic = { workspace = true, optional = true }
 tracing.workspace = true
