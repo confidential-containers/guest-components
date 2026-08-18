@@ -205,7 +205,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "base64 0.22.1",
+ "base64 0.23.1",
  "clap",
  "form_urlencoded",
  "hyper 0.14.32",
@@ -361,7 +361,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "attester",
- "base64 0.22.1",
+ "base64 0.23.1",
  "byteorder",
  "clap",
  "config",
@@ -399,7 +399,7 @@ dependencies = [
  "az-tdx-vtpm",
  "azure-guest-attestation-sdk",
  "azure-tpm",
- "base64 0.22.1",
+ "base64 0.23.1",
  "cfg-if",
  "clap",
  "codicon",
@@ -929,6 +929,12 @@ name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
+
+[[package]]
+name = "base64"
+version = "0.23.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 
 [[package]]
 name = "base64-serde"
@@ -1610,7 +1616,7 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm 0.11.0",
  "anyhow",
- "base64 0.22.1",
+ "base64 0.23.1",
  "clap",
  "ctr 0.10.1",
  "daemonize",
@@ -1691,7 +1697,7 @@ dependencies = [
  "assert_cmd",
  "async-trait",
  "attestation-agent",
- "base64 0.22.1",
+ "base64 0.23.1",
  "cfg-if",
  "clap",
  "config",
@@ -2034,7 +2040,7 @@ dependencies = [
  "aes-gcm 0.11.0",
  "aes-kw 0.3.1",
  "anyhow",
- "base64 0.22.1",
+ "base64 0.23.1",
  "concat-kdf",
  "ctr 0.10.1",
  "kbs-types",
@@ -3848,7 +3854,7 @@ dependencies = [
  "astral-tokio-tar",
  "async-compression",
  "async-trait",
- "base64 0.22.1",
+ "base64 0.23.1",
  "cfg-if",
  "criterion",
  "devicemapper",
@@ -4305,7 +4311,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "base64 0.22.1",
+ "base64 0.23.1",
  "crypto",
  "kbs_protocol",
  "resource_uri",
@@ -4342,7 +4348,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "attester",
- "base64 0.22.1",
+ "base64 0.23.1",
  "clap",
  "crypto",
  "jwt-simple",
@@ -4409,7 +4415,7 @@ dependencies = [
  "attestation-agent",
  "aws-sdk-kms",
  "aws-sdk-secretsmanager",
- "base64 0.22.1",
+ "base64 0.23.1",
  "chrono",
  "const_format",
  "ehsm_client",
@@ -4966,7 +4972,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.21.7",
  "chrono",
  "getrandom 0.2.17",
  "http 1.4.0",
@@ -5128,7 +5134,7 @@ dependencies = [
  "aes-gcm 0.11.0",
  "anyhow",
  "async-trait",
- "base64 0.22.1",
+ "base64 0.23.1",
  "base64-serde",
  "cfg-if",
  "crypto",
@@ -5574,7 +5580,7 @@ dependencies = [
  "aes-gcm 0.10.3",
  "aes-kw 0.2.1",
  "argon2",
- "base64 0.22.1",
+ "base64 0.21.7",
  "bitfields",
  "block-padding",
  "blowfish",

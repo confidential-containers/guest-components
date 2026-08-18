@@ -33,7 +33,7 @@ aws-sdk-secretsmanager = { version = "1.109", default-features = false, features
     "default-https-client",
     "rt-tokio",
 ] }
-base64 = "0.22.1"
+base64 = "0.23.1"
 base64-serde = "0.8"
 bincode = "2.0.1"
 cfg-if = "1.0.4"
