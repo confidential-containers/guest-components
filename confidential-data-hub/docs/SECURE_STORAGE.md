@@ -78,7 +78,7 @@ In both modes, the cleartext device or filesystem is only exposed inside the TEE
 
 - **Common request shape**: Both modes use `volume_type: "block-device"` and share the same basic options:
   - `deviceId` / `devicePath`: identify the block device.
-  - `sourceType`: `"empty"` (new/unencrypted device) or `"encrypted"` (existing encrypted device).
+  - `sourceType`: `"empty"` (ephemeral detached-header provisioning), `"encrypted"` (caller-prepared encrypted device), or `"persistent"` (CDH-managed authenticated detached-header lifecycle).
   - `key`: where to fetch the encryption key (`"sealed.*"`, `"kbs://..."`, or `"file://..."`).
 - **LUKS2 mode**:
   - Uses `targetType` to decide whether to expose a cleartext **device** (`"device"`) or a cleartext **filesystem** (`"fileSystem"`).
@@ -87,6 +87,15 @@ In both modes, the cleartext device or filesystem is only exposed inside the TEE
   - When formatting an empty ext4 filesystem with dm-integrity enabled, CDH
     defaults `lazy_itable_init` to `0` unless the caller explicitly provides a
     `lazy_itable_init` setting in `mkfsOpts`.
+  - Persistent mode requires a stable `volumeId` and an explicit key reference.
+    It initializes only a completely zero device. CDH authenticates the full
+    LUKS2 header before cryptsetup sees a detached copy under `/run`. Two
+    authenticated state records support crash recovery but do not provide
+    rollback protection. Persistent mode requires dm-integrity so modification
+    of mutable ciphertext is detected inside the guest, and keeps its journal
+    enabled so data and authentication-tag writes are crash consistent. First
+    use scans the complete device and initializes every integrity tag before
+    formatting ext4.
 - **ZFS mode**:
   - Always provides a filesystem mount at the given `mount_point`; `targetType` is currently ignored but should be set to `"fileSystem"` for clarity.
   - Adds ZFS-specific options: `pool` (zpool name, defaults to `zpool`) and `dataset` (dataset name, defaults to `zdataset`).

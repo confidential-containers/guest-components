@@ -52,6 +52,7 @@ jose-jwa = "0.1.2"
 jose-jwk = "0.1.2"
 jose-jws = "0.1.2"
 kms = { path = "../kms", default-features = false }
+hmac.workspace = true
 nix.workspace = true
 p256 = "0.13.2"
 prost = { workspace = true, optional = true }
@@ -60,6 +61,7 @@ rand.workspace = true
 resource_uri.path = "../../attestation-agent/deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 shadow-rs = { workspace = true, optional = true }
 strum = { workspace = true, features = ["derive"] }
 tempfile.workspace = true
