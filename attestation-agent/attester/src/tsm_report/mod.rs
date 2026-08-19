@@ -8,8 +8,10 @@ use std::str::FromStr;
 use strum::EnumString;
 use tempfile::tempdir_in;
 use thiserror::Error;
+use tracing::{warn, debug, error};
 
 pub const TSM_REPORT_PATH: &str = "/sys/kernel/config/tsm/report";
+pub const TSM_PRIVLEVEL_MAX: u8 = 3;
 
 #[derive(Error, Debug)]
 pub enum TsmReportError {
@@ -29,6 +31,8 @@ pub enum TsmReportError {
     InblobConflict(u32),
     #[error("Failed to generate TSM Report: missing inblob (len=0)")]
     InblobLen,
+    #[error("Failed to set TSM Report Privlevel: supplied privlevel {0} is not in range [privlevel_floor ({1}), TSM_PRIVLEVEL_MAX (3)]: ({2})")]
+    PrivlevelInvalid(u8, u8, #[source] std::io::Error),
 }
 
 #[derive(PartialEq, Debug, EnumString)]
@@ -93,8 +97,38 @@ impl TsmReportPath {
             TsmReportData::Tdx(inblob) => inblob,
             TsmReportData::Sev(privlevel, inblob) => {
                 // TODO: untested
-                std::fs::write(report_path.join("privlevel"), vec![privlevel])
-                    .map_err(|e| TsmReportError::Access("privlevel", e))?;
+                debug!("Attempting to set privlevel for Configfs-TSM Query to {} ({:?})...", privlevel, privlevel.to_string());
+                std::fs::write(report_path.join("privlevel"), privlevel.to_string())
+                    .map_err(|e| {
+                        // Verify that the requested privilage level is within the bounds --
+                        //   Note that exceeding the bounds triggers an EINVAL from the Kernel (OS Error 22)
+
+                        // Check against the lowest allowed privlevel (tsm api @privlevel_floor)
+                        // Check against the highest allowed privlevel (hardcoded to match the ABI TSM_PRIVLEVEL_MAX = 3)
+                        error!("Failed to write {:?} to privlevel: {}.", privlevel.to_string(), e);
+                        debug!("Reading privlevel_floor for privlevel bounds check...");
+                        let privlevel_floor: u8 = match std::fs::read(report_path.join("privlevel_floor")) {
+                            Ok(buf) => match String::from_utf8(buf) {
+                                Ok(s) => match s.parse::<u8>() {
+                                    Ok(num) => num,
+                                    Err(parse_err) => return TsmReportError::Access("privlevel_floor", std::io::Error::new(std::io::ErrorKind::InvalidData, parse_err)),
+                                },
+                                Err(encode_err) => return TsmReportError::Access("privlevel_floor", std::io::Error::new(std::io::ErrorKind::InvalidData, encode_err)),
+                            },
+                            Err(read_err) => return TsmReportError::Access("privlevel_floor", read_err),
+                        };
+                        debug!("Extracted privlevel_floor: {}", privlevel_floor);
+                        debug!("Checking if privlevel {} is within bounds ({} - {})...", privlevel, privlevel_floor, TSM_PRIVLEVEL_MAX);
+                        if privlevel < privlevel_floor || privlevel > TSM_PRIVLEVEL_MAX {
+                            error!("Privlevel {} is out of bounds ({} - {})", privlevel, privlevel_floor, TSM_PRIVLEVEL_MAX);
+                            TsmReportError::PrivlevelInvalid(privlevel, privlevel_floor, e)
+                        } else {
+                            // In all other cases, bubble up the error
+                            warn!("Privlevel {} is within bounds, but writing to privlevel failed: {}", privlevel, e);
+                            TsmReportError::Access("privlevel", e)
+                        }
+                    })?;
+                debug!("Successfully set privlevel for Configfs-TSM Query to {} ({:?})...", privlevel, privlevel.to_string());
                 inblob
             }
         };

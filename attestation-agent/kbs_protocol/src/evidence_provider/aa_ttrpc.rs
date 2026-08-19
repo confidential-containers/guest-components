@@ -8,6 +8,7 @@ use attester::TeeEvidence;
 use kbs_types::Tee;
 use serde_json::json;
 use ttrpc::context;
+use tracing::{debug, warn};
 
 use crate::{Error, Result};
 use protos::ttrpc::aa::{
