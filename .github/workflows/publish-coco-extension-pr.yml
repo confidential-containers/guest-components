@@ -1,17 +1,9 @@
 name: Publish CoCo guest extension image for pull requests
 
-# Promote successful pull-request builds without giving untrusted build code a
-# registry credential. This privileged workflow never checks out or executes
-# pull-request code. It only copies the fixed artifacts emitted by
-# coco-extension-image.yml into PR-scoped tags:
-#
-#   pr-<head-sha>-ubuntu<release>
-#
-# Kata can use that complete tag as .externals.coco-guest-components.version.
-# Main and release tags remain writable only by their existing trusted paths.
+# A fork pull_request runs without registry credentials. After that build
+# succeeds, call the existing extension workflow in its trusted artifact-
+# promotion mode. The called workflow does not check out or execute PR code.
 on:
-  # The privileged side never checks out or executes pull-request content; it
-  # only promotes fixed-name artifacts into PR-scoped tags.
   workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows:
     - Build and publish the CoCo guest extension image
@@ -24,207 +16,19 @@ concurrency:
 
 permissions: {}
 
-env:
-  REGISTRY: ghcr.io
-  CONTAINER_IMAGE: ghcr.io/${{ github.repository }}/coco-extension
-  DISK_IMAGE: ghcr.io/${{ github.repository }}/coco-extension-disk
-
 jobs:
   publish:
-    name: publish (${{ matrix.arch }}, ${{ matrix.variant }})
+    name: publish PR images
     if: >-
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
     permissions:
-      actions: read # download artifacts from the completed unprivileged build
+      actions: read # let the called workflow download the PR build
       contents: read # bind attestations to this repository
       packages: write # publish PR-scoped OCI artifacts to ghcr.io
       id-token: write # required for OIDC-based attestation signing
       attestations: write # create provenance for the promoted artifacts
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        variant:
-        - ubuntu24.04
-        - ubuntu26.04
-        arch:
-        - amd64
-        - arm64
-        - s390x
-    env:
-      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-      RUN_ID: ${{ github.event.workflow_run.id }}
-      VARIANT: ${{ matrix.variant }}
-      OCI_ARCH: ${{ matrix.arch }}
-    steps:
-    - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
-      with:
-        egress-policy: audit
-
-    - name: Validate source revision
-      run: |
-        if [[ ! "${HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
-          echo "Invalid pull-request head SHA: ${HEAD_SHA}" >&2
-          exit 1
-        fi
-
-    - name: Download extension artifact
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        artifact_name="coco-extension-${VARIANT}-${OCI_ARCH}"
-        artifact_dir="${RUNNER_TEMP}/${artifact_name}"
-        mkdir -p "${artifact_dir}"
-        gh run download "${RUN_ID}" \
-          --repo "${GITHUB_REPOSITORY}" \
-          --name "${artifact_name}" \
-          --dir "${artifact_dir}"
-
-    - name: Validate extension artifact
-      run: |
-        artifact_dir="${RUNNER_TEMP}/coco-extension-${VARIANT}-${OCI_ARCH}"
-        oci_tar="${artifact_dir}/coco-extension-oci-${VARIANT}-${OCI_ARCH}.tar"
-        disk_image="${artifact_dir}/kata-containers-coco-extension-${VARIANT}-${OCI_ARCH}.img"
-        root_hash="${artifact_dir}/root_hash_coco-extension-${VARIANT}-${OCI_ARCH}.txt"
-
-        for file in "${oci_tar}" "${disk_image}" "${root_hash}"; do
-          if [ ! -f "${file}" ] || [ -L "${file}" ] || [ ! -s "${file}" ]; then
-            echo "Missing or invalid extension artifact: ${file}" >&2
-            exit 1
-          fi
-        done
-
-        unexpected="$(find "${artifact_dir}" -mindepth 1 -maxdepth 1 \
-          ! -name "$(basename "${oci_tar}")" \
-          ! -name "$(basename "${disk_image}")" \
-          ! -name "$(basename "${root_hash}")" -print -quit)"
-        if [ -n "${unexpected}" ]; then
-          echo "Unexpected extension artifact entry: ${unexpected}" >&2
-          exit 1
-        fi
-
-    - name: Install publishing tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends skopeo
-
-    - uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
-      with:
-        version: 1.2.0
-
-    - name: Log in to the Container registry
-      uses: docker/login-action@371161bbe7024a29a25c5e19bfcbc0804fe9ad2c # v4.5.2
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Publish PR-scoped images
-      id: publish
-      run: |
-        tag="pr-${HEAD_SHA}-${VARIANT}-${OCI_ARCH}"
-        artifact_dir="${RUNNER_TEMP}/coco-extension-${VARIANT}-${OCI_ARCH}"
-        oci_tar="${artifact_dir}/coco-extension-oci-${VARIANT}-${OCI_ARCH}.tar"
-
-        skopeo copy \
-          "docker-archive:${oci_tar}" \
-          "docker://${CONTAINER_IMAGE}:${tag}"
-        container_digest="$(skopeo inspect \
-          --format '{{.Digest}}' "docker://${CONTAINER_IMAGE}:${tag}")"
-
-        disk_dir="${RUNNER_TEMP}/coco-extension-disk-${VARIANT}-${OCI_ARCH}"
-        mkdir -p "${disk_dir}"
-        install -m 0644 \
-          "${artifact_dir}/kata-containers-coco-extension-${VARIANT}-${OCI_ARCH}.img" \
-          "${disk_dir}/kata-containers-coco-extension.img"
-        install -m 0644 \
-          "${artifact_dir}/root_hash_coco-extension-${VARIANT}-${OCI_ARCH}.txt" \
-          "${disk_dir}/root_hash_coco-extension.txt"
-
-        pushd "${disk_dir}" >/dev/null
-        oras push "${DISK_IMAGE}:${tag}" \
-          --artifact-type application/vnd.confidential-containers.coco-extension.disk \
-          kata-containers-coco-extension.img \
-          root_hash_coco-extension.txt
-        disk_digest="$(oras manifest fetch \
-          "${DISK_IMAGE}:${tag}" --descriptor | jq -r .digest)"
-        popd >/dev/null
-
-        digest_pattern='^sha256:[0-9a-f]{64}$'
-        if [[ ! "${container_digest}" =~ ${digest_pattern} ]]; then
-          echo "Invalid container image digest: ${container_digest}" >&2
-          exit 1
-        fi
-        if [[ ! "${disk_digest}" =~ ${digest_pattern} ]]; then
-          echo "Invalid disk image digest: ${disk_digest}" >&2
-          exit 1
-        fi
-
-        echo "container-digest=${container_digest}" >> "${GITHUB_OUTPUT}"
-        echo "disk-digest=${disk_digest}" >> "${GITHUB_OUTPUT}"
-
-    - name: Generate provenance for the OCI container image
-      uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-      with:
-        subject-name: ${{ env.CONTAINER_IMAGE }}
-        subject-digest: ${{ steps.publish.outputs.container-digest }}
-        push-to-registry: true
-
-    - name: Generate provenance for the disk image
-      uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-      with:
-        subject-name: ${{ env.DISK_IMAGE }}
-        subject-digest: ${{ steps.publish.outputs.disk-digest }}
-        push-to-registry: true
-
-  publish-manifests:
-    name: publish manifest (${{ matrix.variant }})
-    if: >-
-      github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.conclusion == 'success'
-    needs: publish
-    permissions:
-      packages: write # publish PR-scoped multi-arch manifests to ghcr.io
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        variant:
-        - ubuntu24.04
-        - ubuntu26.04
-    env:
-      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-      VARIANT: ${{ matrix.variant }}
-    steps:
-    - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
-      with:
-        egress-policy: audit
-
-    - name: Log in to the Container registry
-      uses: docker/login-action@371161bbe7024a29a25c5e19bfcbc0804fe9ad2c # v4.5.2
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Assemble multi-arch manifests
-      run: |
-        tag="pr-${HEAD_SHA}-${VARIANT}"
-        for image in "${CONTAINER_IMAGE}" "${DISK_IMAGE}"; do
-          docker manifest create "${image}:${tag}" \
-            --amend "${image}:${tag}-amd64" \
-            --amend "${image}:${tag}-arm64" \
-            --amend "${image}:${tag}-s390x"
-          docker manifest annotate --arch amd64 --os linux \
-            "${image}:${tag}" "${image}:${tag}-amd64"
-          docker manifest annotate --arch arm64 --os linux \
-            "${image}:${tag}" "${image}:${tag}-arm64"
-          docker manifest annotate --arch s390x --os linux \
-            "${image}:${tag}" "${image}:${tag}-s390x"
-          docker manifest push "${image}:${tag}"
-        done
-
-        echo "Kata versions.yaml value: ${tag}" >> "${GITHUB_STEP_SUMMARY}"
+    uses: ./.github/workflows/coco-extension-image.yml
+    with:
+      artifact_run_id: ${{ github.event.workflow_run.id }}
+      version: pr-${{ github.event.workflow_run.head_sha }}
