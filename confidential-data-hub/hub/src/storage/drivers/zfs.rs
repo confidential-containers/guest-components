@@ -104,17 +104,21 @@ impl ZfsParameters {
             "mounting zfs pool"
         );
 
-        // if the source type is empty, create a new zpool and zdataset
-        if source_type == SourceType::Empty {
-            warn!("creating a new zpool and zdataset on the device. This will wipe original data on the disk.");
-            create_zpool(&self.pool, device_path)?;
-            create_zdataset(&self.pool, &self.dataset, key, mount_point)?;
-        } else {
-            // if the source type is encrypted, import the zpool and load the key to the zdataset
-            info!("importing the zpool and loading the key to the zdataset on the device.");
-            import_zpool(&self.pool, device_path)?;
-            load_key(&self.pool, &self.dataset, key)?;
-            mount_dataset(&self.pool, &self.dataset, Some(mount_point))?;
+        match source_type {
+            SourceType::Empty => {
+                warn!("creating a new zpool and zdataset on the device. This will wipe original data on the disk.");
+                create_zpool(&self.pool, device_path)?;
+                create_zdataset(&self.pool, &self.dataset, key, mount_point)?;
+            }
+            SourceType::Encrypted => {
+                info!("importing the zpool and loading the key to the zdataset on the device.");
+                import_zpool(&self.pool, device_path)?;
+                load_key(&self.pool, &self.dataset, key)?;
+                mount_dataset(&self.pool, &self.dataset, Some(mount_point))?;
+            }
+            SourceType::Persistent => {
+                bail!("persistent source type is only supported with LUKS2")
+            }
         }
 
         Ok(())
@@ -150,7 +154,7 @@ pub fn create_zdataset(
     mount_point: &str,
 ) -> Result<()> {
     fs::create_dir_all(mount_point).context("create mount point")?;
-    let mut key_command = Vec::new();
+    let mut key_command = Zeroizing::new(Vec::new());
     key_command.write_all(&key)?;
     key_command.write_all(b"\n")?;
     key_command.write_all(&key)?;
@@ -167,7 +171,7 @@ pub fn create_zdataset(
             &format!("mountpoint={mount_point}"),
             &format!("{pool_name}/{dataset_name}"),
         ],
-        Some(key_command),
+        Some(key_command.as_slice()),
     )?;
 
     Ok(())
@@ -181,7 +185,7 @@ pub fn import_zpool(pool_name: &str, device_path: &str) -> Result<()> {
 
 /// This function loads a key to a zdataset.
 pub fn load_key(pool_name: &str, dataset_name: &str, key: Zeroizing<Vec<u8>>) -> Result<()> {
-    let mut key_command = Vec::new();
+    let mut key_command = Zeroizing::new(Vec::new());
     key_command.write_all(&key)?;
     key_command.write_all(b"\n")?;
     key_command.write_all(&key)?;
@@ -189,7 +193,7 @@ pub fn load_key(pool_name: &str, dataset_name: &str, key: Zeroizing<Vec<u8>>) ->
     let _ = run_command(
         "zfs",
         &["load-key", &format!("{pool_name}/{dataset_name}")],
-        Some(key_command),
+        Some(key_command.as_slice()),
     )?;
 
     Ok(())
