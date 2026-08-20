@@ -90,7 +90,7 @@ impl Attester for SnpAttester {
             // Use the TSM Report path to generate the attestation report and get the certificate chain.
 
             // Get and verify the TSM Report path instance for SEV-SNP.
-            let tsm_report_path = TsmReportPath::new(TsmReportProvider::Sev)
+            let mut tsm_report_path = TsmReportPath::new(TsmReportProvider::Sev)
                 .context("SEV-SNP Attester: failed to create TSM Report path")?;
 
             // Generate the attestation report from the TSM Report path.

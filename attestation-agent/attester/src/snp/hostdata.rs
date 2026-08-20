@@ -34,7 +34,7 @@ pub fn get_snp_host_data() -> Result<[u8; 32], GetHostDataError> {
         const VMPL: u8 = 0;
 
         // Get and verify the TSM Report path instance for SEV-SNP.
-        let tsm_report_path = TsmReportPath::new(TsmReportProvider::Sev)?;
+        let mut tsm_report_path = TsmReportPath::new(TsmReportProvider::Sev)?;
 
         // Generate the attestation report from the TSM Report path.
         report_bytes = tsm_report_path
