@@ -821,9 +821,9 @@ dependencies = [
 
 [[package]]
 name = "az-cvm-vtpm"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de89af1208d16b05ef093680a32a6d8e4dce9146caf30ae6aa6181777907285a"
+checksum = "2044bf018f8ff574c82c5c7d672716ff0076b2be07ed6f91afd1ae41b1f8889d"
 dependencies = [
  "jsonwebkey",
  "memoffset 0.9.1",
@@ -840,9 +840,9 @@ dependencies = [
 
 [[package]]
 name = "az-snp-vtpm"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d3d6071c96b6306e616d98ff18b8f13de2b55f16f494094f16e22f26d985311"
+checksum = "f89af3e2429e460930d02a0db1eda14bef738fca3e153c865835d37b2fecdbcc"
 dependencies = [
  "az-cvm-vtpm",
  "clap",
