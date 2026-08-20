@@ -15,14 +15,27 @@ name: Build and publish the CoCo guest extension image
 # release asset is qualified with it (e.g. "<sha>-ubuntu26.04-amd64"): the
 # extension ships no libc, so a variant is only usable on a matching guest.
 #
-# On pull requests everything is built and uploaded as workflow artifacts (no
-# registry push). On pushes to main the artifacts are published to ghcr.io
-# (tagged with the commit sha and "latest") and attested. On a published
-# release the same artifacts are published tagged with the release version, the
-# multi-arch manifests get the version tag, and the per-arch disk images and
-# their dm-verity root hashes are attached to the GitHub release so consumers
-# (e.g. kata-containers) can pin to a stable version.
+# On pull requests everything is built without registry credentials and
+# uploaded as workflow artifacts. A small workflow_run entry point calls this
+# workflow again to promote a successful build under a PR-scoped tag, so
+# consumers such as kata-containers can test the proposed guest-components
+# revision. On pushes to main the artifacts are published to ghcr.io (tagged
+# with the commit sha and "latest") and attested. On a published release the
+# same artifacts are published tagged with the release version, the multi-arch
+# manifests get the version tag, and the per-arch disk images and their
+# dm-verity root hashes are attached to the GitHub release so consumers can pin
+# to a stable version.
 on:
+  workflow_call:
+    inputs:
+      artifact_run_id:
+        description: Pull-request workflow run containing the built images
+        required: true
+        type: number
+      version:
+        description: Registry tag prefix for the promoted images
+        required: true
+        type: string
   pull_request:
   push:
     branches:
@@ -31,7 +44,7 @@ on:
     types: [published]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || inputs.version || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -62,6 +75,7 @@ jobs:
   build:
     name: build (${{ matrix.arch }}, ubuntu ${{ matrix.ubuntu }})
     permissions:
+      actions: read # download an unprivileged pull-request build when called
       contents: write # needed to upload disk images to the GitHub release
       packages: write # push OCI artifacts to ghcr.io
       id-token: write # required for OIDC-based attestation signing
@@ -101,6 +115,8 @@ jobs:
       ATTESTER: ${{ matrix.attester }}
       UBUNTU_VERSION: ${{ matrix.ubuntu }}
       VARIANT: ubuntu${{ matrix.ubuntu }}
+      VERSION: ${{ inputs.version || github.sha }}
+      ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
@@ -108,13 +124,16 @@ jobs:
         egress-policy: audit
 
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      if: ${{ inputs.artifact_run_id == 0 }}
       with:
         persist-credentials: false
 
     # Logging in up front lets the builder cache below be reused; the payload
     # images are pushed by the later steps with the same credentials.
     - name: Log in to the Container registry
-      if: ${{ github.event_name != 'pull_request' }}
+      if: >-
+        github.event_name != 'pull_request' &&
+        inputs.artifact_run_id == 0
       uses: docker/login-action@371161bbe7024a29a25c5e19bfcbc0804fe9ad2c # v4.5.2
       with:
         registry: ${{ env.REGISTRY }}
@@ -122,6 +141,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Install build tooling
+      if: ${{ inputs.artifact_run_id == 0 }}
       env:
         OCI_ARCH: ${{ matrix.oci_arch }}
       run: |
@@ -136,7 +156,14 @@ jobs:
           "https://github.com/opencontainers/umoci/releases/download/${UMOCI_VERSION}/umoci.linux.${OCI_ARCH}"
         sudo chmod +x /usr/local/bin/umoci
 
+    - name: Install artifact promotion tooling
+      if: ${{ inputs.artifact_run_id > 0 }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends skopeo
+
     - name: Build or reuse the Ubuntu ${{ matrix.ubuntu }} builder image
+      if: ${{ inputs.artifact_run_id == 0 }}
       env:
         OCI_ARCH: ${{ matrix.oci_arch }}
         EVENT_NAME: ${{ github.event_name }}
@@ -184,6 +211,7 @@ jobs:
         fi
 
     - name: Assemble extension rootfs
+      if: ${{ inputs.artifact_run_id == 0 }}
       run: |
         docker run --rm \
           -v "${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE}" \
@@ -199,27 +227,91 @@ jobs:
           ./tools/coco-extension/assemble-rootfs.sh
 
     - name: Build OCI container image
+      if: ${{ inputs.artifact_run_id == 0 }}
       env:
-        GIT_SHA: ${{ github.sha }}
         OCI_ARCH: ${{ matrix.oci_arch }}
       run: |
         docker build \
           -f tools/coco-extension/Dockerfile \
-          -t "${CONTAINER_IMAGE}:${GIT_SHA}-${VARIANT}-${OCI_ARCH}" \
+          -t "${CONTAINER_IMAGE}:${VERSION}-${VARIANT}-${OCI_ARCH}" \
           build/coco-extension-rootfs
 
     - name: Build EROFS + dm-verity disk image
+      if: ${{ inputs.artifact_run_id == 0 }}
       run: ./tools/coco-extension/build-erofs-image.sh
+
+    # A workflow_call is the trusted half of a pull-request build. Rehydrate
+    # the exact artifacts produced without credentials by the pull_request run,
+    # then feed them into the normal publication steps below.
+    - name: Prepare pull-request artifacts for publication
+      if: ${{ inputs.artifact_run_id > 0 }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        OCI_ARCH: ${{ matrix.oci_arch }}
+      run: |
+        if [[ ! "${ARTIFACT_RUN_ID}" =~ ^[0-9]+$ ]]; then
+          echo "Invalid artifact workflow run ID: ${ARTIFACT_RUN_ID}" >&2
+          exit 1
+        fi
+        if [[ ! "${VERSION}" =~ ^pr-[0-9a-f]{40}$ ]]; then
+          echo "Invalid pull-request version: ${VERSION}" >&2
+          exit 1
+        fi
+
+        artifact_name="coco-extension-${VARIANT}-${OCI_ARCH}"
+        artifact_dir="${RUNNER_TEMP}/${artifact_name}"
+        mkdir -p "${artifact_dir}"
+        gh run download "${ARTIFACT_RUN_ID}" \
+          --repo "${GITHUB_REPOSITORY}" \
+          --name "${artifact_name}" \
+          --dir "${artifact_dir}"
+
+        oci_tar="${artifact_dir}/coco-extension-oci-${VARIANT}-${OCI_ARCH}.tar"
+        disk_image="${artifact_dir}/kata-containers-coco-extension-${VARIANT}-${OCI_ARCH}.img"
+        root_hash="${artifact_dir}/root_hash_coco-extension-${VARIANT}-${OCI_ARCH}.txt"
+        for file in "${oci_tar}" "${disk_image}" "${root_hash}"; do
+          if [ ! -f "${file}" ] || [ -L "${file}" ] || [ ! -s "${file}" ]; then
+            echo "Missing or invalid extension artifact: ${file}" >&2
+            exit 1
+          fi
+        done
+
+        unexpected="$(find "${artifact_dir}" -mindepth 1 -maxdepth 1 \
+          ! -name "$(basename "${oci_tar}")" \
+          ! -name "$(basename "${disk_image}")" \
+          ! -name "$(basename "${root_hash}")" -print -quit)"
+        if [ -n "${unexpected}" ]; then
+          echo "Unexpected extension artifact entry: ${unexpected}" >&2
+          exit 1
+        fi
+
+        skopeo copy \
+          "docker-archive:${oci_tar}" \
+          "docker-daemon:${CONTAINER_IMAGE}:${VERSION}-${VARIANT}-${OCI_ARCH}"
+        mkdir -p build/coco-extension-image
+        install -m 0644 "${disk_image}" \
+          build/coco-extension-image/kata-containers-coco-extension.img
+        install -m 0644 "${root_hash}" \
+          build/coco-extension-image/root_hash_coco-extension.txt
+
+    # Keep the write credential out of the job until all pull-request artifacts
+    # have been downloaded, validated, and copied into local build state.
+    - name: Log in to publish pull-request artifacts
+      if: ${{ inputs.artifact_run_id > 0 }}
+      uses: docker/login-action@371161bbe7024a29a25c5e19bfcbc0804fe9ad2c # v4.5.2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     # --- Pull request: build only, upload artifacts, no registry push ---------
     - name: Save OCI image for artifact upload
       if: ${{ github.event_name == 'pull_request' }}
       env:
-        GIT_SHA: ${{ github.sha }}
         OCI_ARCH: ${{ matrix.oci_arch }}
       run: |
         mkdir -p build/artifacts
-        docker save "${CONTAINER_IMAGE}:${GIT_SHA}-${VARIANT}-${OCI_ARCH}" \
+        docker save "${CONTAINER_IMAGE}:${VERSION}-${VARIANT}-${OCI_ARCH}" \
           -o "build/artifacts/coco-extension-oci-${VARIANT}-${OCI_ARCH}.tar"
         cp build/coco-extension-image/kata-containers-coco-extension.img \
           "build/artifacts/kata-containers-coco-extension-${VARIANT}-${OCI_ARCH}.img"
@@ -237,10 +329,10 @@ jobs:
         retention-days: 15
         if-no-files-found: error
 
-    # --- Push to main / release: publish to ghcr.io and attest ----------------
-    # The immutable per-arch reference is always "<sha>-<variant>-<arch>"; the
-    # friendly tags (latest, or the release version) are assembled into
-    # per-variant multi-arch manifests in the publish-manifests job below.
+    # --- Publish trusted builds to ghcr.io and attest --------------------------
+    # The per-arch reference is "<version>-<variant>-<arch>". For main and
+    # releases, version is the commit SHA. A trusted workflow_call uses the
+    # PR-scoped version supplied by the workflow_run entry point.
     - uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
       if: ${{ github.event_name != 'pull_request' }}
       with:
@@ -250,10 +342,9 @@ jobs:
       id: publish-container
       if: ${{ github.event_name != 'pull_request' }}
       env:
-        GIT_SHA: ${{ github.sha }}
         OCI_ARCH: ${{ matrix.oci_arch }}
       run: |
-        arch_tag="${GIT_SHA}-${VARIANT}-${OCI_ARCH}"
+        arch_tag="${VERSION}-${VARIANT}-${OCI_ARCH}"
         docker push "${CONTAINER_IMAGE}:${arch_tag}"
         digest="$(docker inspect --format='{{index .RepoDigests 0}}' "${CONTAINER_IMAGE}:${arch_tag}" | cut -d'@' -f2)"
         echo "image=${CONTAINER_IMAGE}" >> "$GITHUB_OUTPUT"
@@ -264,10 +355,9 @@ jobs:
       if: ${{ github.event_name != 'pull_request' }}
       working-directory: build/coco-extension-image
       env:
-        GIT_SHA: ${{ github.sha }}
         OCI_ARCH: ${{ matrix.oci_arch }}
       run: |
-        arch_tag="${GIT_SHA}-${VARIANT}-${OCI_ARCH}"
+        arch_tag="${VERSION}-${VARIANT}-${OCI_ARCH}"
         files=(kata-containers-coco-extension.img)
         if [ -f root_hash_coco-extension.txt ]; then
           files+=(root_hash_coco-extension.txt)
@@ -330,6 +420,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       VARIANT: ubuntu${{ matrix.ubuntu }}
+      VERSION: ${{ inputs.version || github.sha }}
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
@@ -347,19 +438,34 @@ jobs:
       env:
         # On push to main: the commit sha plus the rolling "latest" tag.
         # On release: the commit sha plus the immutable release version, so
-        # consumers can pin to it.
-        EXTRA_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}
-        GIT_SHA: ${{ github.sha }}
+        # consumers can pin to it. A workflow_call publishes only its PR-scoped
+        # version.
+        EXTRA_TAG: >-
+          ${{ github.event_name == 'release' && github.event.release.tag_name ||
+              github.event_name == 'push' && 'latest' || '' }}
       run: |
+        tags=("${VERSION}-${VARIANT}")
+        if [ -n "${EXTRA_TAG}" ]; then
+          tags+=("${EXTRA_TAG}-${VARIANT}")
+        fi
+
         for image in "${CONTAINER_IMAGE}" "${DISK_IMAGE}"; do
-          for tag in "${GIT_SHA}-${VARIANT}" "${EXTRA_TAG}-${VARIANT}"; do
+          for tag in "${tags[@]}"; do
             docker manifest create "${image}:${tag}" \
-              --amend "${image}:${GIT_SHA}-${VARIANT}-amd64" \
-              --amend "${image}:${GIT_SHA}-${VARIANT}-arm64" \
-              --amend "${image}:${GIT_SHA}-${VARIANT}-s390x"
-            docker manifest annotate --arch amd64 --os linux "${image}:${tag}" "${image}:${GIT_SHA}-${VARIANT}-amd64"
-            docker manifest annotate --arch arm64 --os linux "${image}:${tag}" "${image}:${GIT_SHA}-${VARIANT}-arm64"
-            docker manifest annotate --arch s390x --os linux "${image}:${tag}" "${image}:${GIT_SHA}-${VARIANT}-s390x"
+              --amend "${image}:${VERSION}-${VARIANT}-amd64" \
+              --amend "${image}:${VERSION}-${VARIANT}-arm64" \
+              --amend "${image}:${VERSION}-${VARIANT}-s390x"
+            docker manifest annotate --arch amd64 --os linux \
+              "${image}:${tag}" "${image}:${VERSION}-${VARIANT}-amd64"
+            docker manifest annotate --arch arm64 --os linux \
+              "${image}:${tag}" "${image}:${VERSION}-${VARIANT}-arm64"
+            docker manifest annotate --arch s390x --os linux \
+              "${image}:${tag}" "${image}:${VERSION}-${VARIANT}-s390x"
             docker manifest push "${image}:${tag}"
           done
         done
+
+        if [[ "${VERSION}" =~ ^pr-[0-9a-f]{40}$ ]]; then
+          echo "Kata versions.yaml value: ${VERSION}-${VARIANT}" \
+            >> "${GITHUB_STEP_SUMMARY}"
+        fi

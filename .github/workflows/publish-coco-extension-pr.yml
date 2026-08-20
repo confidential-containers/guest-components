@@ -1,0 +1,34 @@
+name: Publish CoCo guest extension image for pull requests
+
+# A fork pull_request runs without registry credentials. After that build
+# succeeds, call the existing extension workflow in its trusted artifact-
+# promotion mode. The called workflow does not check out or execute PR code.
+on:
+  workflow_run: # zizmor: ignore[dangerous-triggers]
+    workflows:
+    - Build and publish the CoCo guest extension image
+    types:
+    - completed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  publish:
+    name: publish PR images
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    permissions:
+      actions: read # let the called workflow download the PR build
+      contents: read # bind attestations to this repository
+      packages: write # publish PR-scoped OCI artifacts to ghcr.io
+      id-token: write # required for OIDC-based attestation signing
+      attestations: write # create provenance for the promoted artifacts
+    uses: ./.github/workflows/coco-extension-image.yml
+    with:
+      artifact_run_id: ${{ github.event.workflow_run.id }}
+      version: pr-${{ github.event.workflow_run.head_sha }}
