@@ -15,13 +15,15 @@ name: Build and publish the CoCo guest extension image
 # release asset is qualified with it (e.g. "<sha>-ubuntu26.04-amd64"): the
 # extension ships no libc, so a variant is only usable on a matching guest.
 #
-# On pull requests everything is built and uploaded as workflow artifacts (no
-# registry push). On pushes to main the artifacts are published to ghcr.io
-# (tagged with the commit sha and "latest") and attested. On a published
-# release the same artifacts are published tagged with the release version, the
-# multi-arch manifests get the version tag, and the per-arch disk images and
-# their dm-verity root hashes are attached to the GitHub release so consumers
-# (e.g. kata-containers) can pin to a stable version.
+# On pull requests everything is built without registry credentials and
+# uploaded as workflow artifacts. A separate workflow_run publisher promotes a
+# successful build under a PR-scoped tag so consumers such as kata-containers
+# can test the proposed guest-components revision. On pushes to main the
+# artifacts are published to ghcr.io (tagged with the commit sha and "latest")
+# and attested. On a published release the same artifacts are published tagged
+# with the release version, the multi-arch manifests get the version tag, and
+# the per-arch disk images and their dm-verity root hashes are attached to the
+# GitHub release so consumers can pin to a stable version.
 on:
   pull_request:
   push:
