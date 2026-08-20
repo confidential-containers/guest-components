@@ -821,9 +821,9 @@ dependencies = [
 
 [[package]]
 name = "az-cvm-vtpm"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de89af1208d16b05ef093680a32a6d8e4dce9146caf30ae6aa6181777907285a"
+checksum = "2044bf018f8ff574c82c5c7d672716ff0076b2be07ed6f91afd1ae41b1f8889d"
 dependencies = [
  "jsonwebkey",
  "memoffset 0.9.1",
@@ -854,9 +854,9 @@ dependencies = [
 
 [[package]]
 name = "az-tdx-vtpm"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68381aac2d985b3482b67aa9766b0a5c97afcb7e794815871b824d7766cca56b"
+checksum = "27351d04ee10126c281b9ff6bbffe642154ab2334b38638104c2b06a8f0c0779"
 dependencies = [
  "az-cvm-vtpm",
  "base64-url",
@@ -4972,7 +4972,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "chrono",
  "getrandom 0.2.17",
  "http 1.4.0",
@@ -5580,7 +5580,7 @@ dependencies = [
  "aes-gcm 0.10.3",
  "aes-kw 0.2.1",
  "argon2",
- "base64 0.21.7",
+ "base64 0.22.1",
  "bitfields",
  "block-padding",
  "blowfish",
