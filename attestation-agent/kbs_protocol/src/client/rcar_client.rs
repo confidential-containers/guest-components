@@ -212,7 +212,7 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
         };
         debug!("Primary runtime data (final): {primary_runtime_data:?}");
         let primary_evidence = self.provider.primary_evidence(primary_runtime_data).await?;
-        debug!("Primary evidence from runtime data: {primary_evidence:#?}");
+        debug!("Primary evidence from runtime data: {primary_evidence:?}");
         let guest_evidence = CompositeEvidence {
             primary_evidence,
             additional_evidence,

@@ -8,7 +8,7 @@ use attester::TeeEvidence;
 use kbs_types::Tee;
 use serde_json::json;
 use ttrpc::context;
-use tracing::{debug, warn};
+use tracing::{debug, field::debug, warn};
 
 use crate::{Error, Result};
 use protos::ttrpc::aa::{
@@ -42,6 +42,7 @@ impl AAEvidenceProvider {
 impl EvidenceProvider for AAEvidenceProvider {
     /// Get evidence with as runtime data (report data, challege)
     async fn primary_evidence(&self, runtime_data: Vec<u8>) -> Result<TeeEvidence> {
+        debug!("Entered AAEvidenceProvider.primary_evidence() ...");
         let req = GetEvidenceRequest {
             RuntimeData: runtime_data,
             ..Default::default()

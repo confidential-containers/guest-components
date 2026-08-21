@@ -8,8 +8,7 @@ use std::str::FromStr;
 use strum::EnumString;
 use tempfile::tempdir_in;
 use thiserror::Error;
-use tracing::{warn, debug, error};
-use std::io;
+use tracing::{info, warn, debug, error};
 
 pub const TSM_REPORT_PATH: &str = "/sys/kernel/config/tsm/report";
 pub const TSM_PRIVLEVEL_MAX: u8 = 3;
@@ -118,6 +117,7 @@ impl TsmReportPath {
                 tracing::error!("Failed to read outblob from report path: {:?}, error: {:?}", report_path, e);
                 TsmReportError::Access("outblob", e)
             })?;
+        debug!("Read outblob from report path: {:?}: {:?}", report_path, q);
 
         // Check that the expected generation matches the current generation maintained by the kernel before returning the report data.
         //  If it doesn't match we should assume another process has modified the report, 
@@ -129,9 +129,14 @@ impl TsmReportPath {
 
     pub fn supplemental_data(&self) -> Result<Vec<u8>, TsmReportError> {
         let report_path = self.path.as_path();
+        debug!("Attempting to read auxblob from report path: {:?}", report_path);
 
         let aux = std::fs::read(report_path.join("auxblob"))
-            .map_err(|e| TsmReportError::Access("auxblob", e))?;
+            .map_err(|e| {
+                tracing::error!("Failed to read auxblob from report path: {:?}, error: {:?}", report_path, e);
+                TsmReportError::Access("auxblob", e)
+            })?;
+        debug!("Read auxblob from report path: {:?}: {:?}", report_path, aux);
 
         // Check that the expected generation matches the current generation in the kernel before returning the supplemental data.
         //  If it doesn't match, we should assume another process has modified the report, 
@@ -161,11 +166,19 @@ impl TsmReportPath {
     /// 
     /// This is meant to detect concurrent modifications to the TsmReportPath instance by other processes.
     pub fn check_tsm_report_generation(&self) -> Result<(), TsmReportError> {
+        debug!("Verifying TSM report consistency for report path {:?}...", &self.path);
         let expected = self.expected_generation;
         let real = Self::get_tsm_report_generation(&self.path)?;
         if self.expected_generation != real {
+            error!(
+                "Generation Mismatch for TSM Report at {:?}. \
+                The report might have been modified by another process and therefore cannot be trusted. \
+                (Expected: {}, Real: {})", 
+                &self.path, expected, real
+            );
             return Err(TsmReportError::GenerationMismatch(real, expected));
         }
+        debug!("Verified TSM report consistency for report path {:?}...", &self.path);
         Ok(())
     }
 

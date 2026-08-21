@@ -14,7 +14,7 @@ use sev::firmware::guest::AttestationReport;
 use sev::firmware::guest::Firmware;
 use sev::firmware::host::CertTableEntry;
 use std::path::Path;
-use tracing::{debug, warn};
+use tracing::{debug, warn, error};
 
 mod hostdata;
 
@@ -90,7 +90,7 @@ impl Attester for SnpAttester {
             // Use the TSM Report path to generate the attestation report and get the certificate chain.
 
             // Get and verify the TSM Report path instance for SEV-SNP.
-            let mut tsm_report_path = TsmReportPath::new(TsmReportProvider::Sev)
+            let mut tsm_report_path: TsmReportPath = TsmReportPath::new(TsmReportProvider::Sev)
                 .context("SEV-SNP Attester: failed to create TSM Report path")?;
 
             // Generate the attestation report from the TSM Report path.
@@ -102,15 +102,24 @@ impl Attester for SnpAttester {
                 .supplemental_data()
                 .context("SEV-SNP Attester: failed to get supplemental data")?;
 
-            // Convert the certificate chain data from bytes to a vector of CertTableEntry structs and sort them.
-            let mut certificates: Vec<CertTableEntry> = CertTableEntry::vec_bytes_to_cert_table(&mut cert_table_data)?;
-            certificates.sort();
-
             // Set the certificate chain to None if it is empty, otherwise set it to Some(certificates).
-            certs = match certificates.is_empty() { 
+            certs = match cert_table_data.is_empty() {
                 true => None,
-                false => Some(certificates) 
-            }
+                false => {
+                    // Convert the certificate chain data from bytes to a vector of CertTableEntry structs and sort them.
+                    debug!("Certificate table data: {:?}", cert_table_data);
+                    let mut certificates: Vec<CertTableEntry> = CertTableEntry::vec_bytes_to_cert_table(&mut cert_table_data)
+                        .map_err(|e| {
+                            error!("Failed to parse certificate table data: {:?}", e);
+                            e
+                        })?;                    
+                    debug!("Certificates before sorting: {:?}", certificates);
+                    certificates.sort();
+                    debug!("Certificates after sorting: {:?}", certificates);
+                    Some(certificates) 
+                }
+            };
+            debug!("Certificate chain set to: {:?}", certs);
         } else {
             warn!("TSM Support not detected, falling back to SEV crate...");
             // Use the legacy path via the sev Rust crate to generate the attestation report and get the certificate chain.
