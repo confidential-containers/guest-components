@@ -76,7 +76,6 @@ pub enum PullImageError {
         source: anyhow::Error,
     },
 
-    #[cfg(feature = "signature")]
     #[error("Image policy rejected: {0}")]
     SignatureValidationFailed(#[from] SignatureError),
 
@@ -400,7 +399,6 @@ impl ImageClient {
             }
         }
 
-        #[cfg(feature = "signature")]
         if let Some(signature_validator) = &self.signature_validator {
             signature_validator
                 .check_image_signature(

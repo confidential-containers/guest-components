@@ -6,11 +6,15 @@
 use std::sync::{Arc, LazyLock};
 
 use anyhow::*;
-use kbc::{cc_kbc::Kbc as CcKbc, sample_kbc::SampleKbc, AnnotationPacket, KbcInterface};
+use kbc::{
+    cc_kbc::Kbc as CcKbc, offline_fs_kbc::OfflineFsKbc, sample_kbc::SampleKbc, AnnotationPacket,
+    KbcInterface,
+};
 use tokio::sync::RwLock;
 
 pub enum Kbc {
     Sample(SampleKbc),
+    OfflineFs(OfflineFsKbc),
     Cc(CcKbc),
 }
 
@@ -21,6 +25,7 @@ async fn initialize_channel(kbs_addr: &str, kbc: &str) -> Result<()> {
     let channel = match kbc {
         "cc_kbc" => Kbc::Cc(CcKbc::new(kbs_addr.to_owned())?),
         "sample_kbc" => Kbc::Sample(SampleKbc::new(kbs_addr.to_owned())),
+        "offline_fs_kbc" => Kbc::OfflineFs(OfflineFsKbc::new()),
         other => bail!("Unsupported KBC {other}"),
     };
 
@@ -47,6 +52,7 @@ pub async fn decrypt_image_layer_annotation(
         let writer = writer.as_mut().expect("unexpected uninitialized.");
         match writer {
             Kbc::Sample(inner) => inner.decrypt_payload(annotation_packet).await,
+            Kbc::OfflineFs(inner) => inner.decrypt_payload(annotation_packet).await,
             Kbc::Cc(inner) => inner.decrypt_payload(annotation_packet).await,
         }
     }?;

@@ -60,9 +60,9 @@ pub enum SignatureError {
 pub struct SignatureValidator {
     policy: Policy,
 
-    resource_provider: Arc<ResourceProvider>,
+    _resource_provider: Arc<ResourceProvider>,
 
-    proxy_config: Option<ProxyConfig>,
+    _proxy_config: Option<ProxyConfig>,
 
     #[cfg(feature = "signature-simple")]
     simple_signing_sigstore_config: Option<policy::SigstoreConfig>,
@@ -160,9 +160,9 @@ impl SignatureValidator {
         policy: &[u8],
         _simple_signing_sigstore_config: Option<Vec<u8>>,
         workdir: &Path,
-        proxy_config: Option<ProxyConfig>,
-        certificates: Vec<String>,
-        resource_provider: Arc<ResourceProvider>,
+        _proxy_config: Option<ProxyConfig>,
+        _certificates: Vec<String>,
+        _resource_provider: Arc<ResourceProvider>,
     ) -> SignatureResult<Self> {
         let policy: Policy =
             serde_json::from_slice(policy).map_err(|_| SignatureError::InvalidPolicyFile)?;
@@ -190,7 +190,7 @@ impl SignatureValidator {
         };
 
         #[cfg(feature = "signature-cosign")]
-        let certificates = certificates
+        let certificates = _certificates
             .into_iter()
             .map(|pem| pem.into_bytes())
             .map(|data| sigstore::registry::Certificate {
@@ -201,8 +201,9 @@ impl SignatureValidator {
 
         Ok(Self {
             policy,
-            resource_provider,
-            proxy_config,
+            _resource_provider,
+            _proxy_config,
+            #[cfg(feature = "signature-cosign")]
             certificates,
             #[cfg(feature = "signature-simple")]
             simple_signing_sigstore_config,

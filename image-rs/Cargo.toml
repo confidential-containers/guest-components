@@ -22,13 +22,12 @@ cfg-if.workspace = true
 devicemapper = { version = "0.34.6", optional = true }
 filetime = "0.2"
 flate2 = "1.1"
-futures = { version = "0.3.32", optional = true }
 futures-util = "0.3"
 hex.workspace = true
 kbc = { path = "../attestation-agent/kbc", default-features = false, optional = true }
 loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27" }
 nix = { workspace = true, features = ["mount", "fs"] }
-oci-client = { git = "https://github.com/oras-project/rust-oci-client", rev = "83092a67ebcaeed832eae090895a1c178d867344", default-features = false, optional = true }
+oci-client = { version = "0.17.0", default-features = false }
 oci-spec = "0.10.0"
 ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = [
     "async-io",
@@ -48,7 +47,7 @@ strum_macros = "0.28"
 astral-tokio-tar = "0.6.2"
 thiserror.workspace = true
 tokio.workspace = true
-tokio-util = "0.7.18"
+tokio-util = { version = "0.7.18", features = ["io-util"] }
 toml.workspace = true
 tonic = { workspace = true, optional = true }
 tracing.workspace = true
@@ -122,7 +121,6 @@ keywrap-grpc = ["ocicrypt-rs/keywrap-keyprovider-grpc", "tonic", "protos/grpc"]
 keywrap-native = [
     "ocicrypt-rs/keywrap-keyprovider-native",
     "kbc/cc_kbc",
-    "kbc/sample_kbc",
     "kbc/sgx-attester",
     "resource_uri",
 ]
@@ -136,12 +134,7 @@ keywrap-ttrpc = [
 keywrap-jwe = ["ocicrypt-rs/keywrap-jwe"]
 
 signature = []
-signature-cosign = [
-    "signature",
-    "futures",
-    "sigstore/registry",
-    "sigstore/cosign",
-]
+signature-cosign = ["signature", "sigstore/registry", "sigstore/cosign"]
 signature-cosign-rustls = [
     "signature-cosign",
     "sigstore/rustls-tls",

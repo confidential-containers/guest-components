@@ -40,11 +40,11 @@ impl SignatureValidator {
     ) -> Result<()> {
         parameter
             .check_image_signature(
-                self.resource_provider.clone(),
+                self._resource_provider.clone(),
                 image,
                 auth,
                 self.certificates.iter().collect(),
-                self.proxy_config.as_ref(),
+                self._proxy_config.as_ref(),
             )
             .await
     }
@@ -53,7 +53,7 @@ impl SignatureValidator {
 impl CosignParameters {
     async fn check_image_signature(
         &self,
-        resource_provider: Arc<ResourceProvider>,
+        _resource_provider: Arc<ResourceProvider>,
         image: &Image,
         auth: &RegistryAuth,
         certificates: Vec<&Certificate>,
@@ -65,7 +65,7 @@ impl CosignParameters {
         // Get the public key
         let key = match (&self.key_data, &self.key_path) {
             (None, None) => bail!("Neither keyPath nor keyData is specified."),
-            (None, Some(key_path)) => resource_provider.get_resource(key_path).await?,
+            (None, Some(key_path)) => _resource_provider.get_resource(key_path).await?,
             (Some(key_data), None) => key_data.as_bytes().to_vec(),
             (Some(_), Some(_)) => bail!("Both keyPath and keyData are specified."),
         };
@@ -313,9 +313,9 @@ mod tests {
         image
             .set_manifest_digest(image_digest)
             .expect("Set manifest digest failed.");
-        let resource_provider = ResourceProvider::default();
+        let _resource_provider = ResourceProvider::default();
 
-        let key = resource_provider
+        let key = _resource_provider
             .get_resource(parameter.key_path.as_ref().unwrap())
             .await
             .unwrap();
@@ -435,10 +435,10 @@ mod tests {
             .expect("Set manifest digest failed.");
 
         if let PolicyReqType::Cosign(scheme) = policy_requirement {
-            let resource_provider = ResourceProvider::default();
+            let _resource_provider = ResourceProvider::default();
             let res = scheme
                 .check_image_signature(
-                    Arc::new(resource_provider),
+                    Arc::new(_resource_provider),
                     &image,
                     &oci_client::secrets::RegistryAuth::Anonymous,
                     vec![],

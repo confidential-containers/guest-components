@@ -16,7 +16,6 @@ resource_uri.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 strum.workspace = true
-url.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
@@ -26,7 +25,7 @@ rstest.workspace = true
 [build-dependencies]
 
 [features]
-default = ["sample_kbc", "rust-crypto"]
+default = ["rust-crypto"]
 
 cc_kbc = ["kbs_protocol/background_check"]
 all-attesters = ["kbs_protocol?/all-attesters"]
@@ -36,12 +35,13 @@ sgx-attester = ["kbs_protocol/sgx-attester"]
 az-snp-vtpm-attester = ["kbs_protocol/az-snp-vtpm-attester"]
 az-tdx-vtpm-attester = ["kbs_protocol/az-tdx-vtpm-attester"]
 snp-attester = ["kbs_protocol/snp-attester"]
+csv-attester = ["kbs_protocol/csv-attester"]
+hygon-dcu-attester = ["kbs_protocol/hygon-dcu-attester"]
 cca-attester = ["kbs_protocol/cca-attester"]
 se-attester = ["kbs_protocol/se-attester"]
 tpm-attester = ["kbs_protocol/tpm-attester"]
-
-sample_kbc = []
-offline_fs_kbc = []
+nvidia-attester = ["kbs_protocol/nvidia-attester"]
+nvidia-dpu-attester = ["kbs_protocol/nvidia-dpu-attester"]
 
 # Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
 rust-crypto = ["crypto/rust-crypto", "kbs_protocol?/rust-crypto"]
