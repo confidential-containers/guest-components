@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use attester::{BoxedAttester, TeeEvidence, detect_attestable_devices, detect_tee_type};
 use kbs_types::Tee;
-
+use tracing::debug;
 use super::EvidenceProvider;
 
 use crate::{Error, Result};
@@ -47,6 +47,7 @@ impl NativeEvidenceProvider {
 #[async_trait]
 impl EvidenceProvider for NativeEvidenceProvider {
     async fn primary_evidence(&self, runtime_data: Vec<u8>) -> Result<TeeEvidence> {
+        debug!("Entered NativeEvidenceProvider.primary_evidence() ...");
         self.primary_attester
             .get_evidence(runtime_data)
             .await
@@ -54,6 +55,7 @@ impl EvidenceProvider for NativeEvidenceProvider {
     }
 
     async fn get_additional_evidence(&self, runtime_data: Vec<u8>) -> Result<String> {
+        debug!("Entered NativeEvidenceProvider.get_additional_evidence() ...");
         let mut additional_evidences_map = HashMap::new();
 
         for (tee, attester) in &self.additional_attesters {
@@ -75,6 +77,7 @@ impl EvidenceProvider for NativeEvidenceProvider {
     }
 
     async fn get_tee_type(&self) -> Result<Tee> {
+        debug!("Entered NativeEvidenceProvider.get_tee_type() ...");
         Ok(self.primary_tee)
     }
 }

@@ -8,8 +8,10 @@ use std::str::FromStr;
 use strum::EnumString;
 use tempfile::tempdir_in;
 use thiserror::Error;
+use tracing::{info, warn, debug, error};
 
-const TSM_REPORT_PATH: &str = "/sys/kernel/config/tsm/report";
+pub const TSM_REPORT_PATH: &str = "/sys/kernel/config/tsm/report";
+pub const TSM_PRIVLEVEL_MAX: u8 = 3;
 
 #[derive(Error, Debug)]
 pub enum TsmReportError {
@@ -29,6 +31,10 @@ pub enum TsmReportError {
     InblobConflict(u32),
     #[error("Failed to generate TSM Report: missing inblob (len=0)")]
     InblobLen,
+    #[error("Failed to set TSM Report Privlevel: supplied privlevel {0} is not in range [privlevel_floor ({1}), TSM_PRIVLEVEL_MAX (3)]: ({2})")]
+    PrivlevelInvalid(u8, u8, #[source] std::io::Error),
+    #[error("Failed to generate TSM Report: generation mismatch (generation={0}, expected {1})")]
+    GenerationMismatch(u32, u32),
 }
 
 #[derive(PartialEq, Debug, EnumString)]
@@ -53,6 +59,7 @@ pub enum TsmReportData {
 /// automatically removed when the instance goes out of scope.
 pub struct TsmReportPath {
     path: PathBuf,
+    expected_generation: u32
 }
 
 impl Drop for TsmReportPath {
@@ -79,22 +86,19 @@ impl TsmReportPath {
             let _ = std::fs::remove_dir(path.as_path());
         })?;
 
-        Ok(Self { path })
+        let expected_generation = Self::get_tsm_report_generation(&path)?;
+
+        Ok(Self { path, expected_generation })
     }
 
-    pub fn attestation_report(
-        &self,
-        provider_data: TsmReportData,
-    ) -> Result<Vec<u8>, TsmReportError> {
-        let report_path = self.path.as_path();
+    pub fn attestation_report(&mut self, provider_data: TsmReportData) -> Result<Vec<u8>, TsmReportError> {
+        let report_path = self.path.clone();
 
         let report_data = match provider_data {
             TsmReportData::Cca(inblob) => inblob,
             TsmReportData::Tdx(inblob) => inblob,
             TsmReportData::Sev(privlevel, inblob) => {
-                // TODO: untested
-                std::fs::write(report_path.join("privlevel"), vec![privlevel])
-                    .map_err(|e| TsmReportError::Access("privlevel", e))?;
+                self.set_privlevel(privlevel)?;
                 inblob
             }
         };
@@ -103,27 +107,147 @@ impl TsmReportPath {
             return Err(TsmReportError::InblobLen);
         }
 
-        std::fs::write(report_path.join("inblob"), report_data)
-            .map_err(|e| TsmReportError::Access("inblob", e))?;
+        debug!("Attempting to write Report Data to inblob: {:?}", &report_data);
+        self.write_inblob(&report_data)?;
+        debug!("Wrote Report Data to inblob: {:?}", &report_data);
 
+        debug!("Attempting to read outblob from report path: {:?}", report_path);
         let q = std::fs::read(report_path.join("outblob"))
-            .map_err(|e| TsmReportError::Access("outblob", e))?;
+            .map_err(|e| {
+                tracing::error!("Failed to read outblob from report path: {:?}, error: {:?}", report_path, e);
+                TsmReportError::Access("outblob", e)
+            })?;
+        debug!("Read outblob from report path: {:?}: {:?}", report_path, q);
 
-        check_inblob_write_race(report_path)?;
+        // Check that the expected generation matches the current generation maintained by the kernel before returning the report data.
+        //  If it doesn't match we should assume another process has modified the report, 
+        //  invalidating our view of the report.
+        self.check_tsm_report_generation()?;
 
         Ok(q)
     }
 
     pub fn supplemental_data(&self) -> Result<Vec<u8>, TsmReportError> {
         let report_path = self.path.as_path();
+        debug!("Attempting to read auxblob from report path: {:?}", report_path);
 
         let aux = std::fs::read(report_path.join("auxblob"))
-            .map_err(|e| TsmReportError::Access("auxblob", e))?;
+            .map_err(|e| {
+                tracing::error!("Failed to read auxblob from report path: {:?}, error: {:?}", report_path, e);
+                TsmReportError::Access("auxblob", e)
+            })?;
+        debug!("Read auxblob from report path: {:?}: {:?}", report_path, aux);
 
-        check_inblob_write_race(report_path)?;
+        // Check that the expected generation matches the current generation in the kernel before returning the supplemental data.
+        //  If it doesn't match, we should assume another process has modified the report, 
+        //  invalidating our view of the report.
+        self.check_tsm_report_generation()?;
 
         Ok(aux)
     }
+
+    /// get_tsm_report_generation returns the generation of a configfs-tsm report according to the kernel.
+    /// Each write to any attribute of the report increments the generation of that report.
+    pub fn get_tsm_report_generation(report_path: &Path) -> Result<u32, TsmReportError> {
+        let g = std::fs::read_to_string(report_path.join("generation"))
+            .map_err(|e| TsmReportError::Access("generation", e))?;
+
+        let generation = g
+            .trim_matches('\n')
+            .to_string()
+            .parse::<u32>()
+            .map_err(TsmReportError::Parse);
+        
+        generation
+    }
+
+    /// check_tsm_report_generation checks if the expected generation of this TsmReportPath instance matches the generation of the Configfs-TSM report maintained by the kernel.
+    /// Returns an error if the expected generation does not match the current generation in the kernel.
+    /// 
+    /// This is meant to detect concurrent modifications to the TsmReportPath instance by other processes.
+    pub fn check_tsm_report_generation(&self) -> Result<(), TsmReportError> {
+        debug!("Verifying TSM report consistency for report path {:?}...", &self.path);
+        let expected = self.expected_generation;
+        let real = Self::get_tsm_report_generation(&self.path)?;
+        if self.expected_generation != real {
+            error!(
+                "Generation Mismatch for TSM Report at {:?}. \
+                The report might have been modified by another process and therefore cannot be trusted. \
+                (Expected: {}, Real: {})", 
+                &self.path, expected, real
+            );
+            return Err(TsmReportError::GenerationMismatch(real, expected));
+        }
+        debug!("Verified TSM report consistency for report path {:?}...", &self.path);
+        Ok(())
+    }
+
+    /// set_privlevel sets the privilege level for the Configfs-TSM Query, updating the generation of report in the kernel.
+    /// 
+    /// If successful, this operation also increments the expected generation of the TsmReportPath instance.
+    fn set_privlevel(&mut self, privlevel: u8) -> Result<(), TsmReportError> {
+        debug!("Attempting to set privlevel for Configfs-TSM Query to {} ({:?})...", privlevel, privlevel.to_string());
+        self.check_tsm_report_generation()?;
+        
+        let report_path = self.path.as_path();
+        std::fs::write(report_path.join("privlevel"), privlevel.to_string())
+            .map_err(|e| {
+                // Verify that the requested privilage level is within the bounds --
+                //   Note that exceeding the bounds triggers an EINVAL from the Kernel (OS Error 22)
+
+                // Check against the lowest allowed privlevel (tsm api @privlevel_floor)
+                // Check against the highest allowed privlevel (hardcoded to match the ABI TSM_PRIVLEVEL_MAX = 3)
+                error!("Failed to write {:?} to privlevel: {}.", privlevel.to_string(), e);
+                debug!("Reading privlevel_floor for privlevel bounds check...");
+                let privlevel_floor: u8 = match std::fs::read(report_path.join("privlevel_floor")) {
+                    Ok(buf) => match String::from_utf8(buf) {
+                        Ok(s) => match s.parse::<u8>() {
+                            Ok(num) => num,
+                            Err(parse_err) => return TsmReportError::Access("privlevel_floor", std::io::Error::new(std::io::ErrorKind::InvalidData, parse_err)),
+                        },
+                        Err(encode_err) => return TsmReportError::Access("privlevel_floor", std::io::Error::new(std::io::ErrorKind::InvalidData, encode_err)),
+                    },
+                    Err(read_err) => return TsmReportError::Access("privlevel_floor", read_err),
+                };
+                debug!("Extracted privlevel_floor: {}", privlevel_floor);
+                debug!("Checking if privlevel {} is within bounds ({} - {})...", privlevel, privlevel_floor, TSM_PRIVLEVEL_MAX);
+                if privlevel < privlevel_floor || privlevel > TSM_PRIVLEVEL_MAX {
+                    error!("Privlevel {} is out of bounds ({} - {})", privlevel, privlevel_floor, TSM_PRIVLEVEL_MAX);
+                    TsmReportError::PrivlevelInvalid(privlevel, privlevel_floor, e)
+                } else {
+                    // In all other cases, bubble up the error
+                    warn!("Privlevel {} is within bounds, but writing to privlevel failed: {}", privlevel, e);
+                    TsmReportError::Access("privlevel", e)
+                }
+            })?;
+        debug!("Successfully set privlevel for Configfs-TSM Query to {} ({:?})...", privlevel, privlevel.to_string());
+        self.increment_expected_generation();
+        Ok(())
+    }
+
+    /// write_inblob writes the given report data to the inblob attribute of the Configfs-TSM report, updating the generation of report in the kernel.
+    /// 
+    /// If successful, this operation also increments the expected generation of the TsmReportPath instance.
+    fn write_inblob(&mut self, report_data: &[u8]) -> Result<(), TsmReportError> {
+        self.check_tsm_report_generation()?;
+
+        let report_path = self.path.as_path();
+        std::fs::write(report_path.join("inblob"), report_data)
+            .map_err(|e| TsmReportError::Access("inblob", e))?;
+        self.increment_expected_generation();
+        Ok(())
+    }
+
+    /// increment_expected_generation increments the expected generation of the TsmReportPath instance.
+    /// 
+    /// This should be called after successfully writing to any attribute of the Configfs-TSM report.
+    fn increment_expected_generation(&mut self) {
+        let next_gen = self.expected_generation + 1;
+        debug!("Incrementing expected generation for Configfs-TSM Query {} => {}...", self.expected_generation, next_gen);
+        self.expected_generation = next_gen;
+        debug!("Expected generation incremented to {}.", self.expected_generation);
+    }
+
 }
 
 /// check_inblob_write_race checks that the returned outblob/auxblob
