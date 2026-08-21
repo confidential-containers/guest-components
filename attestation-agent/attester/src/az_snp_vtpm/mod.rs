@@ -4,6 +4,7 @@
 //
 
 use super::{Attester, InitDataResult, TeeEvidence};
+use crate::utils::read_eventlog;
 use anyhow::{Context, Result, bail};
 use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
 use azure_tpm::{Tpm, TpmCommandExt};
@@ -70,6 +71,9 @@ impl From<vtpm::Quote> for TpmQuote {
 /// - `hcl_report` - Hardware Compatibility Layer report containing the
 ///    Hardware attestation report from the AMD SEV-SNP platform
 /// - `vcek` - Versioned Chip Endorsement Key certificate (DER-encoded)
+/// - `cc_eventlog` - Base64-encoded runtime eventlog (AAEL in TCG2 encoding),
+///    or `None` when no runtime eventlog has been recorded. Mirrors the shape
+///    used by the TDX attester so the verifier can consume it uniformly.
 #[serde_as]
 #[derive(Serialize, Deserialize)]
 struct Evidence {
@@ -79,6 +83,7 @@ struct Evidence {
     hcl_report: Vec<u8>,
     #[serde_as(as = "UrlSafeBase64")]
     vcek: Vec<u8>,
+    cc_eventlog: Option<String>,
 }
 
 /// Convert a PEM-encoded certificate to DER format
@@ -92,7 +97,10 @@ fn pem_to_der(pem: &str) -> Result<Vec<u8>> {
     Ok(der)
 }
 
-fn get_evidence_sync(report_data: &[u8]) -> anyhow::Result<TeeEvidence> {
+fn get_evidence_sync(
+    report_data: &[u8],
+    cc_eventlog: Option<String>,
+) -> anyhow::Result<TeeEvidence> {
     let hcl_report = vtpm::get_report_with_report_data(report_data)?;
     let tpm_quote = vtpm::get_quote(report_data)?.into();
     let certs = imds::get_certs()?;
@@ -103,6 +111,7 @@ fn get_evidence_sync(report_data: &[u8]) -> anyhow::Result<TeeEvidence> {
         tpm_quote,
         hcl_report,
         vcek,
+        cc_eventlog,
     };
 
     Ok(serde_json::to_value(&evidence)?)
@@ -111,7 +120,10 @@ fn get_evidence_sync(report_data: &[u8]) -> anyhow::Result<TeeEvidence> {
 #[async_trait::async_trait]
 impl Attester for AzSnpVtpmAttester {
     async fn get_evidence(&self, report_data: Vec<u8>) -> anyhow::Result<TeeEvidence> {
-        spawn_blocking(move || get_evidence_sync(&report_data)).await?
+        // Read the runtime eventlog (AAEL) before entering the blocking section:
+        // `read_eventlog` is async, whereas the vTPM calls below are blocking.
+        let cc_eventlog = read_eventlog().await?;
+        spawn_blocking(move || get_evidence_sync(&report_data, cc_eventlog)).await?
     }
 
     fn supports_runtime_measurement(&self) -> bool {
