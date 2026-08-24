@@ -211,7 +211,7 @@ pub fn encrypt_layer<'a, R: 'a + Read>(
     annotations: Option<&BTreeMap<String, String>>,
     digest: &str,
 ) -> Result<(
-    Option<impl Read + EncryptionFinalizer + 'a>,
+    Option<impl Read + EncryptionFinalizer + 'a + use<'a, R>>,
     EncLayerFinalizer,
 )> {
     let mut encrypted = false;
@@ -254,7 +254,7 @@ pub fn decrypt_layer<R: Read>(
     layer_reader: R,
     annotations: Option<&BTreeMap<String, String>>,
     unwrap_only: bool,
-) -> Result<(Option<impl Read>, String)> {
+) -> Result<(Option<impl Read + use<R>>, String)> {
     let priv_opts_data = decrypt_layer_key_opts_data(dc, annotations)?;
     let annotations = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);
     let pub_opts_data = get_layer_pub_opts(annotations)?;
@@ -284,7 +284,7 @@ pub fn async_decrypt_layer<R: tokio::io::AsyncRead + Send>(
     layer_reader: R,
     annotations: Option<&BTreeMap<String, String>>,
     priv_opts_data: &[u8],
-) -> Result<(impl tokio::io::AsyncRead + Send, String)> {
+) -> Result<(impl tokio::io::AsyncRead + Send + use<R>, String)> {
     let annotations = annotations.unwrap_or(&DEFAULT_ANNOTATION_MAP);
     let pub_opts_data = get_layer_pub_opts(annotations)?;
     let pub_opts: PublicLayerBlockCipherOptions = serde_json::from_slice(&pub_opts_data)?;
