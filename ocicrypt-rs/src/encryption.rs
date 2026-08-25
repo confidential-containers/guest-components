@@ -5,16 +5,16 @@ use std::collections::BTreeMap;
 use std::io::Read;
 use std::sync::LazyLock;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use base64::Engine;
 
 use crate::blockcipher::{
-    EncryptionFinalizer, LayerBlockCipherHandler, LayerBlockCipherOptions,
-    PrivateLayerBlockCipherOptions, PublicLayerBlockCipherOptions, AES256CTR,
+    AES256CTR, EncryptionFinalizer, LayerBlockCipherHandler, LayerBlockCipherOptions,
+    PrivateLayerBlockCipherOptions, PublicLayerBlockCipherOptions,
 };
 use crate::config::{DecryptConfig, EncryptConfig};
 use crate::keywrap::KeyWrapper;
-use crate::{get_key_wrapper, KEY_WRAPPERS_ANNOTATIONS};
+use crate::{KEY_WRAPPERS_ANNOTATIONS, get_key_wrapper};
 
 static DEFAULT_ANNOTATION_MAP: LazyLock<BTreeMap<String, String>> = LazyLock::new(BTreeMap::new);
 
@@ -322,9 +322,10 @@ mod tests {
         assert!(ec.encrypt_with_jwe(vec![pub_key]).is_ok());
 
         let mut dc = DecryptConfig::default();
-        assert!(dc
-            .decrypt_with_priv_keys(vec![priv_key.to_vec()], vec![vec![]])
-            .is_ok());
+        assert!(
+            dc.decrypt_with_priv_keys(vec![priv_key.to_vec()], vec![vec![]])
+                .is_ok()
+        );
 
         let layer_data: Vec<u8> = b"This is some text!".to_vec();
         let digest = Sha256::digest(&layer_data);
@@ -370,9 +371,10 @@ mod tests {
         assert!(ec.encrypt_with_jwe(vec![pub_key]).is_ok());
 
         let mut dc = DecryptConfig::default();
-        assert!(dc
-            .decrypt_with_priv_keys(vec![priv_key.to_vec()], vec![vec![]])
-            .is_ok());
+        assert!(
+            dc.decrypt_with_priv_keys(vec![priv_key.to_vec()], vec![vec![]])
+                .is_ok()
+        );
 
         let layer_data: Vec<u8> = b"This is some text!".to_vec();
         let digest = Sha256::digest(&layer_data);

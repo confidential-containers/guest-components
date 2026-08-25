@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use base64::Engine;
 use serde::Serialize;
 
@@ -228,10 +228,11 @@ impl KeyProviderKeyWrapper {
         mut attrs: KeyProviderAttrs,
         runner: Option<Box<dyn utils::CommandExecuter>>,
     ) -> Self {
-        if let Some(grpc) = &attrs.grpc {
-            if !grpc.starts_with("http://") && !grpc.starts_with("tcp://") {
-                attrs.grpc = Some(format!("http://{grpc}"));
-            }
+        if let Some(grpc) = &attrs.grpc
+            && !grpc.starts_with("http://")
+            && !grpc.starts_with("tcp://")
+        {
+            attrs.grpc = Some(format!("http://{grpc}"));
         }
 
         KeyProviderKeyWrapper {
@@ -582,7 +583,7 @@ mod tests {
         use aes_gcm::aead::{Aead, KeyInit};
         use aes_gcm::aes::{Aes256Dec, Aes256Enc};
         use aes_gcm::{Aes256Gcm, Key, Nonce};
-        use anyhow::{anyhow, Context, Result};
+        use anyhow::{Context, Result, anyhow};
 
         pub static mut ENC_KEY: &[u8; 32] = b"passphrasewhichneedstobe32bytes!";
         pub static mut DEC_KEY: &[u8; 32] = b"passphrasewhichneedstobe32bytes!";
@@ -614,16 +615,16 @@ mod tests {
 
     #[cfg(feature = "keywrap-keyprovider-grpc")]
     mod grpc {
-        use super::cmd_grpc::{decrypt_key, encrypt_key, DEC_KEY, ENC_KEY};
+        use super::cmd_grpc::{DEC_KEY, ENC_KEY, decrypt_key, encrypt_key};
         use super::*;
         use protos::grpc::cdh::keyprovider::{
-            key_provider_service_server::{KeyProviderService, KeyProviderServiceServer},
             KeyProviderKeyWrapProtocolInput as grpc_input,
             KeyProviderKeyWrapProtocolOutput as grpc_output,
+            key_provider_service_server::{KeyProviderService, KeyProviderServiceServer},
         };
         use std::net::SocketAddr;
         use tokio::sync::mpsc;
-        use tonic::{transport::Server, Request};
+        use tonic::{Request, transport::Server};
 
         #[tonic::async_trait]
         impl KeyProviderService for TestServer {
@@ -724,7 +725,7 @@ mod tests {
 
     #[cfg(feature = "keywrap-keyprovider-ttrpc")]
     mod ttrpc_test {
-        use super::cmd_grpc::{decrypt_key, encrypt_key, DEC_KEY, ENC_KEY};
+        use super::cmd_grpc::{DEC_KEY, ENC_KEY, decrypt_key, encrypt_key};
         use super::*;
         use async_trait::async_trait;
         use protos::ttrpc::cdh::sync::keyprovider::{
@@ -963,9 +964,11 @@ mod tests {
         let param = "keyprovider".to_string().into_bytes();
         ec_params.push(param.clone());
         assert!(ec.encrypt_with_key_provider(ec_params).is_ok());
-        assert!(keyprovider_key_wrapper
-            .wrap_keys(&ec, &b64_opts_data)
-            .is_ok());
+        assert!(
+            keyprovider_key_wrapper
+                .wrap_keys(&ec, &b64_opts_data)
+                .is_ok()
+        );
 
         // Perform key-provider wrap-key operation
         let key_wrap_output_result = keyprovider_key_wrapper.wrap_keys(&ec, &b64_opts_data);
@@ -1024,9 +1027,11 @@ mod tests {
         let mut ec = crate::keywrap::EncryptConfig::default();
         ec_params.push("keyprovider1".to_string().into_bytes());
         assert!(ec.encrypt_with_key_provider(ec_params).is_ok());
-        assert!(keyprovider_key_wrapper
-            .wrap_keys(&ec, &b64_opts_data)
-            .is_err());
+        assert!(
+            keyprovider_key_wrapper
+                .wrap_keys(&ec, &b64_opts_data)
+                .is_err()
+        );
     }
 
     #[cfg(feature = "keywrap-keyprovider-cmd")]
@@ -1071,9 +1076,11 @@ mod tests {
         dc_params.push("keyprovider1".to_string().as_bytes().to_vec());
         let mut dc = crate::keywrap::DecryptConfig::default();
         assert!(dc.decrypt_with_key_provider(dc_params).is_ok());
-        assert!(keyprovider_key_wrapper
-            .unwrap_keys(&dc, &serialized_ap)
-            .is_err());
+        assert!(
+            keyprovider_key_wrapper
+                .unwrap_keys(&dc, &serialized_ap)
+                .is_err()
+        );
     }
 
     #[cfg(feature = "keywrap-keyprovider-grpc")]

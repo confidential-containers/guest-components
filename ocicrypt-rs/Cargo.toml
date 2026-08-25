@@ -6,7 +6,7 @@ repository = "https://github.com/containers/ocicrypt-rs"
 readme = "README.md"
 license = "Apache-2.0"
 authors = ["The ocicrypt Authors"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 anyhow.workspace = true

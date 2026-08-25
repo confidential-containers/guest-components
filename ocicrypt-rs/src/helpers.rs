@@ -7,7 +7,7 @@ use std::io::Read;
 use std::os::unix::io::FromRawFd;
 use std::path::Path;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 use crate::config::{CryptoConfig, DecryptConfig, EncryptConfig};
 
@@ -209,8 +209,14 @@ pub fn create_decrypt_config(
     let x509_from_keys = process_x509_certs(&keys)?;
     x509s.extend(x509_from_keys);
 
-    let [gpg_secret_key_ring_files, gpg_secret_key_passwords, priv_keys, priv_keys_passwords, pkcs11_yamls, key_providers] =
-        process_private_keyfiles(&keys)?;
+    let [
+        gpg_secret_key_ring_files,
+        gpg_secret_key_passwords,
+        priv_keys,
+        priv_keys_passwords,
+        pkcs11_yamls,
+        key_providers,
+    ] = process_private_keyfiles(&keys)?;
 
     if !gpg_secret_key_ring_files.is_empty() {
         dc.decrypt_with_gpg(gpg_secret_key_ring_files, gpg_secret_key_passwords)?;
@@ -259,8 +265,14 @@ pub fn create_encrypt_config(recipients: Vec<String>, keys: Vec<String>) -> Resu
     }
 
     if !recipients.is_empty() {
-        let [gpg_recipients, pubkeys, x509s, pkcs11_pubkeys, pkcs11_yamls, key_providers] =
-            process_recipient_keys(recipients)?;
+        let [
+            gpg_recipients,
+            pubkeys,
+            x509s,
+            pkcs11_pubkeys,
+            pkcs11_yamls,
+            key_providers,
+        ] = process_recipient_keys(recipients)?;
 
         // Create GPG client with guessed GPG version and default homedir
         if !gpg_recipients.is_empty() {
@@ -319,8 +331,14 @@ mod tests {
         assert!(process_recipient_keys(invalid_recipients1).is_err());
         assert!(process_recipient_keys(invalid_recipients2).is_err());
 
-        let [gpg_recipients, pubkeys, x509s, pkcs11_pubkeys, pkcs11_yamls, key_providers] =
-            process_recipient_keys(valid_recipients).unwrap();
+        let [
+            gpg_recipients,
+            pubkeys,
+            x509s,
+            pkcs11_pubkeys,
+            pkcs11_yamls,
+            key_providers,
+        ] = process_recipient_keys(valid_recipients).unwrap();
         assert_eq!(gpg_recipients.len(), 1);
         assert_eq!(pubkeys.len(), 1);
         assert_eq!(x509s.len(), 1);

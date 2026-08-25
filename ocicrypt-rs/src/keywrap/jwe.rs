@@ -3,10 +3,10 @@
 
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use josekit::jwe::{
-    deserialize_json, serialize_general_json, JweDecrypter, JweEncrypter, JweHeader, JweHeaderSet,
-    ECDH_ES_A256KW, RSA_OAEP,
+    ECDH_ES_A256KW, JweDecrypter, JweEncrypter, JweHeader, JweHeaderSet, RSA_OAEP,
+    deserialize_json, serialize_general_json,
 };
 use josekit::jwk::{Jwk, KeyAlg, KeyFormat, KeyInfo};
 
@@ -184,9 +184,10 @@ mod tests {
             privkey_passwords.push(vec![]);
         }
 
-        assert!(dc
-            .decrypt_with_priv_keys(privkeys, privkey_passwords)
-            .is_ok());
+        assert!(
+            dc.decrypt_with_priv_keys(privkeys, privkey_passwords)
+                .is_ok()
+        );
 
         assert!(jwe_key_wrapper.probe(&dc.param));
         assert!(jwe_key_wrapper.private_keys(&dc.param).is_some());
@@ -197,12 +198,16 @@ mod tests {
             "org.opencontainers.image.enc.keys.jwe".to_string()
         );
 
-        assert!(jwe_key_wrapper
-            .keyids_from_packet("packet".to_string())
-            .is_none());
-        assert!(jwe_key_wrapper
-            .recipients("recipients".to_string())
-            .is_none());
+        assert!(
+            jwe_key_wrapper
+                .keyids_from_packet("packet".to_string())
+                .is_none()
+        );
+        assert!(
+            jwe_key_wrapper
+                .recipients("recipients".to_string())
+                .is_none()
+        );
     }
 
     fn load_data_path() -> PathBuf {

@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use base64::Engine;
-use serde::{de, Deserializer, Serialize, Serializer};
+use serde::{Deserializer, Serialize, Serializer, de};
 
 /// OCICRYPT_ENVVARNAME is the environment name for ocicrypt provider config file,
 /// the key will be "OCICRYPT_KEYPROVIDER_CONFIG" and format is defined at:
@@ -329,12 +329,14 @@ mod tests {
 
         let mut dc = DecryptConfig::default();
 
-        assert!(dc
-            .decrypt_with_priv_keys(priv_keys1.clone(), priv_keys2.clone())
-            .is_ok());
-        assert!(dc
-            .decrypt_with_priv_keys(priv_keys1.clone(), priv_keys3)
-            .is_err());
+        assert!(
+            dc.decrypt_with_priv_keys(priv_keys1.clone(), priv_keys2.clone())
+                .is_ok()
+        );
+        assert!(
+            dc.decrypt_with_priv_keys(priv_keys1.clone(), priv_keys3)
+                .is_err()
+        );
         assert!(dc.decrypt_with_x509s(priv_keys1.clone()).is_ok());
         assert!(dc.decrypt_with_gpg(priv_keys1, priv_keys2).is_ok());
         assert!(dc.decrypt_with_pkcs11(pkcs11_config, pkcs11_yaml).is_ok());
@@ -379,15 +381,17 @@ mod tests {
         assert_eq!(2, ec.param["pubkeys"].len());
 
         assert!(ec.encrypt_with_pkcs7(pubkeys2).is_ok());
-        assert!(ec
-            .encrypt_with_gpg(gpg_recipients.clone(), gpg_pub_ring_file.clone())
-            .is_ok());
+        assert!(
+            ec.encrypt_with_gpg(gpg_recipients.clone(), gpg_pub_ring_file.clone())
+                .is_ok()
+        );
         assert_eq!(gpg_recipients, ec.param["gpg-recipients"]);
         assert_eq!(vec![gpg_pub_ring_file], ec.param["gpg-pubkeyringfile"]);
 
-        assert!(ec
-            .encrypt_with_pkcs11(pkcs11_config, pkcs11_pubkeys, pkcs11_yaml)
-            .is_ok());
+        assert!(
+            ec.encrypt_with_pkcs11(pkcs11_config, pkcs11_pubkeys, pkcs11_yaml)
+                .is_ok()
+        );
         assert!(ec.encrypt_with_key_provider(key_providers).is_ok());
         assert_eq!(vec![b"Enabled".to_vec()], ec.param["key_p1"]);
         assert_eq!(vec![b"abc".to_vec()], ec.param["key_p2"]);
@@ -418,7 +422,7 @@ mod tests {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.push("data");
         let test_conf_path = format!("{}/{}", path.to_str().unwrap(), "ocicrypt_config.json");
-        env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", test_conf_path);
+        unsafe { env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", test_conf_path) };
 
         let mut provider = HashMap::new();
         let args: Vec<String> = Vec::default();

@@ -4,10 +4,10 @@
 use std::collections::HashMap;
 use std::io::Read;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use base64::Engine;
 use base64_serde::base64_serde_type;
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 mod aes_ctr;
 use aes_ctr::AESCTRBlockCipher;
@@ -247,14 +247,16 @@ mod tests {
 
         let mut lbco = LayerBlockCipherOptions::default();
         let mut lbch = LayerBlockCipherHandler::default();
-        assert!(lbch
-            .encrypt(layer_data.as_slice(), AES256CTR, &mut lbco)
-            .is_ok());
+        assert!(
+            lbch.encrypt(layer_data.as_slice(), AES256CTR, &mut lbco)
+                .is_ok()
+        );
 
         let mut encrypted_data: Vec<u8> = Vec::new();
-        assert!(lbch
-            .encrypt(layer_data.as_slice(), AES256CTR, &mut lbco)
-            .is_ok());
+        assert!(
+            lbch.encrypt(layer_data.as_slice(), AES256CTR, &mut lbco)
+                .is_ok()
+        );
         let LayerBlockCipherHandler::Aes256Ctr(mut encryptor) = lbch;
         assert!(encryptor.read_to_end(&mut encrypted_data).is_ok());
         assert!(encryptor.finalized_lbco(&mut lbco).is_ok());
