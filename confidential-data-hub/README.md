@@ -5,7 +5,7 @@ APIs.
 
 ### APIs
 
-The APIs are defined in the [proto file](./hub/protos/). 
+The APIs are defined in the [proto file](../protos/protos/confidential-data-hub).
 
 Note that CDH supports decryption of encrypted images.
 When `OCICRYPT_KEYPROVIDER_CONFIG` is unset, CDH writes a default ocicrypt
