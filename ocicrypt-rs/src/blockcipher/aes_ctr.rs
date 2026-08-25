@@ -3,7 +3,7 @@
 
 use std::io::Read;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use ctr::cipher::{KeyIvInit, StreamCipher};
 use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
@@ -261,21 +261,27 @@ mod tests {
         let mut aes_ctr_block_cipher = AESCTRBlockCipher::new(256).unwrap();
 
         // Error due to LayerBlockCipherOptions without symmetric key
-        assert!(aes_ctr_block_cipher
-            .encrypt(layer_data.as_slice(), &mut lbco)
-            .is_err());
+        assert!(
+            aes_ctr_block_cipher
+                .encrypt(layer_data.as_slice(), &mut lbco)
+                .is_err()
+        );
 
         let key = aes_ctr_block_cipher.generate_key().unwrap();
         lbco.private.symmetric_key = key;
 
-        assert!(aes_ctr_block_cipher
-            .encrypt(layer_data.as_slice(), &mut lbco)
-            .is_ok());
+        assert!(
+            aes_ctr_block_cipher
+                .encrypt(layer_data.as_slice(), &mut lbco)
+                .is_ok()
+        );
 
         let mut encrypted_data: Vec<u8> = Vec::new();
-        assert!(aes_ctr_block_cipher
-            .read_to_end(&mut encrypted_data)
-            .is_ok());
+        assert!(
+            aes_ctr_block_cipher
+                .read_to_end(&mut encrypted_data)
+                .is_ok()
+        );
 
         assert!(aes_ctr_block_cipher.state.as_ref().unwrap().done);
         let finalizer = &mut aes_ctr_block_cipher;
@@ -291,26 +297,34 @@ mod tests {
 
         // Expected HMAC is empty
         lbco.public.hmac = vec![];
-        assert!(aes_ctr_block_cipher
-            .decrypt(encrypted_data.as_slice(), &mut lbco)
-            .is_err());
+        assert!(
+            aes_ctr_block_cipher
+                .decrypt(encrypted_data.as_slice(), &mut lbco)
+                .is_err()
+        );
 
         // Expected HMAC is wrong
         lbco.public.hmac = b"wrong hmac".to_vec();
-        assert!(aes_ctr_block_cipher
-            .decrypt(encrypted_data.as_slice(), &mut lbco)
-            .is_ok());
+        assert!(
+            aes_ctr_block_cipher
+                .decrypt(encrypted_data.as_slice(), &mut lbco)
+                .is_ok()
+        );
 
         let mut plaintxt_data: Vec<u8> = Vec::new();
-        assert!(aes_ctr_block_cipher
-            .read_to_end(&mut plaintxt_data)
-            .is_err());
+        assert!(
+            aes_ctr_block_cipher
+                .read_to_end(&mut plaintxt_data)
+                .is_err()
+        );
 
         // Expected HMAC is right
         lbco.public.hmac = exp_hmac;
-        assert!(aes_ctr_block_cipher
-            .decrypt(encrypted_data.as_slice(), &mut lbco)
-            .is_ok());
+        assert!(
+            aes_ctr_block_cipher
+                .decrypt(encrypted_data.as_slice(), &mut lbco)
+                .is_ok()
+        );
 
         let mut plaintxt_data: Vec<u8> = Vec::new();
         assert!(aes_ctr_block_cipher.read_to_end(&mut plaintxt_data).is_ok());
@@ -326,15 +340,19 @@ mod tests {
         let mut aes_ctr_block_cipher = AESCTRBlockCipher::new(256).unwrap();
 
         // Error due to LayerBlockCipherOptions without symmetric key
-        assert!(aes_ctr_block_cipher
-            .encrypt(layer_data.as_slice(), &mut lbco)
-            .is_err());
+        assert!(
+            aes_ctr_block_cipher
+                .encrypt(layer_data.as_slice(), &mut lbco)
+                .is_err()
+        );
 
         let key = aes_ctr_block_cipher.generate_key().unwrap();
         lbco.private.symmetric_key = key;
-        assert!(aes_ctr_block_cipher
-            .encrypt(layer_data.as_slice(), &mut lbco)
-            .is_ok());
+        assert!(
+            aes_ctr_block_cipher
+                .encrypt(layer_data.as_slice(), &mut lbco)
+                .is_ok()
+        );
 
         let mut encrypted_data = vec![0u8; layer_data.len()];
         let enc_len =
@@ -362,25 +380,33 @@ mod tests {
 
         // Expected HMAC is empty
         lbco.public.hmac = vec![];
-        assert!(aes_ctr_block_cipher
-            .decrypt(&encrypted_data[0..enc_len], &mut lbco)
-            .is_err());
+        assert!(
+            aes_ctr_block_cipher
+                .decrypt(&encrypted_data[0..enc_len], &mut lbco)
+                .is_err()
+        );
 
         // Expected HMAC is wrong
         lbco.public.hmac = b"wrong hmac".to_vec();
-        assert!(aes_ctr_block_cipher
-            .decrypt(&encrypted_data[0..enc_len], &mut lbco)
-            .is_ok());
+        assert!(
+            aes_ctr_block_cipher
+                .decrypt(&encrypted_data[0..enc_len], &mut lbco)
+                .is_ok()
+        );
         let mut plaintxt_data: Vec<u8> = Vec::new();
-        assert!(aes_ctr_block_cipher
-            .read_to_end(&mut plaintxt_data)
-            .is_err());
+        assert!(
+            aes_ctr_block_cipher
+                .read_to_end(&mut plaintxt_data)
+                .is_err()
+        );
 
         // Expected HMAC is right
         lbco.public.hmac = exp_hmac;
-        assert!(aes_ctr_block_cipher
-            .decrypt(&encrypted_data[0..enc_len], &mut lbco)
-            .is_ok());
+        assert!(
+            aes_ctr_block_cipher
+                .decrypt(&encrypted_data[0..enc_len], &mut lbco)
+                .is_ok()
+        );
 
         let mut plaintxt_data: Vec<u8> = vec![0u8; layer_data.len()];
         let dec_len =

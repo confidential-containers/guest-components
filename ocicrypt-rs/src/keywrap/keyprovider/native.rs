@@ -7,8 +7,8 @@ use std::sync::{Arc, LazyLock};
 
 use anyhow::*;
 use kbc::{
-    cc_kbc::Kbc as CcKbc, offline_fs_kbc::OfflineFsKbc, sample_kbc::SampleKbc, AnnotationPacket,
-    KbcInterface,
+    AnnotationPacket, KbcInterface, cc_kbc::Kbc as CcKbc, offline_fs_kbc::OfflineFsKbc,
+    sample_kbc::SampleKbc,
 };
 use tokio::sync::RwLock;
 

@@ -5,7 +5,7 @@
 extern crate serde;
 
 use crate::keywrap::KeyWrapper;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
