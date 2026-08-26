@@ -2469,9 +2469,9 @@ dependencies = [
 
 [[package]]
 name = "devicemapper"
-version = "0.34.7"
+version = "0.34.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "607791a4633fca6e032a66614f4fe96a721dd8641ebe98438283e53d361503cd"
+checksum = "6d95021344f9715868259d6b500aa0fb2a3b53c39b5c88fc45814355e53ce83a"
 dependencies = [
  "bitflags 2.13.1",
  "cfg-if",
@@ -4970,7 +4970,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "chrono",
  "getrandom 0.2.17",
  "http 1.4.0",
@@ -5579,7 +5579,7 @@ dependencies = [
  "aes-gcm 0.10.3",
  "aes-kw 0.2.1",
  "argon2",
- "base64 0.21.7",
+ "base64 0.22.1",
  "bitfields",
  "block-padding",
  "blowfish",
