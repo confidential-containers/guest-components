@@ -164,6 +164,76 @@ pub fn create_secure_mount_service(service: Arc<dyn SecureMountService + Send + 
 }
 
 #[derive(Clone)]
+pub struct SecureVolumeServiceClient {
+    client: ::ttrpc::r#async::Client,
+}
+
+impl SecureVolumeServiceClient {
+    pub fn new(client: ::ttrpc::r#async::Client) -> Self {
+        SecureVolumeServiceClient {
+            client,
+        }
+    }
+
+    pub async fn activate_volume(&self, ctx: ttrpc::context::Context, req: &super::api::ActivateVolumeRequest) -> ::ttrpc::Result<super::api::ActivateVolumeResponse> {
+        let mut cres = super::api::ActivateVolumeResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "api.SecureVolumeService", "ActivateVolume", cres);
+    }
+
+    pub async fn deactivate_volume(&self, ctx: ttrpc::context::Context, req: &super::api::DeactivateVolumeRequest) -> ::ttrpc::Result<super::api::DeactivateVolumeResponse> {
+        let mut cres = super::api::DeactivateVolumeResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "api.SecureVolumeService", "DeactivateVolume", cres);
+    }
+}
+
+struct ActivateVolumeMethod {
+    service: Arc<dyn SecureVolumeService + Send + Sync>,
+}
+
+#[async_trait]
+impl ::ttrpc::r#async::MethodHandler for ActivateVolumeMethod {
+    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
+        ::ttrpc::async_request_handler!(self, ctx, req, api, ActivateVolumeRequest, activate_volume);
+    }
+}
+
+struct DeactivateVolumeMethod {
+    service: Arc<dyn SecureVolumeService + Send + Sync>,
+}
+
+#[async_trait]
+impl ::ttrpc::r#async::MethodHandler for DeactivateVolumeMethod {
+    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
+        ::ttrpc::async_request_handler!(self, ctx, req, api, DeactivateVolumeRequest, deactivate_volume);
+    }
+}
+
+#[async_trait]
+pub trait SecureVolumeService: Sync {
+    async fn activate_volume(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::api::ActivateVolumeRequest) -> ::ttrpc::Result<super::api::ActivateVolumeResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/api.SecureVolumeService/ActivateVolume is not supported".to_string())))
+    }
+    async fn deactivate_volume(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::api::DeactivateVolumeRequest) -> ::ttrpc::Result<super::api::DeactivateVolumeResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/api.SecureVolumeService/DeactivateVolume is not supported".to_string())))
+    }
+}
+
+pub fn create_secure_volume_service(service: Arc<dyn SecureVolumeService + Send + Sync>) -> HashMap<String, ::ttrpc::r#async::Service> {
+    let mut ret = HashMap::new();
+    let mut methods = HashMap::new();
+    let streams = HashMap::new();
+
+    methods.insert("ActivateVolume".to_string(),
+                    Box::new(ActivateVolumeMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
+
+    methods.insert("DeactivateVolume".to_string(),
+                    Box::new(DeactivateVolumeMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
+
+    ret.insert("api.SecureVolumeService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
+    ret
+}
+
+#[derive(Clone)]
 pub struct ImagePullServiceClient {
     client: ::ttrpc::r#async::Client,
 }

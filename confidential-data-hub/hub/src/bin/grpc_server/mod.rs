@@ -6,7 +6,7 @@
 use anyhow::*;
 
 use confidential_data_hub::{
-    storage::volume_type::Storage,
+    storage::{secure_volume::VolumeAccess as CdhVolumeAccess, volume_type::Storage},
     {hub::Hub, DataHub},
 };
 use std::{error::Error as _, net::SocketAddr, sync::Arc};
@@ -23,8 +23,11 @@ use protos::grpc::cdh::{
         image_pull_service_server::{ImagePullService, ImagePullServiceServer},
         sealed_secret_service_server::{SealedSecretService, SealedSecretServiceServer},
         secure_mount_service_server::{SecureMountService, SecureMountServiceServer},
-        GetResourceRequest, GetResourceResponse, ImagePullRequest, ImagePullResponse,
-        SecureMountRequest, SecureMountResponse, UnsealSecretInput, UnsealSecretOutput,
+        secure_volume_service_server::{SecureVolumeService, SecureVolumeServiceServer},
+        ActivateVolumeRequest, ActivateVolumeResponse, DeactivateVolumeRequest,
+        DeactivateVolumeResponse, GetResourceRequest, GetResourceResponse, ImagePullRequest,
+        ImagePullResponse, SecureMountRequest, SecureMountResponse, UnsealSecretInput,
+        UnsealSecretOutput, VolumeAccess as ProtoVolumeAccess,
     },
     keyprovider::{
         key_provider_service_server::{KeyProviderService, KeyProviderServiceServer},
@@ -117,6 +120,63 @@ impl SecureMountService for Cdh {
         let reply = SecureMountResponse {};
 
         Result::Ok(Response::new(reply))
+    }
+}
+
+#[tonic::async_trait]
+impl SecureVolumeService for Cdh {
+    async fn activate_volume(
+        &self,
+        request: Request<ActivateVolumeRequest>,
+    ) -> Result<Response<ActivateVolumeResponse>, Status> {
+        let request = request.into_inner();
+        if request.device_id.is_empty() {
+            return Err(Status::invalid_argument("device_id is required"));
+        }
+        if request.manifest_uri.is_empty() {
+            return Err(Status::invalid_argument("manifest_uri is required"));
+        }
+        let requested_access = match ProtoVolumeAccess::try_from(request.requested_access) {
+            std::result::Result::Ok(ProtoVolumeAccess::ReadOnly) => CdhVolumeAccess::ReadOnly,
+            std::result::Result::Ok(ProtoVolumeAccess::ReadWrite) => CdhVolumeAccess::ReadWrite,
+            std::result::Result::Ok(ProtoVolumeAccess::Unspecified)
+            | std::result::Result::Err(_) => {
+                return Err(Status::invalid_argument("requested_access is required"));
+            }
+        };
+        let activation = self
+            .inner
+            .activate_volume(&request.device_id, &request.manifest_uri, requested_access)
+            .await
+            .map_err(|e| {
+                let detailed_error = format_error!(e);
+                error!("[gRPC CDH] Activate Volume failed:\n{detailed_error}");
+                Status::internal(format!("[CDH] [ERROR]: {e}"))
+            })?;
+
+        std::result::Result::Ok(Response::new(ActivateVolumeResponse {
+            activation_id: activation.activation_id,
+            device_path: activation.device_path,
+            effective_access: match activation.effective_access {
+                CdhVolumeAccess::ReadOnly => ProtoVolumeAccess::ReadOnly as i32,
+                CdhVolumeAccess::ReadWrite => ProtoVolumeAccess::ReadWrite as i32,
+            },
+        }))
+    }
+
+    async fn deactivate_volume(
+        &self,
+        request: Request<DeactivateVolumeRequest>,
+    ) -> Result<Response<DeactivateVolumeResponse>, Status> {
+        self.inner
+            .deactivate_volume(&request.into_inner().activation_id)
+            .await
+            .map_err(|e| {
+                let detailed_error = format_error!(e);
+                error!("[gRPC CDH] Deactivate Volume failed:\n{detailed_error}");
+                Status::internal(format!("[CDH] [ERROR]: {e}"))
+            })?;
+        std::result::Result::Ok(Response::new(DeactivateVolumeResponse {}))
     }
 }
 
@@ -219,6 +279,7 @@ pub async fn start_grpc_service(socket: SocketAddr, inner: Hub) -> Result<()> {
         .add_service(SealedSecretServiceServer::new(service.clone()))
         .add_service(GetResourceServiceServer::new(service.clone()))
         .add_service(SecureMountServiceServer::new(service.clone()))
+        .add_service(SecureVolumeServiceServer::new(service.clone()))
         .add_service(ImagePullServiceServer::new(service.clone()))
         .add_service(KeyProviderServiceServer::new(service))
         .serve(socket)

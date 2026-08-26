@@ -6,6 +6,7 @@
 pub mod error;
 pub use error::*;
 pub mod drivers;
+pub mod secure_volume;
 pub mod volume_type;
 
 #[cfg(test)]

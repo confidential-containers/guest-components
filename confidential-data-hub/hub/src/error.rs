@@ -34,6 +34,9 @@ pub enum Error {
     #[error("Secure Mount failed")]
     SecureMount(#[from] storage::Error),
 
+    #[error("Secure Volume failed")]
+    SecureVolume(#[from] storage::secure_volume::Error),
+
     #[error("Image Pull error: {0}")]
     ImagePull(#[from] image_rs::image::PullImageError),
 

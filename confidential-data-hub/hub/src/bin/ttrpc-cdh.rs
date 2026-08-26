@@ -13,7 +13,7 @@ use tracing::{debug, info};
 use protos::ttrpc::cdh::{
     api_ttrpc::{
         create_get_resource_service, create_image_pull_service, create_sealed_secret_service,
-        create_secure_mount_service,
+        create_secure_mount_service, create_secure_volume_service,
     },
     keyprovider_ttrpc::create_key_provider_service,
 };
@@ -108,6 +108,7 @@ rpc: ttrpc
         .register_service(create_get_resource_service(server.clone() as _))
         .register_service(create_key_provider_service(server.clone() as _))
         .register_service(create_secure_mount_service(server.clone() as _))
+        .register_service(create_secure_volume_service(server.clone() as _))
         .register_service(create_image_pull_service(server.clone() as _));
 
     info!(

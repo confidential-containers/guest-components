@@ -387,7 +387,7 @@ impl SecureMount for BlockDevice {
     }
 }
 
-fn parse_device_id(device_id: &str) -> Result<(u32, u32)> {
+pub(crate) fn parse_device_id(device_id: &str) -> Result<(u32, u32)> {
     let parts: Vec<&str> = device_id.split(':').collect();
     if parts.len() != 2 {
         return Err(BlockDeviceError::IllegalDeviceId);
@@ -401,7 +401,7 @@ fn parse_device_id(device_id: &str) -> Result<(u32, u32)> {
     Ok((major, minor))
 }
 
-async fn get_device_path(major: u32, minor: u32) -> Result<String> {
+pub(crate) async fn get_device_path(major: u32, minor: u32) -> Result<String> {
     let uevent_path = format!("/sys/dev/block/{}:{}/uevent", major, minor);
     let file = File::open(uevent_path).await?;
     let reader = BufReader::new(file);

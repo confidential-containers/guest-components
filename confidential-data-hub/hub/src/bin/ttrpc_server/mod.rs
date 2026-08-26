@@ -8,7 +8,7 @@ use std::error::Error as _;
 use anyhow::Result;
 use async_trait::async_trait;
 use confidential_data_hub::{
-    storage::volume_type::Storage,
+    storage::{secure_volume::VolumeAccess as CdhVolumeAccess, volume_type::Storage},
     {hub::Hub, CdhConfig, DataHub},
 };
 use tracing::{debug, error};
@@ -16,10 +16,15 @@ use ttrpc::{asynchronous::TtrpcContext, Code, Error, Status};
 
 use protos::ttrpc::cdh::{
     api::{
-        GetResourceRequest, GetResourceResponse, ImagePullRequest, ImagePullResponse,
-        SecureMountRequest, SecureMountResponse, UnsealSecretInput, UnsealSecretOutput,
+        ActivateVolumeRequest, ActivateVolumeResponse, DeactivateVolumeRequest,
+        DeactivateVolumeResponse, GetResourceRequest, GetResourceResponse, ImagePullRequest,
+        ImagePullResponse, SecureMountRequest, SecureMountResponse, UnsealSecretInput,
+        UnsealSecretOutput, VolumeAccess as ProtoVolumeAccess,
     },
-    api_ttrpc::{GetResourceService, ImagePullService, SealedSecretService, SecureMountService},
+    api_ttrpc::{
+        GetResourceService, ImagePullService, SealedSecretService, SecureMountService,
+        SecureVolumeService,
+    },
     keyprovider::{KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput},
     keyprovider_ttrpc::KeyProviderService,
 };
@@ -173,6 +178,75 @@ impl SecureMountService for Server {
         let reply = SecureMountResponse::new();
         debug!("[ttRPC CDH] secure mount succeeded.");
         Ok(reply)
+    }
+}
+
+#[async_trait]
+impl SecureVolumeService for Server {
+    async fn activate_volume(
+        &self,
+        _ctx: &TtrpcContext,
+        req: ActivateVolumeRequest,
+    ) -> ::ttrpc::Result<ActivateVolumeResponse> {
+        if req.device_id.is_empty() || req.manifest_uri.is_empty() {
+            let mut status = Status::new();
+            status.set_code(Code::INVALID_ARGUMENT);
+            status.set_message("device_id and manifest_uri are required".to_string());
+            return Err(Error::RpcStatus(status));
+        }
+
+        let requested_access = match req.requested_access.enum_value() {
+            Ok(ProtoVolumeAccess::VOLUME_ACCESS_READ_ONLY) => CdhVolumeAccess::ReadOnly,
+            Ok(ProtoVolumeAccess::VOLUME_ACCESS_READ_WRITE) => CdhVolumeAccess::ReadWrite,
+            Ok(ProtoVolumeAccess::VOLUME_ACCESS_UNSPECIFIED) | Err(_) => {
+                let mut status = Status::new();
+                status.set_code(Code::INVALID_ARGUMENT);
+                status.set_message("requested_access is required".to_string());
+                return Err(Error::RpcStatus(status));
+            }
+        };
+
+        let activation = self
+            .hub
+            .activate_volume(&req.device_id, &req.manifest_uri, requested_access)
+            .await
+            .map_err(|e| {
+                let detailed_error = format_error!(e);
+                error!("[ttRPC CDH] Activate Volume:\n{detailed_error}");
+                let mut status = Status::new();
+                status.set_code(Code::INTERNAL);
+                status.set_message(format!("[CDH] [ERROR]: {e}"));
+                Error::RpcStatus(status)
+            })?;
+
+        Ok(ActivateVolumeResponse {
+            activation_id: activation.activation_id,
+            device_path: activation.device_path,
+            effective_access: match activation.effective_access {
+                CdhVolumeAccess::ReadOnly => ProtoVolumeAccess::VOLUME_ACCESS_READ_ONLY.into(),
+                CdhVolumeAccess::ReadWrite => ProtoVolumeAccess::VOLUME_ACCESS_READ_WRITE.into(),
+            },
+            ..Default::default()
+        })
+    }
+
+    async fn deactivate_volume(
+        &self,
+        _ctx: &TtrpcContext,
+        req: DeactivateVolumeRequest,
+    ) -> ::ttrpc::Result<DeactivateVolumeResponse> {
+        self.hub
+            .deactivate_volume(&req.activation_id)
+            .await
+            .map_err(|e| {
+                let detailed_error = format_error!(e);
+                error!("[ttRPC CDH] Deactivate Volume:\n{detailed_error}");
+                let mut status = Status::new();
+                status.set_code(Code::INTERNAL);
+                status.set_message(format!("[CDH] [ERROR]: {e}"));
+                Error::RpcStatus(status)
+            })?;
+        Ok(DeactivateVolumeResponse::new())
     }
 }
 

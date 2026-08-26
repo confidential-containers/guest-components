@@ -16,6 +16,7 @@ use std::{
     collections::HashMap,
     fs::{File, OpenOptions},
     io::SeekFrom,
+    os::fd::AsRawFd,
     os::unix::fs::FileExt,
     os::unix::fs::{FileTypeExt, MetadataExt},
     path::Path,
@@ -27,14 +28,17 @@ use anyhow::{bail, Context, Result};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD as b64, Engine};
 use const_format::concatcp;
 use hmac::{Hmac, KeyInit, Mac};
-use nix::mount::{mount, MsFlags};
+use nix::{
+    libc,
+    mount::{mount, MsFlags},
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tempfile::NamedTempFile;
 use tokio::{
     fs::symlink,
     io::{AsyncReadExt, AsyncSeekExt},
-    sync::Mutex,
+    sync::{Mutex, OwnedMutexGuard},
 };
 use tracing::{debug, info, warn};
 use zeroize::Zeroizing;
@@ -84,6 +88,7 @@ const PERSISTENT_RECORD_MAC_BYTES: usize = 32;
 const PERSISTENT_HEADER_MAC_DOMAIN: &[u8] = b"coco-cdh-persistent-luks2-header-v1";
 const PERSISTENT_RECORD_MAC_DOMAIN: &[u8] = b"coco-cdh-persistent-luks2-record-v1";
 const PERSISTENT_AUTH_KEY_DOMAIN: &[u8] = b"coco-cdh-persistent-luks2-auth-key-v1";
+const BLKGETSIZE64: libc::Ioctl = 0x8008_1272u32 as libc::Ioctl;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -438,6 +443,7 @@ impl Luks2Formatter {
             device_path,
             header_path,
             None,
+            None,
             IntegrityInitialization::SkipWipeWithoutJournal,
             passphrase,
         )
@@ -448,6 +454,7 @@ impl Luks2Formatter {
         device_path: &str,
         header_path: Option<&str>,
         payload_alignment_sectors: Option<u64>,
+        luks_uuid: Option<&str>,
         integrity_initialization: IntegrityInitialization,
         passphrase: &[u8],
     ) -> anyhow::Result<()> {
@@ -481,6 +488,8 @@ impl Luks2Formatter {
             args.push("--luks2-keyslots-size");
             args.push(&keyslots_area_size);
         }
+
+        append_luks_uuid(&mut args, luks_uuid);
 
         if self.integrity {
             args.push("--integrity");
@@ -541,6 +550,13 @@ impl Luks2Formatter {
         let args = ["luksClose", name];
         run_cryptsetup(&args).context("cryptsetup luksClose failed")?;
         Ok(())
+    }
+}
+
+fn append_luks_uuid<'a>(args: &mut Vec<&'a str>, luks_uuid: Option<&'a str>) {
+    if let Some(luks_uuid) = luks_uuid {
+        args.push("--uuid");
+        args.push(luks_uuid);
     }
 }
 
@@ -864,14 +880,15 @@ fn load_verified_header(
 }
 
 fn initialize_persistent_header(
-    formatter: &Luks2Formatter,
     device_path: &str,
     device: &File,
     prepared: &PersistentMetadataRecord,
     auth_key: &[u8],
     key: &[u8],
     volume_id: &PersistentVolumeId,
+    luks_uuid: Option<&str>,
 ) -> Result<(NamedTempFile, PersistentMetadataRecord)> {
+    let formatter = Luks2Formatter::default().with_integrity(true);
     let header = new_persistent_header_file()?;
     let header_path = header
         .path()
@@ -887,6 +904,7 @@ fn initialize_persistent_header(
             device_path,
             Some(header_path),
             Some(PERSISTENT_DATA_OFFSET_SECTORS),
+            luks_uuid,
             IntegrityInitialization::CompleteWithJournal,
             key,
         )
@@ -915,6 +933,24 @@ fn block_device_number(path: &str) -> Result<DeviceNumber> {
     })
 }
 
+fn block_device_size(device: &File, path: &str) -> Result<u64> {
+    let mut size = 0u64;
+    // SAFETY: BLKGETSIZE64 writes one u64 to the valid pointer supplied here.
+    let result = unsafe { libc::ioctl(device.as_raw_fd(), BLKGETSIZE64, &mut size) };
+    if result < 0 {
+        return Err(std::io::Error::last_os_error())
+            .with_context(|| format!("query persistent block-device size for {path}"));
+    }
+    Ok(size)
+}
+
+fn validate_block_device_size(actual: u64, expected: u64) -> Result<()> {
+    if actual != expected {
+        bail!("persistent block-device size mismatch: expected {expected}, got {actual}")
+    }
+    Ok(())
+}
+
 fn parse_cryptsetup_status_field<'a>(output: &'a str, field: &str) -> Option<&'a str> {
     output.lines().find_map(|line| {
         let (name, value) = line.trim().split_once(':')?;
@@ -935,6 +971,23 @@ fn persistent_mapper_backing_path(output: &str) -> Result<&str> {
     }
     parse_cryptsetup_status_field(output, "device")
         .context("cryptsetup status did not identify the mapper backing device")
+}
+
+fn validate_luks_uuid(device_path: &str, header_path: &str, expected: &str) -> Result<()> {
+    let (stdout, _) = run_command(
+        CRYPTSETUP_BIN,
+        &["luksUUID", "--header", header_path, device_path],
+        None,
+    )
+    .context("read persistent LUKS2 UUID")?;
+    validate_luks_uuid_value(stdout.trim(), expected)
+}
+
+fn validate_luks_uuid_value(actual: &str, expected: &str) -> Result<()> {
+    if actual != expected {
+        bail!("persistent LUKS2 UUID mismatch: expected {expected}, got {actual}")
+    }
+    Ok(())
 }
 
 fn verify_existing_mapper(
@@ -1019,6 +1072,30 @@ fn mounted_filesystem_at(mount_point: &str) -> Result<Option<MountedFilesystem>>
     mounted_filesystem_from_mountinfo(&mountinfo, mount_point)
 }
 
+fn mount_point_for_device(device: DeviceNumber) -> Result<Option<String>> {
+    let mountinfo =
+        std::fs::read_to_string("/proc/self/mountinfo").context("read /proc/self/mountinfo")?;
+    for line in mountinfo.lines() {
+        let fields = line.split_ascii_whitespace().collect::<Vec<_>>();
+        if fields.len() < 6 {
+            continue;
+        }
+        let Some((major, minor)) = fields[2].split_once(':') else {
+            continue;
+        };
+        let Ok(major) = major.parse() else {
+            continue;
+        };
+        let Ok(minor) = minor.parse() else {
+            continue;
+        };
+        if (DeviceNumber { major, minor }) == device {
+            return Ok(Some(decode_mountinfo_path(fields[4])));
+        }
+    }
+    Ok(None)
+}
+
 fn mount_filesystem(device_path: &str, mount_point: &str, fs_type: FsType) -> Result<()> {
     mount::<_, _, str, _>(
         Some(device_path),
@@ -1051,11 +1128,210 @@ async fn prepare_persistent_mount_point(mount_point: &str) -> Result<()> {
     Ok(())
 }
 
+struct PreparedPersistentMapper {
+    device: File,
+    auth_key: Zeroizing<Vec<u8>>,
+    record: PersistentMetadataRecord,
+    mapper_name: String,
+    mapper_path: String,
+    opened_mapper: bool,
+    _device_guard: OwnedMutexGuard<()>,
+}
+
+impl PreparedPersistentMapper {
+    fn rollback(&self) {
+        if self.opened_mapper {
+            if let Err(error) = Luks2Formatter::default().close_device(&self.mapper_name) {
+                warn!(
+                    mapper_name = %self.mapper_name,
+                    %error,
+                    "failed to roll back persistent LUKS2 mapper"
+                );
+            }
+        }
+    }
+
+    fn commit_initialization(&self) -> Result<()> {
+        if self.record.state != PersistentLuksState::Initializing {
+            return Ok(());
+        }
+        File::open(&self.mapper_path)
+            .context("open initialized persistent mapper for flush")?
+            .sync_all()
+            .context("flush initialized persistent filesystem")?;
+        store_persistent_metadata(&self.device, &self.record.ready()?, &self.auth_key)
+            .context("commit persistent LUKS2 initialization")
+    }
+}
+
+async fn prepare_persistent_mapper(
+    device_path: &str,
+    key: Zeroizing<Vec<u8>>,
+    volume_id: PersistentVolumeId,
+    luks_uuid: Option<&str>,
+    expected_size_bytes: Option<u64>,
+) -> Result<PreparedPersistentMapper> {
+    validate_persistent_key(&key)?;
+    let source_device = block_device_number(device_path)?;
+    let device_lock = PERSISTENT_MOUNT_LOCKS.for_device(source_device).await;
+    let device_guard = device_lock.lock_owned().await;
+    let mapper_name = volume_id.mapper_name();
+    let mapper_path = format!("/dev/mapper/{mapper_name}");
+    let mapper_exists = Path::new(&mapper_path).exists();
+    let formatter = Luks2Formatter::default().with_integrity(true);
+
+    let device = open_persistent_device(device_path)?;
+    if let Some(expected_size_bytes) = expected_size_bytes {
+        let actual_size_bytes = block_device_size(&device, device_path)?;
+        validate_block_device_size(actual_size_bytes, expected_size_bytes)?;
+    }
+    let auth_key = derive_persistent_auth_key(&key, &volume_id)?;
+    let existing_record = load_persistent_metadata(&device, &auth_key, &volume_id)?;
+    let (header, record) = match existing_record {
+        Some(record) if record.state == PersistentLuksState::Prepared => {
+            if mapper_exists {
+                bail!("persistent mapper exists before its LUKS2 header was committed")
+            }
+            if !block_device_region_is_zero(device_path, PERSISTENT_DATA_OFFSET_BYTES).await? {
+                bail!("prepared persistent LUKS2 device contains nonzero payload data")
+            }
+            initialize_persistent_header(
+                device_path,
+                &device,
+                &record,
+                &auth_key,
+                &key,
+                &volume_id,
+                luks_uuid,
+            )?
+        }
+        Some(record) => {
+            let header = load_verified_header(&device, &record, &auth_key, &volume_id)?;
+            (header, record)
+        }
+        None => {
+            if mapper_exists {
+                bail!("persistent mapper exists for a device with no CDH metadata")
+            }
+            if !block_device_is_zero(device_path).await? {
+                bail!("refusing to initialize a nonzero block device without CDH metadata")
+            }
+            let prepared = PersistentMetadataRecord::prepared(&volume_id);
+            store_persistent_metadata(&device, &prepared, &auth_key)?;
+            initialize_persistent_header(
+                device_path,
+                &device,
+                &prepared,
+                &auth_key,
+                &key,
+                &volume_id,
+                luks_uuid,
+            )?
+        }
+    };
+    let header_path = header
+        .path()
+        .to_str()
+        .context("protected LUKS2 header path is not UTF-8")?;
+    if let Some(expected_uuid) = luks_uuid {
+        validate_luks_uuid(device_path, header_path, expected_uuid)?;
+    }
+
+    let mut prepared = PreparedPersistentMapper {
+        device,
+        auth_key,
+        record,
+        mapper_name,
+        mapper_path,
+        opened_mapper: false,
+        _device_guard: device_guard,
+    };
+    let open_result = (|| -> Result<()> {
+        if mapper_exists {
+            verify_existing_mapper(
+                &formatter,
+                device_path,
+                header_path,
+                source_device,
+                &prepared.mapper_name,
+                &key,
+            )?;
+        } else {
+            formatter
+                .open_device(device_path, Some(header_path), &prepared.mapper_name, &key)
+                .context("open persistent LUKS2 device")?;
+            prepared.opened_mapper = true;
+        }
+        Ok(())
+    })();
+    if open_result.is_err() {
+        prepared.rollback();
+    }
+    open_result?;
+    Ok(prepared)
+}
+
+pub(crate) struct PersistentActivation {
+    pub mapper_name: String,
+    pub device_path: String,
+}
+
+/// Activate the fixed read-write persistent profile without mounting it.
+///
+/// The typed CDH service owns LUKS2, journaled HMAC-SHA256 dm-integrity, and
+/// first-use ext4 formatting. The caller receives only the verified plaintext
+/// mapper and owns the final container-scoped mount.
+pub(crate) async fn activate_persistent_ext4(
+    device_path: &str,
+    key: Zeroizing<Vec<u8>>,
+    volume_id: PersistentVolumeId,
+    luks_uuid: &str,
+    expected_size_bytes: u64,
+) -> Result<PersistentActivation> {
+    let prepared = prepare_persistent_mapper(
+        device_path,
+        key,
+        volume_id,
+        Some(luks_uuid),
+        Some(expected_size_bytes),
+    )
+    .await?;
+    let result = (|| -> Result<()> {
+        let mapper_device = block_device_number(&prepared.mapper_path)?;
+        if let Some(mount_point) = mount_point_for_device(mapper_device)? {
+            bail!("persistent mapper is already mounted at {mount_point}")
+        }
+
+        let filesystem_probe = probe_filesystem(&prepared.mapper_path)?;
+        match persistent_filesystem_action(prepared.record.state, &filesystem_probe, FsType::Ext4)?
+        {
+            PersistentFilesystemAction::MountExisting => {}
+            PersistentFilesystemAction::FormatThenMount => {
+                FsFormatter {
+                    fs_type: FsType::Ext4,
+                    force: true,
+                    args: Vec::new(),
+                }
+                .format_with_eager_inode_initialization(&prepared.mapper_path)
+                .context("create persistent ext4 filesystem")?;
+            }
+        }
+        prepared.commit_initialization()
+    })();
+
+    if result.is_err() {
+        prepared.rollback();
+    }
+    result?;
+    Ok(PersistentActivation {
+        mapper_name: prepared.mapper_name,
+        device_path: prepared.mapper_path,
+    })
+}
+
 #[derive(Default)]
 struct PersistentMountTransaction {
-    mapper_name: String,
     mount_point: String,
-    opened_mapper: bool,
     mounted_filesystem: bool,
 }
 
@@ -1067,15 +1343,6 @@ impl PersistentMountTransaction {
                     mount_point = %self.mount_point,
                     %error,
                     "failed to roll back persistent filesystem mount"
-                );
-            }
-        }
-        if self.opened_mapper {
-            if let Err(error) = Luks2Formatter::default().close_device(&self.mapper_name) {
-                warn!(
-                    mapper_name = %self.mapper_name,
-                    %error,
-                    "failed to roll back persistent LUKS2 mapper"
                 );
             }
         }
@@ -1143,8 +1410,18 @@ impl Luks2MountParameters {
         key: Zeroizing<Vec<u8>>,
         volume_id: PersistentVolumeId,
     ) -> Result<()> {
+        self.do_mount_persistent_inner(device_path, mount_point, key, volume_id)
+            .await
+    }
+
+    async fn do_mount_persistent_inner(
+        self,
+        device_path: &str,
+        mount_point: &str,
+        key: Zeroizing<Vec<u8>>,
+        volume_id: PersistentVolumeId,
+    ) -> Result<()> {
         self.validate_persistent().map_err(anyhow::Error::msg)?;
-        validate_persistent_key(&key)?;
         let filesystem_type = match self.target_type {
             TargetType::FileSystem {
                 filesystem_type, ..
@@ -1153,89 +1430,16 @@ impl Luks2MountParameters {
         };
 
         prepare_persistent_mount_point(mount_point).await?;
-
-        let source_device = block_device_number(device_path)?;
-        let device_lock = PERSISTENT_MOUNT_LOCKS.for_device(source_device).await;
-        let _device_guard = device_lock.lock_owned().await;
-        let mapper_name = volume_id.mapper_name();
-        let mapper_path = format!("/dev/mapper/{mapper_name}");
-        let mapper_exists = Path::new(&mapper_path).exists();
-        let formatter = Luks2Formatter::default().with_integrity(true);
-
-        let device = open_persistent_device(device_path)?;
-        let auth_key = derive_persistent_auth_key(&key, &volume_id)?;
-        let existing_record = load_persistent_metadata(&device, &auth_key, &volume_id)?;
-        let (header, record) = match existing_record {
-            Some(record) if record.state == PersistentLuksState::Prepared => {
-                if mapper_exists {
-                    bail!("persistent mapper exists before its LUKS2 header was committed")
-                }
-                if !block_device_region_is_zero(device_path, PERSISTENT_DATA_OFFSET_BYTES).await? {
-                    bail!("prepared persistent LUKS2 device contains nonzero payload data")
-                }
-                initialize_persistent_header(
-                    &formatter,
-                    device_path,
-                    &device,
-                    &record,
-                    &auth_key,
-                    &key,
-                    &volume_id,
-                )?
-            }
-            Some(record) => {
-                let header = load_verified_header(&device, &record, &auth_key, &volume_id)?;
-                (header, record)
-            }
-            None => {
-                if mapper_exists {
-                    bail!("persistent mapper exists for a device with no CDH metadata")
-                }
-                if !block_device_is_zero(device_path).await? {
-                    bail!("refusing to initialize a nonzero block device without CDH metadata")
-                }
-                let prepared = PersistentMetadataRecord::prepared(&volume_id);
-                store_persistent_metadata(&device, &prepared, &auth_key)?;
-                initialize_persistent_header(
-                    &formatter,
-                    device_path,
-                    &device,
-                    &prepared,
-                    &auth_key,
-                    &key,
-                    &volume_id,
-                )?
-            }
-        };
-        let state = record.state;
-        let header_path = header
-            .path()
-            .to_str()
-            .context("protected LUKS2 header path is not UTF-8")?;
+        let prepared = prepare_persistent_mapper(device_path, key, volume_id, None, None).await?;
+        let mapper_path = prepared.mapper_path.clone();
+        let state = prepared.record.state;
 
         let mut transaction = PersistentMountTransaction {
-            mapper_name: mapper_name.clone(),
             mount_point: mount_point.to_string(),
             ..Default::default()
         };
 
         let result = (|| -> Result<()> {
-            if mapper_exists {
-                verify_existing_mapper(
-                    &formatter,
-                    device_path,
-                    header_path,
-                    source_device,
-                    &mapper_name,
-                    &key,
-                )?;
-            } else {
-                formatter
-                    .open_device(device_path, Some(header_path), &mapper_name, &key)
-                    .context("open persistent LUKS2 device")?;
-                transaction.opened_mapper = true;
-            }
-
             let mapper_device = block_device_number(&mapper_path)?;
             let already_mounted = match mounted_filesystem_at(mount_point)? {
                 Some(mounted)
@@ -1279,20 +1483,14 @@ impl Luks2MountParameters {
                 }
             }
 
-            if state == PersistentLuksState::Initializing {
-                File::open(&mapper_path)
-                    .context("open initialized persistent mapper for flush")?
-                    .sync_all()
-                    .context("flush initialized persistent filesystem")?;
-                store_persistent_metadata(&device, &record.ready()?, &auth_key)
-                    .context("commit persistent LUKS2 initialization")?;
-            }
+            prepared.commit_initialization()?;
 
             Ok(())
         })();
 
         if result.is_err() {
             transaction.rollback();
+            prepared.rollback();
         }
         result
     }
@@ -1467,6 +1665,32 @@ mod tests {
                 mkfs_opts: None,
             },
         }
+    }
+
+    #[test]
+    fn typed_profile_sets_and_verifies_the_manifest_luks_uuid() {
+        let mut args = vec!["luksFormat"];
+        append_luks_uuid(&mut args, Some("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"));
+        assert_eq!(
+            args,
+            [
+                "luksFormat",
+                "--uuid",
+                "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+            ]
+        );
+        validate_luks_uuid_value(
+            "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+            "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        )
+        .unwrap();
+        assert!(validate_luks_uuid_value(
+            "bbbbbbbb-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+            "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        )
+        .is_err());
+        validate_block_device_size(1024 * 1024 * 1024, 1024 * 1024 * 1024).unwrap();
+        assert!(validate_block_device_size(1024 * 1024 * 1024, 2 * 1024 * 1024 * 1024).is_err());
     }
 
     #[tokio::test]
@@ -2179,13 +2403,13 @@ mod tests {
 
                 if !matches!(boundary, PersistentCrashBoundary::AfterPreparedMetadata) {
                     let (header, _) = initialize_persistent_header(
-                        &formatter,
                         device.dev_path(),
                         &device_file,
                         &prepared,
                         &auth_key,
                         key,
                         &volume_id,
+                        None,
                     )
                     .unwrap();
 

@@ -5,6 +5,7 @@
 
 use async_trait::async_trait;
 
+use crate::storage::secure_volume::{Activation, VolumeAccess};
 use crate::storage::volume_type::Storage;
 use crate::Result;
 
@@ -29,6 +30,17 @@ pub trait DataHub {
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>>;
 
     async fn secure_mount(&self, storage: Storage) -> Result<String>;
+
+    /// Activate a manifest-driven secure block volume.
+    async fn activate_volume(
+        &self,
+        device_id: &str,
+        manifest_uri: &str,
+        requested_access: VolumeAccess,
+    ) -> Result<Activation>;
+
+    /// Release a secure block-volume activation.
+    async fn deactivate_volume(&self, activation_id: &str) -> Result<()>;
 
     /// Pull image of image url (reference), and place the merged layers in the `bundle_path/rootfs`
     async fn pull_image(&self, _image_url: &str, _bundle_path: &str) -> Result<String>;
