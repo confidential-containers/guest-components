@@ -67,6 +67,9 @@ For more details, please refer to [the guide](use-cases/secure-mount-with-aliyun
 
 The [plugin](../hub/src/storage/volume_type/blockdevice) provides ways to encrypt a block device and mount it to a specific mount point.
 
+The proposed typed lifecycle for reopening policy-authorized persistent block
+volumes is described in [Confidential persistent volumes](confidential-persistent-volumes.md).
+
 It supports **two secure mount modes**, selected by the `encryptionType` field in the `secure_mount()` request:
 
 - **LUKS2 mode (`"luks2"`)**: Uses `cryptsetup` to create and open a LUKS2-encrypted device.
