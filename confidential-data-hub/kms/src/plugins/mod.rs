@@ -19,9 +19,6 @@ pub mod aws;
 
 pub mod kbs;
 
-#[cfg(feature = "ehsm")]
-pub mod ehsm;
-
 #[derive(AsRefStr, EnumString)]
 pub enum DecryptorProvider {
     #[cfg(feature = "aliyun")]
@@ -31,10 +28,6 @@ pub enum DecryptorProvider {
     #[cfg(feature = "aws")]
     #[strum(ascii_case_insensitive)]
     Aws,
-
-    #[strum(ascii_case_insensitive)]
-    #[cfg(feature = "ehsm")]
-    Ehsm,
 }
 
 /// Create a new [`Decrypter`] by given provider name and [`ProviderSettings`]
@@ -53,11 +46,6 @@ pub async fn new_decryptor(
         #[cfg(feature = "aws")]
         DecryptorProvider::Aws => Ok(Box::new(
             aws::AwsKmsClient::from_provider_settings(&_provider_settings).await?,
-        ) as Box<dyn Decrypter>),
-
-        #[cfg(feature = "ehsm")]
-        DecryptorProvider::Ehsm => Ok(Box::new(
-            ehsm::EhsmKmsClient::from_provider_settings(&_provider_settings).await?,
         ) as Box<dyn Decrypter>),
     }
 }

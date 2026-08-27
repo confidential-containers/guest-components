@@ -14,7 +14,6 @@ aws-sdk-secretsmanager = { workspace = true, optional = true }
 base64.workspace = true
 chrono = { workspace = true, optional = true }
 const_format.workspace = true
-ehsm_client = { git = "https://github.com/intel/ehsm", rev = "3454cac66b968a593c3edc43410c0b52416bbd3e", optional = true }
 hex = { workspace = true, optional = true }
 kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = [
     "passport",
@@ -65,4 +64,3 @@ aliyun = [
 ]
 aws = ["aws-sdk-kms", "aws-sdk-secretsmanager"]
 kbs = ["kbs_protocol"]
-ehsm = ["ehsm_client"]

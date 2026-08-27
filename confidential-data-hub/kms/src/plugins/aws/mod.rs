@@ -13,7 +13,7 @@
 //!
 //! Both services are reached with the same set of static IAM credentials that are
 //! provisioned into the guest (see [`client`] for the credential layout). This
-//! mirrors the credential-bootstrap model of the Aliyun and eHSM plugins: the
+//! mirrors the credential-bootstrap model of the Aliyun plugin: the
 //! credentials themselves are expected to be delivered into the TEE's encrypted
 //! filesystem (e.g. as a sealed secret) before this client is used.
 

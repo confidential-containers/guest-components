@@ -68,13 +68,13 @@ Note:
 
 KMS_PROVIDER plugins (flag `KMS_PROVIDER`)
 
-| Feature name        |           Note                                                     |
-| ------------------- | -----------------------------------------------------------------  |
-| aliyun              | Use aliyun KMS_PROVIDER suites to unseal secrets, etc.                      |
-| ehsm(no longer maintained) | Use Intel eHSM KMS_PROVIDER suites to unseal secrets, etc.                  |
+| Feature name | Note                                                        |
+| ------------ | ----------------------------------------------------------- |
+| aliyun       | Use Alibaba Cloud KMS to seal and unseal secrets.           |
+| aws          | Use AWS KMS and Secrets Manager for confidential secrets.   |
 
 Note:
-- If no `KMS_PROVIDER` flag is given, then all the KMS providers will be enabled by default.
+- If no `KMS_PROVIDER` flag is given, `aliyun` is enabled by default.
 
 RPC plugins (flag `RPC`)
 | Feature name        |           Note                                                     |

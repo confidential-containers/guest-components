@@ -28,7 +28,7 @@ use super::credential::AwsCredential;
 /// expected to be provisioned into the TEE's encrypted memory before use.
 const AWS_IN_GUEST_DEFAULT_KEY_PATH: &str = concatcp!(_IN_GUEST_DEFAULT_KEY_PATH, "/aws");
 
-/// Name of the credential file inside the key path. Unlike Aliyun/eHSM the AWS
+/// Name of the credential file inside the key path. Unlike Aliyun, the AWS
 /// credential is not keyed on any public identifier (the decryptor side only
 /// knows the region), so a fixed file name is used.
 const AWS_CREDENTIAL_FILE_NAME: &str = "credential.json";
