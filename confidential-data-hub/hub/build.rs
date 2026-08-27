@@ -28,7 +28,7 @@ fn main() {
         } else {
             "disabled"
         };
-        let kms = feature_list(vec!["ALIYUN", "EHSM"]);
+        let kms = feature_list(vec!["ALIYUN", "AWS"]);
 
         let out_dir = env::var("OUT_DIR").unwrap();
         let dest_path = Path::new(&out_dir).join("version");

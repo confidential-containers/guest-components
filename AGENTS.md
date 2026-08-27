@@ -88,7 +88,7 @@ Feature flags are heavily used to control platform support, crypto backends, and
 - **TEE attesters** (AA): `tdx-attester`, `snp-attester`, `sgx-attester`, `se-attester`, `cca-attester`, `az-snp-vtpm-attester`, `az-tdx-vtpm-attester`, `all-attesters`
 - **Crypto backends**: `encryption-ring` (default) vs `encryption-openssl`, `rust-crypto` vs `openssl`
 - **Key wrapping** (image-rs/ocicrypt-rs): `keywrap-ttrpc`, `keywrap-grpc`, `keywrap-jwe`, `keywrap-keyprovider-cmd`
-- **KMS providers** (CDH): `kbs`, `aliyun`, `ehsm`
+- **KMS providers** (CDH): `kbs`, `aliyun`, `aws`
 - **TLS**: `rustls-tls` (default) vs `native-tls`; preset features like `kata-cc-rustls-tls`
 - **RPC protocol**: `ttrpc` (default), `grpc`
 

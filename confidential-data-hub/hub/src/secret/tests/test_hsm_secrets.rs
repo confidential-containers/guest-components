@@ -23,23 +23,7 @@ fn test_cli_envelope_secret_lifetime_aliyun() {
     key_lifetime(base_dir, key_id, sub_cmd);
 }
 
-#[test]
-#[ignore]
-#[cfg(feature = "ehsm")]
-fn test_cli_envelope_secret_lifetime_ehsm() {
-    let base_dir = "tests/envelope_secret_ehsm_config_sample/";
-    let key_id = "39c8____";
-    let sub_cmd = vec![
-        "ehsm",
-        "--credential-file-path",
-        "tests/envelope_secret_ehsm_config/credential_16f3____.json",
-        "--endpoint",
-        "https://1.2.3.4:9000",
-    ];
-    key_lifetime(base_dir, key_id, sub_cmd);
-}
-
-#[cfg(any(feature = "aliyun", feature = "ehsm"))]
+#[cfg(feature = "aliyun")]
 fn key_lifetime(base_dir: &str, key_id: &str, sub_cmd: Vec<&str>) {
     use assert_cmd::prelude::*;
     use std::{
@@ -115,7 +99,7 @@ fn key_lifetime(base_dir: &str, key_id: &str, sub_cmd: Vec<&str>) {
     assert_eq!(original_secret, unsealed_secret);
 }
 
-#[cfg(any(feature = "aliyun", feature = "ehsm"))]
+#[cfg(feature = "aliyun")]
 fn create_random_secret() -> Vec<u8> {
     use rand::{distributions::Uniform, Rng};
 

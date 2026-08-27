@@ -21,11 +21,9 @@ use crypto::WrapType;
 use kms::plugins::aliyun::AliyunKmsClient;
 #[cfg(feature = "aws")]
 use kms::plugins::aws::AwsKmsClient;
-#[cfg(feature = "ehsm")]
-use kms::plugins::ehsm::EhsmKmsClient;
 use kms::{Encrypter, ProviderSettings};
 use rand::RngExt;
-#[cfg(any(feature = "ehsm", feature = "aws"))]
+#[cfg(feature = "aws")]
 use serde_json::Value;
 use tokio::{fs, io::AsyncWriteExt};
 use zeroize::Zeroizing;
@@ -143,15 +141,11 @@ enum EnvelopeArgs {
     #[cfg(feature = "aliyun")]
     Ali(AliProviderArgs),
 
-    /// Intel eHSM driver to seal the envelope
-    #[cfg(feature = "ehsm")]
-    Ehsm(EhsmProviderArgs),
-
     /// AWS KMS driver to seal the envelope
     #[cfg(feature = "aws")]
     Aws(AwsProviderArgs),
 
-    /// Dummy driver to prevent the unreachable pattern for neither aliyun nor ehsm
+    /// Dummy driver to prevent an unreachable pattern with no KMS provider
     Dummy,
 }
 
@@ -173,18 +167,6 @@ struct AliProviderArgs {
     /// path of the client key to access the KMS
     #[arg(long)]
     client_key_file_path: String,
-}
-
-#[cfg(feature = "ehsm")]
-#[derive(Args)]
-struct EhsmProviderArgs {
-    /// path of the credential file
-    #[arg(short, long)]
-    credential_file_path: String,
-
-    /// endpoint of eHSM service
-    #[arg(short, long)]
-    endpoint: String,
 }
 
 #[cfg(feature = "aws")]
@@ -236,10 +218,6 @@ async fn unseal_secret(unseal_args: &UnsealArgs) {
     match secret_provider.as_str() {
         "aliyun" => env::set_var(
             "ALIYUN_IN_GUEST_KEY_PATH",
-            unseal_args.key_path.as_ref().expect("Key Path Required"),
-        ),
-        "ehsm" => env::set_var(
-            "EHSM_IN_GUEST_KEY_PATH",
             unseal_args.key_path.as_ref().expect("Key Path Required"),
         ),
         "aws" => env::set_var(
@@ -454,34 +432,6 @@ async fn handle_envelope_provider(
                 .export_provider_settings()
                 .expect("aliyun export provider_settings failed");
             (Box::new(client), provider_settings, "aliyun".into())
-        }
-        #[cfg(feature = "ehsm")]
-        EnvelopeArgs::Ehsm(arg) => {
-            let (app_id, api_key) = {
-                let cred = fs::read_to_string(&arg.credential_file_path)
-                    .await
-                    .expect("read credential fail");
-                let cred_parsed: Value =
-                    serde_json::from_str(&cred).expect("serialize credential fail");
-                let app_id = cred_parsed
-                    .get("AppId")
-                    .expect("get app id value fail")
-                    .as_str()
-                    .expect("get app id string fail");
-                let api_key = cred_parsed
-                    .get("ApiKey")
-                    .expect("get api key value fail")
-                    .as_str()
-                    .expect("get api key string fail");
-                (app_id.to_owned(), api_key.to_owned())
-            };
-
-            let client = EhsmKmsClient::new(&app_id, &api_key, &arg.endpoint)
-                .expect("create ehsm client fail");
-            let provider_settings = client
-                .export_provider_settings()
-                .expect("aliyun export provider_settings fail");
-            (Box::new(client), provider_settings, "ehsm".into())
         }
         #[cfg(feature = "aws")]
         EnvelopeArgs::Aws(arg) => {
