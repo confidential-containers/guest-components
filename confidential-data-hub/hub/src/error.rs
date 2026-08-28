@@ -16,7 +16,7 @@ pub enum Error {
         source: kms::Error,
     },
 
-    #[error("Get Resource failed")]
+    #[error("Get Resource failed: {source}")]
     GetResource {
         #[source]
         source: kms::Error,
@@ -55,7 +55,7 @@ mod tests {
 
     #[rstest]
     #[case(Error::KbsClient { source: kms::Error::KbsClientError("details".into()) }, "kbs client initialization failed")]
-    #[case(Error::GetResource { source: kms::Error::KbsClientError("details".into()) }, "Get Resource failed")]
+    #[case(Error::GetResource { source: kms::Error::KbsClientError("details".into()) }, "Get Resource failed: Kbs client error: details")]
     #[case(
         Error::UnsealSecret(secret::SecretError::VersionError),
         "Unseal Secret failed"
