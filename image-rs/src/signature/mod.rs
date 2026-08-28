@@ -33,7 +33,7 @@ pub enum SignatureError {
     #[error("Illegal image digest: {0}")]
     IllegalImageDigest(String),
 
-    #[error("Denied by policy: {source}")]
+    #[error("Denied by policy: {source:#}")]
     DeniedByPolicy {
         #[source]
         source: anyhow::Error,
