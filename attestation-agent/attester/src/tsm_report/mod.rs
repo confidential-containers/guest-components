@@ -8,7 +8,6 @@ use std::str::FromStr;
 use strum::EnumString;
 use tempfile::tempdir_in;
 use thiserror::Error;
-
 const TSM_REPORT_PATH: &str = "/sys/kernel/config/tsm/report";
 
 #[derive(Error, Debug)]
@@ -44,7 +43,7 @@ pub enum TsmReportProvider {
 pub enum TsmReportData {
     Cca(Vec<u8>),
     Tdx(Vec<u8>),
-    Sev(u8, Vec<u8>),
+    Sev(Vec<u8>),
 }
 
 /// TsmReportPath instance represents a unique path on ConfigFS
@@ -91,12 +90,7 @@ impl TsmReportPath {
         let report_data = match provider_data {
             TsmReportData::Cca(inblob) => inblob,
             TsmReportData::Tdx(inblob) => inblob,
-            TsmReportData::Sev(privlevel, inblob) => {
-                // TODO: untested
-                std::fs::write(report_path.join("privlevel"), vec![privlevel])
-                    .map_err(|e| TsmReportError::Access("privlevel", e))?;
-                inblob
-            }
+            TsmReportData::Sev(inblob) => inblob,
         };
 
         if report_data.is_empty() {
