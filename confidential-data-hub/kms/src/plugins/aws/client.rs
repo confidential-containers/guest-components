@@ -44,7 +44,7 @@ pub struct AwsKmsClient {
 
 impl AwsKmsClient {
     /// Build a client from a region and explicit static credentials. This is the
-    /// entry point used on the user/encryptor side (e.g. by `secret_cli`).
+    /// entry point used on the user/encryptor side (e.g. by the `secret` CLI).
     pub fn new(
         region: &str,
         access_key_id: &str,
