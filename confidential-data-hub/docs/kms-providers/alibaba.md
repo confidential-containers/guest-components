@@ -116,9 +116,9 @@ nc8BTncWI0KGWIzTQasuSEye50R6gc9wZCGIElmhWcu3NYk=
 ```
 - `plaintext`: The file whose content will be sealed.
 
-A prebuilt `secret` CLI (with all KMS providers bundled) is available from the
-[GitHub releases](https://github.com/confidential-containers/guest-components/releases);
-using it lets you skip the build-from-source step below.
+A prebuilt `secret` CLI (with all KMS providers bundled) is available as an
+OCI artifact on `ghcr.io` (see [SEALED_SECRET.md](../SEALED_SECRET.md)); pulling
+it with ORAS lets you skip the build-from-source step below.
 
 Then, let's 
 ```bash
@@ -131,9 +131,9 @@ CLIENT_KEY_FILE_PATH=$(pwd)/ClientKeyContent.json
 
 git clone https://github.com/confidential-containers/guest-components.git && cd guest-components
 
-cargo build --bin secret_cli --release --features "aliyun"
+cargo build --bin secret --release --features "aliyun"
 
-target/release/secret_cli seal --file-path ../plaintext \
+target/release/secret seal --file-path ../plaintext \
     envelope --key-id $KEY_ID ali \
     --password-file-path $CLIENT_KEY_PASSWORD_FILE_PATH \
     --cert-path $CERT_PATH \
