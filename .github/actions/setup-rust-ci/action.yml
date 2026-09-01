@@ -1,0 +1,123 @@
+name: Setup Rust CI
+description: Install Rust toolchain and optional apt / NVAT dependencies
+
+inputs:
+  components:
+    description: Rustup components to install
+    required: false
+    default: rustfmt, clippy
+  toolchain:
+    description: Override rust toolchain (empty uses rust-toolchain.toml)
+    required: false
+    default: ""
+  target:
+    description: Extra rustc target triple
+    required: false
+    default: ""
+  cache:
+    description: Enable rust toolchain action cache
+    required: false
+    default: "true"
+  install-tpm:
+    description: Install libtss2-dev (x86_64 only)
+    required: false
+    default: "false"
+  install-dmverity:
+    description: Install libdevmapper-dev
+    required: false
+    default: "false"
+  install-cryptsetup:
+    description: Install cryptsetup and pkg-config
+    required: false
+    default: "false"
+  install-nettle:
+    description: Install clang/llvm/nettle/protobuf deps for image-rs
+    required: false
+    default: "false"
+  install-zfs:
+    description: Install zfsutils-linux (with cryptsetup)
+    required: false
+    default: "false"
+  install-musl:
+    description: Install musl-tools
+    required: false
+    default: "false"
+  install-build-deps:
+    description: Install protobuf-compiler, libclang-dev, cmake, pkg-config
+    required: false
+    default: "false"
+  install-nvat:
+    description: Build and install NVIDIA Attestation SDK
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Install Rust toolchain (pinned)
+      if: inputs.toolchain == ''
+      uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+      with:
+        components: ${{ inputs.components }}
+        target: ${{ inputs.target }}
+        cache: ${{ inputs.cache == 'true' }}
+
+    - name: Install Rust toolchain (override)
+      if: inputs.toolchain != ''
+      uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        override: true
+        components: ${{ inputs.components }}
+        target: ${{ inputs.target }}
+        cache: ${{ inputs.cache == 'true' }}
+
+    - name: Update apt
+      if: inputs.install-tpm == 'true' || inputs.install-dmverity == 'true' || inputs.install-cryptsetup == 'true' || inputs.install-nettle == 'true' || inputs.install-zfs == 'true' || inputs.install-musl == 'true' || inputs.install-build-deps == 'true'
+      shell: bash
+      run: sudo apt-get update
+
+    - name: Install TPM dependencies
+      if: inputs.install-tpm == 'true' && runner.arch == 'X64'
+      shell: bash
+      run: sudo apt-get install -y --no-install-recommends libtss2-dev
+
+    - name: Install dm-verity dependencies
+      if: inputs.install-dmverity == 'true'
+      shell: bash
+      run: sudo apt-get install -y --no-install-recommends libdevmapper-dev pkg-config
+
+    - name: Install cryptsetup
+      if: inputs.install-cryptsetup == 'true'
+      shell: bash
+      run: sudo apt-get install -y --no-install-recommends cryptsetup pkg-config
+
+    - name: Install nettle / protobuf build deps
+      if: inputs.install-nettle == 'true'
+      shell: bash
+      run: |
+        sudo apt-get install -y --no-install-recommends \
+          clang llvm pkg-config nettle-dev libprotobuf-dev
+
+    - name: Install zfs and cryptsetup
+      if: inputs.install-zfs == 'true'
+      shell: bash
+      run: |
+        sudo apt-get install -y --no-install-recommends \
+          cryptsetup pkg-config zfsutils-linux
+
+    - name: Install musl tools
+      if: inputs.install-musl == 'true'
+      shell: bash
+      run: sudo apt-get install -y --no-install-recommends musl-tools
+
+    - name: Install protobuf / cmake / clang build deps
+      if: inputs.install-build-deps == 'true'
+      shell: bash
+      run: |
+        sudo apt-get install -y --no-install-recommends \
+          protobuf-compiler libclang-dev cmake pkg-config
+
+    - name: Install NVIDIA Attestation SDK
+      if: inputs.install-nvat == 'true'
+      uses: ./.github/actions/install-nvat-sdk

@@ -1,0 +1,351 @@
+name: Release binaries
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag for secret CLI publish (workflow_dispatch only)
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  publish-aa:
+    name: Publish attestation-agent
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write # push OCI artifacts to ghcr.io
+      id-token: write # required for OIDC-based attestation signing
+      attestations: write # required to create build attestations
+    strategy:
+      matrix:
+        platform:
+          - { tee: none,        arch: x86_64,      libc: musl, runner: ubuntu-24.04 }
+          - { tee: none,        arch: s390x,       libc: gnu,  runner: ubuntu-24.04-s390x }
+          - { tee: none,        arch: aarch64,     libc: gnu,  runner: ubuntu-24.04 }
+          - { tee: amd,         arch: x86_64,      libc: musl, runner: ubuntu-24.04 }
+          - { tee: az-cvm-vtpm, arch: x86_64,      libc: gnu,  runner: ubuntu-24.04 }
+          - { tee: tdx,         arch: x86_64,      libc: musl, runner: ubuntu-24.04 }
+          - { tee: cca,         arch: x86_64,      libc: musl, runner: ubuntu-24.04 }
+          - { tee: cca,         arch: aarch64,     libc: gnu,  runner: ubuntu-24.04 }
+          - { tee: se,          arch: s390x,       libc: gnu,  runner: ubuntu-24.04-s390x }
+          - { tee: none,        arch: powerpc64le, libc: gnu,  runner: ubuntu-24.04-ppc64le }
+    runs-on: ${{ matrix.platform.runner }}
+    env:
+      TEE_PLATFORM: ${{ matrix.platform.tee }}
+      LIBC: ${{ matrix.platform.libc }}
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+      RUST_TARGET: ${{ matrix.platform.arch }}-unknown-linux-${{ matrix.platform.libc }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: ./.github/actions/setup-rust-ci
+        with:
+          target: ${{ env.RUST_TARGET }}
+          install-tpm: ${{ matrix.platform.tee == 'az-cvm-vtpm' && 'true' || 'false' }}
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+        with:
+          version: 1.2.0
+
+      - name: Build AA
+        env:
+          ARCH: ${{ matrix.platform.arch }}
+          LIBC: ${{ matrix.platform.libc }}
+        run: make ./target/$RUST_TARGET/release/attestation-agent
+
+      - name: Publish with ORAS
+        id: publish
+        env:
+          OCI_ARCH: ${{ matrix.platform.arch == 'x86_64' && 'amd64' || matrix.platform.arch == 'aarch64' && 'arm64' || matrix.platform.arch == 'powerpc64le' && 'ppc64le' || matrix.platform.arch }}
+          GIT_SHA: ${{ github.sha }}
+          ARCH: ${{ matrix.platform.arch }}
+        run: |
+          mkdir oras
+          cd oras
+          cp ../target/${RUST_TARGET}/release/attestation-agent .
+          tar cJf attestation-agent.tar.xz attestation-agent
+          arch="${ARCH}"
+          # After building for target powerpc64le, tag and push the image as ppc64le to match standard arch naming.
+          [ "$arch" = "powerpc64le" ] && arch="ppc64le"
+          arch_tag="${GIT_SHA}-${TEE_PLATFORM}_${arch}"
+          image="${REGISTRY}/${IMAGE_NAME}/attestation-agent"
+          tag="${GIT_SHA}-${TEE_PLATFORM}"
+          oras push "${image}:${arch_tag}" attestation-agent.tar.xz
+          # We need to create the platform annotations with docker, since oras 1.2 doesn't support
+          # pushing with platform yet.
+          docker manifest create "${image}:${tag}" --amend "${image}:${arch_tag}"
+          docker manifest annotate --arch "${OCI_ARCH}" --os linux "${image}:${tag}" "${image}:${arch_tag}"
+          docker manifest push "${image}:${tag}"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+          digest="$(oras manifest fetch "${image}:${arch_tag}" --descriptor | jq -r .digest)"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.publish.outputs.image }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
+  publish-cdh-and-asr:
+    name: Publish CDH and api-server-rest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write # push OCI artifacts to ghcr.io
+      id-token: write # required for OIDC-based attestation signing
+      attestations: write # required to create build attestations
+    strategy:
+      matrix:
+        platform:
+          - { arch: x86_64,      libc: musl, runner: ubuntu-24.04 }
+          - { arch: s390x,       libc: gnu,  runner: ubuntu-24.04-s390x }
+          - { arch: aarch64,     libc: gnu,  runner: ubuntu-24.04-arm }
+          - { arch: powerpc64le, libc: gnu,  runner: ubuntu-24.04-ppc64le }
+    runs-on: ${{ matrix.platform.runner }}
+    env:
+      LIBC: ${{ matrix.platform.libc }}
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+      RUST_TARGET: ${{ matrix.platform.arch }}-unknown-linux-${{ matrix.platform.libc }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-rust-ci
+        with:
+          target: ${{ env.RUST_TARGET }}
+          install-dmverity: "true"
+          install-build-deps: ${{ matrix.platform.arch == 'powerpc64le' && 'true' || 'false' }}
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+        with:
+          version: 1.2.0
+
+      - name: Build CDH
+        env:
+          ARCH: ${{ matrix.platform.arch }}
+          LIBC: ${{ matrix.platform.libc }}
+        run: make ./target/$RUST_TARGET/release/confidential-data-hub
+
+      - name: Build ASR
+        env:
+          ARCH: ${{ matrix.platform.arch }}
+          LIBC: ${{ matrix.platform.libc }}
+        run: make ./target/$RUST_TARGET/release/api-server-rest
+
+      - name: Publish CDH + ASR with ORAS
+        id: publish
+        env:
+          GIT_SHA: ${{ github.sha }}
+          ARCH: ${{ matrix.platform.arch }}
+        run: |
+          arch="${ARCH}"
+          # After building for target powerpc64le, tag and push the image as ppc64le to match standard arch naming.
+          [ "$arch" = "powerpc64le" ] && arch="ppc64le"
+          tag="${GIT_SHA}-${arch}"
+          mkdir oras
+          cd oras
+          cp ../target/${RUST_TARGET}/release/{confidential-data-hub,api-server-rest} .
+
+          tar cJf confidential-data-hub.tar.xz confidential-data-hub
+          image="${REGISTRY}/${IMAGE_NAME}/confidential-data-hub"
+          oras push "${image}:${tag}" confidential-data-hub.tar.xz
+          echo "cdh-image=${image}" >> "$GITHUB_OUTPUT"
+          digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
+          echo "cdh-digest=${digest}" >> "$GITHUB_OUTPUT"
+
+          tar cJf api-server-rest.tar.xz api-server-rest
+          image="${REGISTRY}/${IMAGE_NAME}/api-server-rest"
+          oras push "${image}:${tag}" api-server-rest.tar.xz
+          echo "asr-image=${image}" >> "$GITHUB_OUTPUT"
+          digest="$(oras manifest fetch "${image}:${tag}" --descriptor | jq -r .digest)"
+          echo "asr-digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.publish.outputs.cdh-image }}
+          subject-digest: ${{ steps.publish.outputs.cdh-digest }}
+          push-to-registry: true
+
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.publish.outputs.asr-image }}
+          subject-digest: ${{ steps.publish.outputs.asr-digest }}
+          push-to-registry: true
+
+  secret-cli:
+    name: Build and upload secret CLI
+    if: |
+      github.event_name == 'release' ||
+      github.event_name == 'pull_request' ||
+      github.event_name == 'workflow_dispatch'
+    permissions:
+      # Write scopes are only exercised by the release-only upload/publish
+      # steps below (gated on env.IS_PUBLISH). On pull_request the job just
+      # builds the binary to catch breakage early; fork PRs get a read-only
+      # token regardless of what is requested here.
+      contents: write # required to upload release assets via gh release upload
+      packages: write # required to publish OCI artifact to ghcr.io
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - { arch: x86_64,  libc: musl, runner: ubuntu-24.04 }
+          - { arch: aarch64, libc: musl, runner: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.platform.runner }}
+    env:
+      RUST_TARGET: ${{ matrix.platform.arch }}-unknown-linux-${{ matrix.platform.libc }}
+      # KMS providers bundled into the released binary. Building all of them
+      # into one artifact keeps the released tool provider-agnostic.
+      CLI_FEATURES: cli,aliyun,aws,kbs
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+      IS_PUBLISH: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-rust-ci
+        with:
+          # The bundled AWS SDK crates require a newer rustc than the repo's
+          # pinned toolchain (rust-toolchain.toml). Build the release binary on
+          # stable so the aws feature compiles.
+          toolchain: stable
+          target: ${{ env.RUST_TARGET }}
+          cache: "false"
+          install-musl: ${{ matrix.platform.libc == 'musl' && 'true' || 'false' }}
+          install-build-deps: "true"
+
+      - name: Log in to the Container registry
+        if: env.IS_PUBLISH == 'true'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up ORAS
+        if: env.IS_PUBLISH == 'true'
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+        with:
+          version: 1.2.0
+
+      - name: Build secret CLI
+        run: |
+          cargo build \
+            -p confidential-data-hub \
+            --bin secret \
+            --release \
+            --target "$RUST_TARGET" \
+            --no-default-features \
+            --features "$CLI_FEATURES"
+
+      - name: Package artifact
+        if: env.IS_PUBLISH == 'true'
+        id: package
+        run: |
+          name="secret-${RUST_TARGET}"
+          mkdir -p "$name"
+          cp "target/${RUST_TARGET}/release/secret" "$name/"
+          tar czf "${name}.tar.gz" "$name"
+          sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256"
+          echo "asset=${name}.tar.gz" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release assets
+        if: env.IS_PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ASSET: ${{ steps.package.outputs.asset }}
+        run: |
+          gh release upload "$TAG" "$ASSET" "${ASSET}.sha256" \
+            --repo "$GITHUB_REPOSITORY" --clobber
+
+      - name: Publish with ORAS
+        if: env.IS_PUBLISH == 'true'
+        env:
+          ASSET: ${{ steps.package.outputs.asset }}
+        run: |
+          image="${REGISTRY}/${IMAGE_NAME}/secret_cli"
+          oras push \
+            "${image}:${TAG}-${RUST_TARGET},latest-${RUST_TARGET}" \
+            "$ASSET"
+
+  vendor:
+    name: Generate and publish vendored code
+    if: github.event_name == 'release'
+    permissions:
+      contents: write # required to upload vendored tarball via gh release upload
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Generate and publish cargo vendored tarball
+        run: |
+          tag=$(echo $GITHUB_REF | sed 's|refs/tags/||')
+          tarball_name="guest-components-${tag}-vendor.tar.gz"
+          mkdir -p .cargo
+          cargo vendor --locked >> .cargo/config.toml
+
+          tar -cvzf ${tarball_name} vendor .cargo/config.toml
+          gh release upload ${tag} ${tarball_name}
+        env:
+          GH_TOKEN: ${{ github.token }}
