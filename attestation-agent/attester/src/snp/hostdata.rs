@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use crate::snp::VMPL;
+use crate::snp::vmpl::{VMPrivilegeLevel, set_privlevel};
 use crate::tsm_report::{TsmReportData, TsmReportError, TsmReportPath, TsmReportProvider};
 use sev::firmware::guest::{AttestationReport, Firmware};
 use thiserror::Error;
@@ -27,12 +27,18 @@ pub fn get_snp_host_data() -> Result<[u8; 32], GetHostDataError> {
         |_notsm| {
             let mut firmware = Firmware::open()?;
             firmware
-                .get_report(None, Some(report_data), Some(VMPL as u32))
+                .get_report(
+                    None,
+                    Some(report_data),
+                    Some(VMPrivilegeLevel::default() as u32),
+                )
                 .map_err(GetHostDataError::from)
         },
         |tsm| {
             // Generate the attestation report from the TSM Report path.
-            tsm.attestation_report(TsmReportData::Sev(report_data.to_vec()))
+            set_privlevel(&tsm, VMPrivilegeLevel::default())
+                .map_err(GetHostDataError::from)?
+                .attestation_report(TsmReportData::Sev(report_data.to_vec()))
                 .map_err(GetHostDataError::from)
         },
     )?;
