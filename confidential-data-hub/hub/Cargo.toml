@@ -108,5 +108,5 @@ bin = ["clap", "shadow-rs", "tracing-subscriber"]
 ttrpc = ["dep:ttrpc", "tokio/signal", "protos/ttrpc"]
 grpc = ["prost", "tonic", "tokio/signal", "protos/grpc"]
 
-# for secret_cli
+# for the `secret` CLI
 cli = ["clap/derive", "tokio/rt-multi-thread", "tokio/sync", "tokio/macros"]
