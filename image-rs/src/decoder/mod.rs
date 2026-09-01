@@ -119,6 +119,11 @@ impl TryFrom<&str> for Compression {
             media_type_str = manifest::IMAGE_LAYER_GZIP_MEDIA_TYPE;
         }
 
+        // WASM layers are stored uncompressed as a single `module.wasm` binary.
+        if media_type_str == crate::media_type::WASM_LAYER_MEDIA_TYPE {
+            return Ok(Compression::Uncompressed);
+        }
+
         let media_type = MediaType::from(media_type_str);
 
         let decoder = match media_type {
@@ -296,6 +301,10 @@ mod tests {
             TestData {
                 media_type_str: "application/vnd.oci.image.layer.nondistributable.v1.tar+zstd",
                 result: Ok(Compression::Zstd),
+            },
+            TestData {
+                media_type_str: crate::media_type::WASM_LAYER_MEDIA_TYPE,
+                result: Ok(Compression::Uncompressed),
             },
         ];
 

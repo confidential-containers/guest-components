@@ -11,6 +11,7 @@ pub mod decrypt;
 pub mod digest;
 pub mod image;
 pub mod layer_store;
+pub mod media_type;
 pub mod meta_store;
 pub mod pull;
 pub mod registry;

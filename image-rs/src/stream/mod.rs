@@ -93,6 +93,44 @@ pub async fn stream_processing(
     async_processing(layer_reader, hasher, dest).await
 }
 
+/// wasm_stream_processing handles WASM layer data by writing the raw bytes
+/// directly to a `module.wasm` file instead of unpacking them as a tar
+/// archive, and returns the layer digest for verification. WASM layers are
+/// stored uncompressed as a single binary module.
+pub async fn wasm_stream_processing(
+    layer_reader: impl AsyncRead + Unpin,
+    diff_id: &str,
+    destination: &Path,
+) -> StreamResult<String> {
+    // WASM image configs do not carry rootfs.diff_ids, so `diff_id` may be
+    // empty. In that case the digest is still computed (SHA256) but is not
+    // verified against the config by the caller.
+    let hasher = if diff_id.starts_with(DIGEST_SHA256_PREFIX) {
+        LayerDigestHasher::Sha256(sha2::Sha256::new())
+    } else if diff_id.starts_with(DIGEST_SHA512_PREFIX) {
+        LayerDigestHasher::Sha512(sha2::Sha512::new())
+    } else {
+        LayerDigestHasher::Sha256(sha2::Sha256::new())
+    };
+
+    tokio::fs::create_dir_all(destination)
+        .await
+        .map_err(|source| StreamError::FailedToRollBack { source })?;
+
+    let wasm_file_path = destination.join("module.wasm");
+    let mut hash_reader = HashReader::new(layer_reader, hasher);
+    let mut wasm_file = tokio::fs::File::create(&wasm_file_path)
+        .await
+        .map_err(|source| StreamError::FailedToRollBack { source })?;
+
+    if let Err(source) = tokio::io::copy(&mut hash_reader, &mut wasm_file).await {
+        tokio::fs::remove_dir_all(destination).await.ok();
+        return Err(StreamError::FailedToRollBack { source });
+    }
+
+    Ok(hash_reader.hasher.digest_finalize())
+}
+
 async fn async_processing(
     layer_reader: impl AsyncRead + Unpin,
     hasher: LayerDigestHasher,
@@ -198,5 +236,44 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(layer_digest, layer_digest_new);
+    }
+
+    #[tokio::test]
+    async fn test_wasm_stream_processing() {
+        let data: Vec<u8> = b"\0asm\x01\0\0\0".to_vec();
+
+        let digest = sha2::Sha256::digest(data.as_slice());
+        let layer_digest = format!("{}{}", DIGEST_SHA256_PREFIX, hex::encode(digest));
+
+        let tempdir = tempfile::tempdir().unwrap();
+        let file_path = tempdir.path().join("layer0");
+
+        let layer_digest_new = wasm_stream_processing(data.as_slice(), &layer_digest, &file_path)
+            .await
+            .unwrap();
+        assert_eq!(layer_digest, layer_digest_new);
+
+        let module = tokio::fs::read(file_path.join("module.wasm"))
+            .await
+            .unwrap();
+        assert_eq!(module, data);
+    }
+
+    #[tokio::test]
+    async fn test_wasm_stream_processing_empty_diff_id() {
+        let data: Vec<u8> = b"\0asm\x01\0\0\0".to_vec();
+
+        let tempdir = tempfile::tempdir().unwrap();
+        let file_path = tempdir.path().join("layer0");
+
+        let layer_digest = wasm_stream_processing(data.as_slice(), "", &file_path)
+            .await
+            .unwrap();
+        assert!(layer_digest.starts_with(DIGEST_SHA256_PREFIX));
+
+        let module = tokio::fs::read(file_path.join("module.wasm"))
+            .await
+            .unwrap();
+        assert_eq!(module, data);
     }
 }
