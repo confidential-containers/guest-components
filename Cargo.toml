@@ -66,7 +66,7 @@ sha2 = "0.11.0"
 shadow-rs = "2.0.0"
 strum = { version = "0.28", features = ["derive"] }
 tempfile = "3.25"
-testcontainers = "0.27.3"
+testcontainers = "0.28.0"
 thiserror = "2.0"
 tokio = "1.52"
 toml = "1.0.3"
