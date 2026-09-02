@@ -1,0 +1,121 @@
+name: Release container images
+
+# Generic release workflow for container images. Add a new entry under
+# `matrix.image` (and the merge job's image list) to ship another image on
+# release; keep coco-extension-image.yml separate (it has a different build
+# pipeline).
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+    name: Build ${{ matrix.image.name }} (${{ matrix.platform.arch }})
+    permissions:
+      contents: read
+      packages: write # push container images to ghcr.io
+    strategy:
+      fail-fast: false
+      matrix:
+        # Per-image config. Expanding this list cartesian-products with
+        # `platform` so each image is built natively on every arch runner.
+        image:
+          - name: coco-keyprovider
+            dockerfile: ./attestation-agent/docker/Dockerfile.keyprovider
+            context: .
+            # Full image path under REGISTRY (without tag).
+            repository: confidential-containers/staged-images/coco-keyprovider
+        platform:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.platform.runner }}
+    env:
+      IMAGE: ${{ env.REGISTRY }}/${{ matrix.image.repository }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build natively on each architecture's runner rather than relying on
+      # QEMU emulation, which makes arm64 cargo builds prohibitively slow.
+      - name: Build and push ${{ matrix.image.name }} (${{ matrix.platform.arch }})
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.dockerfile }}
+          platforms: linux/${{ matrix.platform.arch }}
+          push: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }}-${{ matrix.platform.arch }}
+
+  merge:
+    name: Merge ${{ matrix.image.name }} manifests
+    needs: build
+    permissions:
+      packages: write # push multi-arch manifest to ghcr.io
+    strategy:
+      fail-fast: false
+      matrix:
+        # Keep in sync with `build.matrix.image` (one merge per image).
+        image:
+          - name: coco-keyprovider
+            repository: confidential-containers/staged-images/coco-keyprovider
+            arches: "amd64 arm64"
+    runs-on: ubuntu-24.04
+    env:
+      IMAGE: ${{ env.REGISTRY }}/${{ matrix.image.repository }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifests
+        env:
+          GIT_SHA: ${{ github.sha }}
+          ARCHES: ${{ matrix.image.arches }}
+        run: |
+          sources=()
+          for arch in ${ARCHES}; do
+            sources+=("${IMAGE}:${GIT_SHA}-${arch}")
+          done
+          for tag in "${GIT_SHA}" latest; do
+            docker buildx imagetools create --tag "${IMAGE}:${tag}" "${sources[@]}"
+          done
