@@ -89,6 +89,8 @@ impl ClientBuilder {
         String
     );
 
+    __impl_config!(anonymous_fallback_on_unauthorized, bool);
+
     __impl_config!(max_concurrent_layer_downloads_per_image, usize);
 
     #[cfg(feature = "keywrap-native")]
