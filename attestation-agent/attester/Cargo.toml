@@ -39,7 +39,7 @@ sev = { version = "6.3.1", default-features = false, features = [
 ], optional = true }
 sha2.workspace = true
 strum.workspace = true
-tdx-attest-rs = { git = "https://github.com/intel/confidential-computing.tee.dcap", tag = "DCAP_1.26", optional = true }
+tdx-attest-rs = { git = "https://github.com/intel/confidential-computing.tee.dcap", tag = "DCAP_1.27.101", optional = true }
 thiserror.workspace = true
 csv-rs = { version = "0.1.0", optional = true }
 codicon = { version = "3.0", optional = true }
