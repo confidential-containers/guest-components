@@ -105,7 +105,7 @@ az-tdx-vtpm-attester = [
     "azure-guest-attestation-sdk",
     "zerocopy",
 ]
-snp-attester = ["sev"]
+snp-attester = ["sev", "tsm-report"]
 csv-attester = ["hygon", "codicon", "hyper", "hyper-tls"]
 hygon-dcu-attester = ["hygon"]
 hygon = ["csv-rs"]
