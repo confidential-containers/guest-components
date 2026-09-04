@@ -52,8 +52,8 @@ fn key_lifetime(base_dir: &str, key_id: &str, sub_cmd: Vec<&str>) {
         .write_all(&secret)
         .expect("write 'secret_file' fail");
 
-    // seal secret with 'secret_cli'
-    let seal_secret_output = Command::cargo_bin("secret_cli")
+    // seal secret with 'secret'
+    let seal_secret_output = Command::cargo_bin("secret")
         .expect("init 'cargo_bin' fail")
         .arg("seal")
         .arg("envelope")
@@ -70,8 +70,8 @@ fn key_lifetime(base_dir: &str, key_id: &str, sub_cmd: Vec<&str>) {
 
     assert!(seal_secret_output.status.success());
 
-    // unseal secret with 'secret_cli'
-    let unseal_secret_output = Command::cargo_bin("secret_cli")
+    // unseal secret with 'secret'
+    let unseal_secret_output = Command::cargo_bin("secret")
         .expect("init 'cargo_bin' fail")
         .arg("unseal")
         .args(["--file-path", &sealed_secret_file_path])
