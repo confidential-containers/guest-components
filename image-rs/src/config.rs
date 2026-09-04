@@ -130,6 +130,12 @@ pub struct ImageConfig {
     #[serde(default = "Option::default")]
     pub authenticated_registry_credentials_uri: Option<String>,
 
+    /// Retry an image pull anonymously when the registry rejects the
+    /// configured credential (e.g. an expired token), so public images
+    /// remain pullable.
+    #[serde(default)]
+    pub anonymous_fallback_on_unauthorized: bool,
+
     /// Registry configuration supports defining registry blocking, mirroring,
     /// and remapping rules. This field points to a registry configuration file,
     /// which can either be stored locally in the rootfs or retrieved from the KBS.
@@ -205,6 +211,7 @@ impl Default for ImageConfig {
             sigstore_config_uri: None,
             sigstore_config: None,
             authenticated_registry_credentials_uri: None,
+            anonymous_fallback_on_unauthorized: false,
             registry_configuration_uri: None,
             registry_config: None,
             image_pull_proxy: None,
@@ -282,6 +289,7 @@ impl ImageConfig {
             sigstore_config_uri: None,
             sigstore_config: None,
             authenticated_registry_credentials_uri: None,
+            anonymous_fallback_on_unauthorized: false,
             registry_configuration_uri: None,
             registry_config: None,
             image_pull_proxy: None,
@@ -444,6 +452,7 @@ mod tests {
             config.max_concurrent_layer_downloads_per_image,
             DEFAULT_MAX_CONCURRENT_DOWNLOAD
         );
+        assert!(!config.anonymous_fallback_on_unauthorized);
 
         let env_work_dir = "/tmp";
         let config = ImageConfig::new(PathBuf::from(env_work_dir));
@@ -458,6 +467,7 @@ mod tests {
             "default_snapshot": "overlay",
             "image_security_policy_uri": "file:///etc/image-policy.json",
             "authenticated_registry_credentials_uri": "file:///etc/image-auth.json",
+            "anonymous_fallback_on_unauthorized": true,
 	        "max_concurrent_layer_downloads_per_image": 1
         }"#;
 
@@ -483,6 +493,7 @@ mod tests {
             config.authenticated_registry_credentials_uri,
             Some("file:///etc/image-auth.json".to_string())
         );
+        assert!(config.anonymous_fallback_on_unauthorized);
 
         let invalid_config_file = tempdir.path().join("does-not-exist");
         assert!(!invalid_config_file.exists());

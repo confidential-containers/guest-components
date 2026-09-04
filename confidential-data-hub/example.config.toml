@@ -142,6 +142,11 @@ image_security_policy_uri = "kbs:///default/security-policy/test"
 # is set, the value of the environment variable will be used.
 authenticated_registry_credentials_uri = "kbs:///default/credential/test"
 
+# Retry an image pull anonymously when the registry rejects the
+# configured credential (e.g. an expired token), so public images
+# remain pullable.
+anonymous_fallback_on_unauthorized = false
+
 # Registry configuration supports defining registry blocking, mirroring,
 # and remapping rules. This field points to a registry configuration file,
 # which can either be stored locally in the rootfs or retrieved from the KBS.
