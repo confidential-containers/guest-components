@@ -28,7 +28,7 @@ fn main() -> std::io::Result<()> {
             enabled_features.join(", ")
         }
 
-        let token_plugins = feature_list(vec![], vec!["KBS", "COCO_AS"]);
+        let token_plugins = feature_list(vec![], vec!["KBS", "COCO_AS", "CCM_AS"]);
         let attester = feature_list(
             vec!["SAMPLE_ATTESTER", "SAMPLE_DEVICE_ATTESTER"],
             vec![

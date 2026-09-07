@@ -28,6 +28,11 @@ fn main() {
         } else {
             "disabled"
         };
+        let ccm_kbc = if env::var("CARGO_FEATURE_CCM_KBC").is_ok() {
+            "enabled"
+        } else {
+            "disabled"
+        };
         let kms = feature_list(vec!["ALIYUN", "AWS"]);
 
         let out_dir = env::var("OUT_DIR").unwrap();
@@ -35,6 +40,7 @@ fn main() {
         let mut f = File::create(dest_path).unwrap();
 
         writeln!(f, "kbs: {kbs}").unwrap();
+        writeln!(f, "ccm_kbc: {ccm_kbc}").unwrap();
         write!(f, "kms plugins: {kms}").unwrap();
     }
 
