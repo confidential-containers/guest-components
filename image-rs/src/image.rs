@@ -392,26 +392,28 @@ impl ImageClient {
 
         let mut client = self.new_pull_client(&task, &auth)?;
 
-        let (image_manifest, image_digest, image_config, manifest_list_digest) = match client
-            .pull_manifest()
-            .await
+        let mut result = client.pull_manifest().await;
+
+        // Optionally retry anonymously on a rejected credential. A fresh
+        // client is required: the old one caches the rejected credential
+        // and layer pulls would reuse it.
+        if self.config.anonymous_fallback_on_unauthorized
+            && !matches!(auth, RegistryAuth::Anonymous)
+            && matches!(
+                result,
+                Err(PullLayerError::PullManifestError {
+                    source: OciDistributionError::UnauthorizedError { .. },
+                })
+            )
         {
-            // Optionally retry anonymously on a rejected credential. A fresh
-            // client is required: the old one caches the rejected credential
-            // and layer pulls would reuse it.
-            Err(PullLayerError::PullManifestError {
-                source: OciDistributionError::UnauthorizedError { .. },
-            }) if self.config.anonymous_fallback_on_unauthorized
-                && !matches!(auth, RegistryAuth::Anonymous) =>
-            {
-                warn!(
-                    "registry rejected the configured credential for {image_url}; retrying anonymously"
-                );
-                client = self.new_pull_client(&task, &RegistryAuth::Anonymous)?;
-                client.pull_manifest().await?
-            }
-            other => other?,
-        };
+            warn!(
+                "registry rejected the configured credential for {image_url}; retrying anonymously"
+            );
+            client = self.new_pull_client(&task, &RegistryAuth::Anonymous)?;
+            result = client.pull_manifest().await;
+        }
+
+        let (image_manifest, image_digest, image_config, manifest_list_digest) = result?;
 
         let id = image_manifest.config.digest.clone();
 
