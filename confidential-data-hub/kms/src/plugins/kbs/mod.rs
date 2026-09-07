@@ -8,6 +8,9 @@
 #[cfg(feature = "kbs")]
 mod cc_kbc;
 
+#[cfg(feature = "ccm_kbc")]
+mod ccm_kbc;
+
 mod offline_fs;
 
 use std::{env, sync::Arc};
@@ -29,6 +32,8 @@ pub trait Kbc: Send + Sync {
 pub enum KbcClient {
     #[cfg(feature = "kbs")]
     Cc(Arc<Mutex<cc_kbc::CcKbc>>),
+    #[cfg(feature = "ccm_kbc")]
+    Ccm(Arc<Mutex<ccm_kbc::CcmKbc>>),
     OfflineFs(Arc<Mutex<offline_fs::OfflineFsKbc>>),
 }
 
@@ -46,12 +51,19 @@ impl KbcClient {
                     cc_kbc::CcKbc::new(&params.uri, &aa_socket).await?,
                 )))
             }
+            #[cfg(feature = "ccm_kbc")]
+            "ccm_kbc" => {
+                let aa_socket = env::var("AA_SOCKET").expect("must be initialized");
+                Self::Ccm(Arc::new(Mutex::new(
+                    ccm_kbc::CcmKbc::new(&params.uri, &aa_socket).await?,
+                )))
+            }
             "offline_fs_kbc" => {
                 Self::OfflineFs(Arc::new(Mutex::new(offline_fs::OfflineFsKbc::new().await?)))
             }
             others => {
                 return Err(Error::KbsClientError(format!(
-                    "unknown kbc name {others}, only support `cc_kbc`(feature `kbs`) and `offline_fs_kbc`."
+                    "unknown kbc name {others}, only support `cc_kbc`(feature `kbs`), `ccm_kbc` (feature `ccm_kbc`) and `offline_fs_kbc`."
                 )));
             }
         };
@@ -69,6 +81,8 @@ impl Getter for KbcClient {
         match self {
             #[cfg(feature = "kbs")]
             Self::Cc(c) => c.lock().await.get_resource(resource_uri).await,
+            #[cfg(feature = "ccm_kbc")]
+            Self::Ccm(c) => c.lock().await.get_resource(resource_uri).await,
             Self::OfflineFs(c) => c.lock().await.get_resource(resource_uri).await,
         }
     }

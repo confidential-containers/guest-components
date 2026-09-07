@@ -110,3 +110,5 @@ grpc = ["prost", "tonic", "tokio/signal", "protos/grpc"]
 
 # for the `secret` CLI
 cli = ["clap/derive", "tokio/rt-multi-thread", "tokio/sync", "tokio/macros"]
+
+ccm_kbc = ["kms/ccm_kbc"]
