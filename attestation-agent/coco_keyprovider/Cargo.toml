@@ -36,5 +36,9 @@ shadow-rs.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true
+# Test-only: the KEK registration tests stand up a one-shot loopback HTTP listener to assert
+# that a rejected registration is an error rather than a silent success. Dev-only, so the
+# shipped keyprovider binary is unaffected.
+tokio = { workspace = true, features = ["macros", "net", "rt-multi-thread"] }
 
 [features]
