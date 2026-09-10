@@ -76,7 +76,7 @@ jobs:
 
       - name: Install NVIDIA Attestation SDK
         if: matrix.instance == 'ubuntu-24.04'
-        uses: ./.github/actions/install-nvat-sdk
+        uses: $/.github/actions/install-nvat-sdk
 
       - name: Install dm-verity dependencies
         run: |

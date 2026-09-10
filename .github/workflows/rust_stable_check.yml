@@ -64,7 +64,7 @@ jobs:
 
       - name: Install NVIDIA Attestation SDK
         if: contains(fromJSON('["attestation-agent", "kbc", "kbs_protocol"]'), matrix.package)
-        uses: ./.github/actions/install-nvat-sdk
+        uses: $/.github/actions/install-nvat-sdk
 
       - name: Run rust lint checks (${{matrix.package}})
         env:
