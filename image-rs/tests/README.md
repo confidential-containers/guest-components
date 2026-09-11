@@ -19,14 +19,14 @@ Each test suite will follow these steps:
 
 * Pull manifest of the image without verification of signature.
 * Pull layers of the mentioned image.
-* Ocicrypt-rs will ask the Attestation-Agent to decrypt the Layer Encryption Key (LEK for short), which is 
+* Ocicrypt-rs will ask the Confidential Data Hub to decrypt the Layer Encryption Key (LEK for short), which is
 encrypted using Key Encryption Key (KEK for short). KEK is stored in KBS.
 * Ocicrypt-rs decrypt the layers using LEK. Finish the image pulling.
 
 Different KBCs use different protocol format, so different KBSs are needed to
 encrypt the images. To genetate KBS encrypted image, please refer to the following link:
 
-* [Using Offline-fs-kbs](../../attestation-agent/kbc/src/offline_fs_kbc/README.md)
+* [Using Offline-fs-kbc](../../confidential-data-hub/docs/RESOURCES_SERVICES.md)
 
 ## Image Signature Verification
 

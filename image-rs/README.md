@@ -6,7 +6,11 @@ Container Images Rust Crate
 
 [Design document](docs/design.md)
 
-[CCv1 Image Security Design document](docs/ccv1_image_security_design.md)
+[Image Security Design document](docs/ccv1_image_security_design.md)
+
+For the image encryption/decryption annotation format and protocol, see
+[IMAGE_ENCRYPTION.md](../attestation-agent/docs/IMAGE_ENCRYPTION.md) and
+[IMPLEMENTATION.md](../attestation-agent/docs/IMPLEMENTATION.md).
 
 ## Performance Testing
 

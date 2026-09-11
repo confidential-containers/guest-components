@@ -1,10 +1,10 @@
 # CoCo Keyprovider
 
 CoCo Keyprovider is a very simple keyprovider tool, which can help to generate CoCo-compatible encrypted images.
-The encrypted image can be decrypted using the following Key Broker Client (KBC):
- * cc-kbc
- * offline-fs-kbc
- * sample kbc (toy KBC still supported for historical reason)
+The encrypted image can be decrypted using the following Key Broker Client (KBC), both implemented as
+plugins in [Confidential Data Hub](../../confidential-data-hub):
+ * cc_kbc
+ * offline_fs_kbc
 
 The following guide will help make an encrypted image using [skopeo](https://github.com/containers/skopeo) and CoCo keyprovider, inspect the image as well as decrypt it.
 
@@ -95,7 +95,12 @@ On the examples above the `--insecure-policy` option is not needed for encryptio
 As shown on the previous section, the encryption protocol (`--encryption-key`) passed to skopeo has the `provider:attestation-agent:<parameters>` format.
 
 The `<parameters>` is a key-value list separated by double colons (e.g. key1=value1::key2=value2). Here are the defined keys:
-- `sample`: Not required. Either `true` or `false`. If not set, use `false`. This value indicates whether the hardcoded encryption key is used. This works the same way as `sample keyprovider`.
+- `sample`: Not required. Either `true` or `false`. If not set, use `false`. This value indicates whether a hardcoded encryption key is used, instead of a real KEK.
+  > [!WARNING]
+  > No KBC in `confidential-data-hub` automatically knows this hardcoded key. To decrypt a
+  > `sample=true`-encrypted image you would need to manually provision the same hardcoded key
+  > under the `kbs:///default/test-key/1` resource in your KBC (e.g. as an `offline_fs_kbc`
+  > resource entry). In practice, prefer the `keyid`/`keypath` mode below.
 - `keyid`: Required if `sample` is not enabled. It is a Key Broker Service (KBS) Resource URI (see the specification below). When decryption occurs, the `keyid` value is used to index the Key Encryption Key (KEK).
 - `keypath`: Required if `sample` is not enabled. A local filesystem path, absolute path recommended. Specify the KEK to encrypt the image in local filesystem. KEK will be read from filesystem and then used to encrypt the image. This key's length must be 32 bytes.
 - `algorithm`: Not required. Indicate the encryption algorithm used. Either `A256GCM` or `A256CTR`. If not provided, use `A256GCM` by default as it is AEAD scheme.
@@ -116,9 +121,11 @@ Where:
 
 This section contain encrypting examples.
 
-#### Example 1: encrypting for sample kbc
+#### Example 1: encrypting with a sample (hardcoded) key
 
-Let's start with the simplest example possible, which is to encrypt an image using the sample key provider:
+Let's start with the simplest example possible, which is to encrypt an image using a hardcoded sample key.
+Note that, as explained above, this image cannot currently be decrypted by any KBC in
+`confidential-data-hub` without manually provisioning the same hardcoded key:
 
 ```shell
 $ skopeo copy --insecure-policy --encryption-key provider:attestation-agent:sample=true docker://busybox oci:busybox_encrypted:sample
@@ -199,12 +206,20 @@ Another way to ensure the image is encrypted is to use offline_fs_kbc to test, w
 
 Let's show how the image created on [example two](#example-2-encrypting-for-offline-fs-kbc) can be decrypted.
 
-Build and run Attestation Agent (AA) at localhost on port 48888:
+Build and run Confidential Data Hub (CDH) with a gRPC socket at localhost:
 
 ```shell
-$ cd attestation-agent
-$ make KBC=offline_fs_kbc && make DESTDIR="$(pwd)" install
-$ RUST_LOG=attestation_agent ./attestation-agent --keyprovider_sock 127.0.0.1:48888 &
+$ cd confidential-data-hub
+$ make KMS_PROVIDER=none RPC=grpc
+$ cat <<EOF > cdh_conf.toml
+socket = "127.0.0.1:48888"
+
+[kbc]
+name = "offline_fs_kbc"
+url = ""
+kbs_cert = ""
+EOF
+$ RUST_LOG=confidential_data_hub ../target/x86_64-unknown-linux-gnu/release/confidential-data-hub -c cdh_conf.toml &
 ```
 
 Create a new ocicrypt.conf and re-export OCICRYPT_KEYPROVIDER_CONFIG:

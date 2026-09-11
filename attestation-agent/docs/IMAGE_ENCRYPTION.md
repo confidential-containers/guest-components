@@ -4,10 +4,24 @@
 
 As stated in [CCv0 image security design](../../image-rs/docs/ccv1_image_security_design.md), CoCo uses image encryption mechanism compatible with [ocicrypt](https://github.com/containers/ocicrypt) and [ocicrypt-rs](../../ocicrypt-rs).
 
-Attestation-Agent as a [Key Provider](../../image-rs/docs/ccv1_image_security_design.md#update-manifest) implements API `unwrapkey`, which works together
+Confidential Data Hub (CDH) as a [Key Provider](../../image-rs/docs/ccv1_image_security_design.md#update-manifest) implements API `unwrapkey`, which works together
 with the [Sample Key Provider](../coco_keyprovider/) who implements API `wrapkey`.
 
-This document will describe how Attestation-Agent and Sample Key Provider play a role in image encryption. Together, some specifications will also be defined.
+> [!NOTE]
+> "Sample Key Provider" here refers to the `coco_keyprovider` reference tool as a whole (its
+> normal, real-KEK encryption mode). This is distinct from `coco_keyprovider`'s `sample=true`
+> toy mode, which uses a hardcoded key that no current CDH KBC plugin knows how to decrypt
+> automatically. See
+> [`coco_keyprovider`'s README](../coco_keyprovider/README.md#the-encryption-protocol-explained)
+> for details.
+
+> [!NOTE]
+> Historically, the `attestation-agent` binary itself implemented the `unwrapkey` API. This
+> functionality has since moved to `confidential-data-hub`; CDH still advertises itself under the
+> legacy ocicrypt provider name `attestation-agent` for backward-compatible annotation handling
+> (see [`ocicrypt_config.rs`](../../confidential-data-hub/hub/src/config/ocicrypt_config.rs)).
+
+This document will describe how Confidential Data Hub and Sample Key Provider play a role in image encryption. Together, some specifications will also be defined.
 
 ## Image Encryption and Decryption
 
@@ -30,13 +44,12 @@ Suppose there is a user wanting to encrypt an image layer `L`.
 
 ### Decryption
 
-`unwrapkey` API is directly related to image decryption. An image layer encrypted by `Sample Key Provider` can be decrypted with `Attestation-Agent`'s participation.
+`unwrapkey` API is directly related to image decryption. An image layer encrypted by `Sample Key Provider` can be decrypted with `Confidential Data Hub`'s participation.
 Here are the steps.
 1. `ocicrypt-rs` finds `L` is a encrypted layer, and `L` has a `org.opencontainers.image.enc.keys.provider.attestation-agent` annotation.
-2. `ocicrypt-rs` will send the content of the value of `org.opencontainers.image.enc.keys.provider.attestation-agent` annotation over `unwrapkey` gRPC to `Attestation-Agent`.
-3. `Attestation-Agent` will parse the annotation into an `AnnotationPacket`.
-4. `Attestation-Agent` will use the `AnnotationPacket` to call related KBC's `decrypt_payload()` api to retrieve the `PLBCO`.
-    * For `offline_fs_kbc`, `get_key()` helps to get the `KEK` due to the `key id`, and then `crypto` module decrypts the PLBCO.
+2. `ocicrypt-rs` will send the content of the value of `org.opencontainers.image.enc.keys.provider.attestation-agent` annotation over `unwrapkey` gRPC/ttRPC to `Confidential Data Hub`.
+3. `Confidential Data Hub` will parse the annotation into an `AnnotationPacket`.
+4. `Confidential Data Hub` will use the `AnnotationPacket` to call the configured KBC (e.g. `cc_kbc` or `offline_fs_kbc`, see [Resources Services](../../confidential-data-hub/docs/RESOURCES_SERVICES.md)) to retrieve the `KEK` due to the `key id`, and then decrypts the PLBCO.
 7. `ocicrypt-rs` uses `PLBCO` to decrypt the layer.
 
 ## Specs
@@ -47,13 +60,13 @@ This section gives some specification of CoCo involved image encryption/decrypti
 
 As stated [in ocicrypt](https://github.com/opencontainers/image-spec/pull/775/commits/bc0fcd698946be7e8bb1fa88f178ed2c66274aa2#diff-ecf63e7090e873922f62c4749c01f63f7eccd42912c1465fbee515cb7c4916c1R423), a specified protocol to decrypt `PLBCO` should have an annotation key-value pair in the image layer's [OciDescriptor](https://github.com/opencontainers/image-spec/blob/main/descriptor.md) of the image's [manifest](https://github.com/opencontainers/image-spec/blob/main/manifest.md).
 
-In CoCo scenerios, the annotation's key should be `org.opencontainers.image.enc.keys.provider.attestation-agent`. This indicates that the image layer can be decrypted by calling `unwrapkey` api of `attestation-agent`.
+In CoCo scenerios, the annotation's key should be `org.opencontainers.image.enc.keys.provider.attestation-agent`. This indicates that the image layer can be decrypted by calling the `unwrapkey` api of the key provider registered under the (legacy) `attestation-agent` provider name, which is `confidential-data-hub` in current deployments.
 
 ### Annotation Packet
 
 An `Annotation Packet` is the value of `org.opencontainers.image.enc.keys.provider.attestation-agent` annotation of the encrypted layer's [OciDescriptor](https://github.com/opencontainers/image-spec/blob/main/descriptor.md) (the value is standard-base64-encoded). The format of `Annotation Packet` influences
 * How CoCo's Key Provider wrap the LEK.
-* How AA unwrap the LEK.
+* How CDH unwrap the LEK.
 * How different KBCes can be compatible with each other.
 
 We define the format of `Annotation Packet` as following
@@ -68,9 +81,9 @@ We define the format of `Annotation Packet` as following
 
 ### Decryption Interface
 
-Once an `Annotation Packet` is given, the AA can dispatch specified KBC to handle.
-For those KBCeswho can retrieve the plaintext of KEK via `key id`, AA can perform decryption operation
-with the `KEK`, `wrapped_data`, `iv` and `wrap_type`. This function is provided in `src/crypto`.
+Once an `Annotation Packet` is given, CDH can dispatch to the configured KBC to handle it.
+For those KBCes who can retrieve the plaintext of KEK via `key id`, CDH can perform decryption operation
+with the `KEK`, `wrapped_data`, `iv` and `wrap_type`. This function is provided in the shared [`crypto`](../deps/crypto) crate.
 
 Different wrap types share a common decryption interface, s.t.
 ```rust
