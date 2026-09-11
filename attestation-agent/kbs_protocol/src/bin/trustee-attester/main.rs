@@ -46,7 +46,7 @@ enum Commands {
     #[clap(arg_required_else_help = true)]
     GetResource {
         /// KBS Resource path of format <repository>/<type>/<tag>
-        /// Document: https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md
+        /// Document: https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/RESOURCE_URI.md
         #[clap(long, value_parser)]
         path: String,
 

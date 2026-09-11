@@ -4,16 +4,23 @@ Attestation Agent (AA for short) is a service function set for attestation proce
 in Confidential Containers. It provides kinds of service APIs related to attestation.
 
 
-Current consumers of AA include: 
+Current consumers of AA include:
 
-- [ocicrypt-rs](../ocicrypt-rs)
-- [image-rs](../image-rs)
+- [confidential-data-hub](../confidential-data-hub) (its `cc_kbc` KBC plugin uses AA to perform
+  attestation and obtain a token; it then calls the KBS's `GetResource` API directly using that
+  token)
+
+AA no longer talks to `ocicrypt-rs`/`image-rs` directly for image decryption; that flow is now
+handled by `confidential-data-hub`. See
+[IMAGE_ENCRYPTION.md](docs/IMAGE_ENCRYPTION.md) and [IMPLEMENTATION.md](docs/IMPLEMENTATION.md)
+for details.
 
 ## Components
 
-The main body of AA is a rust library crate, which contains KBC modules used to communicate
-with various KBS. In addition, this project also provides a gRPC service application, 
-which allows callers to call the services provided by AA through gRPC.
+The main body of AA is a rust library crate, which contains attester modules used to generate
+TEE evidence and negotiate an attestation token with a KBS. In addition, this project also
+provides a gRPC/ttrpc service application, which allows callers (such as
+`confidential-data-hub`) to call the services provided by AA.
 
 ## Library crate
 
@@ -31,7 +38,7 @@ Here are the steps of building and running gRPC application of AA:
 
 ### Build
 
-Build and install with default KBC modules:
+Build and install with the default attester(s):
 
 ```shell
 git clone https://github.com/confidential-containers/guest-components

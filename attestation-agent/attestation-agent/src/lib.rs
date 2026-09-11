@@ -64,9 +64,6 @@ pub enum RuntimeMeasurement {
 /// ```
 /// `AttestationAPIs` defines the service APIs of attestation agent that need to make requests
 ///  to the Relying Party (Key Broker Service) in Confidential Containers.
-///
-/// For every service API, the `kbc_name` and `kbs_uri` is necessary, `kbc_name` tells
-/// attestation agent which KBC module it should use and `kbs_uri` specifies the KBS address.
 #[async_trait]
 pub trait AttestationAPIs {
     /// Get attestation Token

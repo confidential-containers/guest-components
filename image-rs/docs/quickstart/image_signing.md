@@ -57,9 +57,9 @@ To learn more about cosign, please refer to [the github repository](https://gith
 
 ### Enable cosign image signature verification and retrieve public key via KBC channel
 
-Take [offline file system key broker](../../../attestation-agent/kbc/src/offline_fs_kbc) (Offline-FS-KBC for short) for example.
+Take the `offline_fs_kbc` KBC provided by [Confidential Data Hub](../../../confidential-data-hub/docs/RESOURCES_SERVICES.md) (Offline-FS-KBC for short) for example.
 
-#### Prepare Attestation-Agent and Offline-FS-KBC
+#### Prepare Confidential Data Hub (CDH) with Offline-Fs-KBC
 
 Clone the repository.
 
@@ -67,13 +67,10 @@ Clone the repository.
 git clone https://github.com/confidential-containers/guest-components
 ```
 
-Build Offline-Fs-KBC & AA
+Build CDH, disabling KMS providers to speed up the build (`offline_fs_kbc` is always built in):
 ```
-cd guest-components/attestation-agent
-make KBC=offline_fs_kbc
-
-install_dir=/path/to/be/installed
-make install
+cd guest-components/confidential-data-hub
+make KMS_PROVIDER=none
 ```
 
 #### Add Offline-Fs-KBC resources
@@ -117,24 +114,33 @@ cat /path/to/policy.json | base64 --wrap=0
 cat /path/to/cosign.pub | base64 --wrap=0
 ```
 
-Let's return to the dir of `attestation-agent` and edit the resources.
-Replace the values of `Policy` and `Cosign Key` in `src/kbc_modules/offline_fs_kbc/aa-offline_fs_kbc-resources.json`
-to the related base64 code generated. 
+`offline_fs_kbc` reads resources from `/etc/aa-offline_fs_kbc-resources.json`. Add the two
+resources' base64-encoded values there under keys `default/security-policy/test` (policy) and
+`default/cosign-public-key/test` (public key), e.g.
 
-Then copy the newly edited `aa-offline_fs_kbc-resources.json` to the target dir.
 ```
-cd src/kbc_modules/offline_fs_kbc/
-cp aa-offline_fs_kbc-resources.json /etc/aa-offline_fs_kbc-resources.json
-cp aa-offline_fs_kbc-keys.json /etc/aa-offline_fs_kbc-keys.json
+{
+  "default/security-policy/test": "<base64-encoded policy.json>",
+  "default/cosign-public-key/test": "<base64-encoded cosign.pub>"
+}
+```
+
+Then install the file, along with an (empty, if unused) keys file:
+```
+sudo cp aa-offline_fs_kbc-resources.json /etc/aa-offline_fs_kbc-resources.json
+sudo cp aa-offline_fs_kbc-keys.json /etc/aa-offline_fs_kbc-keys.json
 ```
 
 In this way, when the images from `"example.org"` is being pulled,
 the signature will be verified using the public key of path `"/run/image-security/cosign/cosign.pub"`.
 
-Now let's start the AA with Offline-Fs-KBC
+Now let's start CDH, configured to serve `offline_fs_kbc` resources over ttRPC/gRPC (see
+[Confidential Data Hub docs](../../../confidential-data-hub/docs/RESOURCES_SERVICES.md) for a full
+config example):
 
 ```
-attestation-agent --keyprovider_sock 127.0.0.1:50000 --getresource_sock 127.0.0.1:50001
+confidential-data-hub -c cdh_conf.toml
 ```
 
-Now the attestation-agent can response with the correct resources.
+Now the confidential-data-hub can respond with the correct resources to image-rs's resource
+provider (which connects to CDH over ttRPC/gRPC, see [`image-rs/src/resource/kbs`](../../src/resource/kbs)).

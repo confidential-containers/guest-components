@@ -25,7 +25,7 @@ pub trait DataHub {
 
     /// Get the resource due to the given KBS Resource URI. The KBS Resource
     /// URI is defined in
-    /// <https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md>
+    /// <https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/RESOURCE_URI.md>
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>>;
 
     async fn secure_mount(&self, storage: Storage) -> Result<String>;

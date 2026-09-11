@@ -1,4 +1,4 @@
-# CCv1 Image Security Design
+# Image Security Design
 
 ## Backgrounds
 
@@ -12,7 +12,8 @@
 - [`image-rs`](..)
 - [`ocicrypt-rs`](../../ocicrypt-rs)
 - [`attestation-agent`](../../attestation-agent)
-- [Key Broker Service (KBS)](https://github.com/confidential-containers/kbs)
+- [`confidential-data-hub`](../../confidential-data-hub)
+- [Key Broker Service (KBS)](https://github.com/confidential-containers/trustee)
 
 # Production of protected container image
 
@@ -39,118 +40,19 @@ depending on what strategy the owner adopts to manage his keys, which is not the
 
 ## Image encryption
 
-Image encryption is based on layer granularity.
+Image encryption is based on layer granularity: for each layer, a random symmetric key is generated
+and used to encrypt the layer; the symmetric key is itself encrypted ("wrapped") with the owner's
+key via the [key provider protocol](https://github.com/containers/ocicrypt/blob/main/docs/keyprovider.md),
+and the wrapped key material is recorded as an annotation on the layer in the image manifest, with
+the `"+encrypted"` suffix added to the layer's `mediaType`.
 
-### Steps
-
-The steps of encrypting an image layer is as follows:
-
-1. Dynamically generate a random symmetric key.
-
-2. Encrypt container image layer with symmetric key.
-
-3. Encrypt the symmetric key with the owner's key.
-
-4. Write the symmetric key encrypted by the owner's key into the container image manifest
-as the content of the annotation of the container image layer.
-
-The owner can use any custom image encryption tool to implement the above process
+The owner can use any custom image encryption tool to implement this process
 (such as [`skopeo`](https://github.com/containers/skopeo) integrated with [`ocicrypt`](https://github.com/containers/ocicrypt)),
-as long as the tool meets the implementation specs described below.
-
-### Implementation specs
-
-#### initialization
-
-After dynamically generating the random symmetric key and encrypting the image layer,
-two special JSON structures need to be generated, One is used to record public encrypted information
-(such as encryption algorithm),
-which is called [`PublicLayerBlockCipherOptions`](https://github.com/opencontainers/image-spec/pull/775/commits/bc0fcd698946be7e8bb1fa88f178ed2c66274aa2#diff-ecf63e7090e873922f62c4749c01f63f7eccd42912c1465fbee515cb7c4916c1R362), and the other is used to record secret information
-(such as symmetric key used for encryption), which is called [`PrivateLayerBlockCipherOptions`](https://github.com/opencontainers/image-spec/pull/775/commits/bc0fcd698946be7e8bb1fa88f178ed2c66274aa2#diff-ecf63e7090e873922f62c4749c01f63f7eccd42912c1465fbee515cb7c4916c1R362).
-The example are as follows:
-
-- `PublicLayerBlockCipherOptions`:
-
-  ```json
-  {
-      "cipher": "AES_256_CTR_HMAC_SHA256",
-      "hmac": “M0M5OTA5QUZFQzI1MzU0RDU1MURBR…”
-      "cipheroptions": {}
-  }
-  ```
-
-- `PrivateLayerBlockCipherOptions`:
-
-  ```json
-  {
-      "symkey": "54kiln1USEaKnlYhKdz+aA==",
-      "cipheroptions": {
-          "nonce": "AdcRPTAEhXx6uwuYcOquNA=="
-      }
-  }
-  ```
-
-#### Key Wrapping
-
-The `PrivateLayerBlockCipherOptions` needs to be encrypted through the [key provider protocol](https://github.com/containers/ocicrypt/blob/main/docs/keyprovider.md) with a "key provider program",
-this action is usually called "Key Wrapping".
-The key provider program here also allows the owner to customize the implementation,
-as long as it meets the implementation specs described here.
-
-The key provider program should encrypt the `PrivateLayerBlockCipherOptions` with the owner's key.
-After that, it should Base64 encode the encrypted `PrivateLayerBlockCipherOptions` and then package it into a owner customized JSON structure.
-In the confidential container design, this JSON structure is called "annotation packet", it record some additional information,
-such as the ID of the owner's key, for example:
-
-```
-{
-    "key_id":"1234",
-    "wrapped_data":#base64encode(Enc(PrivateLayerBlockCipherOptions)),
-    "wrap_type":"",
-}
-```
-
-The specific format of the annotation packet can be determined by the customized key provider program used by the owner,
-but it is necessary to ensure that the key provider program used by the decryptor
-(i.e. the `attestation-agent` integrated with the specified [Key Broker Client](../../attestation-agent/docs/IMPLEMENTATION.md#kbc))
-supports parsing annotation packets of the same format.
-(In CCv1, when decrypting the image, the decryption of `PrivateLayerBlockCipherOptions` will be carried out by `ocicrypt-rs` through the [key provider protocol with the `attestation-agent`](../../attestation-agent/docs/IMPLEMENTATION.md#keyprovider-protocol) (as a key provider program).)
-
-#### Update manifest
-
-The container image manifest provides two new [annotations](https://github.com/opencontainers/image-spec/blob/main/annotations.md)
-to record the encrypted information and the wrapped symmetric key of one layer:
-
-- [`org.opencontainers.image.enc.pubopts`](https://github.com/opencontainers/image-spec/pull/775/commits/bc0fcd698946be7e8bb1fa88f178ed2c66274aa2#diff-72e9137f36414ba79825f6da71afcba1c6dbf72a1f35686e12e6b07d9914066dR55): record base64-encoded `PublicLayerBlockCipherOptions`.
-
-- [`org.opencontainers.image.enc.keys.[key_protocol]`](https://github.com/opencontainers/image-spec/pull/775/commits/bc0fcd698946be7e8bb1fa88f178ed2c66274aa2#diff-72e9137f36414ba79825f6da71afcba1c6dbf72a1f35686e12e6b07d9914066dR52): record annotation packet. In CC V1 design, `[key_protocol]` is specified as `provider.attestation-agent`.
-
-Then, add the ["+encrypted" suffix](https://github.com/opencontainers/image-spec/pull/775/commits/bc0fcd698946be7e8bb1fa88f178ed2c66274aa2#diff-ecf63e7090e873922f62c4749c01f63f7eccd42912c1465fbee515cb7c4916c1R7) to the `mediaType` field of this layer.
-
-For example, the `manifest.json` of a container image with only one layer (and this layer is encrypted) is as follows,
-From its `layers` field, we can see the changes we stated above.
-
-```json
-{
-    "schemaVersion": 2,
-    "config": {
-        "mediaType": "application/vnd.oci.image.config.v1+json",
-        "digest": "sha256:ef87d9f0...",
-        "size": 1510
-    },
-    "layers": [
-        {
-            "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip+encrypted",
-            "digest": "sha256:f69ae40...",
-            "size": 204812,
-            "annotations": {
-                "org.opencontainers.image.enc.pubopts": "eyJjaXBoZXIiOi...",
-                "org.opencontainers.image.enc.keys.provider.attestation-agent": "eyJwcm9..."
-            }
-        }
-    ]
-}
-```
+as long as it meets the implementation specs described in
+[IMAGE_ENCRYPTION.md](../../attestation-agent/docs/IMAGE_ENCRYPTION.md) (annotation packet format,
+layer annotation keys) and [IMPLEMENTATION.md](../../attestation-agent/docs/IMPLEMENTATION.md)
+(KeyProvider protocol). For a worked example of the resulting manifest annotations, see
+[Inspecting the image](../../attestation-agent/coco_keyprovider/README.md#inspecting-the-image).
 
 ## Image signing
 
@@ -161,7 +63,7 @@ security [policy file](ccv1_image_security_design.md#policy) distributed to imag
 
 When verifying the signature, image-rs can select the appropriate scheme for signature verification according to this field.
 
-In CC V1, we start by supporting the [Red Hat simple signing format](https://www.redhat.com/en/blog/container-image-signing).
+We start by supporting the [Red Hat simple signing format](https://www.redhat.com/en/blog/container-image-signing).
 This is a simple and direct signature system,
 which uses the key of OpenPGP([RFC 4880](https://datatracker.ietf.org/doc/html/rfc4880#section-5.4))
 and a simple signature [payload format](https://github.com/containers/image/blob/main/docs/containers-signature.5.md).
@@ -182,7 +84,7 @@ and select the appropriate signature verification method according to the config
 
 After the encryption and signing are completed, we obtain two products:
 the encrypted container image itself and the signature.
-In the design of CC V1, the distribution schemes of the two are as follows:
+the distribution schemes of the two are as follows:
 
 - container image:
   - When using the protected boot image scheme,
@@ -199,7 +101,7 @@ Store it in the specified `sigstore` (a customized local Dir in boot image rootf
 
 # Deployment of protected container image
 
-In the confidential container V1 design, security functions will be performed when `image-rs` pulls the container image,
+In the confidential container design, security functions will be performed when `image-rs` pulls the container image,
 including checking the registry allow list, verifying the container image signature (if needed),
 and decrypting the container image layers.
 The steps are as follows:
@@ -239,7 +141,7 @@ At present, the following two types of transport is supported in confidential co
 
 - `dir`: used to match images located in the local file system.
 
-In the V1 design of the confidential containers, a safe and reasonable `policy.json` file may look like the following example:
+A safe and reasonable `policy.json` file may look like the following example:
 
 ```json
 {
@@ -356,130 +258,35 @@ A single signature's verification action is divided into the following steps:
 
 ## Image layer decryption
 
-After verifying the container image signature, `image-rs` will start the actual image pulling.
-for each encrypted image layer,
-image-rs calls the container image cryptography operation APIs provided by `ocicrypt-rs`
-to decrypt the encrypted image layer. `ocicrypt-rs` perform the following steps:
+After verifying the container image signature, `image-rs` calls `ocicrypt-rs` to decrypt each
+encrypted image layer. `ocicrypt-rs` sends the layer's annotation packet to `confidential-data-hub`'s
+KeyProvider service, which decrypts it (using whichever KBC plugin is configured — attesting via
+`attestation-agent` and communicating with the KBS if using `cc_kbc`, or reading a local resources
+file if using `offline_fs_kbc`) and returns the layer's symmetric key. See the "Attestation Agent and
+Confidential Data Hub" section below, and
+[IMPLEMENTATION.md](../../attestation-agent/docs/IMPLEMENTATION.md), for the full decryption flow.
 
-1. Read the annotations of this layer in the image manifest.
-The `org.opencontainers.image.enc.keys.provider.attestation` field is the "annotation packet" mentioned above,
-which contains `PrivateLayerBlockCipherOptions` encrypted by the owner's encryption key.
-2. Call the key provider gRPC service provided by the `attestation-agent`
-and sends the annotation packet to the `attestation-agent`.
-3. The `attestation-agent` performs remote attestation to the relying KBS deployed by the owner.
-After attestation, it interacts with KBS through the encrypted channel,
-and decrypts the `PrivateLayerBlockCipherOptions` using the owner's decryption key in the KBS.
-4. Obtain the decrypted `PrivateLayerBlockCipherOptions` from the `attestation-agent`,
-reads the symmetric key used to decrypt the container image layer from it, then completes the decryption.
+# Attestation Agent and Confidential Data Hub
 
-# Attestation Agent
+The [`attestation-agent`](../../attestation-agent) (AA) and [`confidential-data-hub`](../../confidential-data-hub) (CDH)
+are indispensable core components in the confidential containers architecture, together undertaking
+the trust distribution function of the confidential container:
 
-The [`attestation-agent`](../../attestation-agent) is an indispensable core component in the confidential containers architecture.
-It undertakes the trust distribution function of the confidential container.
-In the process of signature verification and decryption of the protected image,
-the `attestation-agent` serves as the source of the owner's confidential information,
-and a key provider program of `ocicrypt-rs`: it helps `ocicrypt-rs` to decrypt the `PrivateLayerBlockCipherOptions`.
+- **`attestation-agent`** performs the TEE attestation handshake (RCAR protocol) with the relying
+  party (KBS) to obtain a signed attestation token. It does not itself serve
+  `GetResource` or `KeyProvider` requests to `image-rs`/`ocicrypt-rs`. AA is only involved when CDH
+  is configured with its `cc_kbc` KBC plugin (see below); other KBC plugins, such as
+  `offline_fs_kbc`, don't use AA or perform any attestation at all.
+- **`confidential-data-hub`** is the component that `image-rs` and `ocicrypt-rs` actually talk to.
+  When using the `cc_kbc` KBC plugin, it fetches the attestation token from AA (over ttrpc/gRPC) and
+  uses it as a bearer token to call the KBS's REST API directly — CDH does not need to know how the
+  token was obtained. It serves as the source of the owner's confidential information for both
+  signature verification (`GetResource` service, used to fetch `policy.json` and related materials)
+  and image decryption (`KeyProvider` service, used to unwrap the per-layer symmetric key). CDH
+  advertises its `KeyProvider` service under the legacy ocicrypt provider name `attestation-agent`
+  for backward-compatible annotation handling.
 
-`attestation-agent` provides two gRPC services at present: `GetResource` and `KeyProvider`.
-
-The `GetResource` gRPC service is for image-rs supporting the signature verification functions,
-As stated earlier in this document, four necessary materials are required to verify the signature of the container image:
-policy file, `sigstore` configuration file, public key ring (can be included in the `keyData` field of the policy file) and signature itself.
-Depending on the owner's different configurations of the pod,
-these materials may be dynamically distributed remotely at runtime,
-or these materials cached in the pod may be updated regularly,
-the get resource API of the attention agent provides a reliable distribution way for the remote acquisition of these materials.
-
-The `KeyProvider` gRPC service is for `ocicrypt-rs` to support the image layer decryption.
-Through this service, the `attestation-agent` can serve `ocicrypt-rs` as a key provider program.
-
-### Get-Resource service
-
-The `GetResource` gRPC service interface provided by the attestation agent
-is used to obtain various confidential resources from the relying party (KBS).
-In the process of protected image deployment,
-it is usually used to obtain `policy.json` config file.
-
-Attestation-agent performs attestation to the KBS,
-establish an encrypted channel after negotiating the key,
-and download the required confidential resources through the encrypted channel.
-The `GetResource` gRPC service interface `protobuf` is defined as follows:
-
-```protobuf
-message getResourceRequest {
-    string KbcName = 1;
-    string KbsUri = 2;
-    string ResourceDescription = 3;
-}
-
-message getResourceResponse {
-    bytes resource = 1;
-}
-
-service GetResource {
-    rpc GetResource(getResourceRequest) returns (getResourceResponse) {};
-}
-```
-
-`ResourceDescription` is a JSON string used to describe resources, and its format is defined as follows:
-
-```json
-{
-    "name":"resource_name",
-    "optional":{}
-}
-```
-
-`optional` is a reserved key value pair JSON string.
-It can be used to pass some additional description information when requesting resources in the future.
-Its key words and values can be customized by the caller.
-It only needs to ensure that the KBC specified in the evaluation agent can be parsed.
-
-### Key-Provider service
-
-The key provider gRPC interface provided by the `attestation-agent`
-is used to decrypt `PrivateLayerBlockCipherOptions` for `ocicrypt-rs`.
-The `protobuf` of this gRPC service is defined as follows:
-
-```protobuf
-message keyProviderKeyWrapProtocolInput {
-    bytes KeyProviderKeyWrapProtocolInput = 1;
-}
-
-message keyProviderKeyWrapProtocolOutput {
-    bytes KeyProviderKeyWrapProtocolOutput = 1;
-}
-
-service KeyProviderService {
-    rpc UnWrapKey(keyProviderKeyWrapProtocolInput) returns (keyProviderKeyWrapProtocolOutput) {};
-}
-```
-
-The input JSON string format is:
-
-```json
-{
-    "op":"keyunwrap",
-    "keyunwrapparams":{
-        "dc":{
-            "Parameters":{
-                "`attestation-agent`":[
-                    "KBC_NAME::KBS_URI <base64encode>"
-                ],
-                "DecryptConfig":{"Parameters":{}}
-            }
-        }
-    },
-    "annotation": #annotation-packet,
-}
-```
-
-The output JSON string format is:
-
-```json
-{
-    "keyunwrapresults": {
-        "optsdata": #PrivateLayerBlockCipherOptions,
-    }
-}
-```
+See [IMPLEMENTATION.md](../../attestation-agent/docs/IMPLEMENTATION.md) and
+[Resources Services](../../confidential-data-hub/docs/RESOURCES_SERVICES.md) for the full protocol
+and implementation details, and the `.proto` definitions in
+[`protos/protos/confidential-data-hub`](../../protos/protos/confidential-data-hub).
