@@ -55,9 +55,9 @@ pub struct ResourceProvider {
 }
 
 impl ResourceProvider {
-    pub fn new(_kbc_name: &str, _kbs_uri: &str, _work_dir: &Path) -> ResourceResult<Self> {
+    pub fn new(_work_dir: &Path) -> ResourceResult<Self> {
         #[cfg(feature = "kbs")]
-        let secure_channel = kbs::SecureChannel::new(_kbc_name, _kbs_uri, _work_dir)
+        let secure_channel = kbs::SecureChannel::new(_work_dir)
             .map_err(|source| ResourceError::EstablishSecureChannel { source })?;
         Ok(Self {
             #[cfg(feature = "kbs")]

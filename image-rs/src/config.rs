@@ -167,14 +167,6 @@ pub struct ImageConfig {
     /// supply the corresponding trusted root cert (in PEM format) here.
     #[serde(default = "Vec::default")]
     pub extra_root_certificates: Vec<String>,
-
-    #[cfg(feature = "keywrap-native")]
-    #[serde(default = "default_kbc")]
-    pub kbc: String,
-
-    #[cfg(feature = "keywrap-native")]
-    #[serde(default = "default_kbs_uri")]
-    pub kbs_uri: String,
 }
 
 macro_rules! __default_deserialization_value {
@@ -193,12 +185,6 @@ __default_deserialization_value!(
 
 __default_deserialization_value!(default_work_dir, PathBuf, PathBuf::from(DEFAULT_WORK_DIR));
 
-#[cfg(feature = "keywrap-native")]
-__default_deserialization_value!(default_kbc, String, "sample_kbc".into());
-
-#[cfg(feature = "keywrap-native")]
-__default_deserialization_value!(default_kbs_uri, String, "null".into());
-
 impl Default for ImageConfig {
     // Construct a default instance of `ImageConfig`
     fn default() -> ImageConfig {
@@ -216,12 +202,6 @@ impl Default for ImageConfig {
             registry_config: None,
             image_pull_proxy: None,
             extra_root_certificates: Vec::new(),
-
-            #[cfg(feature = "keywrap-native")]
-            kbc: default_kbc(),
-
-            #[cfg(feature = "keywrap-native")]
-            kbs_uri: default_kbs_uri(),
         }
     }
 }
@@ -294,12 +274,6 @@ impl ImageConfig {
             registry_config: None,
             image_pull_proxy: None,
             extra_root_certificates: Vec::new(),
-
-            #[cfg(feature = "keywrap-native")]
-            kbc: default_kbc(),
-
-            #[cfg(feature = "keywrap-native")]
-            kbs_uri: default_kbs_uri(),
         };
 
         if let Ok(kernel_cmdline) = fs::read_to_string("/proc/cmdline") {
