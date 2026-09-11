@@ -31,8 +31,6 @@ jobs:
         include:
           - package: attestation-agent
             feature-parameters: "--no-default-features --features rust-crypto,kbs,all-attesters,bin,ttrpc"
-          - package: kbc
-            feature-parameters: "--no-default-features --features openssl,cc_kbc,all-attesters"
     runs-on: ubuntu-24.04
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -63,8 +61,8 @@ jobs:
         run: sudo apt install -y libdevmapper-dev
 
       - name: Install NVIDIA Attestation SDK
-        if: contains(fromJSON('["attestation-agent", "kbc", "kbs_protocol"]'), matrix.package)
-        uses: $/.github/actions/install-nvat-sdk
+        if: contains(fromJSON('["attestation-agent", "kbs_protocol"]'), matrix.package)
+        uses: ./.github/actions/install-nvat-sdk
 
       - name: Run rust lint checks (${{matrix.package}})
         env:

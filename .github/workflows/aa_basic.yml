@@ -99,7 +99,7 @@ jobs:
         env:
           CARGO_TEST_OPTS: ${{ matrix.cargo_test_opts }}
         run: |
-          sudo -E PATH=${PATH} -s cargo test ${CARGO_TEST_OPTS} -p attestation-agent -p attester -p coco_keyprovider -p kbc -p kbs_protocol -p crypto -p resource_uri
+          sudo -E PATH=${PATH} -s cargo test ${CARGO_TEST_OPTS} -p attestation-agent -p attester -p coco_keyprovider -p kbs_protocol -p crypto -p resource_uri
 
       - name: Build and test kbs_protocol pqc-experimental feature
         run: |

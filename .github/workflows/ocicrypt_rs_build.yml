@@ -90,9 +90,6 @@ jobs:
       - name: Run cargo test - keywrap-keyprovider-ttrpc
         run: cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-ttrpc
 
-      - name: Run cargo test - keywrap-keyprovider-native
-        run: cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-native
-
       - name: Run cargo fmt check
         run: cargo fmt -p ocicrypt-rs -- --check
 

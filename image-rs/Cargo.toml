@@ -24,7 +24,6 @@ filetime = "0.2"
 flate2 = "1.1"
 futures-util = "0.3"
 hex.workspace = true
-kbc = { path = "../attestation-agent/kbc", default-features = false, optional = true }
 loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27" }
 nix = { workspace = true, features = ["mount", "fs"] }
 oci-client = { version = "0.17.0", default-features = false }
@@ -35,7 +34,6 @@ ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = [
 pathrs = "0.2.4"
 protos = { path = "../protos", optional = true, default-features = false }
 reqwest = { workspace = true, features = ["json"], optional = true }
-resource_uri = { path = "../attestation-agent/deps/resource_uri", optional = true }
 pgp = { version = "0.20", optional = true }
 serde = { workspace = true, features = ["serde_derive", "rc"] }
 serde_json.workspace = true
@@ -104,26 +102,12 @@ kata-cc-native-tls = [
 ]
 
 encryption = ["ocicrypt-rs/block-cipher"]
-encryption-ring = [
-    "ocicrypt-rs/block-cipher-ring",
-    "kbc?/rust-crypto",
-    "encryption",
-]
-encryption-openssl = [
-    "ocicrypt-rs/block-cipher-openssl",
-    "kbc?/openssl",
-    "encryption",
-]
+encryption-ring = ["ocicrypt-rs/block-cipher-ring", "encryption"]
+encryption-openssl = ["ocicrypt-rs/block-cipher-openssl", "encryption"]
 
 keywrap-cmd = ["ocicrypt-rs/keywrap-keyprovider-cmd"]
 
 keywrap-grpc = ["ocicrypt-rs/keywrap-keyprovider-grpc", "tonic", "protos/grpc"]
-keywrap-native = [
-    "ocicrypt-rs/keywrap-keyprovider-native",
-    "kbc/cc_kbc",
-    "kbc/sgx-attester",
-    "resource_uri",
-]
 keywrap-ttrpc = [
     "ocicrypt-rs/keywrap-keyprovider-ttrpc",
     "dep:ttrpc",
@@ -150,8 +134,7 @@ signature-simple = ["signature", "pgp", "serde_yaml"]
 
 # This features controls whether kbs uri scheme is supported in resource location, s.t. `kbs://...`
 # it will try to connect to a service with `GetResource` API, typically `Confidential Data Hub`.
-# The concrete way is via ttrpc (aligns with feature `keywrap-ttrpc`), gRPC (aligns with `keywrap-grpc`)
-# or directly connects to KBS (aligns with feature `keywrap-native`. This way is used in enclave-cc)
+# The concrete way is via ttrpc (aligns with feature `keywrap-ttrpc`) or gRPC (aligns with `keywrap-grpc`).
 kbs = []
 
 verity = ["devicemapper"]

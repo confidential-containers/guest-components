@@ -63,13 +63,11 @@ ifeq ($(ATTESTER), none)
     AA_FEATURES := kbs,coco_as,bin,$(RPC),$(CRYPTO)
     AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(CRYPTO)
     ATTESTER_PKG_FEATURES := bin
-    KBC_FEATURES := cc_kbc,$(CRYPTO)
     KBS_PROTOCOL_FEATURES := background_check,passport,$(CRYPTO),bin,aa_ttrpc,pqc-experimental
 else
     AA_FEATURES := kbs,coco_as,bin,$(RPC),$(CRYPTO),$(ATTESTER)
     AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(CRYPTO),$(ATTESTER)
     ATTESTER_PKG_FEATURES := $(ATTESTER),bin
-    KBC_FEATURES := cc_kbc,$(ATTESTER),$(CRYPTO)
     KBS_PROTOCOL_FEATURES := background_check,passport,$(CRYPTO),$(ATTESTER),bin,aa_ttrpc,pqc-experimental
 endif
 
@@ -124,7 +122,6 @@ lint:
 	cargo clippy -p attestation-agent --all-targets --no-default-features --features "$(AA_CHECK_FEATURES)" -- -D warnings
 	cargo clippy -p attester --all-targets --no-default-features --features "$(ATTESTER_PKG_FEATURES)" -- -D warnings
 	cargo clippy -p coco_keyprovider --all-targets -- -D warnings
-	cargo clippy -p kbc --all-targets --no-default-features --features "$(KBC_FEATURES)" -- -D warnings
 	cargo clippy -p kbs_protocol --all-targets --no-default-features \
 		--features "$(KBS_PROTOCOL_FEATURES)" -- -D warnings
 	cargo clippy -p crypto --all-targets --no-default-features --features $(CRYPTO) -- -D warnings
@@ -134,7 +131,6 @@ test:
 	cargo test -p attestation-agent --all-targets --no-default-features --features "$(AA_CHECK_FEATURES)"
 	cargo test -p attester --all-targets --no-default-features --features "$(ATTESTER_PKG_FEATURES)"
 	cargo test -p coco_keyprovider --all-targets
-	cargo test -p kbc --all-targets --no-default-features --features "$(KBC_FEATURES)"
 	cargo test -p kbs_protocol --all-targets --no-default-features \
 		--features "$(KBS_PROTOCOL_FEATURES)"
 	cargo test -p crypto --all-targets --no-default-features --features $(CRYPTO)

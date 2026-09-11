@@ -3,7 +3,6 @@ resolver = "2"
 members = [
     "api-server-rest",
     "attestation-agent/attestation-agent",
-    "attestation-agent/kbc",
     "attestation-agent/kbs_protocol",
     "attestation-agent/attester",
     "attestation-agent/deps/resource_uri",

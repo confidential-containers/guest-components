@@ -2,7 +2,6 @@ ARCH=$(shell uname -m)
 
 .PHONY: lint build test
 
-# keywrap-keyprovider-native pulls kbc/sgx-attester; only compile it on x86_64.
 lint:
 ifeq ($(ARCH),x86_64)
 	cargo clippy -p ocicrypt-rs --all-targets --all-features -- -D warnings

@@ -74,7 +74,6 @@ pub struct KeyProviderAttrs {
     pub cmd: Option<Command>,
     pub grpc: Option<String>,
     pub ttrpc: Option<String>,
-    pub native: Option<String>,
 }
 
 /// DecryptConfig wraps the Parameters map that holds the decryption key
@@ -433,7 +432,6 @@ mod tests {
             }),
             grpc: None,
             ttrpc: None,
-            native: None,
         };
         provider.insert(String::from("keyprovider1"), attrs);
 
@@ -458,7 +456,6 @@ mod tests {
         assert_eq!(cmd.args.as_ref().unwrap().len(), 0);
         assert!(p1.grpc.is_none());
         assert!(p1.ttrpc.is_none());
-        assert!(p1.native.is_none());
 
         let p2 = provider_unmarshalled
             .key_providers
@@ -467,24 +464,13 @@ mod tests {
         assert!(p2.cmd.is_none());
         assert!(p2.grpc.is_some());
         assert!(p2.ttrpc.is_none());
-        assert!(p2.native.is_none());
 
         let p3 = provider_unmarshalled
             .key_providers
-            .get("keyprovider3")
+            .get("keyprovider4")
             .unwrap();
         assert!(p3.cmd.is_none());
         assert!(p3.grpc.is_none());
-        assert!(p3.ttrpc.is_none());
-        assert!(p3.native.is_some());
-
-        let p4 = provider_unmarshalled
-            .key_providers
-            .get("keyprovider4")
-            .unwrap();
-        assert!(p4.cmd.is_none());
-        assert!(p4.grpc.is_none());
-        assert!(p4.ttrpc.is_some());
-        assert!(p4.native.is_none());
+        assert!(p3.ttrpc.is_some());
     }
 }

@@ -21,18 +21,11 @@ use sha2::{Digest, Sha256};
 use tokio::fs;
 use tracing::info;
 
-#[cfg(all(
-    feature = "keywrap-grpc",
-    not(feature = "keywrap-ttrpc"),
-    not(feature = "keywrap-native")
-))]
+#[cfg(all(feature = "keywrap-grpc", not(feature = "keywrap-ttrpc")))]
 mod grpc;
 
 #[cfg(feature = "keywrap-ttrpc")]
 mod ttrpc;
-
-#[cfg(feature = "keywrap-native")]
-mod native;
 
 /// Default workdir to store downloaded kbs resources
 const STORAGE_PATH: &str = "image-security/kbs";
@@ -48,12 +41,8 @@ pub struct SecureChannel {
 
 impl Default for SecureChannel {
     fn default() -> Self {
-        Self::new(
-            "sample_kbc",
-            "null",
-            Path::new(crate::config::DEFAULT_WORK_DIR),
-        )
-        .expect("initialize default secure channel")
+        Self::new(Path::new(crate::config::DEFAULT_WORK_DIR))
+            .expect("initialize default secure channel")
     }
 }
 
@@ -63,23 +52,19 @@ trait Client: Send + Sync {
 }
 
 impl SecureChannel {
-    /// Create a new [`SecureChannel`], the input parameter:
-    /// * `decrypt_config`: a string with format `provider:attestation-agent:<kbc_name>::<kbs_uri>`.
-    ///   This parameter is only used when in native secure channel (for enclave-cc)
-    pub fn new(_kbc_name: &str, _kbs_uri: &str, work_dir: &Path) -> Result<Self> {
+    /// Create a new [`SecureChannel`] that talks to a `GetResource` service
+    /// (typically Confidential Data Hub) over ttrpc or gRPC.
+    pub fn new(work_dir: &Path) -> Result<Self> {
         let client: Box<dyn Client> = {
             cfg_if::cfg_if! {
                 if #[cfg(feature = "keywrap-ttrpc")] {
                     info!("secure channel uses ttrpc");
                     Box::<ttrpc::Ttrpc>::default()
-                } else if #[cfg(feature = "keywrap-native")] {
-                    info!("secure channel uses native-aa");
-                    Box::new(native::Native::new(_kbc_name, _kbs_uri)?)
                 } else if #[cfg(feature = "keywrap-grpc")] {
                     info!("secure channel uses gRPC");
                     Box::<grpc::Grpc>::default()
                 } else  {
-                    compile_error!("At least one feature of `keywrap-grpc`, `keywrap-ttrpc`, and `keywrap-native` must be enabled.");
+                    compile_error!("At least one feature of `keywrap-grpc` and `keywrap-ttrpc` must be enabled.");
                 }
             }
         };

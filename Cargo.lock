@@ -3790,7 +3790,6 @@ dependencies = [
  "flate2",
  "futures-util",
  "hex",
- "kbc",
  "loopdev",
  "nix 0.31.3",
  "oci-client 0.17.0",
@@ -3800,7 +3799,6 @@ dependencies = [
  "pgp",
  "protos",
  "reqwest 0.13.4",
- "resource_uri",
  "ring",
  "rsa",
  "rstest",
@@ -4230,24 +4228,6 @@ dependencies = [
  "once_cell",
  "sha2 0.10.9",
  "signature 2.2.0",
-]
-
-[[package]]
-name = "kbc"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "base64 0.23.1",
- "crypto",
- "kbs_protocol",
- "resource_uri",
- "rstest",
- "serde",
- "serde_json",
- "strum 0.28.0",
- "tokio",
- "zeroize",
 ]
 
 [[package]]
@@ -5063,17 +5043,14 @@ dependencies = [
  "base64 0.23.1",
  "base64-serde",
  "cfg-if",
- "crypto",
  "ctr 0.10.1",
  "ctrlc",
  "hex",
  "hmac 0.13.0",
  "josekit",
- "kbc",
  "openssl",
  "pin-project-lite",
  "protos",
- "resource_uri",
  "ring",
  "serde",
  "serde_json",
@@ -5082,7 +5059,6 @@ dependencies = [
  "tonic",
  "tracing",
  "ttrpc",
- "zeroize",
 ]
 
 [[package]]

@@ -115,7 +115,6 @@ const SIGSTORE_CONFIG_URI: &str = "kbs:///default/sigstore-config/test";
 
 /// image-rs built without support for cosign image signing cannot use a policy that includes a type that
 /// uses cosign (type: sigstoreSigned), even if the image being pulled is not signed using cosign.
-/// https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/kbc/src/sample_kbc/policy.json
 #[cfg(all(
     feature = "kbs",
     any(feature = "keywrap-ttrpc", feature = "keywrap-grpc")

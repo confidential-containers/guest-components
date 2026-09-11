@@ -93,22 +93,8 @@ impl ClientBuilder {
 
     __impl_config!(max_concurrent_layer_downloads_per_image, usize);
 
-    #[cfg(feature = "keywrap-native")]
-    __impl_config!(kbc, String);
-
-    #[cfg(feature = "keywrap-native")]
-    __impl_config!(kbs_uri, kbs_uri, String);
-
     pub async fn build(self) -> BuilderResult<ImageClient> {
-        #[cfg(feature = "keywrap-native")]
-        let resource_provider = Arc::new(ResourceProvider::new(
-            &self.config.kbc,
-            &self.config.kbs_uri,
-            &self.config.work_dir,
-        )?);
-
-        #[cfg(not(feature = "keywrap-native"))]
-        let resource_provider = Arc::new(ResourceProvider::new("", "", &self.config.work_dir)?);
+        let resource_provider = Arc::new(ResourceProvider::new(&self.config.work_dir)?);
 
         let registry_auth = match &self.config.authenticated_registry_credentials_uri {
             Some(uri) => {
