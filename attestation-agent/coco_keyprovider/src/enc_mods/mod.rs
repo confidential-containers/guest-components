@@ -82,7 +82,7 @@ fn parse_input_params(input: &str) -> Result<InputParams> {
     let keyid = map.get("keyid").map(|id| id.to_string());
     let keypath = map.get("keypath").map(|p| p.to_string());
     let algorithm = map
-        .get("keypath")
+        .get("algorithm")
         .map(|alg| (*alg).try_into().unwrap_or_default())
         .unwrap_or_default();
     Ok(InputParams {
