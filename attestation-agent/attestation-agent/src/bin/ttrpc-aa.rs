@@ -22,12 +22,10 @@ shadow!(build);
 
 mod ttrpc_dep;
 
-const DEFAULT_UNIX_SOCKET_DIR: &str = "/run/confidential-containers/attestation-agent/";
 const UNIX_SOCKET_PREFIX: &str = "unix://";
 const DEFAULT_ATTESTATION_SOCKET_ADDR: &str = concatcp!(
     UNIX_SOCKET_PREFIX,
-    DEFAULT_UNIX_SOCKET_DIR,
-    "attestation-agent.sock"
+    "/run/confidential-containers/attestation-agent/attestation-agent.sock"
 );
 
 const FEATURE_INFO: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
@@ -131,12 +129,24 @@ rpc: ttrpc
     info!("{config_log}");
     debug!(config = ?config, "Using config");
 
-    if !Path::new(DEFAULT_UNIX_SOCKET_DIR).exists() {
-        std::fs::create_dir_all(DEFAULT_UNIX_SOCKET_DIR).expect("Create unix socket dir failed");
+    let sock_path = cli
+        .attestation_sock
+        .strip_prefix(UNIX_SOCKET_PREFIX)
+        .context("socket address scheme is not expected")?
+        .to_owned();
+    let sock_path_buf = Path::new(&sock_path);
+    if !sock_path_buf.is_absolute() {
+        bail!("attestation_sock path must be absolute, got: {sock_path}");
     }
-
-    clean_previous_sock_file(&cli.attestation_sock)
-        .context("clean previous attestation socket file")?;
+    let sock_dir = sock_path_buf
+        .parent()
+        .context("attestation_sock path has no parent directory")?;
+    if !sock_dir.exists() {
+        std::fs::create_dir_all(sock_dir).context("create unix socket parent dir")?;
+    } else {
+        clean_previous_sock_file(sock_path_buf)
+            .context("clean previous attestation socket file")?;
+    }
 
     let mut aa = AttestationAgent::new(config).context("start AA")?;
 
@@ -199,13 +209,28 @@ rpc: ttrpc
     Ok(())
 }
 
-fn clean_previous_sock_file(unix_socket: &str) -> Result<()> {
-    let path = unix_socket
-        .strip_prefix(UNIX_SOCKET_PREFIX)
-        .ok_or_else(|| anyhow!("socket address scheme is not expected"))?;
+/// Remove a leftover socket file from a previous run.
+///
+/// Only removes the file when it already exists **and** is a Unix socket.
+/// Returns an error if the path exists but is not a socket (e.g. a regular
+/// file or a directory), so callers are not surprised by silent data loss.
+fn clean_previous_sock_file(path: &Path) -> Result<()> {
+    if !path.exists() {
+        return Ok(());
+    }
 
-    if Path::new(path).exists() {
-        std::fs::remove_file(path)?;
+    let file_type = path
+        .metadata()
+        .context("stat previous socket path")?
+        .file_type();
+
+    if std::os::unix::fs::FileTypeExt::is_socket(&file_type) {
+        std::fs::remove_file(path).context("remove previous socket file")?;
+    } else {
+        bail!(
+            "attestation_sock path '{}' already exists and is not a Unix socket",
+            path.display()
+        );
     }
 
     Ok(())
