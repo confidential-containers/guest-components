@@ -278,3 +278,73 @@ impl AttestationAPIs for AttestationAgent {
         self.additional_attesters.keys().cloned().collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use attester::InitDataResult;
+    use kbs_types::Tee;
+
+    fn aa() -> AttestationAgent {
+        AttestationAgent::new(Config::default()).expect("failed to create AttestationAgent")
+    }
+
+    // On a developer laptop (no real TEE) the attester detection falls through
+    // to the Sample attester.
+    #[test]
+    fn test_get_tee_type_returns_sample_on_non_tee_host() {
+        assert_eq!(aa().get_tee_type(), Tee::Sample);
+    }
+
+    #[test]
+    fn test_get_additional_tees_is_empty_without_extra_devices() {
+        assert!(aa().get_additional_tees().is_empty());
+    }
+
+    // get_evidence: output is valid JSON with the fields the SampleAttester contract
+    // requires. This also guards the `.to_string().into_bytes()` serialisation path.
+    #[tokio::test]
+    async fn test_get_evidence_returns_valid_json_for_sample_attester() {
+        let evidence = aa()
+            .get_evidence(b"report_data")
+            .await
+            .expect("get_evidence failed");
+        let parsed: serde_json::Value =
+            serde_json::from_slice(&evidence).expect("evidence is not valid JSON");
+        assert!(parsed.get("svn").is_some(), "evidence missing `svn` field");
+        assert!(parsed.get("report_data").is_some(), "evidence missing `report_data` field");
+    }
+
+    // get_additional_evidence: no additional attesters on a dev host → empty vec,
+    // exercising the early-return branch.
+    #[tokio::test]
+    async fn test_get_additional_evidence_empty_without_extra_attesters() {
+        let evidence = aa()
+            .get_additional_evidence(b"runtime_data")
+            .await
+            .expect("get_additional_evidence failed");
+        assert!(evidence.is_empty());
+    }
+
+    // bind_init_data: SampleAttester always returns Unsupported,
+    // confirming the delegation contract.
+    #[tokio::test]
+    async fn test_bind_init_data_returns_unsupported_for_sample_attester() {
+        let result = aa()
+            .bind_init_data(b"digest")
+            .await
+            .expect("bind_init_data should not error");
+        assert!(matches!(result, InitDataResult::Unsupported));
+    }
+
+    // extend_runtime_measurement: self.eventlog is None until init() is called,
+    // so NotEnabled is returned before the PCR index or attester are consulted.
+    #[tokio::test]
+    async fn test_extend_runtime_measurement_not_enabled_without_init() {
+        let result = aa()
+            .extend_runtime_measurement("dom", "op", "cnt", None)
+            .await
+            .expect("extend_runtime_measurement failed");
+        assert!(matches!(result, RuntimeMeasurement::NotEnabled));
+    }
+}

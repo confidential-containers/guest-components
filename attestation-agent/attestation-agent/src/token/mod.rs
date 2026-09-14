@@ -27,3 +27,20 @@ pub enum TokenType {
     #[strum(serialize = "coco_as")]
     CoCoAS,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+    use std::str::FromStr;
+
+    // Unknown, empty, and wrong-case strings must all be rejected regardless
+    // of which token features are compiled in. strum is case-sensitive by default.
+    #[rstest]
+    #[case("unknown_type")]
+    #[case("")]
+    #[case("KBS")]  // wrong case
+    fn test_invalid_token_type_rejected(#[case] s: &str) {
+        assert!(TokenType::from_str(s).is_err());
+    }
+}
