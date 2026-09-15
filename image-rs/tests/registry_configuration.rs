@@ -18,9 +18,9 @@ pub mod common;
 #[serial_test::serial]
 async fn test_use_registry_configuration(#[case] image_ref: &str, #[case] successful: bool) {
     use testcontainers::{
+        ImageExt,
         core::{IntoContainerPort, WaitFor},
         runners::AsyncRunner,
-        ImageExt,
     };
     use tokio::process::Command;
 

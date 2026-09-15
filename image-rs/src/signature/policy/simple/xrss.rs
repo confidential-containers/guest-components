@@ -5,11 +5,11 @@
 
 use anyhow::*;
 use base64::Engine;
-use oci_client::{secrets::RegistryAuth, Reference};
-use reqwest::{header::HeaderValue, Client};
+use oci_client::{Reference, secrets::RegistryAuth};
+use reqwest::{Client, header::HeaderValue};
 use serde::*;
 
-use crate::signature::image::{digest::Digest, Image};
+use crate::signature::image::{Image, digest::Digest};
 
 #[derive(Debug, Default)]
 pub struct RegistryClient {

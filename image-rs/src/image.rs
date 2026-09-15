@@ -2,13 +2,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Context};
+use anyhow::{Context, bail};
 use oci_client::{
+    ParseError, Reference,
     client::{Certificate, CertificateEncoding, ClientConfig, ClientProtocol},
     errors::OciDistributionError,
     manifest::{OciDescriptor, OciImageManifest},
     secrets::RegistryAuth,
-    ParseError, Reference,
 };
 use oci_spec::image::{ImageConfiguration, Os};
 use serde::{Deserialize, Serialize};
@@ -22,17 +22,17 @@ use tokio::sync::RwLock;
 
 use crate::decoder::Compression;
 use crate::layer_store::LayerStore;
-use crate::meta_store::{MetaStore, METAFILE};
+use crate::meta_store::{METAFILE, MetaStore};
 use crate::pull::PullClient;
 use crate::signature::SignatureValidator;
 use crate::snapshots::{SnapshotType, Snapshotter};
 use crate::{auth::Auth, registry::RegistryHandler};
 use crate::{
-    bundle::{create_runtime_config, BUNDLE_ROOTFS},
+    bundle::{BUNDLE_ROOTFS, create_runtime_config},
     pull::PullLayerError,
 };
 use crate::{
-    config::{ImageConfig, CONFIGURATION_FILE_NAME, DEFAULT_WORK_DIR},
+    config::{CONFIGURATION_FILE_NAME, DEFAULT_WORK_DIR, ImageConfig},
     signature::SignatureError,
 };
 
@@ -371,7 +371,7 @@ impl ImageClient {
                     return Err(PullImageError::IllegalRegistryAuth {
                         image: image_url.into(),
                         auth_source: format!("input `{input_auth}`"),
-                    })
+                    });
                 }
             },
             None => match &self.registry_auth {

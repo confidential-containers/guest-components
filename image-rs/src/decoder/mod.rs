@@ -151,9 +151,11 @@ mod tests {
         let bytes = Vec::new();
         let mut output = Vec::new();
         let compression = Compression::Uncompressed;
-        assert!(compression
-            .decompress(bytes.as_slice(), &mut output)
-            .is_err());
+        assert!(
+            compression
+                .decompress(bytes.as_slice(), &mut output)
+                .is_err()
+        );
     }
 
     #[test]
@@ -167,14 +169,18 @@ mod tests {
         let mut output = Vec::new();
 
         let compression = Compression::Uncompressed;
-        assert!(compression
-            .decompress(bytes.as_slice(), &mut output)
-            .is_err());
+        assert!(
+            compression
+                .decompress(bytes.as_slice(), &mut output)
+                .is_err()
+        );
 
         let compression = Compression::default();
-        assert!(compression
-            .decompress(bytes.as_slice(), &mut output)
-            .is_ok());
+        assert!(
+            compression
+                .decompress(bytes.as_slice(), &mut output)
+                .is_ok()
+        );
         assert_eq!(data, output);
     }
 
@@ -187,9 +193,11 @@ mod tests {
 
         let mut output = Vec::new();
         let compression = Compression::Zstd;
-        assert!(compression
-            .decompress(bytes.as_slice(), &mut output)
-            .is_ok());
+        assert!(
+            compression
+                .decompress(bytes.as_slice(), &mut output)
+                .is_ok()
+        );
         assert_eq!(data, output);
     }
 

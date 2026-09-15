@@ -1,8 +1,8 @@
 use anyhow::anyhow;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// The LayerStore abstracts the image layers storage on the file system.
 #[derive(Clone, Default, Debug)]

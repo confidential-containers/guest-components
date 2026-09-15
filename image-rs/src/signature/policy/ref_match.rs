@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use oci_client::Reference;
 use serde::*;
 
@@ -266,17 +266,27 @@ mod tests {
         ];
 
         for test_case in tests_expect.iter() {
-            assert!(test_case
-                .match_policy
-                .matches_docker_reference(&test_case.origin_reference, test_case.signed_reference)
-                .is_ok());
+            assert!(
+                test_case
+                    .match_policy
+                    .matches_docker_reference(
+                        &test_case.origin_reference,
+                        test_case.signed_reference
+                    )
+                    .is_ok()
+            );
         }
 
         for test_case in tests_unexpect.iter() {
-            assert!(test_case
-                .match_policy
-                .matches_docker_reference(&test_case.origin_reference, test_case.signed_reference)
-                .is_err());
+            assert!(
+                test_case
+                    .match_policy
+                    .matches_docker_reference(
+                        &test_case.origin_reference,
+                        test_case.signed_reference
+                    )
+                    .is_err()
+            );
         }
     }
 }

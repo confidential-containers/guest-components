@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use oci_client::Reference;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
