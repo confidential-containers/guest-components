@@ -46,7 +46,9 @@ async fn test_decrypt_layers(#[case] image: &str) {
     // to communicate with CDH
     let manifest_dir = std::env!("CARGO_MANIFEST_DIR");
     let keyprovider_config = format!("{manifest_dir}/{OCICRYPT_CONFIG}");
-    std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
+    unsafe {
+        std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
+    }
 
     let work_dir = tempfile::tempdir().unwrap();
     let bundle_dir = tempfile::tempdir().unwrap();

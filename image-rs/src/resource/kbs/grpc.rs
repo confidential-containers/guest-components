@@ -8,7 +8,7 @@
 use anyhow::*;
 use async_trait::async_trait;
 use protos::grpc::cdh::api::{
-    get_resource_service_client::GetResourceServiceClient, GetResourceRequest,
+    GetResourceRequest, get_resource_service_client::GetResourceServiceClient,
 };
 use tokio::sync::{Mutex, OnceCell};
 use tonic::transport::Channel;

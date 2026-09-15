@@ -10,7 +10,7 @@
 
 use std::str::FromStr;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use oci_client::Reference;
 use serde::{Deserialize, Serialize};
 use tracing::debug;

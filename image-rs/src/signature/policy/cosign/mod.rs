@@ -5,15 +5,16 @@
 
 //! Cosign verification
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use oci_client::secrets::RegistryAuth;
 
 use sigstore::registry::{Certificate, ClientConfig};
 #[cfg(feature = "signature-cosign")]
 use sigstore::{
     cosign::{
+        ClientBuilder, CosignCapabilities,
         verification_constraint::{PublicKeyVerifier, VerificationConstraintVec},
-        verify_constraints, ClientBuilder, CosignCapabilities,
+        verify_constraints,
     },
     errors::SigstoreVerifyConstraintsError,
     registry::{Auth, OciReference},
@@ -207,9 +208,9 @@ mod tests {
     };
 
     use oci_client::Reference;
+    use rsa::RsaPrivateKey;
     use rsa::pkcs8::{EncodePublicKey, LineEnding};
     use rsa::rand_core::OsRng;
-    use rsa::RsaPrivateKey;
     use rstest::rstest;
     use serial_test::serial;
     use sigstore::crypto::SigningScheme;

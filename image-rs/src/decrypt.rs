@@ -25,7 +25,9 @@ pub enum DecryptLayerError {
         source: anyhow::Error,
     },
 
-    #[error("Failed to decrypt the image layer, please ensure that the decryption key is placed and correct")]
+    #[error(
+        "Failed to decrypt the image layer, please ensure that the decryption key is placed and correct"
+    )]
     DecryptLayerOptsDataFailed {
         #[source]
         source: anyhow::Error,
@@ -347,10 +349,12 @@ mod encryption {
 
             keyprovider_config.write_all(data.as_bytes()).unwrap();
 
-            std::env::set_var(
-                ocicrypt_rs::config::OCICRYPT_ENVVARNAME,
-                keyprovider_config_path,
-            );
+            unsafe {
+                std::env::set_var(
+                    ocicrypt_rs::config::OCICRYPT_ENVVARNAME,
+                    keyprovider_config_path,
+                );
+            }
 
             for (i, d) in tests.iter().enumerate() {
                 let msg = format!("test[{i}]: {d:?}");

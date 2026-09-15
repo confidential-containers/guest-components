@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod unpack;
-pub use unpack::{unpack, UnpackError};
+pub use unpack::{UnpackError, unpack};
 
 use sha2::Digest;
 use std::{
@@ -15,7 +15,7 @@ use thiserror::Error;
 use tokio::io::{AsyncRead, ReadBuf};
 use tracing::error;
 
-use crate::digest::{DigestHasher, LayerDigestHasher, DIGEST_SHA256_PREFIX, DIGEST_SHA512_PREFIX};
+use crate::digest::{DIGEST_SHA256_PREFIX, DIGEST_SHA512_PREFIX, DigestHasher, LayerDigestHasher};
 
 pub type StreamResult<T> = std::result::Result<T, StreamError>;
 

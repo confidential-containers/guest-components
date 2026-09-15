@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use image_rs::image::ImageClient;
 use nix::mount::umount;
 use std::{fs, path::Path, time::Duration};
