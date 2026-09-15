@@ -152,12 +152,12 @@ mod encryption {
             }
         }
 
-        pub fn async_get_plaintext_layer(
+        pub fn async_get_plaintext_layer<T: AsyncRead + Send>(
             &self,
-            encrypted_layer: impl AsyncRead + Send,
+            encrypted_layer: T,
             descriptor: &OciDescriptor,
             priv_opts_data: &[u8],
-        ) -> DecryptLayerResult<impl AsyncRead + Send> {
+        ) -> DecryptLayerResult<impl AsyncRead + Send + use<T>> {
             let (layer_decryptor, _dec_digest) = async_decrypt_layer(
                 encrypted_layer,
                 descriptor.annotations.as_ref(),
