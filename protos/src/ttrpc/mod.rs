@@ -5,3 +5,4 @@
 
 pub mod aa;
 pub mod cdh;
+pub use protobuf::MessageField;
