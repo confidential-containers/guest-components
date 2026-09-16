@@ -8,8 +8,9 @@ use attestation_agent::{AttestationAPIs, AttestationAgent, RuntimeMeasurement};
 use protos::grpc::aa::attestation_agent::{
     BindInitDataRequest, BindInitDataResponse, ExtendRuntimeMeasurementRequest,
     ExtendRuntimeMeasurementResponse, GetAdditionalEvidenceRequest, GetAdditionalTeesRequest,
-    GetAdditionalTeesResponse, GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest,
-    GetTeeTypeResponse, GetTokenRequest, GetTokenResponse, RuntimeMeasurementResult,
+    GetAdditionalTeesResponse, GetEvidenceRequest, GetEvidenceResponse, GetTeeTopologyRequest,
+    GetTeeTopologyResponse, GetTeeTypeRequest, GetTeeTypeResponse, GetTokenRequest,
+    GetTokenResponse, RuntimeMeasurementResult, TeeInfo,
     attestation_agent_service_server::{AttestationAgentService, AttestationAgentServiceServer},
 };
 use std::net::SocketAddr;
@@ -206,6 +207,42 @@ impl AttestationAgentService for AA {
             reply.additional_tees.push(tee);
         }
         debug!("AA (grpc): get additional tees succeeded.");
+        Result::Ok(Response::new(reply))
+    }
+
+    async fn get_tee_topology(
+        &self,
+        _request: Request<GetTeeTopologyRequest>,
+    ) -> Result<Response<GetTeeTopologyResponse>, Status> {
+        debug!("AA (grpc): get tee topology ...");
+
+        let tee_topology = self.inner.get_tee_topology().map_err(|e| {
+            error!("AA (grpc): get tee topology failed:\n {e:?}");
+            Status::internal(format!("[ERROR:{AGENT_NAME}] AA get tee topology failed"))
+        })?;
+
+        let primary_tee = TeeInfo {
+            tee: tee_topology.primary.tee.to_string(),
+            metadata: tee_topology
+                .primary
+                .metadata
+                .map(|context| context.to_string()),
+            ..Default::default()
+        };
+        let additional_tees = tee_topology
+            .additional
+            .into_iter()
+            .map(|tee| TeeInfo {
+                tee: tee.tee.to_string(),
+                metadata: tee.metadata.map(|context| context.to_string()),
+                ..Default::default()
+            })
+            .collect();
+        let reply = GetTeeTopologyResponse {
+            primary_tee: Some(primary_tee),
+            additional_tees: additional_tees,
+        };
+        debug!("AA (grpc): get tee topology succeeded.");
         Result::Ok(Response::new(reply))
     }
 }

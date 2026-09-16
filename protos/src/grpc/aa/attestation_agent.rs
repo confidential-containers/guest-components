@@ -68,6 +68,23 @@ pub struct GetAdditionalTeesResponse {
     #[prost(string, repeated, tag = "1")]
     pub additional_tees: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetTeeTopologyRequest {}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct TeeInfo {
+    #[prost(string, tag = "1")]
+    pub tee: ::prost::alloc::string::String,
+    /// JSON string
+    #[prost(string, optional, tag = "2")]
+    pub metadata: ::core::option::Option<::prost::alloc::string::String>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetTeeTopologyResponse {
+    #[prost(message, optional, tag = "1")]
+    pub primary_tee: ::core::option::Option<TeeInfo>,
+    #[prost(message, repeated, tag = "2")]
+    pub additional_tees: ::prost::alloc::vec::Vec<TeeInfo>,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum RuntimeMeasurementResult {
@@ -393,6 +410,35 @@ pub mod attestation_agent_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn get_tee_topology(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetTeeTopologyRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetTeeTopologyResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/attestation_agent.AttestationAgentService/GetTeeTopology",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "attestation_agent.AttestationAgentService",
+                        "GetTeeTopology",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -455,6 +501,13 @@ pub mod attestation_agent_service_server {
             request: tonic::Request<super::GetAdditionalTeesRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetAdditionalTeesResponse>,
+            tonic::Status,
+        >;
+        async fn get_tee_topology(
+            &self,
+            request: tonic::Request<super::GetTeeTopologyRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetTeeTopologyResponse>,
             tonic::Status,
         >;
     }
@@ -866,6 +919,55 @@ pub mod attestation_agent_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetAdditionalTeesSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/attestation_agent.AttestationAgentService/GetTeeTopology" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetTeeTopologySvc<T: AttestationAgentService>(pub Arc<T>);
+                    impl<
+                        T: AttestationAgentService,
+                    > tonic::server::UnaryService<super::GetTeeTopologyRequest>
+                    for GetTeeTopologySvc<T> {
+                        type Response = super::GetTeeTopologyResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetTeeTopologyRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AttestationAgentService>::get_tee_topology(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetTeeTopologySvc(inner);
                         let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
