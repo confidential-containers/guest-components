@@ -5,13 +5,15 @@
 
 use async_trait::async_trait;
 use attester::TeeEvidence;
-use kbs_types::Tee;
+use kbs_types::{Tee, TeeParameters, TeeTopology};
 use serde_json::json;
 use ttrpc::context;
 
 use crate::{Error, Result};
 use protos::ttrpc::aa::{
-    attestation_agent::{GetAdditionalEvidenceRequest, GetEvidenceRequest, GetTeeTypeRequest},
+    attestation_agent::{
+        GetAdditionalEvidenceRequest, GetEvidenceRequest, GetTeeTopologyRequest, GetTeeTypeRequest,
+    },
     attestation_agent_ttrpc::AttestationAgentServiceClient,
 };
 
@@ -96,5 +98,60 @@ impl EvidenceProvider for AAEvidenceProvider {
         let tee = serde_json::from_value(json!(res.tee))
             .map_err(|e| Error::AAEvidenceProvider(format!("failed to parse Tee type: {e}")))?;
         Ok(tee)
+    }
+
+    async fn get_tee_topology(&self) -> Result<TeeTopology> {
+        let req = GetTeeTopologyRequest {
+            ..Default::default()
+        };
+        let res = self
+            .client
+            .get_tee_topology(
+                context::with_timeout(AA_TTRPC_TIMEOUT_SECONDS * 1000 * 1000 * 1000),
+                &req,
+            )
+            .await
+            .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e}")))?;
+        let Some(primary_tee) = res.primary_tee.into_option() else {
+            return Err(Error::AAEvidenceProvider(
+                "primary tee is not found".to_string(),
+            ));
+        };
+
+        let res = TeeTopology {
+            primary: TeeParameters {
+                name: primary_tee
+                    .tee
+                    .parse()
+                    .map_err(|e| Error::AAEvidenceProvider(format!("failed to parse tee: {e}")))?,
+                context: primary_tee
+                    .metadata
+                    .map(|metadata| serde_json::from_str(&metadata))
+                    .transpose()
+                    .map_err(|e| {
+                        Error::AAEvidenceProvider(format!("failed to parse context: {e}"))
+                    })?,
+            },
+            additional: res
+                .additional_tees
+                .into_iter()
+                .map(|tee| {
+                    Ok(TeeParameters {
+                        name: tee.tee.parse().map_err(|e| {
+                            Error::AAEvidenceProvider(format!("failed to parse tee: {e}"))
+                        })?,
+                        context: tee
+                            .metadata
+                            .map(|metadata| serde_json::from_str(&metadata))
+                            .transpose()
+                            .map_err(|e| {
+                                Error::AAEvidenceProvider(format!("failed to parse context: {e}"))
+                            })?,
+                    })
+                })
+                .collect::<Result<Vec<TeeParameters>>>()?,
+        };
+
+        Ok(res)
     }
 }
