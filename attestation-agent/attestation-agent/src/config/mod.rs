@@ -192,7 +192,9 @@ M9QaC1mzQ/OStg==
 ".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
                 attestation_policy_selector: String::new(),
-            })
+            }),
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -235,7 +237,9 @@ M9QaC1mzQ/OStg==
 ".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
                 attestation_policy_selector: String::new(),
-            })
+            }),
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -257,7 +261,9 @@ M9QaC1mzQ/OStg==
                 cert: Some("cert".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
                 attestation_policy_selector: String::new(),
-            })
+            }),
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -277,7 +283,9 @@ M9QaC1mzQ/OStg==
                 cert: Some("cert".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
                 attestation_policy_selector: String::new(),
-            })
+            }),
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -297,7 +305,9 @@ M9QaC1mzQ/OStg==
                 cert: Some("cert".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
                 attestation_policy_selector: "alice".to_string(),
-            })
+            }),
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -313,6 +323,8 @@ M9QaC1mzQ/OStg==
             coco_as: None,
             #[cfg(feature = "kbs")]
             kbs: None,
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -328,6 +340,8 @@ M9QaC1mzQ/OStg==
             coco_as: None,
             #[cfg(feature = "kbs")]
             kbs: None,
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -343,6 +357,8 @@ M9QaC1mzQ/OStg==
                 coco_as: None,
                 #[cfg(feature = "kbs")]
                 kbs: None,
+                #[cfg(feature = "ccm_as")]
+                ccm_as: None,
             },
             eventlog_config: EventlogConfig {
                 init_pcr: 17,

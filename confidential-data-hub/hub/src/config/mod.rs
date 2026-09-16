@@ -449,6 +449,7 @@ image_security_policy = """
             url: "".to_string(),
             kbs_cert: None,
         },
+        kbc_configs: KbcConfigs::default(),
         credentials: vec![],
         image: ImageConfig {
                 image_security_policy: Some(
