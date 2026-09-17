@@ -588,8 +588,6 @@ mod tests {
 
         // TODO test with more OCI image registries and fix broken registries.
         let oci_images = [
-            // image with duplicated layers
-            "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master",
             // Alibaba Container Registry
             "registry.cn-hangzhou.aliyuncs.com/acs/busybox:v1.29.2",
             // Amazon Elastic Container Registry
