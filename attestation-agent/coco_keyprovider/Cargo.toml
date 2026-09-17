@@ -22,7 +22,14 @@ protos = { path = "../../protos", default-features = false, features = [
     "grpc",
 ] }
 rand.workspace = true
-reqwest.workspace = true
+# The workspace pins reqwest with `default-features = false`, which leaves it with no TLS
+# backend. Registering a KEK against a KBS served over TLS then fails before a request is
+# sent, with "invalid URL, scheme is not http". Opt in to rustls for this crate, the way
+# kbs_protocol and confidential-data-hub/kms already do, rather than widening the
+# workspace pin. reqwest 0.13's `rustls` feature verifies through rustls-platform-verifier,
+# which loads the platform trust store -- and honours SSL_CERT_FILE -- so a KBS fronted by
+# a private CA needs no extra roots bundled into the binary.
+reqwest = { workspace = true, features = ["rustls"] }
 resource_uri.path = "../deps/resource_uri"
 serde.workspace = true
 serde_json.workspace = true
