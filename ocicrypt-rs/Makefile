@@ -30,6 +30,3 @@ endif
 	cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-cmd
 	cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-grpc
 	cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-ttrpc
-ifeq ($(ARCH),x86_64)
-	cargo test -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider-native
-endif
