@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Context, Error, Result};
+use anyhow::{Context, Error, Result, bail};
 use base64::Engine;
-use devicemapper::{DevId, DmFlags, DmName, DmOptions, DM};
+use devicemapper::{DM, DevId, DmFlags, DmName, DmOptions};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::path::Path;

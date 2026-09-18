@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -97,10 +97,10 @@ pub fn create_runtime_config(
             annotations.extend(labels2.clone());
             labels.clone_from(labels2);
         }
-        if !labels.contains_key(ANNOTATION_STOP_SIGNAL) {
-            if let Some(stop_signal) = config.stop_signal() {
-                annotations.insert(ANNOTATION_STOP_SIGNAL.to_string(), stop_signal.to_string());
-            }
+        if !labels.contains_key(ANNOTATION_STOP_SIGNAL)
+            && let Some(stop_signal) = config.stop_signal()
+        {
+            annotations.insert(ANNOTATION_STOP_SIGNAL.to_string(), stop_signal.to_string());
         }
 
         // Parsed Fields:
@@ -169,17 +169,16 @@ pub fn create_runtime_config(
     if !labels.contains_key(ANNOTATION_OS) {
         annotations.insert(ANNOTATION_OS.to_string(), image_config.os().to_string());
     }
-    if !labels.contains_key(ANNOTATION_OS_VERSION) {
-        if let Some(version) = image_config.os_version() {
-            annotations.insert(ANNOTATION_OS_VERSION.to_string(), version.to_string());
-        }
+    if !labels.contains_key(ANNOTATION_OS_VERSION)
+        && let Some(version) = image_config.os_version()
+    {
+        annotations.insert(ANNOTATION_OS_VERSION.to_string(), version.to_string());
     }
-    if !labels.contains_key(ANNOTATION_OS_FEATURES) {
-        if let Some(features) = image_config.os_features() {
-            if let Ok(v) = serde_json::to_string(features) {
-                annotations.insert(ANNOTATION_OS_FEATURES.to_string(), v);
-            }
-        }
+    if !labels.contains_key(ANNOTATION_OS_FEATURES)
+        && let Some(features) = image_config.os_features()
+        && let Ok(v) = serde_json::to_string(features)
+    {
+        annotations.insert(ANNOTATION_OS_FEATURES.to_string(), v);
     }
     if !labels.contains_key(ANNOTATION_ARCH) {
         annotations.insert(
@@ -187,20 +186,20 @@ pub fn create_runtime_config(
             image_config.architecture().to_string(),
         );
     }
-    if !labels.contains_key(ANNOTATION_VARIANT) {
-        if let Some(variant) = image_config.variant() {
-            annotations.insert(ANNOTATION_VARIANT.to_string(), variant.to_string());
-        }
+    if !labels.contains_key(ANNOTATION_VARIANT)
+        && let Some(variant) = image_config.variant()
+    {
+        annotations.insert(ANNOTATION_VARIANT.to_string(), variant.to_string());
     }
-    if !labels.contains_key(ANNOTATION_AUTHOR) {
-        if let Some(author) = image_config.author() {
-            annotations.insert(ANNOTATION_AUTHOR.to_string(), author.to_string());
-        }
+    if !labels.contains_key(ANNOTATION_AUTHOR)
+        && let Some(author) = image_config.author()
+    {
+        annotations.insert(ANNOTATION_AUTHOR.to_string(), author.to_string());
     }
-    if !labels.contains_key(ANNOTATION_CREATED) {
-        if let Some(created) = image_config.created() {
-            annotations.insert(ANNOTATION_CREATED.to_string(), created.to_string());
-        }
+    if !labels.contains_key(ANNOTATION_CREATED)
+        && let Some(created) = image_config.created()
+    {
+        annotations.insert(ANNOTATION_CREATED.to_string(), created.to_string());
     }
 
     spec.set_annotations(Some(annotations));

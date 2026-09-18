@@ -25,7 +25,9 @@ pub enum DecryptLayerError {
         source: anyhow::Error,
     },
 
-    #[error("Failed to decrypt the image layer, please ensure that the decryption key is placed and correct")]
+    #[error(
+        "Failed to decrypt the image layer, please ensure that the decryption key is placed and correct"
+    )]
     DecryptLayerOptsDataFailed {
         #[source]
         source: anyhow::Error,
@@ -152,12 +154,12 @@ mod encryption {
             }
         }
 
-        pub fn async_get_plaintext_layer(
+        pub fn async_get_plaintext_layer<T: AsyncRead + Send>(
             &self,
-            encrypted_layer: impl AsyncRead + Send,
+            encrypted_layer: T,
             descriptor: &OciDescriptor,
             priv_opts_data: &[u8],
-        ) -> DecryptLayerResult<impl AsyncRead + Send> {
+        ) -> DecryptLayerResult<impl AsyncRead + Send + use<T>> {
             let (layer_decryptor, _dec_digest) = async_decrypt_layer(
                 encrypted_layer,
                 descriptor.annotations.as_ref(),
@@ -347,10 +349,12 @@ mod encryption {
 
             keyprovider_config.write_all(data.as_bytes()).unwrap();
 
-            std::env::set_var(
-                ocicrypt_rs::config::OCICRYPT_ENVVARNAME,
-                keyprovider_config_path,
-            );
+            unsafe {
+                std::env::set_var(
+                    ocicrypt_rs::config::OCICRYPT_ENVVARNAME,
+                    keyprovider_config_path,
+                );
+            }
 
             for (i, d) in tests.iter().enumerate() {
                 let msg = format!("test[{i}]: {d:?}");

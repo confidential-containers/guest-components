@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use oci_client::Reference;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -87,7 +87,9 @@ impl SigstoreConfig {
             if merged_config.default_config.is_some()
                 && input.default_config != merged_config.default_config
             {
-                bail!("Error parsing sigstore config: \"default-docker\" defined repeatedly but differently.");
+                bail!(
+                    "Error parsing sigstore config: \"default-docker\" defined repeatedly but differently."
+                );
             }
             merged_config.default_config = input.default_config;
         }
@@ -221,9 +223,11 @@ mod tests {
             current_dir.to_str().unwrap()
         );
         let test_sigstore_uri = url::Url::parse(test_sigstore_dir.as_str()).unwrap();
-        assert!(get_sigs_from_specific_sigstore(test_sigstore_uri.clone())
-            .await
-            .is_ok());
+        assert!(
+            get_sigs_from_specific_sigstore(test_sigstore_uri.clone())
+                .await
+                .is_ok()
+        );
         assert_eq!(
             2,
             get_sigs_from_specific_sigstore(test_sigstore_uri)

@@ -7,7 +7,7 @@ pub mod auth_config;
 
 use std::collections::HashMap;
 
-use oci_client::{secrets::RegistryAuth, Reference};
+use oci_client::{Reference, secrets::RegistryAuth};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 

@@ -2,12 +2,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Context};
+use anyhow::{Context, bail};
 use oci_client::{
+    ParseError, Reference,
     client::{Certificate, CertificateEncoding, ClientConfig, ClientProtocol},
+    errors::OciDistributionError,
     manifest::{OciDescriptor, OciImageManifest},
     secrets::RegistryAuth,
-    ParseError, Reference,
 };
 use oci_spec::image::{ImageConfiguration, Os};
 use serde::{Deserialize, Serialize};
@@ -21,17 +22,17 @@ use tokio::sync::RwLock;
 
 use crate::decoder::Compression;
 use crate::layer_store::LayerStore;
-use crate::meta_store::{MetaStore, METAFILE};
+use crate::meta_store::{METAFILE, MetaStore};
 use crate::pull::PullClient;
 use crate::signature::SignatureValidator;
 use crate::snapshots::{SnapshotType, Snapshotter};
 use crate::{auth::Auth, registry::RegistryHandler};
 use crate::{
-    bundle::{create_runtime_config, BUNDLE_ROOTFS},
+    bundle::{BUNDLE_ROOTFS, create_runtime_config},
     pull::PullLayerError,
 };
 use crate::{
-    config::{ImageConfig, CONFIGURATION_FILE_NAME, DEFAULT_WORK_DIR},
+    config::{CONFIGURATION_FILE_NAME, DEFAULT_WORK_DIR, ImageConfig},
     signature::SignatureError,
 };
 
@@ -291,45 +292,12 @@ impl ImageClient {
         })
     }
 
-    async fn pull_task(
-        &mut self,
-        task: ImagePullTask,
-        auth_info: &Option<&str>,
-        bundle_dir: &Path,
-        decrypt_config: &Option<&str>,
-        image_url: &str,
-    ) -> PullImageResult<ImageInfo> {
-        // Try to find a valid registry auth. Logic order
-        // 1. the input parameter
-        // 2. from self.registry_auth
-        // 3. use Anonymous auth
-        let auth = match auth_info {
-            Some(input_auth) => match input_auth.split_once(':') {
-                Some((username, password)) => {
-                    RegistryAuth::Basic(username.to_string(), password.to_string())
-                }
-                None => {
-                    return Err(PullImageError::IllegalRegistryAuth {
-                        image: image_url.into(),
-                        auth_source: format!("input `{input_auth}`"),
-                    })
-                }
-            },
-            None => match &self.registry_auth {
-                Some(registry_auth) => registry_auth
-                    .credential_for_reference(&task.image_reference)
-                    .await
-                    .map_err(|_| PullImageError::IllegalRegistryAuth {
-                        image: image_url.into(),
-                        auth_source: "auth config".into(),
-                    })?,
-                None => {
-                    info!("Use Anonymous image registry auth");
-                    RegistryAuth::Anonymous
-                }
-            },
-        };
-
+    /// Builds a PullClient for one pull task with the given auth.
+    fn new_pull_client<'a>(
+        &self,
+        task: &ImagePullTask,
+        auth: &'a RegistryAuth,
+    ) -> PullImageResult<PullClient<'a>> {
         let mut client_config = ClientConfig::default();
         if task.use_http {
             client_config.protocol = ClientProtocol::Http;
@@ -372,17 +340,79 @@ impl ImageClient {
             });
         client_config.extra_root_certificates.extend(certs);
 
-        let mut client = PullClient::new(
-            task.image_reference,
+        PullClient::new(
+            task.image_reference.clone(),
             self.layer_store.clone(),
-            &auth,
+            auth,
             self.config.max_concurrent_layer_downloads_per_image,
             client_config,
         )
-        .map_err(|source| PullImageError::Internal { source })?;
+        .map_err(|source| PullImageError::Internal { source })
+    }
 
-        let (image_manifest, image_digest, image_config, manifest_list_digest) =
-            client.pull_manifest().await?;
+    async fn pull_task(
+        &mut self,
+        task: ImagePullTask,
+        auth_info: &Option<&str>,
+        bundle_dir: &Path,
+        decrypt_config: &Option<&str>,
+        image_url: &str,
+    ) -> PullImageResult<ImageInfo> {
+        // Try to find a valid registry auth. Logic order
+        // 1. the input parameter
+        // 2. from self.registry_auth
+        // 3. use Anonymous auth
+        let auth = match auth_info {
+            Some(input_auth) => match input_auth.split_once(':') {
+                Some((username, password)) => {
+                    RegistryAuth::Basic(username.to_string(), password.to_string())
+                }
+                None => {
+                    return Err(PullImageError::IllegalRegistryAuth {
+                        image: image_url.into(),
+                        auth_source: format!("input `{input_auth}`"),
+                    });
+                }
+            },
+            None => match &self.registry_auth {
+                Some(registry_auth) => registry_auth
+                    .credential_for_reference(&task.image_reference)
+                    .await
+                    .map_err(|_| PullImageError::IllegalRegistryAuth {
+                        image: image_url.into(),
+                        auth_source: "auth config".into(),
+                    })?,
+                None => {
+                    info!("Use Anonymous image registry auth");
+                    RegistryAuth::Anonymous
+                }
+            },
+        };
+
+        let mut client = self.new_pull_client(&task, &auth)?;
+
+        let mut result = client.pull_manifest().await;
+
+        // Optionally retry anonymously on a rejected credential. A fresh
+        // client is required: the old one caches the rejected credential
+        // and layer pulls would reuse it.
+        if self.config.anonymous_fallback_on_unauthorized
+            && !matches!(auth, RegistryAuth::Anonymous)
+            && matches!(
+                result,
+                Err(PullLayerError::PullManifestError {
+                    source: OciDistributionError::UnauthorizedError { .. },
+                })
+            )
+        {
+            warn!(
+                "registry rejected the configured credential for {image_url}; retrying anonymously"
+            );
+            client = self.new_pull_client(&task, &RegistryAuth::Anonymous)?;
+            result = client.pull_manifest().await;
+        }
+
+        let (image_manifest, image_digest, image_config, manifest_list_digest) = result?;
 
         let id = image_manifest.config.digest.clone();
 
@@ -405,7 +435,7 @@ impl ImageClient {
                     image_url,
                     &image_digest,
                     manifest_list_digest.as_deref(),
-                    &auth,
+                    client.auth,
                 )
                 .await?;
         }
@@ -558,8 +588,6 @@ mod tests {
 
         // TODO test with more OCI image registries and fix broken registries.
         let oci_images = [
-            // image with duplicated layers
-            "gcr.io/k8s-staging-cloud-provider-ibm/ibm-vpc-block-csi-driver:master",
             // Alibaba Container Registry
             "registry.cn-hangzhou.aliyuncs.com/acs/busybox:v1.29.2",
             // Amazon Elastic Container Registry

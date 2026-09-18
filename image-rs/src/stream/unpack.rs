@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use filetime::FileTime;
 use futures_util::StreamExt;
 use nix::libc;
 use nix::libc::timeval;
-use pathrs::{flags::OpenFlags, InodeType, Root};
+use pathrs::{InodeType, Root, flags::OpenFlags};
 use thiserror::Error;
 use tracing::{debug, warn};
 
@@ -360,9 +360,9 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
                 Err(f) => {
                     return Err(UnpackError::UnpackFailed {
                         source: io::Error::other(format!(
-                        "Try hardlink fallback failed, {f:?}, after original unpack error: {e:?}"
-                    )),
-                    })
+                            "Try hardlink fallback failed, {f:?}, after original unpack error: {e:?}"
+                        )),
+                    });
                 }
             }
         }
@@ -564,12 +564,12 @@ async fn try_hardlink_fallback<R: AsyncRead + Unpin>(
 
 #[cfg(test)]
 mod tests {
-    use std::os::unix::fs::{chown, lchown, MetadataExt};
+    use std::os::unix::fs::{MetadataExt, chown, lchown};
 
     use std::os::unix::fs::FileTypeExt;
     use tokio::{
         fs::{self, File},
-        io::{empty, AsyncWriteExt},
+        io::{AsyncWriteExt, empty},
     };
     use tokio_tar::{Builder, EntryType, Header};
 

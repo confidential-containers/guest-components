@@ -10,10 +10,10 @@ pub mod policy;
 use std::{path::Path, sync::Arc};
 
 use image::Image;
-use policy::policy_requirement::PolicyReqType;
 pub use policy::Policy;
+use policy::policy_requirement::PolicyReqType;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use oci_client::secrets::RegistryAuth;
 use thiserror::Error;
 

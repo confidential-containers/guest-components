@@ -14,17 +14,12 @@ You can use the secret cli tool to generate a sealed secret.
 
 ### Prebuilt binary (recommended)
 
-Each [GitHub release](https://github.com/confidential-containers/guest-components/releases)
-ships the `secret` CLI as a prebuilt artifact with all KMS providers bundled,
-so you do not need a Rust toolchain. Download the tarball matching your
-platform, verify it, and extract the binary:
+Pull the secret cli for the latest release for ARM or x86.
 
 ```bash
-# Pick the asset for your platform, e.g. secret-x86_64-unknown-linux-musl.tar.gz
-ASSET=secret-x86_64-unknown-linux-musl.tar.gz
-sha256sum -c "${ASSET}.sha256"
-tar xzf "$ASSET"
-./secret-x86_64-unknown-linux-musl/secret --help
+oras pull ghcr.io/confidential-containers/guest-components/secret-cli:latest
+chmod +x secret
+./secret --help
 ```
 
 ### Build from source

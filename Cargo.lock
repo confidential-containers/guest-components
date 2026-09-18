@@ -42,9 +42,9 @@ dependencies = [
 
 [[package]]
 name = "aes"
-version = "0.9.2"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8eb277bec05f56a0e0591f155a484cbd0f4f07ff2905051a48c72f004f7ed58"
+checksum = "35f0f96ce78e38c3dc6d8948aa8163d06385be74000f3c7a95bf1eef35d3ea32"
 dependencies = [
  "cipher 0.5.2",
  "cpubits",
@@ -73,7 +73,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f2b8006a0c83f52b62ba44a97b58bf76fe2f70a329e588f67f89691d93d498f"
 dependencies = [
  "aead 0.6.1",
- "aes 0.9.2",
+ "aes 0.9.3",
  "cipher 0.5.2",
  "ctr 0.10.1",
  "ctutils",
@@ -86,7 +86,7 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "10b6f24a1f796bc46415a1d0d18dc0a8203ccba088acf5def3291c4f61225522"
 dependencies = [
- "aes 0.9.2",
+ "aes 0.9.3",
  "byteorder",
 ]
 
@@ -105,7 +105,7 @@ version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41ac571010bd60765c56085a4f1d412012a9be2663b1a2f2b19b49318653fd0d"
 dependencies = [
- "aes 0.9.2",
+ "aes 0.9.3",
  "const-oid 0.10.2",
  "zeroize",
 ]
@@ -3051,9 +3051,9 @@ checksum = "b7ac824320a75a52197e8f2d787f6a38b6718bb6897a35142d749af3c0e8f4fe"
 
 [[package]]
 name = "flate2"
-version = "1.1.9"
+version = "1.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "843fba2746e448b37e26a819579957415c8cef339bf08564fe8b7ddbd959573c"
+checksum = "6e634e2e0ebac1ee034020da1ca582e17ffe4e0f5e985823721e168928136dcb"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
@@ -4871,9 +4871,9 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "miniz_oxide"
-version = "0.8.9"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316"
+checksum = "b63fbc4a50860e98e7b2aa7804ded1db5cbc3aff9193adaff57a6931bf7c4b4c"
 dependencies = [
  "adler2",
  "simd-adler32",
@@ -5378,7 +5378,7 @@ dependencies = [
 name = "ocicrypt-rs"
 version = "0.1.0"
 dependencies = [
- "aes 0.9.2",
+ "aes 0.9.3",
  "aes-gcm 0.11.1",
  "anyhow",
  "async-trait",
@@ -5687,9 +5687,9 @@ checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
 
 [[package]]
 name = "pathrs"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b1c0fdecdba7e25990ddca671cd555d0b081252f4052f73df485263ef229d2d"
+checksum = "bd74b8fd656302d50059a07147444e46d6c2f162656271cf626e8ff3fad4cce8"
 dependencies = [
  "bitflags 2.13.1",
  "itertools 0.15.0",
@@ -8154,7 +8154,7 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 [[package]]
 name = "tdx-attest-rs"
 version = "0.1.2"
-source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.26#1f362a6cffc228e290862bd7fffe2d31e290bb4f"
+source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.27.101#64b78f3766e7196d3d2c60e401540f0f853b2deb"
 dependencies = [
  "tdx-attest-sys",
 ]
@@ -8162,7 +8162,7 @@ dependencies = [
 [[package]]
 name = "tdx-attest-sys"
 version = "0.1.0"
-source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.26#1f362a6cffc228e290862bd7fffe2d31e290bb4f"
+source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.27.101#64b78f3766e7196d3d2c60e401540f0f853b2deb"
 dependencies = [
  "bindgen 0.70.1",
 ]
@@ -8184,7 +8184,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.2",
  "once_cell",
  "rustix 1.1.4",
  "windows-sys 0.61.2",

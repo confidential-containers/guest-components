@@ -62,7 +62,7 @@ mod tests {
     #[cfg(feature = "signature-simple")]
     #[test]
     fn deserialize_signed_by_policy() {
-        use crate::signature::policy::{ref_match::PolicyReqMatchType, SimpleParameters};
+        use crate::signature::policy::{SimpleParameters, ref_match::PolicyReqMatchType};
 
         let jsons = [
             r#"{

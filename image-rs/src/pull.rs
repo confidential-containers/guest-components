@@ -5,10 +5,10 @@
 use anyhow::Result;
 use futures_util::stream::{self, StreamExt, TryStreamExt};
 use oci_client::{
+    Client, Reference,
     client::ClientConfig,
     manifest::{OciDescriptor, OciImageManifest},
     secrets::RegistryAuth,
-    Client, Reference,
 };
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -372,7 +372,9 @@ mod tests {
                 .join("test_data")
                 .join("private_key_for_tests.pem:test");
 
-            std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
+            unsafe {
+                std::env::set_var("OCICRYPT_KEYPROVIDER_CONFIG", keyprovider_config);
+            }
 
             assert_retry!(
                 5,

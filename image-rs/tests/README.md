@@ -1,10 +1,11 @@
 # Integration Test for Image-rs
 
-This integration test has two main sub-type test sets:
+This integration test has these main sub-type test sets:
 * Image decryption using [ocicrypt-rs](../../ocicrypt-rs)
-* Image signature verification.
+* Image signature verification
+* Odd-image pull regression matrix (`odd_images.rs`)
 
-And both of test set will use the following key broker client:
+Decryption and signature suites use the following key broker client:
 * `Offline-fs-kbc`
 
 ## Image Decryption
@@ -66,3 +67,20 @@ The test cases are
 |---|---|
 |`docker.io/liudalibj/private-busy-box` |`bGl1ZGFsaWJqOlBhc3N3MHJkIXFhego=`|
 |`quay.io/liudalibj/private-busy-box`|`bGl1ZGFsaWJqOlBhc3N3MHJkIXFhego=`|
+
+## Odd-image pull regression matrix
+
+Implemented in `odd_images.rs`.
+
+The tests require root privileges to create an overlay snapshot and currently
+run on `x86_64` only.
+
+| Image tag | Regression covered | Expected result |
+|---|---|---|
+| `odd-duplicated-layers` | duplicated layer digests | pull succeeds |
+| `odd-whiteout-agnhost` | whiteout handling | pull succeeds |
+| `odd-empty-pax` | empty local PAX values | pull fails |
+| `odd-whiteout-deletion` | deletion whiteout conversion | pull succeeds and `rootfs/etc/apache2` is absent |
+
+The images are hosted under
+`ghcr.io/confidential-containers/test-container-image-rs:<tag>`.

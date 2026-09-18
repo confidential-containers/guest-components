@@ -8,7 +8,7 @@
 use anyhow::*;
 use async_trait::async_trait;
 use kbc::{
-    cc_kbc::Kbc as CcKbc, offline_fs_kbc::OfflineFsKbc, sample_kbc::SampleKbc, KbcInterface,
+    KbcInterface, cc_kbc::Kbc as CcKbc, offline_fs_kbc::OfflineFsKbc, sample_kbc::SampleKbc,
 };
 use resource_uri::ResourceUri;
 use tokio::sync::Mutex;

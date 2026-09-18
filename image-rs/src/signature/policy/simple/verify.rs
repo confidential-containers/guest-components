@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use pgp::composed::{Deserializable, SignedPublicKey};
 use pgp::packet::{OpsVersionSpecific, Packet, PacketParser};
 use pgp::types::KeyDetails;
@@ -38,13 +38,11 @@ impl SigKeyIDs {
         {
             Ok(())
         } else {
-            Err(
-                anyhow!(
-                    "Key ID not matched. trusted key id is: {:X?}, but key id in signature info is: {:X?}", 
-                    self.trusted_key_id,
-                    self.sig_info_key_id
-                )
-            )
+            Err(anyhow!(
+                "Key ID not matched. trusted key id is: {:X?}, but key id in signature info is: {:X?}",
+                self.trusted_key_id,
+                self.sig_info_key_id
+            ))
         }
     }
 }
@@ -244,23 +242,31 @@ mod tests {
         }];
 
         for case in tests_expect.iter() {
-            assert!(sig_payload
-                .validate_signed_docker_manifest_digest(case.digest)
-                .is_ok());
+            assert!(
+                sig_payload
+                    .validate_signed_docker_manifest_digest(case.digest)
+                    .is_ok()
+            );
 
-            assert!(sig_payload
-                .validate_signed_docker_reference(&case.reference, &match_reference_policy)
-                .is_ok());
+            assert!(
+                sig_payload
+                    .validate_signed_docker_reference(&case.reference, &match_reference_policy)
+                    .is_ok()
+            );
         }
 
         for case in tests_unexpect.iter() {
-            assert!(sig_payload
-                .validate_signed_docker_manifest_digest(case.digest)
-                .is_err());
+            assert!(
+                sig_payload
+                    .validate_signed_docker_manifest_digest(case.digest)
+                    .is_err()
+            );
 
-            assert!(sig_payload
-                .validate_signed_docker_reference(&case.reference, &match_reference_policy)
-                .is_err());
+            assert!(
+                sig_payload
+                    .validate_signed_docker_reference(&case.reference, &match_reference_policy)
+                    .is_err()
+            );
         }
     }
 

@@ -14,7 +14,7 @@ use crate::{
     config::ImageConfig,
     image::ImageClient,
     layer_store::LayerStore,
-    meta_store::{MetaStore, METAFILE},
+    meta_store::{METAFILE, MetaStore},
     registry::RegistryHandler,
     resource::{ResourceError, ResourceProvider},
     signature::{SignatureError, SignatureValidator},
@@ -89,6 +89,8 @@ impl ClientBuilder {
         String
     );
 
+    __impl_config!(anonymous_fallback_on_unauthorized, bool);
+
     __impl_config!(max_concurrent_layer_downloads_per_image, usize);
 
     #[cfg(feature = "keywrap-native")]
@@ -157,7 +159,9 @@ impl ClientBuilder {
                 Some(signature_validator)
             }
             None => {
-                warn!("No `image_security_policy` given, thus all images can be pulled by the image client without filtering.");
+                warn!(
+                    "No `image_security_policy` given, thus all images can be pulled by the image client without filtering."
+                );
                 None
             }
         };

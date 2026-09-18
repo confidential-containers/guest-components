@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod dmverity;
-use crate::verity::dmverity::{create_verity_device, destroy_verity_device, DmVerityOption};
+use crate::verity::dmverity::{DmVerityOption, create_verity_device, destroy_verity_device};
 use anyhow::Result;
 use base64::Engine;
 use nix::mount::MsFlags;

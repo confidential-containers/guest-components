@@ -147,11 +147,15 @@ async fn signature_verification_xrss() {
                 .await;
             }
             false => {
-                println!("Skipping xrss test cases because the test cases require authentication and no AUTH is set in the environment");
+                println!(
+                    "Skipping xrss test cases because the test cases require authentication and no AUTH is set in the environment"
+                );
             }
         },
         Err(_) => {
-            println!("Skipping xrss test cases because the test cases require authentication and no AUTH is set in the environment");
+            println!(
+                "Skipping xrss test cases because the test cases require authentication and no AUTH is set in the environment"
+            );
         }
     }
 }
