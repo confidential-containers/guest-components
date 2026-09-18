@@ -6,6 +6,7 @@
 pub mod native;
 
 use attester::TeeEvidence;
+use kbs_types::{Tee, TeeTopology};
 pub use native::*;
 
 pub mod mock;
@@ -18,7 +19,6 @@ pub use aa_ttrpc::*;
 
 use crate::Result;
 use async_trait::async_trait;
-use kbs_types::Tee;
 
 #[async_trait]
 pub trait EvidenceProvider: Send + Sync {
@@ -28,6 +28,9 @@ pub trait EvidenceProvider: Send + Sync {
     /// Get evidences of devices
     async fn get_additional_evidence(&self, runtime_data: Vec<u8>) -> Result<String>;
 
-    /// Get the underlying Tee type
+    /// Get the underlying primary Tee type
     async fn get_tee_type(&self) -> Result<Tee>;
+
+    /// Get the underlying Tee topology
+    async fn get_tee_topology(&self) -> Result<TeeTopology>;
 }

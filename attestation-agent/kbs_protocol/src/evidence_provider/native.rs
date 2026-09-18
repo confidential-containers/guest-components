@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use attester::{BoxedAttester, TeeEvidence, detect_attestable_devices, detect_tee_type};
-use kbs_types::Tee;
+use kbs_types::{Tee, TeeParameters, TeeTopology};
 
 use super::EvidenceProvider;
 
@@ -76,5 +76,33 @@ impl EvidenceProvider for NativeEvidenceProvider {
 
     async fn get_tee_type(&self) -> Result<Tee> {
         Ok(self.primary_tee)
+    }
+
+    async fn get_tee_topology(&self) -> Result<TeeTopology> {
+        let res = TeeTopology {
+            primary: TeeParameters {
+                name: self.primary_tee,
+                context: self.primary_attester.get_tee_metadata().map_err(|e| {
+                    Error::NativeEvidenceProvider(format!(
+                        "failed to get attestation request context: {e}"
+                    ))
+                })?,
+            },
+            additional: self
+                .additional_attesters
+                .iter()
+                .map(|(tee, attester)| {
+                    Ok(TeeParameters {
+                        name: *tee,
+                        context: attester.get_tee_metadata().map_err(|e| {
+                            Error::NativeEvidenceProvider(format!(
+                                "failed to get attestation request context: {e}"
+                            ))
+                        })?,
+                    })
+                })
+                .collect::<Result<Vec<TeeParameters>>>()?,
+        };
+        Ok(res)
     }
 }

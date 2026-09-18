@@ -36,6 +36,18 @@ pub enum RuntimeMeasurement {
     NotEnabled,
 }
 
+pub type TeeMetadata = serde_json::Value;
+
+pub struct TeeInfo {
+    pub tee: Tee,
+    pub metadata: Option<TeeMetadata>,
+}
+
+pub struct TeeTopology {
+    pub primary: TeeInfo,
+    pub additional: Vec<TeeInfo>,
+}
+
 /// Attestation Agent (AA for short) is a rust library crate for attestation procedure
 /// in confidential containers. It provides kinds of service APIs related to attestation,
 /// including the following
@@ -92,6 +104,11 @@ pub trait AttestationAPIs {
     fn get_tee_type(&self) -> Tee;
 
     fn get_additional_tees(&self) -> Vec<Tee>;
+
+    /// Get the tee topology of current platform.
+    /// Togetherly, their attestation request context will be included. Now the context
+    /// is used in the attestation handshake.
+    fn get_tee_topology(&self) -> Result<TeeTopology>;
 }
 
 /// Attestation agent to provide attestation service.
@@ -273,5 +290,29 @@ impl AttestationAPIs for AttestationAgent {
 
     fn get_additional_tees(&self) -> Vec<Tee> {
         self.additional_attesters.keys().cloned().collect()
+    }
+
+    fn get_tee_topology(&self) -> Result<TeeTopology> {
+        {
+            let primary_context = self.primary_attester.get_tee_metadata()?;
+            let primary_parameters = TeeInfo {
+                tee: self.primary_tee,
+                metadata: primary_context,
+            };
+            let additional_parameters = self
+                .additional_attesters
+                .iter()
+                .map(|(tee, attester)| {
+                    Ok(TeeInfo {
+                        tee: *tee,
+                        metadata: attester.get_tee_metadata()?,
+                    })
+                })
+                .collect::<Result<Vec<TeeInfo>>>()?;
+            Ok(TeeTopology {
+                primary: primary_parameters,
+                additional: additional_parameters,
+            })
+        }
     }
 }

@@ -5,7 +5,7 @@
 
 use async_trait::async_trait;
 use attester::TeeEvidence;
-use kbs_types::Tee;
+use kbs_types::{Tee, TeeParameters, TeeTopology};
 
 use super::EvidenceProvider;
 
@@ -26,5 +26,17 @@ impl EvidenceProvider for MockedEvidenceProvider {
 
     async fn get_tee_type(&self) -> Result<Tee> {
         Ok(Tee::Sample)
+    }
+
+    async fn get_tee_topology(&self) -> Result<TeeTopology> {
+        let tee_parameters = TeeTopology {
+            primary: TeeParameters {
+                name: Tee::Sample,
+                context: None,
+            },
+            additional: vec![],
+        };
+
+        Ok(tee_parameters)
     }
 }
