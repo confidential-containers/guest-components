@@ -60,14 +60,14 @@ else
 endif
 
 ifeq ($(ATTESTER), none)
-    AA_FEATURES := kbs,coco_as,bin,$(RPC),$(CRYPTO)
-    AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(CRYPTO)
+    AA_FEATURES := kbs,coco_as,ccm_as,bin,$(RPC),$(CRYPTO)
+    AA_CHECK_FEATURES := kbs,coco_as,ccm_as,bin,ttrpc,grpc,$(CRYPTO)
     ATTESTER_PKG_FEATURES := bin
     KBC_FEATURES := cc_kbc,$(CRYPTO)
     KBS_PROTOCOL_FEATURES := background_check,passport,$(CRYPTO),bin,aa_ttrpc,pqc-experimental
 else
-    AA_FEATURES := kbs,coco_as,bin,$(RPC),$(CRYPTO),$(ATTESTER)
-    AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(CRYPTO),$(ATTESTER)
+    AA_FEATURES := kbs,coco_as,ccm_as,bin,$(RPC),$(CRYPTO),$(ATTESTER)
+    AA_CHECK_FEATURES := kbs,coco_as,ccm_as,bin,ttrpc,grpc,$(CRYPTO),$(ATTESTER)
     ATTESTER_PKG_FEATURES := $(ATTESTER),bin
     KBC_FEATURES := cc_kbc,$(ATTESTER),$(CRYPTO)
     KBS_PROTOCOL_FEATURES := background_check,passport,$(CRYPTO),$(ATTESTER),bin,aa_ttrpc,pqc-experimental
@@ -115,7 +115,7 @@ ifneq ($(RUSTFLAGS_ARGS),)
 endif
 
 build:
-	cd attestation-agent && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(AA_FEATURES)" $(binary) $(LIBC_FLAG)
+	cd attestation-agent && env -u DESTDIR $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(AA_FEATURES)" $(binary) $(LIBC_FLAG)
 	mv $(TARGET_DIR)/$(binary_name) $(TARGET)
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)

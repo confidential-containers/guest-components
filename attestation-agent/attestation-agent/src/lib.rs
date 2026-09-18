@@ -190,6 +190,22 @@ impl AttestationAPIs for AttestationAgent {
                 .get_token()
                 .await
             }
+            #[cfg(feature = "ccm_as")]
+            token::TokenType::CcmAs => {
+                token::ccm_as::CcmAsTokenGetter::new(
+                    self.config
+                        .read()
+                        .await
+                        .token_configs
+                        .ccm_as
+                        .as_ref()
+                        .ok_or(anyhow::anyhow!(
+                            "ccm_as token config not configured in config file"
+                        ))?,
+                )
+                .get_token()
+                .await
+            }
         }
     }
 
