@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use sev::firmware::guest::AttestationReport;
 use sev::firmware::guest::Firmware;
 use sev::firmware::host::CertTableEntry;
+use sev::parser::ByteParser;
 use std::path::Path;
 use tracing::{debug, error, warn};
 

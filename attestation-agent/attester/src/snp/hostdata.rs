@@ -7,6 +7,7 @@
 use crate::snp::VMPL;
 use crate::tsm_report::{TsmReportData, TsmReportError, TsmReportPath, TsmReportProvider};
 use sev::firmware::guest::{AttestationReport, Firmware};
+use sev::parser::ByteParser;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -38,5 +39,5 @@ pub fn get_snp_host_data() -> Result<[u8; 32], GetHostDataError> {
     )?;
 
     let report = AttestationReport::from_bytes(&report_bytes)?;
-    Ok(*report.host_data)
+    Ok(report.host_data)
 }
