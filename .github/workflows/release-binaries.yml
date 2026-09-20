@@ -32,6 +32,7 @@ jobs:
     strategy:
       matrix:
         platform:
+          - { tee: all,         arch: x86_64,      libc: gnu,  runner: ubuntu-24.04 }
           - { tee: none,        arch: x86_64,      libc: musl, runner: ubuntu-24.04 }
           - { tee: none,        arch: s390x,       libc: gnu,  runner: ubuntu-24.04-s390x }
           - { tee: none,        arch: aarch64,     libc: gnu,  runner: ubuntu-24.04 }
@@ -64,7 +65,9 @@ jobs:
       - uses: $/.github/actions/setup-rust-ci
         with:
           target: ${{ env.RUST_TARGET }}
-          install-tpm: ${{ matrix.platform.tee == 'az-cvm-vtpm' && 'true' || 'false' }}
+          install-tpm: ${{ ( matrix.platform.tee == 'az-cvm-vtpm' ||
+                             matrix.platform.tee == 'all' ) && 'true' || 'false' }}
+          install-nvat: ${{ matrix.platform.tee == 'all' && 'true' || 'false' }}
 
       - name: Log in to the Container registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
