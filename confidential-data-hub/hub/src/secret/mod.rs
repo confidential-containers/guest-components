@@ -287,7 +287,7 @@ mod tests {
         let jwk: Jwk = serde_json::from_str(jwk).expect("Could not parse signing JWK");
 
         let kid = "test-key".to_string();
-        let kid_cred_path = format!("{SIGNING_CREDENTIALS_PATH}/{}", &kid);
+        let kid_cred_path = format!("{SIGNING_CREDENTIALS_PATH}/{kid}");
 
         std::fs::create_dir_all(SIGNING_CREDENTIALS_PATH).unwrap();
         std::fs::write(kid_cred_path, serde_json::to_string(&jwk).unwrap()).unwrap();
@@ -325,7 +325,7 @@ mod tests {
         let jwk: Jwk = serde_json::from_str(jwk).expect("Could not parse signing JWK");
 
         let kid = "test-key".to_string();
-        let kid_cred_path = format!("{SIGNING_CREDENTIALS_PATH}/{}", &kid);
+        let kid_cred_path = format!("{SIGNING_CREDENTIALS_PATH}/{kid}");
 
         std::fs::create_dir_all(SIGNING_CREDENTIALS_PATH).unwrap();
         std::fs::write(kid_cred_path, serde_json::to_string(&jwk).unwrap()).unwrap();
@@ -366,7 +366,7 @@ mod tests {
         let jwk2: Jwk = serde_json::from_str(jwk2).expect("Could not parse signing JWK");
 
         let kid = "test-key".to_string();
-        let kid_cred_path = format!("{SIGNING_CREDENTIALS_PATH}/{}", &kid);
+        let kid_cred_path = format!("{SIGNING_CREDENTIALS_PATH}/{kid}");
 
         std::fs::create_dir_all(SIGNING_CREDENTIALS_PATH).unwrap();
         std::fs::write(kid_cred_path, serde_json::to_string(&jwk).unwrap()).unwrap();
