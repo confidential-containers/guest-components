@@ -14,14 +14,12 @@ aes = { workspace = true, optional = true }
 async-trait = { workspace = true, optional = true }
 base64.workspace = true
 base64-serde = { workspace = true, optional = true }
-cfg-if.workspace = true
 ctr = { workspace = true, optional = true }
 hmac = { workspace = true, optional = true }
 josekit = { version = ">=0.7", optional = true }
 openssl = { workspace = true, features = ["vendored"], optional = true }
 pin-project-lite = { version = "0.2.17", optional = true }
 protos = { path = "../protos", default-features = false, optional = true }
-ring = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 sha2 = { workspace = true, optional = true }
@@ -40,24 +38,11 @@ openssl = { workspace = true, features = ["vendored"] }
 tokio = { workspace = true, features = ["time", "signal"] }
 
 [features]
-default = ["block-cipher-openssl", "keywrap-jwe", "keywrap-keyprovider-cmd"]
+default = ["block-cipher", "keywrap-jwe", "keywrap-keyprovider-cmd"]
 
 async-io = ["tokio"]
 
-block-cipher = []
-# Use ring as pseudo random number generator
-block-cipher-ring = [
-    "aes",
-    "base64-serde",
-    "ctr",
-    "hmac",
-    "ring",
-    "pin-project-lite",
-    "sha2",
-    "block-cipher",
-]
-# Use openssl as pseudo random number generator
-block-cipher-openssl = [
+block-cipher = [
     "aes",
     "base64-serde",
     "ctr",
@@ -65,7 +50,6 @@ block-cipher-openssl = [
     "openssl",
     "pin-project-lite",
     "sha2",
-    "block-cipher",
 ]
 
 keywrap-jwe = ["josekit"]
