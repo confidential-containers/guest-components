@@ -56,7 +56,7 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 shadow-rs.workspace = true
 
 [features]
-default = ["rust-crypto", "ttrpc", "grpc"]
+default = ["ttrpc", "grpc"]
 
 # Attestation Token support
 token = []
@@ -110,10 +110,6 @@ nvidia-dpu-attester = [
     "kbs_protocol?/nvidia-dpu-attester",
     "attester/nvidia-dpu-attester",
 ]
-
-# Either `rust-crypto` or `openssl` should be enabled to work as underlying crypto module
-rust-crypto = ["kbs_protocol?/rust-crypto"]
-openssl = ["kbs_protocol?/openssl"]
 
 # Binary RPC type
 bin = ["clap", "shadow-rs", "tracing-subscriber", "tokio/rt-multi-thread"]

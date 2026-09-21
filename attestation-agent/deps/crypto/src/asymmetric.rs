@@ -7,11 +7,8 @@
 // TODO: remove this when the deprecated attribute is removed
 #[allow(deprecated)]
 pub mod rsa {
-    #[cfg(feature = "openssl")]
-    pub use crate::native::rsa::*;
-
-    #[cfg(all(feature = "rust-crypto", not(feature = "openssl")))]
     pub use crate::rust::rsa::*;
+    use strum::{AsRefStr, EnumString};
 
     /// Definitions of different Padding mode for encryption. Refer to
     /// <https://datatracker.ietf.org/doc/html/rfc7518#section-4.1> for
@@ -34,11 +31,8 @@ pub mod rsa {
 }
 
 pub mod ec {
-    #[cfg(feature = "openssl")]
-    pub use crate::native::ec::*;
-
-    #[cfg(all(feature = "rust-crypto", not(feature = "openssl")))]
     pub use crate::rust::ec::*;
+    use strum::{AsRefStr, EnumString};
 
     /// The elliptic curve key type
     pub const EC_KTY: &str = "EC";

@@ -43,9 +43,9 @@ make -C api-server-rest test
 make -C image-rs test
 make -C ocicrypt-rs test
 
-# Attestation-agent: build/lint/test share ATTESTER and OPENSSL knobs
+# Attestation-agent: build/lint/test share ATTESTER
 make -C attestation-agent ATTESTER=all-attesters test
-make -C attestation-agent ATTESTER=tdx-attester OPENSSL=1 test   # s390x sets OPENSSL=1 by default
+make -C attestation-agent ATTESTER=tdx-attester test
 ```
 
 For ad-hoc single-crate or single-test runs:
@@ -60,7 +60,7 @@ cargo test -p ocicrypt-rs
 cargo test -p image-rs -- test_name
 
 # Many tests require specific features to compile
-cargo test -p image-rs --features kata-cc-rustls-tls
+cargo test -p image-rs --no-default-features --features kata-cc,keywrap-jwe
 cargo test -p confidential-data-hub --features kbs,aliyun,bin
 cargo test -p attestation-agent --features all-attesters,kbs,coco_as
 
@@ -85,16 +85,16 @@ make -C image-rs lint
 make -C ocicrypt-rs lint
 ```
 
-`attestation-agent`, `image-rs`, and `ocicrypt-rs` lint multiple feature combinations
-(including `--no-default-features` presets). `image-rs` and `ocicrypt-rs` keep mutually
-exclusive feature axes; native keywrap targets run on x86_64 only.
+`attestation-agent`, `image-rs`, and `ocicrypt-rs` lint multiple production feature
+combinations, including selected `--no-default-features` presets.
 
 For one-off cargo runs:
 
 ```bash
 cargo fmt --check
 cargo clippy -- -D warnings
-cargo clippy -p image-rs --features kata-cc-rustls-tls -- -D warnings
+cargo clippy -p image-rs --all-targets --no-default-features \
+    --features kata-cc,signature-simple-xrss -- -D warnings
 ```
 
 Pre-commit hooks run gitleaks, shellcheck, trailing-whitespace, and end-of-file-fixer.
@@ -120,15 +120,23 @@ Components communicate over **ttrpc** (protobuf over Unix sockets, default) or *
 
 Data flow: `REST API → ttrpc → AA (attestation) + CDH (secrets/images) → image-rs (decryption with keys from CDH)`
 
+### Crypto
+
+RustCrypto implementations are used for the project's configurable cryptographic
+operations. HTTP clients use rustls, and ocicrypt-rs uses ring for cryptographic
+randomness. These backends are no longer selectable through Cargo features.
+
+The Aliyun KMS integration retains its provider-specific OpenSSL dependency for
+PKCS#12 credential handling and request signing. Transitive dependencies such as
+`kbs-types` may also bring OpenSSL into the final dependency graph.
+
 ### Feature flags
 
-Feature flags are heavily used to control platform support, crypto backends, and protocol choices. Key categories:
+Feature flags are heavily used to control platform support and protocol choices. Key categories:
 
 - **TEE attesters** (AA): `tdx-attester`, `snp-attester`, `sgx-attester`, `se-attester`, `cca-attester`, `az-snp-vtpm-attester`, `az-tdx-vtpm-attester`, `all-attesters`
-- **Crypto backends**: `encryption-ring` (default) vs `encryption-openssl`, `rust-crypto` vs `openssl`
 - **Key wrapping** (image-rs/ocicrypt-rs): `keywrap-ttrpc`, `keywrap-grpc`, `keywrap-jwe`, `keywrap-keyprovider-cmd`
 - **KMS providers** (CDH): `kbs`, `aliyun`, `aws`
-- **TLS**: `rustls-tls` (default) vs `native-tls`; preset features like `kata-cc-rustls-tls`
 - **RPC protocol**: `ttrpc` (default), `grpc`
 
 CI validates many feature combinations — when adding features or changing conditional compilation, test with multiple feature sets.

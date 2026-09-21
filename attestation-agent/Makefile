@@ -25,14 +25,9 @@ DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
 binary ?=
 binary_name ?=
-OPENSSL ?=
 
 ifeq ($(SOURCE_ARCH), ppc64le)
   ARCH=powerpc64le
-endif
-
-ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
-  OPENSSL=1
 endif
 
 ifeq ($(ARCH), s390x)
@@ -53,22 +48,16 @@ else
     RPC = ttrpc
 endif
 
-ifdef OPENSSL
-    CRYPTO := openssl
-else
-    CRYPTO := rust-crypto
-endif
-
 ifeq ($(ATTESTER), none)
-    AA_FEATURES := kbs,coco_as,bin,$(RPC),$(CRYPTO)
-    AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(CRYPTO)
+    AA_FEATURES := kbs,coco_as,bin,$(RPC)
+    AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc
     ATTESTER_PKG_FEATURES := bin
-    KBS_PROTOCOL_FEATURES := background_check,passport,$(CRYPTO),bin,aa_ttrpc,pqc-experimental
+    KBS_PROTOCOL_FEATURES := background_check,passport,bin,aa_ttrpc,pqc-experimental
 else
-    AA_FEATURES := kbs,coco_as,bin,$(RPC),$(CRYPTO),$(ATTESTER)
-    AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(CRYPTO),$(ATTESTER)
+    AA_FEATURES := kbs,coco_as,bin,$(RPC),$(ATTESTER)
+    AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(ATTESTER)
     ATTESTER_PKG_FEATURES := $(ATTESTER),bin
-    KBS_PROTOCOL_FEATURES := background_check,passport,$(CRYPTO),$(ATTESTER),bin,aa_ttrpc,pqc-experimental
+    KBS_PROTOCOL_FEATURES := background_check,passport,$(ATTESTER),bin,aa_ttrpc,pqc-experimental
 endif
 
 ifeq ($(LIBC), musl)
@@ -124,7 +113,7 @@ lint:
 	cargo clippy -p coco_keyprovider --all-targets -- -D warnings
 	cargo clippy -p kbs_protocol --all-targets --no-default-features \
 		--features "$(KBS_PROTOCOL_FEATURES)" -- -D warnings
-	cargo clippy -p crypto --all-targets --no-default-features --features $(CRYPTO) -- -D warnings
+	cargo clippy -p crypto --all-targets --no-default-features -- -D warnings
 	cargo clippy -p resource_uri --all-targets -- -D warnings
 
 test:
@@ -133,7 +122,7 @@ test:
 	cargo test -p coco_keyprovider --all-targets
 	cargo test -p kbs_protocol --all-targets --no-default-features \
 		--features "$(KBS_PROTOCOL_FEATURES)"
-	cargo test -p crypto --all-targets --no-default-features --features $(CRYPTO)
+	cargo test -p crypto --all-targets --no-default-features
 	cargo test -p resource_uri --all-targets
 
 install: 
@@ -147,6 +136,6 @@ clean:
 
 help:
 	@echo "==========================Help========================================="
-	@echo "build/lint/test share ATTESTER and OPENSSL (ARCH picks the default attester)"
-	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [OPENSSL=1] [ATTESTER=all-attesters]"
+	@echo "build/lint/test share ATTESTER (ARCH picks the default attester)"
+	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [ATTESTER=all-attesters]"
 	@echo "install: make install [DESTDIR=/path/to/target] [LIBC=(musl)]"
