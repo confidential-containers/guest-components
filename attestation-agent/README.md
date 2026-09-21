@@ -69,13 +69,6 @@ To build and install with musl, just run:
 make LIBC=musl && make install
 ```
 
-#### Openssl support
-
-To build and install with openssl support (which is helpful in specific machines like `s390x`)
-```
-make OPENSSL=1 && make install
-```
-
 ### Run
 
 For help information, just run:

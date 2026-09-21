@@ -7,7 +7,7 @@ ifeq ($(ARCH),x86_64)
 	cargo clippy -p ocicrypt-rs --all-targets --all-features -- -D warnings
 else
 	cargo clippy -p ocicrypt-rs --all-targets \
-		--features async-io,block-cipher-ring,keywrap-keyprovider-grpc,keywrap-keyprovider-ttrpc \
+		--features async-io,block-cipher,keywrap-keyprovider-grpc,keywrap-keyprovider-ttrpc \
 		-- -D warnings
 endif
 
@@ -16,8 +16,7 @@ ifeq ($(ARCH),x86_64)
 	cargo build -p ocicrypt-rs --all-features
 endif
 	cargo build -p ocicrypt-rs --no-default-features
-	cargo build -p ocicrypt-rs --no-default-features --features=block-cipher-openssl
-	cargo build -p ocicrypt-rs --no-default-features --features=block-cipher-ring
+	cargo build -p ocicrypt-rs --no-default-features --features=block-cipher
 	cargo build -p ocicrypt-rs --no-default-features --features=keywrap-jwe
 	cargo build -p ocicrypt-rs --no-default-features --features=keywrap-keyprovider
 

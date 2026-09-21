@@ -45,7 +45,7 @@ pub struct StsSettings {
 impl StsTokenClient {
     pub fn from_sts_token(sts: StsCredential, endpoint: String, region_id: String) -> Result<Self> {
         let http_client = ClientBuilder::new()
-            .use_rustls_tls()
+            .use_native_tls()
             .build()
             .map_err(|e| Error::AliyunKmsError(format!("build http client failed: {e:?}")))?;
         Ok(Self {
@@ -81,7 +81,7 @@ impl StsTokenClient {
         let endpoint = format!("kms.{}.aliyuncs.com", settings.region_id);
 
         let http_client = ClientBuilder::new()
-            .use_rustls_tls()
+            .use_native_tls()
             .build()
             .map_err(|e| Error::AliyunKmsError(format!("build http client failed: {e:?}")))?;
 
