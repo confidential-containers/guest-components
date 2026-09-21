@@ -17,7 +17,7 @@ A resource with exact same path must be uploaded to Trustee before trustee-attes
 
 ```bash
 cargo build -p kbs_protocol --bin trustee-attester --no-default-features
---features "background_check,passport,<openssl|rust-crypto>,bin,<attesters-list>"
+--features "background_check,passport,bin,<attesters-list>"
 ```
 
 ## Run: ##

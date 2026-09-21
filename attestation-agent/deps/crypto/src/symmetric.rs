@@ -7,13 +7,10 @@
 
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
+use strum::{AsRefStr, EnumString};
 use zeroize::Zeroizing;
 
-#[cfg(feature = "openssl")]
 use crate::native::*;
-
-#[cfg(all(feature = "rust-crypto", not(feature = "openssl")))]
-use crate::rust::*;
 
 pub const AES_GCM_256_KEY_BITS: u32 = 256;
 

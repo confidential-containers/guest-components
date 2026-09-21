@@ -26,7 +26,9 @@ futures-util = "0.3"
 hex.workspace = true
 loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27" }
 nix = { workspace = true, features = ["mount", "fs"] }
-oci-client = { version = "0.17.0", default-features = false }
+oci-client = { version = "0.17.0", default-features = false, features = [
+    "native-tls",
+] }
 oci-spec = "0.10.0"
 ocicrypt-rs = { path = "../ocicrypt-rs", default-features = false, features = [
     "async-io",
@@ -73,37 +75,17 @@ test-utils = { path = "libs/test-utils" }
 tokio = { workspace = true, features = ["process"] }
 
 [features]
-default = [
-    "signature-cosign-rustls",
-    "keywrap-grpc",
-    "oci-client-rustls",
-    "signature-simple-xrss",
-]
+default = ["signature-cosign", "keywrap-grpc", "signature-simple-xrss"]
 
-# This will be based on `ring` dependency
-kata-cc-rustls-tls = [
-    "encryption-ring",
-    "keywrap-ttrpc",
-    "signature-cosign-rustls",
+kata-cc = [
+    "encryption",
+    "signature-cosign",
     "signature-simple",
-    "kbs",
-    "oci-client/rustls-tls",
-    "reqwest?/rustls",
-]
-# This will be based on `openssl` dependency
-kata-cc-native-tls = [
-    "encryption-openssl",
     "keywrap-ttrpc",
-    "signature-cosign-native",
-    "signature-simple",
     "kbs",
-    "oci-client/native-tls",
-    "reqwest?/native-tls",
 ]
 
 encryption = ["ocicrypt-rs/block-cipher"]
-encryption-ring = ["ocicrypt-rs/block-cipher-ring", "encryption"]
-encryption-openssl = ["ocicrypt-rs/block-cipher-openssl", "encryption"]
 
 keywrap-cmd = ["ocicrypt-rs/keywrap-keyprovider-cmd"]
 
@@ -118,16 +100,12 @@ keywrap-ttrpc = [
 keywrap-jwe = ["ocicrypt-rs/keywrap-jwe"]
 
 signature = []
-signature-cosign = ["signature", "sigstore/registry", "sigstore/cosign"]
-signature-cosign-rustls = [
-    "signature-cosign",
-    "sigstore/rustls-tls",
-    "sigstore/rustls-tls-native-roots",
+signature-cosign = [
+    "signature",
+    "sigstore/registry",
+    "sigstore/cosign",
+    "sigstore/native-tls",
 ]
-signature-cosign-native = ["signature-cosign", "sigstore/native-tls"]
-
-oci-client-rustls = ["oci-client/rustls-tls"]
-oci-client-native = ["oci-client/native-tls"]
 
 signature-simple-xrss = ["signature-simple", "reqwest/query"]
 signature-simple = ["signature", "pgp", "serde_yaml"]

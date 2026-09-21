@@ -117,11 +117,6 @@ impl<T> KbsClientBuilder<T> {
             http_client_builder = http_client_builder.add_root_certificate(cert);
         }
 
-        #[cfg(feature = "rust-crypto")]
-        {
-            http_client_builder = http_client_builder.use_rustls_tls();
-        }
-
         let tee_key = match self.tee_key {
             Some(key) => TeeKeyPair::from_pem(&key[..]).context("read tee public key")?,
             None => TeeKeyPair::new_with_algorithm(self.tee_key_algorithm)?,
