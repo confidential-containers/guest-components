@@ -67,7 +67,7 @@ impl ClientKeyClient {
 
         let cert = Self::read_kms_instance_cert(cert_pem.as_bytes())?;
         let http_client = ClientBuilder::new()
-            .use_rustls_tls()
+            .use_native_tls()
             .add_root_certificate(cert)
             .build()
             .map_err(|e| Error::AliyunKmsError(format!("build http client failed: {e:?}")))?;
