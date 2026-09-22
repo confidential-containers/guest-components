@@ -18,7 +18,6 @@ hex = { workspace = true, optional = true }
 kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = [
     "passport",
     "aa_ttrpc",
-    "openssl",
 ], optional = true }
 openssl = { workspace = true, optional = true }
 prost = { workspace = true, optional = true }
@@ -55,7 +54,7 @@ aliyun = [
     "dep:openssl",
     "hex",
     "rand",
-    "reqwest/rustls",
+    "dep:reqwest",
     "sha2",
     "tonic",
     "url",

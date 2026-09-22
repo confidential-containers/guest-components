@@ -249,9 +249,6 @@ impl<R: tokio::io::AsyncRead> tokio::io::AsyncRead for AESCTRBlockCipher<R> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use openssl::hash::MessageDigest;
-    use openssl::pkey::PKey;
-    use openssl::sign::Signer;
 
     #[test]
     fn test_aes_ctr_block_cipher() {
@@ -425,74 +422,27 @@ mod tests {
     }
 
     #[test]
-    // Verify different rust crypto crate have the same results
-    fn test_crypto_crate() {
-        let layer_data: Vec<u8> = b"this is some data".to_vec();
+    fn test_crypto_vectors() {
+        // NIST SP 800-38A, section F.5.5.
+        let key = hex::decode("603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4")
+            .unwrap();
+        let nonce = hex::decode("f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff").unwrap();
+        let mut block = hex::decode("6bc1bee22e409f96e93d7e117393172a").unwrap();
+        let expected = hex::decode("601ec313775789a5b7a7f504bbf3d228").unwrap();
 
-        let mut symmetric_key = vec![0; 32];
-        rand_bytes(&mut symmetric_key[..]).unwrap();
-
-        let mut nonce = vec![0; 16];
-        rand_bytes(&mut nonce[..]).unwrap();
-
-        let mut crypto_encrypt = Aes256Ctr::new(
-            symmetric_key
-                .as_slice()
-                .try_into()
-                .context("Failed to convert symmetric key to array")
-                .unwrap(),
-            nonce
-                .as_slice()
-                .try_into()
-                .context("Failed to convert nonce to array")
-                .unwrap(),
+        let mut cipher = Aes256Ctr::new(
+            key.as_slice().try_into().unwrap(),
+            nonce.as_slice().try_into().unwrap(),
         );
+        cipher.apply_keystream(&mut block);
+        assert_eq!(block, expected);
 
-        let openssl_cipher = openssl::symm::Cipher::aes_256_ctr();
-        let openssl_ciphertext =
-            openssl::symm::encrypt(openssl_cipher, &symmetric_key, Some(&nonce), &layer_data)
+        // RFC 4231, test case 1.
+        let mut hmac = HmacSha256::new_from_slice(&[0x0b; 20]).unwrap();
+        hmac.update(b"Hi There");
+        let expected =
+            hex::decode("b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7")
                 .unwrap();
-
-        let mut buffer = layer_data.clone();
-        crypto_encrypt.apply_keystream(&mut buffer);
-
-        assert_eq!(buffer, openssl_ciphertext);
-
-        let openssl_plaintext = openssl::symm::decrypt(
-            openssl_cipher,
-            &symmetric_key,
-            Some(&nonce),
-            &openssl_ciphertext,
-        )
-        .unwrap();
-
-        let mut crypto_decrypt = Aes256Ctr::new(
-            symmetric_key
-                .as_slice()
-                .try_into()
-                .context("Failed to convert symmetric key to array")
-                .unwrap(),
-            nonce
-                .as_slice()
-                .try_into()
-                .context("Failed to convert nonce to array")
-                .unwrap(),
-        );
-
-        crypto_decrypt.apply_keystream(&mut buffer);
-
-        assert_eq!(buffer, openssl_plaintext);
-
-        let mut hmac_sha256 =
-            HmacSha256::new_from_slice(symmetric_key.as_slice()).expect("hmac use symmetric key");
-        hmac_sha256.update(&layer_data);
-        let crypto_hmac = hmac_sha256.finalize().into_bytes().to_vec();
-
-        let openssl_pkey = PKey::hmac(&symmetric_key).unwrap();
-        let mut openssl_signer = Signer::new(MessageDigest::sha256(), &openssl_pkey).unwrap();
-        openssl_signer.update(&layer_data).unwrap();
-        let openssl_hmac = openssl_signer.sign_to_vec().unwrap();
-
-        assert_eq!(crypto_hmac, openssl_hmac);
+        assert_eq!(hmac.finalize().into_bytes().as_slice(), expected);
     }
 }

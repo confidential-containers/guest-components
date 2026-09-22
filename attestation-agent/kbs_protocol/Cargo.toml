@@ -14,7 +14,7 @@ attester = { path = "../attester", default-features = false }
 base64.workspace = true
 serde_json_canonicalizer = { version = "0.3", optional = true }
 clap = { workspace = true, features = ["derive"], optional = true }
-crypto = { path = "../deps/crypto", default-features = false }
+crypto.path = "../deps/crypto"
 jwt-simple.workspace = true
 kbs-types.workspace = true
 protobuf = { workspace = true, optional = true }
@@ -55,7 +55,7 @@ name = "trustee-attester"
 required-features = ["bin"]
 
 [features]
-default = ["background_check", "passport", "rust-crypto", "all-attesters"]
+default = ["background_check", "passport", "all-attesters"]
 
 passport = []
 # Allow to connect Attestation-Agent with TTRPC to get evidence, token, etc.
@@ -79,9 +79,6 @@ se-attester = ["attester/se-attester"]
 tpm-attester = ["attester/tpm-attester"]
 nvidia-attester = ["attester/nvidia-attester"]
 nvidia-dpu-attester = ["attester/nvidia-dpu-attester"]
-
-rust-crypto = ["reqwest/rustls", "crypto/rust-crypto"]
-openssl = ["reqwest/native-tls-vendored", "crypto/openssl"]
 
 # Experimental Post-Quantum KEM support (ML-KEM-768+A192KW per
 # [draft-ietf-jose-pqc-kem-05](https://datatracker.ietf.org/doc/html/draft-ietf-jose-pqc-kem-05)). 

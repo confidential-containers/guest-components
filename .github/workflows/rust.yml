@@ -167,11 +167,6 @@ jobs:
         working-directory: ./attestation-agent
         run: make lint
 
-      - name: Run rust lint check with openssl
-        if: matrix.instance == 'ubuntu-24.04'
-        working-directory: ./attestation-agent
-        run: make OPENSSL=1 lint
-
       - name: Musl build with all platform
         if: matrix.instance == 'ubuntu-24.04'
         working-directory: ./attestation-agent
@@ -436,8 +431,3 @@ jobs:
         env:
           MAKE_ARGS: ${{ matrix.make_args }}
         run: make ${MAKE_ARGS} lint
-
-      - name: Lint with openssl
-        if: matrix.crate == 'attestation-agent'
-        working-directory: ./attestation-agent
-        run: make OPENSSL=1 lint

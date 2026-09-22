@@ -5,14 +5,11 @@ use anyhow::Result;
 
 /// Fill the given slice with cryptographically generated random numbers
 pub fn rand_bytes(data: &mut [u8]) -> Result<()> {
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "block-cipher-openssl")] {
-            openssl::rand::rand_bytes(&mut data[..])?;
-        } else if #[cfg(feature = "block-cipher-ring")] {
-            use ring::rand::SecureRandom;
-            ring::rand::SystemRandom::new().fill(&mut data[..]).map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        }
-    }
+    use ring::rand::SecureRandom;
+
+    ring::rand::SystemRandom::new()
+        .fill(data)
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
     Ok(())
 }
 
