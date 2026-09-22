@@ -76,8 +76,8 @@ impl Attester for AzTdxVtpmAttester {
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> anyhow::Result<InitDataResult> {
-        let digest = init_data_digest.to_vec();
-        spawn_blocking(move || utils::extend_pcr_sync(&digest, utils::INIT_DATA_PCR)).await??;
+        let sha256 = utils::truncate_digest(init_data_digest)?;
+        spawn_blocking(move || utils::extend_pcr_sync(&sha256, utils::INIT_DATA_PCR)).await??;
         Ok(InitDataResult::Ok)
     }
 
@@ -90,8 +90,8 @@ impl Attester for AzTdxVtpmAttester {
         event_digest: Vec<u8>,
         register_index: u64,
     ) -> Result<()> {
-        spawn_blocking(move || utils::extend_pcr_sync(&event_digest, register_index as u8))
-            .await??;
+        let sha256 = utils::truncate_digest(&event_digest)?;
+        spawn_blocking(move || utils::extend_pcr_sync(&sha256, register_index as u8)).await??;
         Ok(())
     }
 
