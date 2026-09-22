@@ -14,8 +14,8 @@
 #     build/coco-extension-rootfs
 #
 # The image is intentionally scratch-based: it carries only the extension
-# payload (guest-component binaries, ocicrypt config, components.toml manifest
-# and the pause bundle) with no base OS. Consumers either use the layers
+# payload (guest-component binaries, components.toml manifest and the pause
+# bundle) with no base OS. Consumers either use the layers
 # directly or convert the image into an EROFS + dm-verity extension disk image.
 FROM scratch
 

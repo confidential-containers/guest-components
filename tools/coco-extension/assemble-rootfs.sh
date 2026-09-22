@@ -25,7 +25,6 @@
 #   usr/local/bin/api-server-rest
 #   usr/local/bin/attestation-agent-nv (x86_64, when NVIDIA SDK is available)
 #   usr/local/lib/libnvat.so*
-#   etc/ocicrypt_config.json
 #   etc/kata-extensions/components.toml
 #   usr/sbin/cryptsetup
 #   pause_bundle/...
@@ -183,11 +182,6 @@ install_guest_components() {
 		ARCH="${ARCH}" \
 		LIBC="${LIBC}" \
 		DESTDIR="${ROOTFS_DIR}/usr/local/bin"
-
-	# ocicrypt config used by CDH's keyprovider; referenced from components.toml.
-	install -D -m0644 \
-		"${repo_root_dir}/confidential-data-hub/hub/src/image/ocicrypt_config.json" \
-		"${ROOTFS_DIR}/etc/ocicrypt_config.json"
 
 	build_nvidia_attestation_agent
 	install_cryptsetup
