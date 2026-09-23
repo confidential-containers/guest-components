@@ -53,7 +53,7 @@ ttrpc = { workspace = true, features = ["async"], optional = true }
 url = "2.5.4"
 walkdir = "2"
 xattr = "1"
-zstd = "0.13"
+zstd = "0.14"
 
 [build-dependencies]
 anyhow.workspace = true
