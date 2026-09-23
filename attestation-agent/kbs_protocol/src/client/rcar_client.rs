@@ -23,7 +23,7 @@ use crate::{
     client::{
         ClientTee, KBS_GET_RESOURCE_MAX_ATTEMPT, KBS_PREFIX, KBS_PROTOCOL_VERSION, KbsClient,
     },
-    evidence_provider::EvidenceProvider,
+    evidence_provider::{EvidenceProvider, TotalTeeInfo},
     keypair::TeeKeyPair,
     token_provider::Token,
 };
@@ -46,6 +46,9 @@ const ATTESTATION_POLICY_SELECTOR_JSON_KEY: &str = "attestation-policy-selector"
 /// SUPPORTED_HASH_ALGORITHMS_JSON_KEY and the TEE.
 const SELECTED_HASH_ALGORITHM_JSON_KEY: &str = "selected-hash-algorithm";
 
+/// JSON key in a 'Request's extra parameters with which the client provides the TEE metadata.
+const TEE_METADATA_JSON_KEY: &str = "tee-metadata";
+
 /// Hash algorithm to use by default.
 const DEFAULT_HASH_ALGORITHM: HashAlgorithm = HashAlgorithm::Sha384;
 
@@ -58,7 +61,10 @@ struct AttestationResponseData {
     token: String,
 }
 
-async fn get_request_extra_params(attestation_policy_selector: Option<&str>) -> serde_json::Value {
+fn get_request_extra_params(
+    attestation_policy_selector: Option<&str>,
+    tee_metadata: &TotalTeeInfo,
+) -> Result<serde_json::Value> {
     let supported_hash_algorithms = HashAlgorithm::list_all();
 
     let mut extra_params = json!({SUPPORTED_HASH_ALGORITHMS_JSON_KEY: supported_hash_algorithms});
@@ -67,7 +73,10 @@ async fn get_request_extra_params(attestation_policy_selector: Option<&str>) -> 
         extra_params[ATTESTATION_POLICY_SELECTOR_JSON_KEY] = json!(attestation_policy_selector);
     }
 
-    extra_params
+    extra_params[TEE_METADATA_JSON_KEY] = serde_json::to_value(tee_metadata)
+        .map_err(|e| Error::RcarHandshake(format!("failed to serialize tee metadata: {e}")))?;
+
+    Ok(extra_params)
 }
 
 fn get_hash_algorithm(extra_params: serde_json::Value) -> Result<HashAlgorithm> {
@@ -94,20 +103,24 @@ fn serialize_json_canonically<T: Serialize>(value: T) -> anyhow::Result<Vec<u8>>
     Ok(serde_json_canonicalizer::to_vec(&value)?)
 }
 
-async fn build_request(tee: Tee, attestation_policy_selector: Option<&str>) -> Request {
-    let extra_params = get_request_extra_params(attestation_policy_selector).await;
-
-    // Note that the Request includes the list of supported hash algorithms.
-    // The Challenge response will return which TEE-specific algorithm should
-    // be used for future communications.
-    Request {
-        version: String::from(KBS_PROTOCOL_VERSION),
-        tee,
-        extra_params,
-    }
-}
-
 impl KbsClient<Box<dyn EvidenceProvider>> {
+    async fn build_request(&self, attestation_policy_selector: Option<&str>) -> Result<Request> {
+        // Note that the Request includes the list of supported hash algorithms.
+        // The Challenge response will return which TEE-specific algorithm should
+        // be used for future communications.
+        let tee_metadata = self.provider.get_tee_metadata().await.map_err(|e| {
+            Error::RcarHandshake(format!("failed to get request tee metadata: {e}"))
+        })?;
+        let tee = tee_metadata.primary_tee.tee;
+        let extra_params = get_request_extra_params(attestation_policy_selector, &tee_metadata)?;
+
+        Ok(Request {
+            version: String::from(KBS_PROTOCOL_VERSION),
+            tee,
+            extra_params,
+        })
+    }
+
     /// Get a [`TeeKeyPair`] and a [`Token`] that certifies the [`TeeKeyPair`].
     /// If the client does not already have token or the token is invalid,
     /// an RCAR handshake will be performed.
@@ -240,7 +253,9 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             ClientTee::_Initialized(tee) => *tee,
         };
 
-        let request = build_request(tee, self._attestation_policy_selector.as_deref()).await;
+        let request = self
+            .build_request(self._attestation_policy_selector.as_deref())
+            .await?;
 
         debug!("send auth request {request:?} to {auth_endpoint}");
 
@@ -422,13 +437,16 @@ mod test {
     use tokio::io::AsyncBufReadExt;
 
     use crate::{
-        Error, KbsClientBuilder, KbsClientCapabilities, evidence_provider::NativeEvidenceProvider,
+        Error, KbsClientBuilder, KbsClientCapabilities,
+        evidence_provider::{
+            MockedEvidenceProvider, NativeEvidenceProvider, TeeInfo, TotalTeeInfo,
+        },
     };
 
     use crate::client::rcar_client::{
         ATTESTATION_POLICY_SELECTOR_JSON_KEY, DEFAULT_HASH_ALGORITHM, KBS_PROTOCOL_VERSION, Result,
-        SELECTED_HASH_ALGORITHM_JSON_KEY, SUPPORTED_HASH_ALGORITHMS_JSON_KEY, build_request,
-        get_hash_algorithm, get_request_extra_params,
+        SELECTED_HASH_ALGORITHM_JSON_KEY, SUPPORTED_HASH_ALGORITHMS_JSON_KEY,
+        TEE_METADATA_JSON_KEY, get_hash_algorithm, get_request_extra_params,
     };
     use kbs_types::Tee;
 
@@ -556,7 +574,15 @@ mod test {
     #[tokio::test]
     #[serial_test::serial]
     async fn test_get_request_extra_params(#[case] attestation_policy_selector: Option<&str>) {
-        let extra_params = get_request_extra_params(attestation_policy_selector).await;
+        let tee_metadata = TotalTeeInfo {
+            primary_tee: TeeInfo {
+                tee: Tee::Sample,
+                metadata: None,
+            },
+            additional_tees: vec![],
+        };
+        let extra_params =
+            get_request_extra_params(attestation_policy_selector, &tee_metadata).unwrap();
 
         assert!(extra_params.is_object());
 
@@ -584,6 +610,11 @@ mod test {
             let result = algos.contains(algo);
             assert!(result);
         }
+
+        assert_eq!(
+            extra_params.get(TEE_METADATA_JSON_KEY),
+            Some(&serde_json::to_value(&tee_metadata).unwrap())
+        );
     }
 
     #[rstest]
@@ -592,34 +623,42 @@ mod test {
     #[tokio::test]
     #[serial_test::serial]
     async fn test_build_request(#[case] attestation_policy_selector: Option<&str>) {
-        let tees = vec![
-            Tee::AzSnpVtpm,
-            Tee::AzTdxVtpm,
-            Tee::Cca,
-            Tee::Csv,
-            Tee::Se,
-            Tee::Sgx,
-            Tee::Snp,
-            Tee::Tdx,
-        ];
+        let client = KbsClientBuilder::with_evidence_provider(
+            Box::new(MockedEvidenceProvider::default()),
+            &"",
+        )
+        .build()
+        .expect("client create");
 
         let expected_version = String::from(KBS_PROTOCOL_VERSION);
-        let expected_extra_params = get_request_extra_params(attestation_policy_selector).await;
+        let expected_tee_metadata = TotalTeeInfo {
+            primary_tee: TeeInfo {
+                tee: Tee::Sample,
+                metadata: None,
+            },
+            additional_tees: vec![],
+        };
+        let expected_extra_params =
+            get_request_extra_params(attestation_policy_selector, &expected_tee_metadata).unwrap();
 
-        for tee in tees {
-            let request = build_request(tee, attestation_policy_selector).await;
-
-            assert_eq!(request.version, expected_version);
-            assert_eq!(request.tee, tee);
-            assert_eq!(request.extra_params, expected_extra_params);
-            assert_eq!(
-                request
-                    .extra_params
-                    .get(ATTESTATION_POLICY_SELECTOR_JSON_KEY)
-                    .and_then(Value::as_str),
-                attestation_policy_selector
-            );
-        }
+        let request = client
+            .build_request(attestation_policy_selector)
+            .await
+            .unwrap();
+        assert_eq!(request.version, expected_version);
+        assert_eq!(request.tee, Tee::Sample);
+        assert_eq!(request.extra_params, expected_extra_params);
+        assert_eq!(
+            request
+                .extra_params
+                .get(ATTESTATION_POLICY_SELECTOR_JSON_KEY)
+                .and_then(Value::as_str),
+            attestation_policy_selector
+        );
+        assert_eq!(
+            request.extra_params.get(TEE_METADATA_JSON_KEY),
+            Some(&serde_json::to_value(&expected_tee_metadata).unwrap())
+        );
     }
 
     #[rstest]
