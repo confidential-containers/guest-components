@@ -56,33 +56,32 @@ struct Cli {
     /// Configuration file for Attestation Agent
     ///
     /// Example:
-    /// `--config /etc/attestation-agent.conf`
+    /// `--config-file /etc/attestation-agent.conf`
     #[arg(short, long)]
     config_file: Option<String>,
 
     /// Initdata digest to be verified by AA. If initdata check failed, AA will failed to launch.
     /// The initdata should be base64 standard encoding.
     ///
-    /// Note that this is an alternative to `--initdata_toml`.
+    /// Note that this is an alternative to `--initdata-toml`.
     ///
-    /// If both parameters `--initdata_toml` and `initdata_digest` are provided, parameter
-    /// `--initdata_toml` takes precedence.
+    /// If both `--initdata-toml` and `--initdata-digest` are provided,
+    /// `--initdata-toml` takes precedence.
     ///
     /// Example:
-    /// `--initdata_digest AAAAAAAAAAAA`
+    /// `--initdata-digest AAAAAAAAAAAA`
     #[arg(short, long)]
     initdata_digest: Option<String>,
 
     /// Path to the Initdata TOML file to be verified by AA. If initdata check failed, AA will failed to launch.
-    /// The initdata should be base64 standard encoding.
     ///
-    /// Note that this is an alternative to `--initdata_digest`.
+    /// Note that this is an alternative to `--initdata-digest`.
     ///
-    /// /// If both parameters `--initdata_toml` and `initdata_digest` are provided, parameter
-    /// `--initdata_toml` takes precedence.
+    /// If both `--initdata-toml` and `--initdata-digest` are provided,
+    /// `--initdata-toml` takes precedence.
     ///
     /// Example:
-    /// `--initdata_toml /path/to/initdata.toml`
+    /// `--initdata-toml /path/to/initdata.toml`
     #[arg(short = 't', long)]
     initdata_toml: Option<String>,
 }
