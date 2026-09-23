@@ -8,6 +8,8 @@ use kbs_types::{HashAlgorithm, Tee};
 
 pub mod sample;
 pub mod sample_device;
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils;
 pub mod utils;
 
 #[cfg(feature = "az-snp-vtpm-attester")]

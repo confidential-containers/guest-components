@@ -115,4 +115,7 @@ se-attester = ["pv"]
 tpm-attester = ["tss-esapi", "picky-asn1", "picky-asn1-x509", "picky-asn1-der"]
 
 
+# Fake attesters for other crates' tests.
+test-utils = []
+
 bin = ["clap", "tracing-subscriber"]
