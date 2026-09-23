@@ -5,7 +5,7 @@
 
 use std::{env, path::Path};
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use tokio::{fs::File, io::AsyncReadExt};
 use tracing::debug;
@@ -19,6 +19,14 @@ pub fn pad<const T: usize>(input: &[u8]) -> [u8; T] {
         output[..len].copy_from_slice(input);
     }
     output
+}
+
+/// Truncates a digest to its first 32 bytes so it fits a SHA-256 PCR bank.
+pub fn truncate_digest(digest: &[u8]) -> Result<[u8; 32]> {
+    let sha256_digest: &[u8; 32] = digest
+        .first_chunk::<32>()
+        .context("expected digest to be at least 32 bytes")?;
+    Ok(*sha256_digest)
 }
 
 /// Validates and pads data to a specified size.
@@ -210,7 +218,7 @@ pub async fn read_eventlog() -> Result<Option<String>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{EL_HEADER, trim_ccel};
+    use super::{EL_HEADER, trim_ccel, truncate_digest};
     use std::collections::HashMap;
 
     // Builds a minimal TCG_PCR_EVENT spec-id header (EV_NO_ACTION, sha1 digest prefix).
@@ -332,5 +340,13 @@ mod tests {
         ccel.extend_from_slice(&event);
 
         assert!(trim_ccel(ccel).is_err());
+    }
+
+    #[test]
+    fn test_truncate_digest() {
+        let sha384: Vec<u8> = (0..48).collect();
+        assert_eq!(truncate_digest(&sha384).unwrap(), sha384[..32]);
+        assert_eq!(truncate_digest(&[7u8; 32]).unwrap(), [7u8; 32]);
+        assert!(truncate_digest(&[0u8; 20]).is_err());
     }
 }

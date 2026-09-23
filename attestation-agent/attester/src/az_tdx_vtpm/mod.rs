@@ -5,6 +5,7 @@
 
 use super::{Attester, InitDataResult, TeeEvidence};
 use crate::az_snp_vtpm::{TpmQuote, utils};
+use crate::utils::truncate_digest;
 use anyhow::*;
 use az_tdx_vtpm::{hcl, is_tdx_cvm, tdx::TdReport, vtpm};
 use azure_guest_attestation_sdk::guest_attest::ImdsClient;
@@ -76,7 +77,7 @@ impl Attester for AzTdxVtpmAttester {
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> anyhow::Result<InitDataResult> {
-        let sha256 = utils::truncate_digest(init_data_digest)?;
+        let sha256 = truncate_digest(init_data_digest)?;
         spawn_blocking(move || utils::extend_pcr_sync(&sha256, utils::INIT_DATA_PCR)).await??;
         Ok(InitDataResult::Ok)
     }
@@ -90,7 +91,7 @@ impl Attester for AzTdxVtpmAttester {
         event_digest: Vec<u8>,
         register_index: u64,
     ) -> Result<()> {
-        let sha256 = utils::truncate_digest(&event_digest)?;
+        let sha256 = truncate_digest(&event_digest)?;
         spawn_blocking(move || utils::extend_pcr_sync(&sha256, register_index as u8)).await??;
         Ok(())
     }

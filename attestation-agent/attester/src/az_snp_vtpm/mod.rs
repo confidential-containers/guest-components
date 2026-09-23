@@ -4,7 +4,7 @@
 //
 
 use super::{Attester, InitDataResult, TeeEvidence};
-use crate::utils::read_eventlog;
+use crate::utils::{read_eventlog, truncate_digest};
 use anyhow::{Context, Result, bail};
 use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
 use azure_tpm::{Tpm, TpmCommandExt};
@@ -131,7 +131,7 @@ impl Attester for AzSnpVtpmAttester {
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> anyhow::Result<InitDataResult> {
-        let sha256 = utils::truncate_digest(init_data_digest)?;
+        let sha256 = truncate_digest(init_data_digest)?;
         spawn_blocking(move || utils::extend_pcr_sync(&sha256, utils::INIT_DATA_PCR)).await??;
         Ok(InitDataResult::Ok)
     }
@@ -141,7 +141,7 @@ impl Attester for AzSnpVtpmAttester {
         event_digest: Vec<u8>,
         register_index: u64,
     ) -> Result<()> {
-        let sha256 = utils::truncate_digest(&event_digest)?;
+        let sha256 = truncate_digest(&event_digest)?;
         spawn_blocking(move || utils::extend_pcr_sync(&sha256, register_index as u8)).await??;
         Ok(())
     }
@@ -165,13 +165,6 @@ pub(crate) mod utils {
     use super::*;
 
     pub const INIT_DATA_PCR: u8 = 8;
-
-    pub fn truncate_digest(digest: &[u8]) -> Result<[u8; 32]> {
-        let sha256_digest: &[u8; 32] = digest
-            .first_chunk::<32>()
-            .context("expected digest to be at least 32 bytes")?;
-        Ok(*sha256_digest)
-    }
 
     pub fn extend_pcr_sync(digest: &[u8; 32], pcr: u8) -> Result<()> {
         if pcr > 23 {
