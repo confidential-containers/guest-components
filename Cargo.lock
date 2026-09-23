@@ -844,7 +844,6 @@ checksum = "2044bf018f8ff574c82c5c7d672716ff0076b2be07ed6f91afd1ae41b1f8889d"
 dependencies = [
  "jsonwebkey",
  "memoffset 0.9.1",
- "openssl",
  "serde",
  "serde-big-array",
  "serde_json",
@@ -871,9 +870,9 @@ dependencies = [
 
 [[package]]
 name = "az-tdx-vtpm"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68381aac2d985b3482b67aa9766b0a5c97afcb7e794815871b824d7766cca56b"
+checksum = "27351d04ee10126c281b9ff6bbffe642154ab2334b38638104c2b06a8f0c0779"
 dependencies = [
  "az-cvm-vtpm",
  "base64-url",
@@ -887,7 +886,8 @@ dependencies = [
 [[package]]
 name = "azure-guest-attestation-sdk"
 version = "0.1.0"
-source = "git+https://github.com/Azure/azure-guest-attestation-sdk?rev=9c8344cbeeb2c7ab46c1311e983f254a69ab5eec#9c8344cbeeb2c7ab46c1311e983f254a69ab5eec"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bef27b68b503a3e19502e3557f6bd340f0296e9289417f8371736635f474af2"
 dependencies = [
  "aes-gcm 0.10.3",
  "azure-tpm",
@@ -909,7 +909,8 @@ dependencies = [
 [[package]]
 name = "azure-tpm"
 version = "0.1.0"
-source = "git+https://github.com/Azure/azure-guest-attestation-sdk?rev=9c8344cbeeb2c7ab46c1311e983f254a69ab5eec#9c8344cbeeb2c7ab46c1311e983f254a69ab5eec"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6aba3c76b6720eabed3349061682cf67b47370ed580642ea205147bed8de089c"
 dependencies = [
  "bitfield-struct",
  "digest 0.10.7",
@@ -6454,15 +6455,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rdrand"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d92195228612ac8eed47adbc2ed0f04e513a4ccb98175b6f2bd04d963b533655"
-dependencies = [
- "rand_core 0.6.4",
-]
-
-[[package]]
 name = "redox_syscall"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7373,8 +7365,6 @@ dependencies = [
  "iocuddle 0.1.1",
  "lazy_static",
  "libc",
- "openssl",
- "rdrand",
  "serde",
  "serde-big-array",
  "static_assertions",

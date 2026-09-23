@@ -9,14 +9,14 @@ license = "Apache-2.0"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-az-snp-vtpm = { version = "0.8.1", default-features = false, features = [
+az-snp-vtpm = { version = "0.8.2", default-features = false, features = [
     "attester",
 ], optional = true }
-az-tdx-vtpm = { version = "0.8.1", default-features = false, features = [
+az-tdx-vtpm = { version = "0.8.2", default-features = false, features = [
     "attester",
 ], optional = true }
-azure-guest-attestation-sdk = { git = "https://github.com/Azure/azure-guest-attestation-sdk", rev = "9c8344cbeeb2c7ab46c1311e983f254a69ab5eec", optional = true }
-azure-tpm = { git = "https://github.com/Azure/azure-guest-attestation-sdk", rev = "9c8344cbeeb2c7ab46c1311e983f254a69ab5eec", optional = true }
+azure-guest-attestation-sdk = { version = "0.1", optional = true }
+azure-tpm = { version = "0.1", optional = true }
 base64.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
 cfg-if.workspace = true
