@@ -108,11 +108,7 @@ impl AttestationAgent {
     pub async fn init(&mut self) -> Result<()> {
         let config = self.config.read().await;
         if config.eventlog_config.enable_eventlog {
-            let eventlog = EventLog::new(
-                self.primary_attester.clone(),
-                config.eventlog_config.init_pcr,
-            )
-            .await?;
+            let eventlog = EventLog::new(self.primary_attester.clone()).await?;
 
             self.eventlog = Some(Mutex::new(eventlog));
         }
