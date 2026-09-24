@@ -4,6 +4,7 @@
 //
 
 use super::{Attester, InitDataResult, TeeEvidence};
+use crate::utils::truncate_digest;
 pub mod utils;
 
 use self::utils::{
@@ -98,8 +99,9 @@ impl Attester for TpmAttester {
 
     /// Bind init data for the TPM attester (extends PCR 8).
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> Result<InitDataResult> {
+        let digest = truncate_digest(init_data_digest)?;
         // Use the stored tpm_device path.
-        extend_pcr(&self.tpm_device, init_data_digest.to_vec(), PCR_SLOT_8)
+        extend_pcr(&self.tpm_device, digest.to_vec(), PCR_SLOT_8)
             .map_err(|e| anyhow!("Failed to extend PCR for init data: {e}"))?;
         Ok(InitDataResult::Ok)
     }
