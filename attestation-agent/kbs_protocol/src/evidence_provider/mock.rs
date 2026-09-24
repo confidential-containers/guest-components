@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use attester::TeeEvidence;
 use kbs_types::Tee;
 
-use super::EvidenceProvider;
+use super::{EvidenceProvider, TeeInfo, TotalTeeInfo};
 
 use crate::Result;
 
@@ -26,5 +26,15 @@ impl EvidenceProvider for MockedEvidenceProvider {
 
     async fn get_tee_type(&self) -> Result<Tee> {
         Ok(Tee::Sample)
+    }
+
+    async fn get_tee_metadata(&self) -> Result<TotalTeeInfo> {
+        Ok(TotalTeeInfo {
+            primary_tee: TeeInfo {
+                tee: Tee::Sample,
+                metadata: None,
+            },
+            additional_tees: vec![],
+        })
     }
 }
