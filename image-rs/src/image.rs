@@ -575,7 +575,7 @@ fn create_bundle(
     Ok(image_id)
 }
 
-#[cfg(not(target_arch = "s390x"))]
+#[cfg(not(any(target_arch = "s390x", target_arch = "powerpc64")))]
 #[cfg(test)]
 mod tests {
     use super::*;
