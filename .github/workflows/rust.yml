@@ -139,7 +139,7 @@ jobs:
           - instance: ubuntu-24.04-arm
             make_args: "ATTESTER=cca-attester"
           - instance: ubuntu-24.04-ppc64le
-            make_args: ""
+            make_args: "ATTESTER=none"
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
