@@ -39,6 +39,8 @@ ifeq ($(ARCH), s390x)
     ATTESTER ?= se-attester
 else ifeq ($(ARCH), aarch64)
     ATTESTER ?= cca-attester
+else ifeq ($(ARCH), powerpc64le)
+    ATTESTER ?= none
 else
     ATTESTER ?= all-attesters
 endif

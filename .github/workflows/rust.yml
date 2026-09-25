@@ -130,6 +130,7 @@ jobs:
           - ubuntu-24.04
           - ubuntu-24.04-s390x
           - ubuntu-24.04-arm
+          - ubuntu-24.04-ppc64le
         include:
           - instance: ubuntu-24.04
             make_args: ""
@@ -137,6 +138,8 @@ jobs:
             make_args: "ATTESTER=se-attester"
           - instance: ubuntu-24.04-arm
             make_args: "ATTESTER=cca-attester"
+          - instance: ubuntu-24.04-ppc64le
+            make_args: "ATTESTER=none"
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -154,6 +157,7 @@ jobs:
           install-tpm: "true"
           install-dmverity: "true"
           install-nvat: ${{ matrix.instance == 'ubuntu-24.04' && 'true' || 'false' }}
+          install-build-deps: ${{ matrix.instance == 'ubuntu-24.04-ppc64le' && 'true' || 'false' }}
 
       - name: Gnu build and install with ttrpc
         working-directory: ./attestation-agent
@@ -200,6 +204,7 @@ jobs:
           - ubuntu-24.04
           - ubuntu-24.04-s390x
           - ubuntu-24.04-arm
+          - ubuntu-24.04-ppc64le
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -215,6 +220,7 @@ jobs:
       - uses: $/.github/actions/setup-rust-ci
         with:
           install-zfs: "true"
+          install-build-deps: ${{ matrix.instance == 'ubuntu-24.04-ppc64le' && 'true' || 'false' }}
 
       - name: Lint
         working-directory: ./confidential-data-hub
@@ -249,6 +255,7 @@ jobs:
           - ubuntu-24.04
           - ubuntu-24.04-s390x
           - ubuntu-24.04-arm
+          - ubuntu-24.04-ppc64le
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -262,6 +269,8 @@ jobs:
           fetch-depth: 1
 
       - uses: $/.github/actions/setup-rust-ci
+        with:
+          install-build-deps: ${{ matrix.instance == 'ubuntu-24.04-ppc64le' && 'true' || 'false' }}
 
       - name: Build and install with default features
         working-directory: ./api-server-rest
@@ -270,7 +279,7 @@ jobs:
           make && make install PREFIX=${HOME}/.local
 
       - name: Musl build with default features
-        if: ${{ !endsWith(matrix.instance, 's390x') }}
+        if: ${{ !endsWith(matrix.instance, 's390x') && !endsWith(matrix.instance, 'ppc64le') }}
         working-directory: ./api-server-rest
         run: make LIBC=musl
 
@@ -301,6 +310,7 @@ jobs:
           - ubuntu-24.04
           - ubuntu-24.04-s390x
           - ubuntu-24.04-arm
+          - ubuntu-24.04-ppc64le
     runs-on: ${{ matrix.instance }}
     environment: image-rs
     steps:
@@ -321,12 +331,6 @@ jobs:
           install-dmverity: ${{ matrix.instance == 'ubuntu-24.04' && 'true' || 'false' }}
           install-cryptsetup: ${{ (matrix.instance == 'ubuntu-24.04' || matrix.instance == 'ubuntu-24.04-arm') && 'true' || 'false' }}
 
-      - name: Install cross-compilation support
-        if: matrix.instance == 'ubuntu-24.04'
-        run: |
-          sudo apt-get install -y gcc-powerpc64le-linux-gnu
-          rustup target add powerpc64le-unknown-linux-gnu
-
       - name: Lint
         working-directory: ./image-rs
         run: make lint
@@ -334,12 +338,6 @@ jobs:
       - name: Build
         working-directory: ./image-rs
         run: make build
-
-      - name: Cross-compile for powerpc64le
-        if: matrix.instance == 'ubuntu-24.04'
-        run: |
-          sudo -E PATH=$PATH -s RUSTFLAGS=" -C linker=powerpc64le-linux-gnu-gcc" \
-            cargo build --target powerpc64le-unknown-linux-gnu -p image-rs --features default
 
       - name: Test
         env:
@@ -365,6 +363,7 @@ jobs:
         instance:
           - ubuntu-24.04
           - ubuntu-24.04-arm
+          - ubuntu-24.04-ppc64le
     runs-on: ${{ matrix.instance }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
