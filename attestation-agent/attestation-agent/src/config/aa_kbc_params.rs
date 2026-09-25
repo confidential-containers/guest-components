@@ -12,6 +12,7 @@ pub enum ParamError {
     MissingInCmdline,
 }
 
+#[derive(Debug)]
 pub struct AaKbcParams {
     pub kbc: String,
     pub uri: String,
@@ -78,5 +79,54 @@ impl AaKbcParams {
             .strip_prefix("agent.aa_kbc_params=")
             .expect("must have a prefix");
         Ok(value.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case("offline_fs_kbc::http://127.0.0.1:8080", "offline_fs_kbc", "http://127.0.0.1:8080")]
+    #[case("cc_kbc::https://kbs.example.com", "cc_kbc", "https://kbs.example.com")]
+    #[case("null_kbc::", "null_kbc", "")]
+    fn test_try_from_valid_params(
+        #[case] input: &str,
+        #[case] expected_kbc: &str,
+        #[case] expected_uri: &str,
+    ) {
+        let params = AaKbcParams::try_from(input.to_string())
+            .expect("should parse successfully");
+        assert_eq!(params.kbc, expected_kbc);
+        assert_eq!(params.uri, expected_uri);
+    }
+
+    #[rstest]
+    #[case("no_separator_at_all")]
+    #[case("one:colon")]
+    #[case("a::b::c")]
+    fn test_try_from_invalid_format_returns_error(#[case] input: &str) {
+        let err = AaKbcParams::try_from(input.to_string())
+            .expect_err("expected error for invalid input");
+        assert!(matches!(err, ParamError::IllegalFormat(_)));
+    }
+
+    #[test]
+    fn test_default_kbc_is_offline_fs() {
+        let params = AaKbcParams::default();
+        assert_eq!(params.kbc, "offline_fs_kbc");
+        assert_eq!(params.uri, "");
+    }
+
+    // AaKbcParams::new() reads AA_KBC_PARAMS from env when present.
+    // This covers the get_value() → env branch that TryFrom tests don't reach.
+    #[test]
+    fn test_new_reads_from_env() {
+        std::env::set_var("AA_KBC_PARAMS", "cc_kbc::https://kbs.example.com");
+        let params = AaKbcParams::new().expect("new() failed");
+        std::env::remove_var("AA_KBC_PARAMS");
+        assert_eq!(params.kbc, "cc_kbc");
+        assert_eq!(params.uri, "https://kbs.example.com");
     }
 }

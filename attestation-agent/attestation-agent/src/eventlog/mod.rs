@@ -375,13 +375,12 @@ mod tests {
         assert_eq!(std::fs::read(&log_path).unwrap(), b"01AB456789");
     }
 
-    #[test]
-    fn test_content() {
-        let a_str = "hello";
-        let _: Content = a_str.try_into().unwrap();
-        let b_str = "hello\nworld";
-        let content: Result<Content, _> = b_str.try_into();
-        assert!(content.is_err());
+    #[rstest]
+    #[case("hello world", true)]
+    #[case("has\nnewline", false)]
+    fn test_content(#[case] s: &str, #[case] valid: bool) {
+        let result: Result<Content, _> = s.try_into();
+        assert_eq!(result.is_ok(), valid);
     }
 
     /// The eventlog will influence the underlying hardware
@@ -532,5 +531,56 @@ mod tests {
             .unwrap();
         drop(eventlog);
         std::fs::remove_file(EVENTLOG_PATH).unwrap();
+    }
+
+    // Event::new and Event::try_from: valid parses + newline rejection.
+    #[rstest]
+    #[case("domain operation content", "domain", "operation", "content", true)]
+    #[case("d o c with spaces", "d", "o", "c with spaces", true)]
+    #[case("no_spaces_at_all", "", "", "", false)]
+    #[case("only_one space", "", "", "", false)]
+    fn test_event_parse(
+        #[case] input: &str,
+        #[case] domain: &str,
+        #[case] operation: &str,
+        #[case] content: &str,
+        #[case] valid: bool,
+    ) {
+        let result: Result<Event, _> = input.try_into();
+        if valid {
+            let event = result.expect("should parse");
+            assert_eq!(event.domain, domain);
+            assert_eq!(event.operation, operation);
+            assert_eq!(event.content.0, content);
+            // Display must round-trip
+            assert_eq!(event.to_string(), input);
+        } else {
+            assert!(result.is_err());
+        }
+    }
+
+    // Event::new is the constructor path (domain/operation/content args directly),
+    // distinct from Event::try_from which parses a single space-delimited string.
+    #[test]
+    fn test_event_new_constructs_correctly() {
+        let event = Event::new("dom", "op", "cnt").expect("Event::new failed");
+        assert_eq!(event.to_string(), "dom op cnt");
+    }
+
+    // WAL cache: absent path returns Ok(None); truncated file (< 8 bytes for
+    // the offset field) returns Err.
+    #[test]
+    fn test_wal_cache_absent_returns_none() {
+        let tmp = tempfile::tempdir().unwrap();
+        let result = EventLog::read_wal_cache_from(&tmp.path().join("wal"), 32);
+        assert!(result.unwrap().is_none());
+    }
+
+    #[test]
+    fn test_wal_cache_truncated_returns_err() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("wal");
+        std::fs::write(&path, b"abc").unwrap(); // 3 bytes < 8-byte offset field
+        assert!(EventLog::read_wal_cache_from(&path, 32).is_err());
     }
 }
