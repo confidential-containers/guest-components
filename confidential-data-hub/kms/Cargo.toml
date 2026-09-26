@@ -35,7 +35,9 @@ tokio = { workspace = true, features = ["fs"] }
 toml.workspace = true
 tonic = { workspace = true, optional = true }
 tracing.workspace = true
+ttrpc = { workspace = true, optional = true }
 url = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true }
 
 [dev-dependencies]
 rstest.workspace = true
@@ -64,3 +66,11 @@ aliyun = [
 ]
 aws = ["aws-sdk-kms", "aws-sdk-secretsmanager"]
 kbs = ["kbs_protocol"]
+ccm_kbc = [
+    "uuid",
+    "reqwest/rustls",
+    "reqwest/json",
+    "ttrpc/async",
+    "protos",
+    "protos/ttrpc",
+]

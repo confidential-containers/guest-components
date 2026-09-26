@@ -43,6 +43,23 @@ else
     ATTESTER ?= all-attesters
 endif
 
+# ccm_as (SEV-SNP/TDX/NVIDIA attestation to Fortanix CCM) is an x86_64/bare-metal-server
+# feature - it has no meaning on s390x (Secure Execution) or aarch64 (CCA) and pulls in the
+# `client`/`attestation` crates, which transitively depend on `mbedtls`. mbedtls's RDRAND/RDSEED
+# backend uses x86-only intrinsics unguarded by an arch cfg, so building it on non-x86_64 hard
+# fails. Default it on only for x86_64; override with CCM_AS=1/0 to force either way.
+ifeq ($(ARCH), x86_64)
+    CCM_AS ?= 1
+else
+    CCM_AS ?= 0
+endif
+
+ifeq ($(CCM_AS), 1)
+    CCM_AS_FEATURE := ,ccm_as
+else
+    CCM_AS_FEATURE :=
+endif
+
 ifeq ($(ttrpc), false)
     binary = --bin grpc-aa
     binary_name = grpc-aa
@@ -60,13 +77,13 @@ else
 endif
 
 ifeq ($(ATTESTER), none)
-    AA_FEATURES := kbs,coco_as,bin,$(RPC),$(CRYPTO)
-    AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(CRYPTO)
+    AA_FEATURES := kbs,coco_as$(CCM_AS_FEATURE),bin,$(RPC),$(CRYPTO)
+    AA_CHECK_FEATURES := kbs,coco_as$(CCM_AS_FEATURE),bin,ttrpc,grpc,$(CRYPTO)
     ATTESTER_PKG_FEATURES := bin
     KBS_PROTOCOL_FEATURES := background_check,passport,$(CRYPTO),bin,aa_ttrpc,pqc-experimental
 else
-    AA_FEATURES := kbs,coco_as,bin,$(RPC),$(CRYPTO),$(ATTESTER)
-    AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(CRYPTO),$(ATTESTER)
+    AA_FEATURES := kbs,coco_as$(CCM_AS_FEATURE),bin,$(RPC),$(CRYPTO),$(ATTESTER)
+    AA_CHECK_FEATURES := kbs,coco_as$(CCM_AS_FEATURE),bin,ttrpc,grpc,$(CRYPTO),$(ATTESTER)
     ATTESTER_PKG_FEATURES := $(ATTESTER),bin
     KBS_PROTOCOL_FEATURES := background_check,passport,$(CRYPTO),$(ATTESTER),bin,aa_ttrpc,pqc-experimental
 endif
@@ -113,7 +130,7 @@ ifneq ($(RUSTFLAGS_ARGS),)
 endif
 
 build:
-	cd attestation-agent && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(AA_FEATURES)" $(binary) $(LIBC_FLAG)
+	cd attestation-agent && env -u DESTDIR $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(AA_FEATURES)" $(binary) $(LIBC_FLAG)
 	mv $(TARGET_DIR)/$(binary_name) $(TARGET)
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)

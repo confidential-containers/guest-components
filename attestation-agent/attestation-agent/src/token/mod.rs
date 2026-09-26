@@ -12,6 +12,9 @@ pub mod kbs;
 #[cfg(feature = "coco_as")]
 pub mod coco_as;
 
+#[cfg(feature = "ccm_as")]
+pub mod ccm_as;
+
 fn make_error(_: &str) -> Error {
     Error::msg("Invalid resource type")
 }
@@ -26,4 +29,8 @@ pub enum TokenType {
     #[cfg(feature = "coco_as")]
     #[strum(serialize = "coco_as")]
     CoCoAS,
+
+    #[cfg(feature = "ccm_as")]
+    #[strum(serialize = "ccm_as")]
+    CcmAs,
 }
