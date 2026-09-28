@@ -441,7 +441,7 @@ mod tests {
     #[case::integrity("true")]
     #[case::no_integrity("false")]
     #[tokio::test]
-    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[cfg_attr(any(target_arch = "s390x", target_arch = "powerpc64"), ignore)]
     #[serial]
     async fn encrypt_an_empty_device_and_make_a_filesystem_on_it_using_luks2(
         #[case] integrity: &str,
@@ -485,7 +485,7 @@ mod tests {
     #[case::integrity("true")]
     #[case::no_integrity("false")]
     #[tokio::test]
-    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[cfg_attr(any(target_arch = "s390x", target_arch = "powerpc64"), ignore)]
     #[serial]
     async fn encrypt_an_empty_device_with_mkfs_opts_using_luks2(#[case] integrity: &str) {
         use std::io::Write;
@@ -528,7 +528,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[cfg_attr(any(target_arch = "s390x", target_arch = "powerpc64"), ignore)]
     #[serial]
     async fn encrypt_a_loop_device_with_integrity_and_mkfs_opts_using_luks2() {
         let temp_device = TempFileLoopDevice::new(512 * 1024 * 1024).unwrap();
@@ -571,7 +571,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[cfg_attr(any(target_arch = "s390x", target_arch = "powerpc64"), ignore)]
     #[serial]
     async fn encrypt_a_loop_device_with_integrity_and_parallel_ext4_stress_using_luks2() {
         let temp_device = TempFileLoopDevice::new(56 * 1024 * 1024 * 1024).unwrap();
@@ -614,7 +614,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[cfg_attr(any(target_arch = "s390x", target_arch = "powerpc64"), ignore)]
     #[serial]
     async fn encrypt_a_loop_device_with_integrity_and_single_worker_ext4_stress_using_luks2() {
         let temp_device = TempFileLoopDevice::new(56 * 1024 * 1024 * 1024).unwrap();
@@ -660,7 +660,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[cfg_attr(any(target_arch = "s390x", target_arch = "powerpc64"), ignore)]
     #[serial]
     async fn encrypt_an_empty_device_using_luks2() {
         use rand::{distr::Alphanumeric, rng, RngExt};
@@ -706,7 +706,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[cfg_attr(any(target_arch = "s390x", target_arch = "powerpc64"), ignore)]
     #[serial]
     async fn open_pre_encrypted_device_using_luks2_with_key() {
         use crate::storage::drivers::luks2::Luks2Formatter;
@@ -761,7 +761,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[cfg_attr(any(target_arch = "s390x", target_arch = "powerpc64"), ignore)]
     #[serial]
     async fn encrypt_empty_device_without_key_uses_random_key() {
         use rand::{distr::Alphanumeric, rng, RngExt};
