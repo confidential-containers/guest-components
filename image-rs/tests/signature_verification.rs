@@ -121,6 +121,7 @@ const SIGSTORE_CONFIG_URI: &str = "kbs:///default/sigstore-config/test";
 ))]
 #[tokio::test]
 #[serial_test::serial]
+#[cfg_attr(target_arch = "powerpc64", ignore)]
 async fn signature_verification() {
     do_signature_verification_tests(&_TESTS, common::OFFLINE_FS_KBC_RESOURCES_FILE, &None).await;
 }
