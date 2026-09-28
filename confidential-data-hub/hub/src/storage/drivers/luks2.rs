@@ -380,7 +380,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[cfg_attr(any(target_arch = "s390x", target_arch = "powerpc64"), ignore)]
     #[serial]
     fn encrypt_open_device_no_integrity() {
         let mut bin_file = tempfile::NamedTempFile::new().unwrap();
@@ -404,7 +404,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[cfg_attr(any(target_arch = "s390x", target_arch = "powerpc64"), ignore)]
     #[serial]
     fn encrypt_open_device_integrity() {
         let mut bin_file = tempfile::NamedTempFile::new().unwrap();
@@ -428,7 +428,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[cfg_attr(any(target_arch = "s390x", target_arch = "powerpc64"), ignore)]
     #[serial]
     fn encrypt_open_device_no_integrity_with_header() {
         let mut bin_file = tempfile::NamedTempFile::new().unwrap();
@@ -454,7 +454,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "s390x", ignore)]
+    #[cfg_attr(any(target_arch = "s390x", target_arch = "powerpc64"), ignore)]
     #[serial]
     fn encrypt_open_device_integrity_with_header() {
         let mut bin_file = tempfile::NamedTempFile::new().unwrap();
