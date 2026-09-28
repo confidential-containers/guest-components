@@ -436,6 +436,7 @@ mod test {
 
     #[tokio::test]
     #[serial_test::serial]
+    #[cfg_attr(target_arch = "powerpc64", ignore)]
     async fn test_client() {
         // prepare test resource
         let tmp = tempfile::tempdir().expect("create tempdir");

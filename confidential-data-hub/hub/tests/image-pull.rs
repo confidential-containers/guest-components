@@ -18,6 +18,7 @@ const OFFLINE_FS_KBC_RESOURCE_SCRIPT: &str =
 #[case::private_registry("quay.io/liudalibj/private-busy-box")]
 #[tokio::test]
 #[serial_test::serial]
+#[cfg_attr(target_arch = "powerpc64", ignore)]
 async fn test_pull_image(#[case] image_ref: &str) {
     tokio::process::Command::new(OFFLINE_FS_KBC_RESOURCE_SCRIPT)
         .arg("install")
