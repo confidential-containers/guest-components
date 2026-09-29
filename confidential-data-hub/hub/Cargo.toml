@@ -53,7 +53,7 @@ jose-jwk = "0.1.2"
 jose-jws = "0.1.2"
 kms = { path = "../kms", default-features = false }
 nix.workspace = true
-p256 = "0.13.2"
+p256 = "0.14.0"
 prost = { workspace = true, optional = true }
 protos = { path = "../../protos", default-features = false, optional = true }
 rand.workspace = true
