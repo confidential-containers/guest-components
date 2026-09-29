@@ -302,7 +302,6 @@ jobs:
           - ubuntu-24.04-s390x
           - ubuntu-24.04-arm
     runs-on: ${{ matrix.instance }}
-    environment: image-rs
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -343,7 +342,7 @@ jobs:
 
       - name: Test
         env:
-          AUTH_PASSWORD: ${{ secrets.SH_ICR_API_KEY }}
+          AUTH_PASSWORD: ${{ secrets.SH_ICR_API_KEY }} # zizmor: ignore[secrets-outside-env]
         working-directory: ./image-rs
         run: sudo -E PATH=$PATH -s make test
 
