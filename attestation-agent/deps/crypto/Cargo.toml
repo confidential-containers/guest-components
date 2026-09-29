@@ -16,7 +16,7 @@ ctr = { workspace = true, optional = true }
 kbs-types.workspace = true
 openssl = { workspace = true, features = ["vendored"], optional = true }
 p256 = { version = "0.13.1", features = ["ecdh", "pem"], optional = true }
-p521 = { version = "0.13.3", features = ["ecdh", "pem"], optional = true }
+p521 = { version = "0.14.0", features = ["ecdh", "pem"], optional = true }
 rand.workspace = true
 
 # This is for API compability of p256 who is using the old version of `rand`
