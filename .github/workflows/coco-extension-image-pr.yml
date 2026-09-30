@@ -1,0 +1,149 @@
+name: Publish the CoCo guest extension image from a pull request
+
+# Lets consumers (e.g. kata-containers) test a pull request against real images.
+#
+# Adding the "publish-coco-extension" label publishes the artifacts that the
+# "Build and publish the CoCo guest extension image" workflow built for the
+# pull request's current head commit. They go to dedicated "-pr" packages,
+# tagged "<head sha>-<variant>[-<arch>]" like the images published from main,
+# so consumers only need to swap the image names and the version.
+#
+# The pull request code is never checked out or run here: it was built by the
+# pull_request workflow with a read-only token, and this workflow only pushes
+# the resulting artifacts. The label is removed afterwards, so every new head
+# commit needs a maintainer to add it again.
+on:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] PR code is never checked out, only its build artifacts are published.
+    types:
+    - labeled
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+env:
+  REGISTRY: ghcr.io
+  CONTAINER_IMAGE: ghcr.io/${{ github.repository }}/coco-extension-pr
+  DISK_IMAGE: ghcr.io/${{ github.repository }}/coco-extension-disk-pr
+  BUILD_WORKFLOW: coco-extension-image.yml
+
+jobs:
+  publish:
+    name: publish images for the pull request head
+    if: ${{ github.event.label.name == 'publish-coco-extension' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read # download the artifacts of the pull_request build
+      packages: write # push the images to ghcr.io
+    env:
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+
+    - name: Find the build of the pull request head
+      id: build
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        run_id="$(gh run list --workflow "${BUILD_WORKFLOW}" --event pull_request \
+          --commit "${HEAD_SHA}" --status success --limit 1 --json databaseId \
+          --jq '.[0].databaseId // empty')"
+        if [ -z "${run_id}" ]; then
+          echo "::error::No successful ${BUILD_WORKFLOW} run for ${HEAD_SHA} yet; add the label again once it has finished."
+          exit 1
+        fi
+        echo "run_id=${run_id}" >> "${GITHUB_OUTPUT}"
+
+    - name: Download the build artifacts
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        RUN_ID: ${{ steps.build.outputs.run_id }}
+      run: gh run download "${RUN_ID}" --pattern 'coco-extension-*' --dir artifacts
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+
+    - name: Publish the per-arch images
+      run: |
+        for dir in artifacts/coco-extension-*; do
+          name="${dir#artifacts/coco-extension-}"
+          variant="${name%-*}"
+          arch="${name##*-}"
+          tag="${HEAD_SHA}-${variant}-${arch}"
+
+          loaded="$(docker load -i "${dir}/coco-extension-oci-${variant}-${arch}.tar" \
+            | sed -n 's/^Loaded image: //p')"
+          docker tag "${loaded}" "${CONTAINER_IMAGE}:${tag}"
+          docker push "${CONTAINER_IMAGE}:${tag}"
+
+          files=("kata-containers-coco-extension.img")
+          cp "${dir}/kata-containers-coco-extension-${variant}-${arch}.img" \
+            "${dir}/kata-containers-coco-extension.img"
+          if [ -f "${dir}/root_hash_coco-extension-${variant}-${arch}.txt" ]; then
+            cp "${dir}/root_hash_coco-extension-${variant}-${arch}.txt" \
+              "${dir}/root_hash_coco-extension.txt"
+            files+=("root_hash_coco-extension.txt")
+          fi
+          (cd "${dir}" && oras push "${DISK_IMAGE}:${tag}" \
+            --artifact-type application/vnd.confidential-containers.coco-extension.disk \
+            "${files[@]}")
+        done
+
+    - name: Publish the multi-arch manifests
+      run: |
+        variants="$(find artifacts -mindepth 1 -maxdepth 1 -name 'coco-extension-*' \
+          | sed 's|^artifacts/coco-extension-||; s|-[^-]*$||' | sort -u)"
+        for variant in ${variants}; do
+          for image in "${CONTAINER_IMAGE}" "${DISK_IMAGE}"; do
+            reference="${image}:${HEAD_SHA}-${variant}"
+            docker manifest create "${reference}" \
+              --amend "${reference}-amd64" \
+              --amend "${reference}-arm64" \
+              --amend "${reference}-s390x"
+            for arch in amd64 arm64 s390x; do
+              docker manifest annotate --arch "${arch}" --os linux "${reference}" "${reference}-${arch}"
+            done
+            docker manifest push "${reference}"
+          done
+          {
+            echo "### ${variant}"
+            echo '```yaml'
+            echo "version: \"${HEAD_SHA}\""
+            echo "variant: \"${variant}\""
+            echo "container_image: \"${CONTAINER_IMAGE}\""
+            echo "extension_image: \"${DISK_IMAGE}\""
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+        done
+
+  unlabel:
+    name: remove the label
+    needs: publish
+    if: ${{ always() && github.event.label.name == 'publish-coco-extension' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write # remove the label from the pull request
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+
+    - name: Remove the label
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: gh pr edit "${PR_NUMBER}" --remove-label publish-coco-extension
