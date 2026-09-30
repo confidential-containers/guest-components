@@ -79,7 +79,7 @@ Note:
 RPC plugins (flag `RPC`)
 | Feature name        |           Note                                                     |
 | ------------------- | -----------------------------------------------------------------  |
-| grpc                | Use grpc API to serve for requests (TCP/IP socket).                |
+| grpc                | Use gRPC over TCP, with optional per-service Unix sockets.         |
 | ttrpc               | Use ttrpc API to serve for requests (Unix socket).                 |
 
 Secure mount plugins (flag `STORAGE`)
@@ -95,6 +95,21 @@ confidential-data-hub -c <path-to-config>
 ```
 
 Please see the example config file in [toml](./example.config.toml) or [json](./example.config.json) for more details.
+
+Both RPC binaries accept an optional `services_dir` configuration setting. When
+set, CDH also serves `imagepull.sock`, `sealedsecrets.sock`, `securemount.sock`
+and `getresource.sock` in that directory. Each socket exposes only its named
+service and uses the running binary's protocol (ttRPC or gRPC); clients must
+use the matching protocol. All listeners share one CDH instance.
+
+The combined endpoint remains available at `socket`: a Unix socket URI for
+ttRPC (for example, `unix:///run/confidential-containers/cdh.sock`) or a TCP
+address for gRPC (for example, `127.0.0.1:50000`). Per-service sockets are bound
+before the combined endpoint. Omitting `services_dir` serves only the combined
+endpoint, including the key-provider service, unless `CDH_SERVICES_DIR` is set
+to a non-empty path. That variable fills `services_dir` only when the config
+omits it, so a launcher can enable the per-service sockets without rewriting a
+config whose other fields come from the kernel command line or from initdata.
 
 However, if a file isn't passed with **-c** then it will search for configurations on the
 following locations (in order):

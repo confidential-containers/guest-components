@@ -9,9 +9,11 @@ use confidential_data_hub::{
     storage::volume_type::Storage,
     {hub::Hub, DataHub},
 };
-use std::{error::Error as _, net::SocketAddr, sync::Arc};
+use std::{error::Error as _, net::SocketAddr, path::Path, sync::Arc};
+use tokio::{fs, net::UnixListener, task::JoinSet};
+use tokio_stream::wrappers::UnixListenerStream;
 use tonic::{transport::Server, Request, Response, Status};
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 use crate::{
     format_error,
@@ -211,17 +213,73 @@ impl KeyProviderService for Cdh {
     }
 }
 
-pub async fn start_grpc_service(socket: SocketAddr, inner: Hub) -> Result<()> {
+pub async fn start_grpc_service(
+    socket: SocketAddr,
+    inner: Hub,
+    services_dir: Option<&str>,
+) -> Result<()> {
     let service = Cdh {
         inner: Arc::new(inner),
     };
-    Server::builder()
-        .add_service(SealedSecretServiceServer::new(service.clone()))
-        .add_service(GetResourceServiceServer::new(service.clone()))
-        .add_service(SecureMountServiceServer::new(service.clone()))
-        .add_service(ImagePullServiceServer::new(service.clone()))
-        .add_service(KeyProviderServiceServer::new(service))
-        .serve(socket)
-        .await?;
+    let mut servers = JoinSet::new();
+
+    if let Some(services_dir) = services_dir {
+        fs::create_dir_all(services_dir)
+            .await
+            .with_context(|| format!("cannot create services directory {services_dir}"))?;
+        for (name, router) in [
+            (
+                "imagepull",
+                Server::builder().add_service(ImagePullServiceServer::new(service.clone())),
+            ),
+            (
+                "sealedsecrets",
+                Server::builder().add_service(SealedSecretServiceServer::new(service.clone())),
+            ),
+            (
+                "securemount",
+                Server::builder().add_service(SecureMountServiceServer::new(service.clone())),
+            ),
+            (
+                "getresource",
+                Server::builder().add_service(GetResourceServiceServer::new(service.clone())),
+            ),
+        ] {
+            let path = Path::new(services_dir).join(format!("{name}.sock"));
+            if path.exists() {
+                fs::remove_file(&path).await?;
+            }
+            let listener = UnixListener::bind(&path)
+                .with_context(|| format!("cannot bind cdh gRPC service to {}", path.display()))?;
+            info!(
+                "[gRPC] Confidential Data Hub serves {name} on: {}",
+                path.display()
+            );
+            servers.spawn(async move {
+                router
+                    .serve_with_incoming(UnixListenerStream::new(listener))
+                    .await
+                    .with_context(|| format!("CDH gRPC {name} server failed"))
+            });
+        }
+    }
+
+    servers.spawn(async move {
+        Server::builder()
+            .add_service(SealedSecretServiceServer::new(service.clone()))
+            .add_service(GetResourceServiceServer::new(service.clone()))
+            .add_service(SecureMountServiceServer::new(service.clone()))
+            .add_service(ImagePullServiceServer::new(service.clone()))
+            .add_service(KeyProviderServiceServer::new(service))
+            .serve(socket)
+            .await
+            .context("CDH combined gRPC server failed")
+    });
+
+    servers
+        .join_next()
+        .await
+        .context("no CDH gRPC servers running")?
+        .context("CDH gRPC server task failed")??;
     Ok(())
 }
