@@ -12,6 +12,10 @@ name: Publish the CoCo guest extension image from a pull request
 # pull_request workflow with a read-only token, and this workflow only pushes
 # the resulting artifacts. The label is removed afterwards, so every new head
 # commit needs a maintainer to add it again.
+#
+# A single comment on the pull request tracks the latest attempt: it is posted
+# as soon as the label is seen and then updated with the image references, or
+# with the reason nothing was published.
 on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] PR code is never checked out, only its build artifacts are published.
     types:
@@ -28,15 +32,83 @@ env:
   CONTAINER_IMAGE: ghcr.io/${{ github.repository }}/coco-extension-pr
   DISK_IMAGE: ghcr.io/${{ github.repository }}/coco-extension-disk-pr
   BUILD_WORKFLOW: coco-extension-image.yml
+  COMMENT_MARKER: "<!-- coco-extension-image-pr -->"
 
 jobs:
+  announce:
+    name: find the build and announce the publication
+    if: ${{ github.event.label.name == 'publish-coco-extension' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read # look up the pull_request build
+      pull-requests: write # comment on the pull request
+    outputs:
+      comment_id: ${{ steps.comment.outputs.comment_id }}
+      run_id: ${{ steps.build.outputs.run_id }}
+      error: ${{ steps.build.outputs.error }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+
+    # Does not fail when there is nothing to publish, so the reason reaches
+    # the report job through this job's outputs.
+    - name: Find the build of the pull request head
+      id: build
+      run: |
+        run="$(gh run list --workflow "${BUILD_WORKFLOW}" --event pull_request \
+          --commit "${HEAD_SHA}" --limit 1 --json databaseId,status,conclusion,url \
+          --jq '.[0] // empty')"
+        if [ -z "${run}" ]; then
+          error="No ${BUILD_WORKFLOW} run found for ${HEAD_SHA}; add the label again once it has run."
+        elif [ "$(jq -r .status <<< "${run}")" != "completed" ]; then
+          error="The [${BUILD_WORKFLOW} run]($(jq -r .url <<< "${run}")) for ${HEAD_SHA} has not finished yet; add the label again once it has."
+        elif [ "$(jq -r .conclusion <<< "${run}")" != "success" ]; then
+          error="The [${BUILD_WORKFLOW} run]($(jq -r .url <<< "${run}")) for ${HEAD_SHA} ended with \"$(jq -r .conclusion <<< "${run}")\", so there is nothing to publish."
+        fi
+        if [ -n "${error:-}" ]; then
+          echo "::error::${error}"
+          echo "error=${error}" >> "${GITHUB_OUTPUT}"
+        else
+          echo "run_id=$(jq -r .databaseId <<< "${run}")" >> "${GITHUB_OUTPUT}"
+        fi
+
+    - name: Post or update the status comment
+      id: comment
+      env:
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        {
+          echo "${COMMENT_MARKER}"
+          echo "Publishing the CoCo guest extension images for ${HEAD_SHA} ([workflow run](${RUN_URL}))."
+        } > body.md
+        comment_id="$(gh api --paginate "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" \
+          --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"${COMMENT_MARKER}\"))) | .id" \
+          | tail -n 1)"
+        if [ -n "${comment_id}" ]; then
+          gh api --method PATCH "repos/${GH_REPO}/issues/comments/${comment_id}" -F body=@body.md > /dev/null
+        else
+          comment_id="$(gh api --method POST "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" \
+            -F body=@body.md --jq .id)"
+        fi
+        echo "comment_id=${comment_id}" >> "${GITHUB_OUTPUT}"
+
   publish:
     name: publish images for the pull request head
-    if: ${{ github.event.label.name == 'publish-coco-extension' }}
+    needs: announce
+    if: ${{ needs.announce.outputs.run_id != '' }}
     runs-on: ubuntu-24.04
     permissions:
       actions: read # download the artifacts of the pull_request build
       packages: write # push the images to ghcr.io
+    outputs:
+      summary: ${{ steps.manifests.outputs.summary }}
     env:
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       GH_REPO: ${{ github.repository }}
@@ -46,24 +118,10 @@ jobs:
       with:
         egress-policy: audit
 
-    - name: Find the build of the pull request head
-      id: build
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        run_id="$(gh run list --workflow "${BUILD_WORKFLOW}" --event pull_request \
-          --commit "${HEAD_SHA}" --status success --limit 1 --json databaseId \
-          --jq '.[0].databaseId // empty')"
-        if [ -z "${run_id}" ]; then
-          echo "::error::No successful ${BUILD_WORKFLOW} run for ${HEAD_SHA} yet; add the label again once it has finished."
-          exit 1
-        fi
-        echo "run_id=${run_id}" >> "${GITHUB_OUTPUT}"
-
     - name: Download the build artifacts
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RUN_ID: ${{ steps.build.outputs.run_id }}
+        RUN_ID: ${{ needs.announce.outputs.run_id }}
       run: gh run download "${RUN_ID}" --pattern 'coco-extension-*' --dir artifacts
 
     - name: Log in to the Container registry
@@ -102,6 +160,7 @@ jobs:
         done
 
     - name: Publish the multi-arch manifests
+      id: manifests
       run: |
         variants="$(find artifacts -mindepth 1 -maxdepth 1 -name 'coco-extension-*' \
           | sed 's|^artifacts/coco-extension-||; s|-[^-]*$||' | sort -u)"
@@ -125,25 +184,71 @@ jobs:
             echo "container_image: \"${CONTAINER_IMAGE}\""
             echo "extension_image: \"${DISK_IMAGE}\""
             echo '```'
-          } >> "${GITHUB_STEP_SUMMARY}"
+          } >> summary.md
         done
+        cat summary.md >> "${GITHUB_STEP_SUMMARY}"
+        # The variant names come from the pull request's artifacts, so the
+        # delimiter must not be guessable.
+        delimiter="EOF_$(openssl rand -hex 16)"
+        {
+          echo "summary<<${delimiter}"
+          cat summary.md
+          echo "${delimiter}"
+        } >> "${GITHUB_OUTPUT}"
 
-  unlabel:
-    name: remove the label
-    needs: publish
-    if: ${{ always() && github.event.label.name == 'publish-coco-extension' }}
+  report:
+    name: report the result and remove the label
+    needs: [announce, publish]
+    if: ${{ !cancelled() && github.event.label.name == 'publish-coco-extension' }}
     runs-on: ubuntu-24.04
     permissions:
-      pull-requests: write # remove the label from the pull request
+      pull-requests: write # comment on the pull request and remove the label
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
     - name: Harden the runner (Audit all outbound calls)
       uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
       with:
         egress-policy: audit
 
-    - name: Remove the label
+    - name: Update the status comment
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GH_REPO: ${{ github.repository }}
-        PR_NUMBER: ${{ github.event.pull_request.number }}
+        COMMENT_ID: ${{ needs.announce.outputs.comment_id }}
+        RESULT: ${{ needs.publish.result }}
+        ERROR: ${{ needs.announce.outputs.error }}
+        SUMMARY: ${{ needs.publish.outputs.summary }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        {
+          echo "${COMMENT_MARKER}"
+          case "${RESULT}" in
+          success)
+            echo "Published the CoCo guest extension images for ${HEAD_SHA} ([workflow run](${RUN_URL})):"
+            echo
+            echo "${SUMMARY}"
+            ;;
+          *)
+            echo "Failed to publish the CoCo guest extension images for ${HEAD_SHA} ([workflow run](${RUN_URL}))."
+            if [ -n "${ERROR}" ]; then
+              echo
+              echo "${ERROR}"
+            fi
+            ;;
+          esac
+        } > body.md
+        if [ -n "${COMMENT_ID}" ]; then
+          gh api --method PATCH "repos/${GH_REPO}/issues/comments/${COMMENT_ID}" -F body=@body.md > /dev/null
+        else
+          gh api --method POST "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" -F body=@body.md > /dev/null
+        fi
+
+    - name: Remove the label
+      if: ${{ !cancelled() }}
       run: gh pr edit "${PR_NUMBER}" --remove-label publish-coco-extension
+
+    - name: Fail when nothing was published
+      if: ${{ needs.publish.result != 'success' }}
+      run: exit 1
