@@ -3,6 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#[cfg(target_arch = "s390x")]
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    path::Path,
+};
+
 use std::time::Duration;
 
 use anyhow::{Context, bail};
@@ -27,6 +34,16 @@ use crate::{
     keypair::TeeKeyPair,
     token_provider::Token,
 };
+
+#[cfg(target_arch = "s390x")]
+mod s390x_consts {
+    /// JSON object added to a 'Request's extra parameters for machine type.
+    pub const MACHINE_TYPE_JSON_KEY: &str = "machine-type";
+    /// Path to /proc/sysinfo for machine type detection
+    pub const PROC_SYSINFO: &str = "/proc/sysinfo";
+}
+#[cfg(target_arch = "s390x")]
+use s390x_consts::*;
 
 /// When executing get token, RCAR handshake should retry if failed to
 /// make the logic robust. This constant is the max retry times.
@@ -58,13 +75,68 @@ struct AttestationResponseData {
     token: String,
 }
 
+/// Detect IBM Z machine type from /proc/sysinfo
+/// Returns machine generation string ("z16", "z17") or None if not detected.
+#[cfg(target_arch = "s390x")]
+fn detect_se_machine_type() -> Option<String> {
+    if !Path::new(PROC_SYSINFO).exists() {
+        return None;
+    }
+    let file = match File::open(PROC_SYSINFO) {
+        Ok(f) => f,
+        Err(e) => {
+            warn!("Failed to open {PROC_SYSINFO}: {e}");
+            return None;
+        }
+    };
+    let reader = BufReader::new(file);
+
+    for line in reader.lines() {
+        let line = match line {
+            Ok(l) => l,
+            Err(_) => continue,
+        };
+        if line.trim().starts_with("Type:") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2
+                && let Ok(machine_type) = parts[1].parse::<u32>()
+            {
+                // Map numeric type to generation string
+                // 9175/9176 → z17, 3931/3932 → z16
+                return match machine_type {
+                    9175 | 9176 => Some("z17".to_string()),
+                    3931 | 3932 => Some("z16".to_string()),
+                    _ => {
+                        warn!("Unrecognised machine type in {PROC_SYSINFO}: {machine_type}");
+                        None
+                    }
+                };
+            }
+        }
+    }
+    warn!("No 'Type:' entry found in {PROC_SYSINFO}");
+    None
+}
+
 async fn get_request_extra_params(attestation_policy_selector: Option<&str>) -> serde_json::Value {
     let supported_hash_algorithms = HashAlgorithm::list_all();
 
+    #[allow(unused_mut)]
     let mut extra_params = json!({SUPPORTED_HASH_ALGORITHMS_JSON_KEY: supported_hash_algorithms});
 
     if let Some(attestation_policy_selector) = attestation_policy_selector {
         extra_params[ATTESTATION_POLICY_SELECTOR_JSON_KEY] = json!(attestation_policy_selector);
+    }
+
+    // Add machine type for SE/IBM Z systems
+    #[cfg(target_arch = "s390x")]
+    if let Some(machine_type) = detect_se_machine_type()
+        && let Some(obj) = extra_params.as_object_mut()
+    {
+        obj.insert(
+            MACHINE_TYPE_JSON_KEY.to_string(),
+            serde_json::Value::String(machine_type),
+        );
     }
 
     extra_params
