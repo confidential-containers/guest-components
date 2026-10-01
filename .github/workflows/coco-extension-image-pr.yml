@@ -13,6 +13,12 @@ name: Publish the CoCo guest extension image from a pull request
 # the resulting artifacts. The label is removed afterwards, so every new head
 # commit needs a maintainer to add it again.
 #
+# Each per-arch image is then attested the same way images from main are.
+# pull_request builds cannot sign (a fork has no OIDC token), and consumers
+# such as kata-containers verify the per-arch digest with --bundle-from-oci
+# against this repository. The signing job only receives digests this
+# workflow pushed; it does not run the pull request's code.
+#
 # A single comment on the pull request tracks the latest attempt: it is posted
 # as soon as the label is seen and then updated with the image references, or
 # with the reason nothing was published.
@@ -109,6 +115,7 @@ jobs:
       packages: write # push the images to ghcr.io
     outputs:
       summary: ${{ steps.manifests.outputs.summary }}
+      subjects: ${{ steps.images.outputs.subjects }}
     env:
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       GH_REPO: ${{ github.repository }}
@@ -134,7 +141,19 @@ jobs:
     - uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
 
     - name: Publish the per-arch images
+      id: images
       run: |
+        : > subjects.jsonl
+        record() {
+          case "$2" in
+          sha256:*) ;;
+          *)
+            echo "::error::no digest for $1"
+            exit 1
+            ;;
+          esac
+          jq -nc --arg name "$1" --arg digest "$2" '{name:$name,digest:$digest}' >> subjects.jsonl
+        }
         for dir in artifacts/coco-extension-*; do
           name="${dir#artifacts/coco-extension-}"
           variant="${name%-*}"
@@ -145,6 +164,8 @@ jobs:
             | sed -n 's/^Loaded image: //p')"
           docker tag "${loaded}" "${CONTAINER_IMAGE}:${tag}"
           docker push "${CONTAINER_IMAGE}:${tag}"
+          record "${CONTAINER_IMAGE}" \
+            "$(docker inspect --format='{{index .RepoDigests 0}}' "${CONTAINER_IMAGE}:${tag}" | cut -d'@' -f2)"
 
           files=("kata-containers-coco-extension.img")
           cp "${dir}/kata-containers-coco-extension-${variant}-${arch}.img" \
@@ -157,7 +178,14 @@ jobs:
           (cd "${dir}" && oras push "${DISK_IMAGE}:${tag}" \
             --artifact-type application/vnd.confidential-containers.coco-extension.disk \
             "${files[@]}")
+          record "${DISK_IMAGE}" \
+            "$(oras manifest fetch "${DISK_IMAGE}:${tag}" --descriptor | jq -r .digest)"
         done
+        if [ ! -s subjects.jsonl ]; then
+          echo "::error::published no images"
+          exit 1
+        fi
+        echo "subjects=$(jq -c -s '.' subjects.jsonl)" >> "${GITHUB_OUTPUT}"
 
     - name: Publish the multi-arch manifests
       id: manifests
@@ -196,9 +224,36 @@ jobs:
           echo "${delimiter}"
         } >> "${GITHUB_OUTPUT}"
 
+  attest:
+    name: record provenance
+    needs: publish
+    if: ${{ needs.publish.result == 'success' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write # sign the provenance
+      attestations: write # persist the attestation
+      contents: read # actions/attest reads the repository
+      packages: write # attach the attestation to the image
+    strategy:
+      fail-fast: false
+      matrix:
+        subject: ${{ fromJSON(needs.publish.outputs.subjects) }}
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+
+    - name: Attest ${{ matrix.subject.name }}
+      uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+      with:
+        subject-name: ${{ matrix.subject.name }}
+        subject-digest: ${{ matrix.subject.digest }}
+        push-to-registry: true
+
   report:
     name: report the result and remove the label
-    needs: [announce, publish]
+    needs: [announce, publish, attest]
     if: ${{ !cancelled() && github.event.label.name == 'publish-coco-extension' }}
     runs-on: ubuntu-24.04
     permissions:
@@ -217,6 +272,7 @@ jobs:
       env:
         COMMENT_ID: ${{ needs.announce.outputs.comment_id }}
         RESULT: ${{ needs.publish.result }}
+        ATTEST: ${{ needs.attest.result }}
         ERROR: ${{ needs.announce.outputs.error }}
         SUMMARY: ${{ needs.publish.outputs.summary }}
         HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -226,9 +282,13 @@ jobs:
           echo "${COMMENT_MARKER}"
           case "${RESULT}" in
           success)
-            echo "Published the CoCo guest extension images for ${HEAD_SHA} ([workflow run](${RUN_URL})):"
-            echo
-            echo "${SUMMARY}"
+            if [ "${ATTEST}" != "success" ]; then
+              echo "Pushed the CoCo guest extension images for ${HEAD_SHA}, but recording their provenance failed ([workflow run](${RUN_URL}))."
+            else
+              echo "Published the CoCo guest extension images for ${HEAD_SHA} ([workflow run](${RUN_URL})):"
+              echo
+              echo "${SUMMARY}"
+            fi
             ;;
           *)
             echo "Failed to publish the CoCo guest extension images for ${HEAD_SHA} ([workflow run](${RUN_URL}))."
@@ -250,5 +310,5 @@ jobs:
       run: gh pr edit "${PR_NUMBER}" --remove-label publish-coco-extension
 
     - name: Fail when nothing was published
-      if: ${{ needs.publish.result != 'success' }}
+      if: ${{ needs.publish.result != 'success' || needs.attest.result != 'success' }}
       run: exit 1
