@@ -118,6 +118,11 @@ pub struct CdhConfig {
     #[serde(default = "default_socket_addr")]
     pub socket: String,
 
+    /// Optional directory for per-service Unix sockets, in addition to `socket`.
+    /// When unset, only the combined endpoint is served.
+    #[serde(default)]
+    pub services_dir: Option<String>,
+
     /// Sealed Secrets use JWS integrity protection to ensure
     /// that the secret cannot be modified while it is stored
     /// by the untrusted control plane.
@@ -139,6 +144,7 @@ impl CdhConfig {
             aa: AaConfig::default(),
             credentials: Vec::new(),
             socket: default_socket_addr(),
+            services_dir: None,
             image: ImageConfig::from_kernel_cmdline(),
             skip_sealed_secret_verification: false,
             log: LogConfig::default(),
@@ -245,6 +251,7 @@ mod tests {
     #[case(
         r#"
 socket = "unix:///run/confidential-containers/cdh.sock"
+services_dir = "/run/guest-services"
 
 [aa]
 aa_socket = "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock"
@@ -316,6 +323,7 @@ https_proxy = "http://127.0.0.1:8080"
                 ..Default::default()
             },
             socket: "unix:///run/confidential-containers/cdh.sock".to_string(),
+            services_dir: Some("/run/guest-services".to_string()),
             skip_sealed_secret_verification: false,
         })
     )]
@@ -354,6 +362,7 @@ name = "offline_fs_kbc"
                 ..Default::default()
         },
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
+        services_dir: None,
         skip_sealed_secret_verification: false,
     })
     )]
@@ -389,6 +398,7 @@ some_undefined_field = "unknown value"
                 ..Default::default()
         },
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
+        services_dir: None,
         skip_sealed_secret_verification: false,
     })
     )]
@@ -424,6 +434,7 @@ image_security_policy = """
                 ..Default::default()
         },
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
+        services_dir: None,
         skip_sealed_secret_verification: false,
         aa: AaConfig::default(),
     })
@@ -441,5 +452,19 @@ image_security_policy = """
             Some(cfg) => assert_eq!(cfg, res.unwrap()),
             None => assert!(res.is_err()),
         }
+    }
+
+    #[rstest]
+    #[case(r#"{"kbc":{"name":"offline_fs_kbc"}}"#, None)]
+    #[case(r#"{"kbc":{"name":"offline_fs_kbc"},"services_dir":null}"#, None)]
+    #[case(
+        r#"{"kbc":{"name":"offline_fs_kbc"},"services_dir":"/run/guest-services"}"#,
+        Some("/run/guest-services")
+    )]
+    fn read_services_dir_from_json(#[case] config: &str, #[case] expected: Option<&str>) {
+        let mut file = tempfile::Builder::new().suffix(".json").tempfile().unwrap();
+        file.write_all(config.as_bytes()).unwrap();
+        let config = CdhConfig::from_file(file.path().to_str().unwrap()).unwrap();
+        assert_eq!(config.services_dir.as_deref(), expected);
     }
 }

@@ -1,6 +1,12 @@
 # The ttrpc sock of CDH that is used to listen to the requests
 socket = "unix:///run/confidential-containers/cdh.sock"
 
+# Optional. Also serve each API service on its own socket in this directory:
+# imagepull.sock, sealedsecrets.sock, securemount.sock and getresource.sock.
+# When omitted, only the combined endpoint above is served.
+# These Unix sockets use the running binary's RPC protocol (ttRPC or gRPC).
+services_dir = "/run/guest-services"
+
 [aa]
 aa_socket = "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock"
 

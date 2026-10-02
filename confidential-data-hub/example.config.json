@@ -1,5 +1,6 @@
 {
     "socket": "unix:///run/confidential-containers/cdh.sock",
+    "services_dir": "/run/guest-services",
     "aa": {
         "aa_socket": "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock"
     },

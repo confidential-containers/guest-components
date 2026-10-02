@@ -103,6 +103,7 @@ mod tests {
             credentials: vec![],
             image: ImageConfig::default(),
             socket: socket.to_string(),
+            services_dir: None,
             skip_sealed_secret_verification: false,
         }
     }
