@@ -117,12 +117,14 @@ rpc: grpc
     let mut aa = AttestationAgent::new(config).context("start AA")?;
 
     let mut initdata_digest = None;
+    let mut initdata_alg = None;
     if let Some(initdata_toml_path) = cli.initdata_toml {
         info!("Initdata TOML file is given by parameter");
         let initdata_toml =
             std::fs::read_to_string(&initdata_toml_path).context("read initdata toml file")?;
-        let (_, digest) = Initdata::parse_and_get_digest(&initdata_toml)?;
+        let (initdata, digest) = Initdata::parse_and_get_digest(&initdata_toml)?;
         aa.set_initdata_toml(initdata_toml);
+        initdata_alg = Some(initdata.algorithm);
         initdata_digest = Some(digest);
     } else if let Some(initdata) = cli.initdata_digest {
         info!("Initdata digest is given by parameter");
@@ -132,10 +134,15 @@ rpc: grpc
         initdata_digest = Some(initdata);
     }
 
+    // Open the eventlog first, so that initdata recorded into it starts from a recovered log.
+    aa.init().await.context("init AA")?;
+
     if let Some(initdata_digest) = initdata_digest {
-        let res = aa.bind_init_data(&initdata_digest).await.context(
-        "The initdata supplied by the parameter is inconsistent with that of the current platform.",
-    )?;
+        let res = match initdata_alg {
+            Some(alg) => aa.bind_or_record_init_data(alg, &initdata_digest).await,
+            None => aa.bind_init_data(&initdata_digest).await,
+        }
+        .context("Failed to bind initdata to the platform")?;
 
         match res {
             attester::InitDataResult::Ok => info!("Check initdata passed."),
@@ -146,7 +153,6 @@ rpc: grpc
         }
     }
 
-    aa.init().await.context("init AA")?;
     debug!(
         "Attestation gRPC service listening on: {:?}",
         cli.attestation_sock

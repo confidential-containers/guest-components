@@ -35,6 +35,7 @@ pub struct EventLog {
     writer: Box<dyn Writer>,
     rtmr_extender: Arc<BoxedAttester>,
     alg: HashAlgorithm,
+    log_path: PathBuf,
     wal_path: PathBuf,
 }
 
@@ -118,7 +119,7 @@ impl EventLog {
         Self::open(rtmr_extender, Path::new(EVENTLOG_PATH), WAL_CACHE.into()).await
     }
 
-    async fn open(
+    pub(crate) async fn open(
         rtmr_extender: Arc<BoxedAttester>,
         log_path: &Path,
         wal_path: PathBuf,
@@ -165,6 +166,7 @@ impl EventLog {
                     writer,
                     rtmr_extender,
                     alg,
+                    log_path: log_path.to_path_buf(),
                     wal_path,
                 })
             }
@@ -175,9 +177,25 @@ impl EventLog {
                 writer,
                 rtmr_extender,
                 alg,
+                log_path: log_path.to_path_buf(),
                 wal_path,
             }),
         }
+    }
+
+    /// Contents of the logged events with this domain and operation, oldest first.
+    /// Only meaningful after WAL recovery, which `open` performs before returning.
+    pub fn logged_contents(&self, domain: &str, operation: &str) -> Result<Vec<String>> {
+        let path = self.log_path.display();
+        let log =
+            std::fs::read(&self.log_path).with_context(|| format!("read AAEL file {path}"))?;
+        let entries =
+            tcg2::aael_plaintexts(&log).with_context(|| format!("parse AAEL file {path}"))?;
+        let prefix = format!("{domain} {operation} ");
+        Ok(entries
+            .into_iter()
+            .filter_map(|e| e.strip_prefix(&prefix).map(str::to_owned))
+            .collect())
     }
 
     /// Record the event and the target digest into cache file before write, this would do
@@ -499,6 +517,7 @@ mod tests {
             writer: Box::new(tw),
             rtmr_extender: Arc::new(rtmr_extender),
             alg: HashAlgorithm::Sha384,
+            log_path: EVENTLOG_PATH.into(),
             wal_path: WAL_CACHE.into(),
         };
 

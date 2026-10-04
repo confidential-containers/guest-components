@@ -6,7 +6,7 @@
 use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use attester::{BoxedAttester, detect_attestable_devices, detect_tee_type};
-use kbs_types::Tee;
+use kbs_types::{HashAlgorithm, Tee};
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
 
@@ -24,6 +24,9 @@ use token::*;
 use tracing::{debug, info};
 
 use crate::{config::Config, eventlog::Event};
+
+const INITDATA_EVENT_DOMAIN: &str = "github.com/confidential-containers";
+const INITDATA_EVENT_OPERATION: &str = "InitData";
 
 pub enum RuntimeMeasurement {
     /// The runtime measurement is extended successfully.
@@ -114,6 +117,39 @@ impl AttestationAgent {
         }
 
         Ok(())
+    }
+
+    /// Bind initdata like [`AttestationAPIs::bind_init_data`], but when the platform register
+    /// for it is unset, record the digest as an `InitData` event in the eventlog's default
+    /// register (RTMR3 on TDX) instead. This runs whether or not the eventlog is enabled, and
+    /// fails rather than leaving initdata unbound.
+    pub async fn bind_or_record_init_data(
+        &self,
+        alg: HashAlgorithm,
+        digest: &[u8],
+    ) -> Result<InitDataResult> {
+        match self.primary_attester.bind_init_data(digest).await? {
+            InitDataResult::NotBound => {
+                if !self.primary_attester.supports_runtime_measurement() {
+                    bail!("initdata is not bound and this platform cannot extend RTMR3");
+                }
+                let pcr = self.config.read().await.eventlog_config.init_pcr;
+                let extended = match &self.eventlog {
+                    Some(eventlog) => {
+                        record_init_data(&mut *eventlog.lock().await, pcr, alg, digest).await?
+                    }
+                    // The eventlog is off for runtime events, but initdata still has to be
+                    // measured, so open it just for this.
+                    None => {
+                        let mut eventlog = EventLog::new(self.primary_attester.clone()).await?;
+                        record_init_data(&mut eventlog, pcr, alg, digest).await?
+                    }
+                };
+                info!("Initdata recorded in the eventlog (extended: {extended}).");
+                Ok(InitDataResult::Ok)
+            }
+            result => Ok(result),
+        }
     }
 
     /// Create a new instance of [AttestationAgent].
@@ -260,7 +296,9 @@ impl AttestationAPIs for AttestationAgent {
     async fn bind_init_data(&self, init_data: &[u8]) -> Result<InitDataResult> {
         match self.primary_attester.bind_init_data(init_data).await? {
             InitDataResult::NotBound => {
-                bail!("initdata is not bound: the platform register for it is unset")
+                bail!(
+                    "initdata is not bound: the platform register for it is unset, pass the initdata TOML so AA can record it"
+                )
             }
             result => Ok(result),
         }
@@ -274,5 +312,122 @@ impl AttestationAPIs for AttestationAgent {
 
     fn get_additional_tees(&self) -> Vec<Tee> {
         self.additional_attesters.keys().cloned().collect()
+    }
+}
+
+/// Log and measure the initdata digest once per boot. Returns false when an earlier AA run
+/// already recorded the same digest; a different recorded digest is an error.
+async fn record_init_data(
+    eventlog: &mut EventLog,
+    pcr: u64,
+    alg: HashAlgorithm,
+    digest: &[u8],
+) -> Result<bool> {
+    // Canonical JSON (RFC 8785), as the CoCo eventlog spec requires for event content.
+    let content = format!(r#"{{"digest":"{alg}:{}"}}"#, hex::encode(digest));
+    match eventlog
+        .logged_contents(INITDATA_EVENT_DOMAIN, INITDATA_EVENT_OPERATION)?
+        .as_slice()
+    {
+        [] => {
+            let event = Event::new(INITDATA_EVENT_DOMAIN, INITDATA_EVENT_OPERATION, &content)?;
+            eventlog.extend_entry(event, pcr).await?;
+            Ok(true)
+        }
+        [logged] if *logged == content => Ok(false),
+        logged => bail!("eventlog already records initdata {logged:?}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use attester::test_utils::FakeTdx;
+    use std::collections::HashMap;
+    use std::path::Path;
+    use std::sync::Mutex as StdMutex;
+
+    type Registers = Arc<StdMutex<HashMap<u64, Vec<u8>>>>;
+
+    const PCR: u64 = 17;
+
+    /// Open the eventlog in `dir` the way a fresh AA process would, sharing `registers`
+    /// so they outlive the instance like real RTMRs across an AA restart.
+    async fn open(dir: &Path, registers: &Registers, crash_after_extend: bool) -> Result<EventLog> {
+        let fake = FakeTdx {
+            registers: registers.clone(),
+            crash_after_extend,
+        };
+        let attester: BoxedAttester = Box::new(fake);
+        EventLog::open(Arc::new(attester), &dir.join("eventlog"), dir.join("wal")).await
+    }
+
+    async fn record(dir: &Path, registers: &Registers, digest: &[u8]) -> Result<bool> {
+        let mut eventlog = open(dir, registers, false).await?;
+        record_init_data(&mut eventlog, PCR, HashAlgorithm::Sha384, digest).await
+    }
+
+    fn rtmr3(registers: &Registers) -> Option<Vec<u8>> {
+        registers.lock().unwrap().get(&PCR).cloned()
+    }
+
+    #[tokio::test]
+    async fn test_record_init_data_once_across_restarts() {
+        let tmp = tempfile::tempdir().unwrap();
+        let registers = Registers::default();
+
+        assert!(record(tmp.path(), &registers, &[1; 48]).await.unwrap());
+        let after_first = rtmr3(&registers).expect("RTMR3 extended");
+
+        assert!(!record(tmp.path(), &registers, &[1; 48]).await.unwrap());
+        assert_eq!(rtmr3(&registers).unwrap(), after_first);
+
+        let eventlog = open(tmp.path(), &registers, false).await.unwrap();
+        let logged = eventlog
+            .logged_contents(INITDATA_EVENT_DOMAIN, INITDATA_EVENT_OPERATION)
+            .unwrap();
+        assert_eq!(
+            logged,
+            [format!(r#"{{"digest":"sha384:{}"}}"#, "01".repeat(48))]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_record_init_data_rejects_a_different_digest() {
+        let tmp = tempfile::tempdir().unwrap();
+        let registers = Registers::default();
+
+        record(tmp.path(), &registers, &[1; 48]).await.unwrap();
+        let after_first = rtmr3(&registers);
+
+        assert!(record(tmp.path(), &registers, &[2; 48]).await.is_err());
+        assert_eq!(rtmr3(&registers), after_first);
+    }
+
+    #[tokio::test]
+    async fn test_record_init_data_rejects_a_malformed_log() {
+        let tmp = tempfile::tempdir().unwrap();
+        let registers = Registers::default();
+        std::fs::write(tmp.path().join("eventlog"), b"junk").unwrap();
+
+        assert!(record(tmp.path(), &registers, &[1; 48]).await.is_err());
+        assert_eq!(rtmr3(&registers), None);
+    }
+
+    #[tokio::test]
+    async fn test_record_init_data_after_a_crash_recovers_first() {
+        let tmp = tempfile::tempdir().unwrap();
+        let registers = Registers::default();
+
+        // Crash after the extend lands but before the entry is written.
+        let mut eventlog = open(tmp.path(), &registers, true).await.unwrap();
+        let crashed = record_init_data(&mut eventlog, PCR, HashAlgorithm::Sha384, &[1; 48]).await;
+        assert!(crashed.is_err());
+        drop(eventlog);
+        let after_crash = rtmr3(&registers).expect("RTMR3 extended before the crash");
+
+        // WAL recovery writes the entry, so the restart finds it and does not extend again.
+        assert!(!record(tmp.path(), &registers, &[1; 48]).await.unwrap());
+        assert_eq!(rtmr3(&registers).unwrap(), after_crash);
     }
 }

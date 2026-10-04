@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use anyhow::{Context, Result, bail};
 use kbs_types::HashAlgorithm;
 use serde::Serialize;
 
@@ -162,4 +163,47 @@ impl Tcg2EventEntry {
         self.digest = vec![el_digest];
         (self, digest)
     }
+}
+
+/// Return the AAEL plaintext of each entry in a log written by `EventLog`.
+///
+/// Every entry has the shape `Tcg2EventEntry::to_le_bytes` produces, so a truncated tail
+/// or any unexpected header is an error rather than something to skip.
+pub fn aael_plaintexts(mut log: &[u8]) -> Result<Vec<&str>> {
+    fn take<'a>(buf: &mut &'a [u8], n: usize) -> Result<&'a [u8]> {
+        if buf.len() < n {
+            bail!("truncated AAEL entry");
+        }
+        let (head, tail) = buf.split_at(n);
+        *buf = tail;
+        Ok(head)
+    }
+    fn u32_le(buf: &mut &[u8]) -> Result<u32> {
+        Ok(u32::from_le_bytes(take(buf, 4)?.try_into()?))
+    }
+
+    let mut plaintexts = vec![];
+    while !log.is_empty() {
+        let _register = u32_le(&mut log)?;
+        let event_type = u32_le(&mut log)?;
+        let digest_count = u32_le(&mut log)?;
+        if event_type != EV_EVENT_TAG_TYPE || digest_count != 1 {
+            bail!("unexpected AAEL entry header");
+        }
+        let digest_len = match u16::from_le_bytes(take(&mut log, 2)?.try_into()?) {
+            0xB | 0x12 => 32,
+            0xC => 48,
+            0xD => 64,
+            alg => bail!("unknown AAEL digest algorithm {alg:#x}"),
+        };
+        take(&mut log, digest_len)?;
+        let data_len = u32_le(&mut log)? as usize;
+        let mut data = take(&mut log, data_len)?;
+        let tag = u32_le(&mut data)?;
+        if tag != AAEL_TAGGED_EVENT_ID || u32_le(&mut data)? as usize != data.len() {
+            bail!("malformed AAEL tagged event");
+        }
+        plaintexts.push(std::str::from_utf8(data).context("AAEL plaintext is not UTF-8")?);
+    }
+    Ok(plaintexts)
 }
