@@ -142,6 +142,7 @@ rpc: grpc
             attester::InitDataResult::Unsupported => {
                 info!("Platform does not support initdata checking. Jumping.")
             }
+            attester::InitDataResult::NotBound => bail!("Initdata is not bound."),
         }
     }
 

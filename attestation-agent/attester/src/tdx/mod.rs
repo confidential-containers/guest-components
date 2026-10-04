@@ -186,13 +186,7 @@ impl Attester for TdxAttester {
             }
         };
 
-        let mut init_data = init_data_digest.to_vec();
-        init_data.resize(TDX_REGISTER_LENGTH, 0);
-        if init_data != mr_configid {
-            bail!("Init data does not match!");
-        }
-
-        Ok(InitDataResult::Ok)
+        check_mr_configid(init_data_digest, &mr_configid)
     }
 
     async fn get_runtime_measurement(&self, pcr_index: u64) -> Result<Vec<u8>> {
@@ -225,9 +219,27 @@ impl Attester for TdxAttester {
     }
 }
 
+/// An all-zero MRCONFIGID means the host did not set it, which is the case on
+/// CSPs that don't expose it. Any other value must match the digest.
+fn check_mr_configid(init_data_digest: &[u8], mr_configid: &[u8]) -> Result<InitDataResult> {
+    if mr_configid.iter().all(|b| *b == 0) {
+        return Ok(InitDataResult::NotBound);
+    }
+
+    let mut init_data = init_data_digest.to_vec();
+    init_data.resize(TDX_REGISTER_LENGTH, 0);
+    if init_data != mr_configid {
+        bail!("Init data does not match!");
+    }
+
+    Ok(InitDataResult::Ok)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
+    use std::result::Result::Ok;
 
     #[ignore]
     #[tokio::test]
@@ -245,5 +257,23 @@ mod tests {
         let attester = TdxAttester::default();
         let report = attester.ioctl_get_report();
         assert!(report.is_ok());
+    }
+
+    fn outcome(result: Result<InitDataResult>) -> &'static str {
+        match result {
+            Ok(InitDataResult::Ok) => "bound",
+            Ok(InitDataResult::NotBound) => "not bound",
+            Ok(InitDataResult::Unsupported) => "unsupported",
+            Err(_) => "error",
+        }
+    }
+
+    #[rstest]
+    #[case::matches([7u8; 48], "bound")]
+    #[case::unset([0u8; 48], "not bound")]
+    #[case::mismatch([9u8; 48], "error")]
+    fn test_check_mr_configid(#[case] mr_configid: [u8; 48], #[case] expected: &str) {
+        let digest = [7u8; 48];
+        assert_eq!(outcome(check_mr_configid(&digest, &mr_configid)), expected);
     }
 }

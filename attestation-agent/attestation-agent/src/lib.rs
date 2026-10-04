@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use attester::{BoxedAttester, detect_attestable_devices, detect_tee_type};
 use kbs_types::Tee;
@@ -258,7 +258,12 @@ impl AttestationAPIs for AttestationAgent {
     /// Perform the initdata binding. If current platform does not support initdata
     /// binding, return `InitdataResult::Unsupported`.
     async fn bind_init_data(&self, init_data: &[u8]) -> Result<InitDataResult> {
-        self.primary_attester.bind_init_data(init_data).await
+        match self.primary_attester.bind_init_data(init_data).await? {
+            InitDataResult::NotBound => {
+                bail!("initdata is not bound: the platform register for it is unset")
+            }
+            result => Ok(result),
+        }
     }
 
     /// Get the tee type of current platform. If no platform is detected,
