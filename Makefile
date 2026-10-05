@@ -11,6 +11,10 @@ ATTESTER ?=
 # Enable the `kbs` cargo feature (cc_kbc / CoCo KBS). offline_fs_kbc is always built.
 ENABLE_KBS ?= true
 
+# Key-release backend for attestation-agent: kbs (default, minimal) or ccm_as
+# (Fortanix CCM/DSM, x86_64 only). See attestation-agent/Makefile.
+KBC ?= kbs
+
 ifeq ($(ARCH), ppc64le)
   ARCH=powerpc64le
 endif
@@ -68,7 +72,7 @@ $(CDH_BINARY):
 
 $(AA_BINARY):
 	@echo build $(AA) for $(TEE_PLATFORM)
-	cd $(AA) && $(MAKE) ttrpc=true ARCH=$(ARCH) LIBC=$(LIBC) ATTESTER=$(ATTESTER)
+	cd $(AA) && $(MAKE) ttrpc=true ARCH=$(ARCH) LIBC=$(LIBC) ATTESTER=$(ATTESTER) KBC=$(KBC)
 
 $(ASR_BINARY):
 	@echo build $(ASR) for $(TEE_PLATFORM)
