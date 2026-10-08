@@ -4,8 +4,8 @@ description: Install the NVIDIA Attestation SDK (libnvat-dev) from NVIDIA's apt 
 inputs:
   version:
     description: >
-      libnvat-dev version to install. Should match the NVAT release used by
-      the "nv-attestation-sdk" crate dependency in
+      libnvat and libnvat-dev version to install. Should match the NVAT release
+      used by the "nv-attestation-sdk" crate dependency in
       attestation-agent/attester/Cargo.toml (see that crate's GitHub release
       notes for its corresponding libnvat/libnvat-dev version).
     required: false
@@ -32,6 +32,8 @@ runs:
         rm -rf "${tmpdir}"
 
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends "libnvat-dev=${NVAT_VERSION}*"
+        sudo apt-get install -y --no-install-recommends \
+          "libnvat=${NVAT_VERSION}*" \
+          "libnvat-dev=${NVAT_VERSION}*"
 
         echo "NVAT_USE_SYSTEM_LIB=1" >> "$GITHUB_ENV"
