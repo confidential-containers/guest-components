@@ -45,6 +45,26 @@ else
     ATTESTER ?= all-attesters
 endif
 
+# KBC selects the key-release backend built into AA on top of the base kbs/coco_as CoCo
+# token types. Defaults to `kbs` so a plain build stays minimal and matches the basic
+# CoCo architecture. Set KBC=ccm_as to opt in to Fortanix CCM/DSM-backed key release
+# (SEV-SNP/TDX/NVIDIA attestation to the Node Agent) - it pulls in the `client`/
+# `attestation` crates, which transitively depend on `mbedtls`. mbedtls's RDRAND/RDSEED
+# backend uses x86-only intrinsics unguarded by an arch cfg, so KBC=ccm_as only builds
+# on x86_64.
+KBC ?= kbs
+
+ifeq ($(KBC), ccm_as)
+    ifneq ($(ARCH), x86_64)
+        $(error ERROR: KBC=ccm_as is only supported on x86_64 (got ARCH=$(ARCH)))
+    endif
+    KBC_FEATURE := ,ccm_as
+else ifeq ($(KBC), kbs)
+    KBC_FEATURE :=
+else
+    $(error ERROR: Unsupported KBC '$(KBC)'. Supported values: kbs, ccm_as)
+endif
+
 ifeq ($(ttrpc), false)
     binary = --bin grpc-aa
     binary_name = grpc-aa
@@ -62,13 +82,13 @@ else
 endif
 
 ifeq ($(ATTESTER), none)
-    AA_FEATURES := kbs,coco_as,bin,$(RPC),$(CRYPTO)
-    AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(CRYPTO)
+    AA_FEATURES := kbs,coco_as$(KBC_FEATURE),bin,$(RPC),$(CRYPTO)
+    AA_CHECK_FEATURES := kbs,coco_as$(KBC_FEATURE),bin,ttrpc,grpc,$(CRYPTO)
     ATTESTER_PKG_FEATURES := bin
     KBS_PROTOCOL_FEATURES := background_check,passport,$(CRYPTO),bin,aa_ttrpc,pqc-experimental
 else
-    AA_FEATURES := kbs,coco_as,bin,$(RPC),$(CRYPTO),$(ATTESTER)
-    AA_CHECK_FEATURES := kbs,coco_as,bin,ttrpc,grpc,$(CRYPTO),$(ATTESTER)
+    AA_FEATURES := kbs,coco_as$(KBC_FEATURE),bin,$(RPC),$(CRYPTO),$(ATTESTER)
+    AA_CHECK_FEATURES := kbs,coco_as$(KBC_FEATURE),bin,ttrpc,grpc,$(CRYPTO),$(ATTESTER)
     ATTESTER_PKG_FEATURES := $(ATTESTER),bin
     KBS_PROTOCOL_FEATURES := background_check,passport,$(CRYPTO),$(ATTESTER),bin,aa_ttrpc,pqc-experimental
 endif
@@ -115,7 +135,7 @@ ifneq ($(RUSTFLAGS_ARGS),)
 endif
 
 build:
-	cd attestation-agent && $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(AA_FEATURES)" $(binary) $(LIBC_FLAG)
+	cd attestation-agent && env -u DESTDIR $(RUST_FLAGS) cargo build $(release) --no-default-features --features "$(AA_FEATURES)" $(binary) $(LIBC_FLAG)
 	mv $(TARGET_DIR)/$(binary_name) $(TARGET)
 
 TARGET := $(TARGET_DIR)/$(BIN_NAME)
@@ -150,5 +170,5 @@ clean:
 help:
 	@echo "==========================Help========================================="
 	@echo "build/lint/test share ATTESTER and OPENSSL (ARCH picks the default attester)"
-	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [OPENSSL=1] [ATTESTER=all-attesters]"
+	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [OPENSSL=1] [ATTESTER=all-attesters] [KBC=(kbs/ccm_as)]"
 	@echo "install: make install [DESTDIR=/path/to/target] [LIBC=(musl)]"

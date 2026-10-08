@@ -38,6 +38,20 @@ pub struct KbsConfig {
     pub kbs_cert: Option<String>,
 }
 
+#[derive(Clone, Deserialize, Debug, PartialEq, Default)]
+pub struct KbcConfigs {
+    /// This config item is used when the `ccm_kbc` feature is enabled.
+    #[cfg(feature = "ccm_kbc")]
+    pub ccm_kbc: Option<CcmKbcConfig>,
+}
+
+#[cfg(feature = "ccm_kbc")]
+#[derive(Clone, Deserialize, Debug, PartialEq, Default)]
+pub struct CcmKbcConfig {
+    #[serde(default)]
+    pub dsm_app_id: Option<String>,
+}
+
 impl KbsConfig {
     fn new() -> Result<Self> {
         debug!("Try to get kbc and url from env and kernel commandline.");
@@ -106,6 +120,9 @@ pub struct CdhConfig {
     pub aa: AaConfig,
 
     #[serde(default)]
+    pub kbc_configs: KbcConfigs,
+
+    #[serde(default)]
     pub credentials: Vec<Credential>,
 
     /// Image pull configuration. Note that if `[image]` section is not given,
@@ -137,6 +154,7 @@ impl CdhConfig {
         Ok(Self {
             kbc: KbsConfig::new()?,
             aa: AaConfig::default(),
+            kbc_configs: KbcConfigs::default(),
             credentials: Vec::new(),
             socket: default_socket_addr(),
             image: ImageConfig::from_kernel_cmdline(),
@@ -211,6 +229,19 @@ impl CdhConfig {
             env::set_var("KBS_CERT", kbs_cert);
         }
 
+        // CCM configurations
+        #[cfg(feature = "ccm_kbc")]
+        if let Some(dsm_app_id) = self
+            .kbc_configs
+            .ccm_kbc
+            .as_ref()
+            .and_then(|c| c.dsm_app_id.as_deref())
+        {
+            if !dsm_app_id.is_empty() {
+                env::set_var("CCM_KBC_APP_ID", dsm_app_id);
+            }
+        }
+
         if self.skip_sealed_secret_verification {
             env::set_var("SKIP_SEALED_SECRET_VERIFICATION", "true");
         }
@@ -237,8 +268,8 @@ mod tests {
     use serial_test::serial;
 
     use crate::{
-        config::DEFAULT_AA_SOCKET_ADDR, config::DEFAULT_CDH_SOCKET_ADDR, AaConfig, CdhConfig,
-        KbsConfig, LogConfig,
+        config::{KbcConfigs, DEFAULT_AA_SOCKET_ADDR, DEFAULT_CDH_SOCKET_ADDR},
+        AaConfig, CdhConfig, KbsConfig, LogConfig,
     };
 
     #[rstest]
@@ -277,6 +308,7 @@ location = "example-mirror-0.local/mirror-for-foo"
 https_proxy = "http://127.0.0.1:8080"
     "#,
         Some(CdhConfig {
+        kbc_configs: KbcConfigs::default(),
             log: LogConfig::default(),
             aa: AaConfig::default(),
             kbc: KbsConfig {
@@ -338,6 +370,7 @@ kbs_cert = ""
 name = "offline_fs_kbc"
 "#,
     Some(CdhConfig {
+        kbc_configs: KbcConfigs::default(),
         log: LogConfig::default(),
         aa: AaConfig::default(),
         kbc: KbsConfig {
@@ -369,6 +402,7 @@ name = "offline_fs_kbc"
 some_undefined_field = "unknown value"
 "#,
     Some(CdhConfig {
+        kbc_configs: KbcConfigs::default(),
         log: LogConfig {
             level: "warn".to_string(),
         },
@@ -415,6 +449,7 @@ image_security_policy = """
             url: "".to_string(),
             kbs_cert: None,
         },
+        kbc_configs: KbcConfigs::default(),
         credentials: vec![],
         image: ImageConfig {
                 image_security_policy: Some(

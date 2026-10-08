@@ -47,6 +47,16 @@ toml.workspace = true
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 
+# SEV-SNP/TDX/NVIDIA attestation and CCM workload-certificate issuance, used
+# by the ccm_as token type.
+attestation = { git = "https://github.com/fortanix/attestation.git", rev = "fade7bf57c93fefaeaca77fe453b87a7909c9cd4", default-features = false, features = [
+    "sev-guest",
+    "tdx-guest",
+    "nvidia-evidence",
+], optional = true }
+client = { git = "https://github.com/fortanix/attestation.git", rev = "fade7bf57c93fefaeaca77fe453b87a7909c9cd4", optional = true }
+x509-cert = { version = "0.2.5", features = ["pem"], optional = true }
+
 [dev-dependencies]
 rstest.workspace = true
 serial_test.workspace = true
@@ -66,6 +76,11 @@ kbs = ["kbs_protocol/background_check", "token"]
 
 # CoCoAS Attestation Token
 coco_as = ["reqwest", "token"]
+
+# CCM_AS Token: local attestation to the Fortanix Node Agent/CCM, returning a
+# CCM-issued workload cert+key as the token (used by CDH's ccm_kbc for DSM key
+# release).
+ccm_as = ["dep:client", "dep:x509-cert", "tokio/rt", "token"]
 
 all-attesters = [
     "tdx-attester",

@@ -19,6 +19,9 @@ pub mod coco_as;
 #[cfg(feature = "kbs")]
 pub mod kbs;
 
+#[cfg(feature = "ccm_as")]
+pub mod ccm_as;
+
 pub const DEFAULT_AA_CONFIG_PATH: &str = "/etc/attestation-agent.conf";
 
 pub const DEFAULT_EVENTLOG_HASH: &str = "sha384";
@@ -111,6 +114,10 @@ pub struct TokenConfigs {
     /// This config item is used when `kbs` feature is enabled.
     #[cfg(feature = "kbs")]
     pub kbs: Option<kbs::KbsConfig>,
+
+    /// This config item is used when `ccm_as` feature is enabled.
+    #[cfg(feature = "ccm_as")]
+    pub ccm_as: Option<ccm_as::CcmAsConfig>,
 }
 
 impl TokenConfigs {
@@ -123,6 +130,8 @@ impl TokenConfigs {
             coco_as: None,
             #[cfg(feature = "kbs")]
             kbs,
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         }
     }
 }
@@ -183,7 +192,9 @@ M9QaC1mzQ/OStg==
 ".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
                 attestation_policy_selector: String::new(),
-            })
+            }),
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -226,7 +237,9 @@ M9QaC1mzQ/OStg==
 ".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
                 attestation_policy_selector: String::new(),
-            })
+            }),
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -248,7 +261,9 @@ M9QaC1mzQ/OStg==
                 cert: Some("cert".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
                 attestation_policy_selector: String::new(),
-            })
+            }),
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -268,7 +283,9 @@ M9QaC1mzQ/OStg==
                 cert: Some("cert".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
                 attestation_policy_selector: String::new(),
-            })
+            }),
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -288,7 +305,9 @@ M9QaC1mzQ/OStg==
                 cert: Some("cert".to_string()),
                 tee_key_algorithm: kbs_protocol::TeeKeyAlgorithm::EcdhEsA256KwP256,
                 attestation_policy_selector: "alice".to_string(),
-            })
+            }),
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -304,6 +323,8 @@ M9QaC1mzQ/OStg==
             coco_as: None,
             #[cfg(feature = "kbs")]
             kbs: None,
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -319,6 +340,8 @@ M9QaC1mzQ/OStg==
             coco_as: None,
             #[cfg(feature = "kbs")]
             kbs: None,
+            #[cfg(feature = "ccm_as")]
+            ccm_as: None,
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
@@ -334,6 +357,8 @@ M9QaC1mzQ/OStg==
                 coco_as: None,
                 #[cfg(feature = "kbs")]
                 kbs: None,
+                #[cfg(feature = "ccm_as")]
+                ccm_as: None,
             },
             eventlog_config: EventlogConfig {
                 init_pcr: 17,
@@ -341,6 +366,7 @@ M9QaC1mzQ/OStg==
             },
             log: LogConfig::default(),
         })]
+    // TODO: Add test for "ccm_as"
     fn parse_configs(#[case] config: &str, #[case] expected: Config) {
         let _config = Config::try_from(config).expect("failed to parse config file");
         assert_eq!(_config, expected);

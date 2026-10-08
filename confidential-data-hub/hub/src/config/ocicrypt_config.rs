@@ -89,7 +89,7 @@ mod tests {
     use serial_test::serial;
 
     use super::OCICRYPT_KEYPROVIDER_CONFIG_ENV;
-    use crate::{AaConfig, CdhConfig, KbsConfig, LogConfig};
+    use crate::{AaConfig, CdhConfig, KbcConfigs, KbsConfig, LogConfig};
 
     fn test_config(socket: &str) -> CdhConfig {
         CdhConfig {
@@ -100,6 +100,7 @@ mod tests {
                 url: "".to_string(),
                 kbs_cert: None,
             },
+            kbc_configs: KbcConfigs::default(),
             credentials: vec![],
             image: ImageConfig::default(),
             socket: socket.to_string(),
