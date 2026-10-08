@@ -235,6 +235,7 @@ mod tests {
     use crypto::WrapType;
     use jose_jwk::Jwk;
     use rstest::rstest;
+    use serial_test::serial;
 
     use crate::secret::layout::{
         envelope::EnvelopeSecret,
@@ -276,6 +277,7 @@ mod tests {
         }),
     })]
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    #[serial]
     async fn serialize_deserialize(#[case] secret_json: &str, #[case] secret_object: Secret) {
         let serialized = serde_json::to_string_pretty(&secret_object).expect("serialize failed");
         assert_json_eq!(secret_json, serialized);
@@ -310,6 +312,7 @@ mod tests {
     #[case(200)] // Payload
     #[case(250)] // Signature
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    #[serial]
     async fn check_tampering(#[case] offset: usize) {
         let secret_object = Secret {
             version: "0.1.0".into(),
@@ -348,6 +351,7 @@ mod tests {
 
     // Negative test to check a signature with the wrong key.
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    #[serial]
     async fn check_wrong_key() {
         let secret_object = Secret {
             version: "0.1.0".into(),
