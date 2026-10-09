@@ -54,9 +54,8 @@ env:
   PAUSE_IMAGE_REPO: docker://registry.k8s.io/pause
   PAUSE_IMAGE_VERSION: "3.10"
   UMOCI_VERSION: v0.6.0
-  # The C++ SDK is linked by the Rust bindings, so the two have to be the same
-  # release; the crate pin below is the single source of truth for both.
-  NVAT_CARGO_MANIFEST: attestation-agent/attester/Cargo.toml
+  # Keep in sync with the version specified in install-nvat-sdk/action.yml.
+  NVAT_VERSION: "2.0.0"
 
 jobs:
   build:
@@ -145,15 +144,7 @@ jobs:
         # The NVIDIA SDK is only consumed by the x86_64 attestation-agent-nv
         # variant; an empty version skips it entirely.
         nvat_version=""
-        if [ "${ARCH}" = "x86_64" ]; then
-          nvat_version="$(sed -n \
-            's/^nv-attestation-sdk[[:space:]]*=.*tag[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' \
-            "${NVAT_CARGO_MANIFEST}")"
-          [ -n "${nvat_version}" ] || {
-            echo "failed to read the nv-attestation-sdk tag from ${NVAT_CARGO_MANIFEST}" >&2
-            exit 1
-          }
-        fi
+        [ "${ARCH}" = "x86_64" ] && nvat_version="${NVAT_VERSION}"
 
         # Building the environment (notably the NVIDIA SDK) costs more than
         # building the payload itself, so reuse a published one whenever the
