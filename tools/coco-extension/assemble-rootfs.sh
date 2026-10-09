@@ -50,7 +50,7 @@ NV_ATTESTER="${NV_ATTESTER:-${ATTESTER},nvidia-attester}"
 # Optional: set ENABLE_KBS=false to build without cc_kbc. Default is enabled.
 INCLUDE_NVIDIA_ATTESTER="${INCLUDE_NVIDIA_ATTESTER:-auto}"
 INCLUDE_CRYPTSETUP="${INCLUDE_CRYPTSETUP:-yes}"
-NVAT_LIB_DIR="${NVAT_LIB_DIR:-/usr/local/lib}"
+NVAT_LIB_DIR="${NVAT_LIB_DIR:-/usr/lib/x86_64-linux-gnu}"
 
 # TEE_PLATFORM is intentionally left empty so the top-level Makefile does not
 # override the ATTESTER value passed in the environment. This mirrors kata's
@@ -137,8 +137,9 @@ build_nvidia_attestation_agent() {
 		*) die "unsupported INCLUDE_NVIDIA_ATTESTER=${INCLUDE_NVIDIA_ATTESTER}" ;;
 	esac
 
-	[[ -e "${NVAT_LIB_DIR}/libnvat.so" || -e "${NVAT_LIB_DIR}/libnvat.so.1" ]] || \
-		die "NVIDIA SDK libnvat.so not found in ${NVAT_LIB_DIR}"
+	local libnvat
+	libnvat="$(find "${NVAT_LIB_DIR}" -maxdepth 1 -name 'libnvat.so*' | sort | head -n 1)"
+	[[ -n "${libnvat}" ]] || die "NVIDIA SDK libnvat.so not found in ${NVAT_LIB_DIR}"
 
 	info "Building NVIDIA attester variant (ATTESTER=${NV_ATTESTER} LIBC=${LIBC})"
 	rm -f "${build_dir}/attestation-agent"
@@ -160,11 +161,7 @@ build_nvidia_attestation_agent() {
 	mkdir -p "${ROOTFS_DIR}/usr/local/lib"
 	cp -a "${NVAT_LIB_DIR}"/libnvat.so* "${ROOTFS_DIR}/usr/local/lib/"
 
-	local libnvat
-	libnvat="$(find "${NVAT_LIB_DIR}" -maxdepth 1 -name 'libnvat.so*' | sort | head -n 1)"
-	if [[ -n "${libnvat}" ]]; then
-		copy_non_glibc_library_closure "${libnvat}"
-	fi
+	copy_non_glibc_library_closure "${libnvat}"
 }
 
 install_cryptsetup() {
