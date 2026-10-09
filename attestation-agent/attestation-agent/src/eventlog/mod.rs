@@ -424,6 +424,12 @@ mod tests {
         registers
     }
 
+    fn extended_pcrs(registers: &Mutex<HashMap<u64, Vec<u8>>>) -> Vec<u64> {
+        let mut pcrs: Vec<_> = registers.lock().unwrap().keys().copied().collect();
+        pcrs.sort();
+        pcrs
+    }
+
     #[tokio::test]
     async fn test_extend_entry_logs_the_register_it_extends() {
         let tmp = tempfile::tempdir().unwrap();
@@ -437,7 +443,7 @@ mod tests {
 
         let log = std::fs::read(tmp.path().join("eventlog")).unwrap();
         assert_eq!(logged_registers(&log), vec![3]);
-        assert!(!registers.lock().unwrap().contains_key(&17));
+        assert_eq!(extended_pcrs(&registers), [8]);
     }
 
     #[tokio::test]
@@ -459,14 +465,12 @@ mod tests {
         };
         open_fake(tmp.path(), fake).await.unwrap();
 
-        {
-            let registers = registers.lock().unwrap();
-            assert!(
-                !registers.contains_key(&17),
-                "recovery extended the default PCR"
-            );
-            assert_eq!(registers[&8], pcr8, "PCR 8 must not be extended twice");
-        }
+        assert_eq!(extended_pcrs(&registers), [8]);
+        assert_eq!(
+            registers.lock().unwrap()[&8],
+            pcr8,
+            "PCR 8 must not be extended twice"
+        );
         let log = std::fs::read(tmp.path().join("eventlog")).unwrap();
         assert_eq!(logged_registers(&log), vec![3]);
     }
