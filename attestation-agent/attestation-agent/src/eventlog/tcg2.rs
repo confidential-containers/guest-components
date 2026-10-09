@@ -207,3 +207,52 @@ pub fn aael_plaintexts(mut log: &[u8]) -> Result<Vec<&str>> {
     }
     Ok(plaintexts)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    // Byte offsets in a SHA-384 entry, as `Tcg2EventEntry::to_le_bytes` lays it out.
+    const EVENT_TYPE: usize = 4;
+    const DIGEST_COUNT: usize = 8;
+    const ALGORITHM: usize = 12;
+    const TAG: usize = 66;
+    const TEXT_LEN: usize = 70;
+
+    fn entry(content: &str) -> Vec<u8> {
+        let event = Event::new("domain", "operation", content).unwrap();
+        let (entry, _) = Tcg2EventEntry::from(event)
+            .with_target_measurement_register(4)
+            .digest(HashAlgorithm::Sha384);
+        entry.to_le_bytes()
+    }
+
+    fn set_u32(entry: &mut [u8], at: usize, value: u32) {
+        entry[at..at + 4].copy_from_slice(&value.to_le_bytes());
+    }
+
+    #[test]
+    fn test_aael_plaintexts_reads_every_entry() {
+        let log = [entry("one"), entry("two")].concat();
+        assert_eq!(
+            aael_plaintexts(&log).unwrap(),
+            ["domain operation one", "domain operation two"]
+        );
+    }
+
+    #[rstest]
+    #[case::truncated(|e: &mut Vec<u8>| { e.pop(); })]
+    #[case::event_type(|e: &mut Vec<u8>| set_u32(e, EVENT_TYPE, 1))]
+    #[case::digest_count(|e: &mut Vec<u8>| set_u32(e, DIGEST_COUNT, 2))]
+    #[case::algorithm(|e: &mut Vec<u8>| e[ALGORITHM..ALGORITHM + 2].copy_from_slice(&4u16.to_le_bytes()))]
+    #[case::tag(|e: &mut Vec<u8>| set_u32(e, TAG, 0))]
+    #[case::text_len(|e: &mut Vec<u8>| set_u32(e, TEXT_LEN, 4))]
+    #[case::not_utf8(|e: &mut Vec<u8>| *e.last_mut().unwrap() = 0xff)]
+    fn test_aael_plaintexts_rejects_a_malformed_entry(#[case] corrupt: fn(&mut Vec<u8>)) {
+        let mut bad = entry("two");
+        corrupt(&mut bad);
+        let log = [entry("one"), bad].concat();
+        assert!(aael_plaintexts(&log).is_err());
+    }
+}
