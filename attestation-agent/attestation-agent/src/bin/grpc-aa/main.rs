@@ -134,22 +134,28 @@ rpc: grpc
         initdata_digest = Some(initdata);
     }
 
-    // Open the eventlog first, so that initdata recorded into it starts from a recovered log.
+    // Open the eventlog first, so that initdata measured into it starts from a recovered log.
     aa.init().await.context("init AA")?;
 
     if let Some(initdata_digest) = initdata_digest {
-        let res = match initdata_alg {
-            Some(alg) => aa.bind_or_record_init_data(alg, &initdata_digest).await,
-            None => aa.bind_init_data(&initdata_digest).await,
-        }
-        .context("Failed to bind initdata to the platform")?;
+        let res = aa
+            .bind_init_data(&initdata_digest)
+            .await
+            .context("Failed to bind initdata to the platform")?;
 
         match res {
             attester::InitDataResult::Ok => info!("Check initdata passed."),
             attester::InitDataResult::Unsupported => {
                 info!("Platform does not support initdata checking. Jumping.")
             }
-            attester::InitDataResult::NotBound => bail!("Initdata is not bound."),
+            attester::InitDataResult::NotBound => {
+                // The event content names the hash algorithm, which only the TOML gives.
+                let alg = initdata_alg
+                    .context("Initdata is not bound: pass --initdata-toml so AA can measure it")?;
+                aa.measure_init_data(alg, &initdata_digest)
+                    .await
+                    .context("Failed to measure initdata")?;
+            }
         }
     }
 

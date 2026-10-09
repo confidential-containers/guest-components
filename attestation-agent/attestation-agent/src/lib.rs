@@ -119,37 +119,22 @@ impl AttestationAgent {
         Ok(())
     }
 
-    /// Bind initdata like [`AttestationAPIs::bind_init_data`], but when the platform register
-    /// for it is unset, record the digest as an `InitData` event in the eventlog's default
-    /// register (RTMR3 on TDX) instead. This runs whether or not the eventlog is enabled, and
-    /// fails rather than leaving initdata unbound.
-    pub async fn bind_or_record_init_data(
-        &self,
-        alg: HashAlgorithm,
-        digest: &[u8],
-    ) -> Result<InitDataResult> {
-        match self.primary_attester.bind_init_data(digest).await? {
-            InitDataResult::NotBound => {
-                if !self.primary_attester.supports_runtime_measurement() {
-                    bail!("initdata is not bound and this platform cannot extend RTMR3");
-                }
-                let pcr = self.config.read().await.eventlog_config.init_pcr;
-                let extended = match &self.eventlog {
-                    Some(eventlog) => {
-                        record_init_data(&mut *eventlog.lock().await, pcr, alg, digest).await?
-                    }
-                    // The eventlog is off for runtime events, but initdata still has to be
-                    // measured, so open it just for this.
-                    None => {
-                        let mut eventlog = EventLog::new(self.primary_attester.clone()).await?;
-                        record_init_data(&mut eventlog, pcr, alg, digest).await?
-                    }
-                };
-                info!("Initdata recorded in the eventlog (extended: {extended}).");
-                Ok(InitDataResult::Ok)
-            }
-            result => Ok(result),
+    /// Bind the initdata digest through an `InitData` event in the eventlog's default register
+    /// (RTMR3 on TDX), for when [`AttestationAPIs::bind_init_data`] returns `NotBound`. Needs
+    /// the eventlog to be enabled.
+    pub async fn measure_init_data(&self, alg: HashAlgorithm, digest: &[u8]) -> Result<()> {
+        let Some(eventlog) = &self.eventlog else {
+            bail!(
+                "initdata is not bound: enable the eventlog to bind it through a runtime measurement"
+            );
+        };
+        if !self.primary_attester.supports_runtime_measurement() {
+            bail!("initdata is not bound and this platform cannot extend runtime measurements");
         }
+        let pcr = self.config.read().await.eventlog_config.init_pcr;
+        let extended = extend_init_data_once(&mut *eventlog.lock().await, pcr, alg, digest).await?;
+        info!("Initdata measured into the eventlog (extended: {extended}).");
+        Ok(())
     }
 
     /// Create a new instance of [AttestationAgent].
@@ -292,16 +277,10 @@ impl AttestationAPIs for AttestationAgent {
     }
 
     /// Perform the initdata binding. If current platform does not support initdata
-    /// binding, return `InitdataResult::Unsupported`.
+    /// binding, return `InitdataResult::Unsupported`; if it does but the register for it is
+    /// unset, return `InitDataResult::NotBound`.
     async fn bind_init_data(&self, init_data: &[u8]) -> Result<InitDataResult> {
-        match self.primary_attester.bind_init_data(init_data).await? {
-            InitDataResult::NotBound => {
-                bail!(
-                    "initdata is not bound: the platform register for it is unset, pass the initdata TOML so AA can record it"
-                )
-            }
-            result => Ok(result),
-        }
+        self.primary_attester.bind_init_data(init_data).await
     }
 
     /// Get the tee type of current platform. If no platform is detected,
@@ -315,9 +294,9 @@ impl AttestationAPIs for AttestationAgent {
     }
 }
 
-/// Log and measure the initdata digest once per boot. Returns false when an earlier AA run
+/// Extend and log the initdata digest once per boot. Returns false when an earlier AA run
 /// already recorded the same digest; a different recorded digest is an error.
-async fn record_init_data(
+async fn extend_init_data_once(
     eventlog: &mut EventLog,
     pcr: u64,
     alg: HashAlgorithm,
@@ -364,7 +343,7 @@ mod tests {
 
     async fn record(dir: &Path, registers: &Registers, digest: &[u8]) -> Result<bool> {
         let mut eventlog = open(dir, registers, false).await?;
-        record_init_data(&mut eventlog, PCR, HashAlgorithm::Sha384, digest).await
+        extend_init_data_once(&mut eventlog, PCR, HashAlgorithm::Sha384, digest).await
     }
 
     fn rtmr3(registers: &Registers) -> Option<Vec<u8>> {
@@ -372,7 +351,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_record_init_data_once_across_restarts() {
+    async fn test_extend_init_data_once_once_across_restarts() {
         let tmp = tempfile::tempdir().unwrap();
         let registers = Registers::default();
 
@@ -393,7 +372,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_record_init_data_rejects_a_different_digest() {
+    async fn test_extend_init_data_once_rejects_a_different_digest() {
         let tmp = tempfile::tempdir().unwrap();
         let registers = Registers::default();
 
@@ -405,7 +384,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_record_init_data_rejects_a_malformed_log() {
+    async fn test_extend_init_data_once_rejects_a_malformed_log() {
         let tmp = tempfile::tempdir().unwrap();
         let registers = Registers::default();
         std::fs::write(tmp.path().join("eventlog"), b"junk").unwrap();
@@ -415,13 +394,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_record_init_data_after_a_crash_recovers_first() {
+    async fn test_extend_init_data_once_after_a_crash_recovers_first() {
         let tmp = tempfile::tempdir().unwrap();
         let registers = Registers::default();
 
         // Crash after the extend lands but before the entry is written.
         let mut eventlog = open(tmp.path(), &registers, true).await.unwrap();
-        let crashed = record_init_data(&mut eventlog, PCR, HashAlgorithm::Sha384, &[1; 48]).await;
+        let crashed =
+            extend_init_data_once(&mut eventlog, PCR, HashAlgorithm::Sha384, &[1; 48]).await;
         assert!(crashed.is_err());
         drop(eventlog);
         let after_crash = rtmr3(&registers).expect("RTMR3 extended before the crash");

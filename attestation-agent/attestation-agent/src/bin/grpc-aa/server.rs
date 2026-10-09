@@ -4,7 +4,7 @@
 //
 
 use anyhow::*;
-use attestation_agent::{AttestationAPIs, AttestationAgent, RuntimeMeasurement};
+use attestation_agent::{AttestationAPIs, AttestationAgent, InitDataResult, RuntimeMeasurement};
 use protos::grpc::aa::attestation_agent::{
     BindInitDataRequest, BindInitDataResponse, ExtendRuntimeMeasurementRequest,
     ExtendRuntimeMeasurementResponse, GetAdditionalEvidenceRequest, GetAdditionalTeesRequest,
@@ -143,13 +143,22 @@ impl AttestationAgentService for AA {
 
         debug!("AA (grpc): bind init data ...");
 
-        self.inner
+        let result = self
+            .inner
             .bind_init_data(&request.digest)
             .await
             .map_err(|e| {
                 error!("AA (grpc): binding init data failed:\n{e:?}");
                 Status::internal(format!("[ERROR:{AGENT_NAME}] AA binding init data failed"))
             })?;
+
+        // A digest alone can't be measured instead, so an unset register is a failure here.
+        if let InitDataResult::NotBound = result {
+            error!("AA (grpc): init data is not bound: the platform register for it is unset");
+            return Err(Status::failed_precondition(format!(
+                "[ERROR:{AGENT_NAME}] AA init data is not bound"
+            )));
+        }
 
         debug!("AA (grpc): init data binding successfully!");
 
