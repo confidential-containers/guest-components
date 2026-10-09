@@ -9,7 +9,7 @@ inputs:
       attestation-agent/attester/Cargo.toml (see that crate's GitHub release
       notes for its corresponding libnvat/libnvat-dev version).
     required: false
-    default: "1.2.2"
+    default: "2.0.0"
   cuda-keyring-version:
     description: cuda-keyring package version used to register NVIDIA's apt repository
     required: false
