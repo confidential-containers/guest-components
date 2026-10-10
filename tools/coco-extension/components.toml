@@ -44,6 +44,9 @@ select        = "${attester_variant}"
 id           = "confidential-data-hub"
 level        = 2
 path         = "usr/local/bin/confidential-data-hub"
+# CDH_SERVICES_DIR fills services_dir when the config file omits it. The path
+# is where kata-agent looks for the per-service sockets. A config that sets
+# services_dir itself is left unchanged.
 config       = "${cdh_config_path}"
 # CDH's secure_mount shells out (by PATH lookup) to cryptsetup for encrypted
 # storage and to mke2fs/mkfs.ext4/dd for the filesystem. cryptsetup is CoCo-only
@@ -53,7 +56,7 @@ config       = "${cdh_config_path}"
 # /bin. The agent launches CDH with PATH=/bin:/sbin:/usr/bin:/usr/sbin, but
 # setting any env here overrides it wholesale, so prepend the extension's
 # usr/sbin and restore the base dirs.
-env          = { OCICRYPT_KEYPROVIDER_CONFIG = "${ocicrypt_config_path}", PATH = "${extension_root}/usr/sbin:/bin:/sbin:/usr/bin:/usr/sbin" }
+env          = { OCICRYPT_KEYPROVIDER_CONFIG = "${ocicrypt_config_path}", PATH = "${extension_root}/usr/sbin:/bin:/sbin:/usr/bin:/usr/sbin", CDH_SERVICES_DIR = "/run/guest-services" }
 wait_socket  = "${cdh_socket}"
 timeout_secs = "${launch_process_timeout}"
 

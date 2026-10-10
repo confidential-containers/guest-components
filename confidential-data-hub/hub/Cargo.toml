@@ -72,6 +72,7 @@ tokio = { workspace = true, features = [
     "rt-multi-thread",
     "sync",
 ] }
+tokio-stream = { workspace = true, features = ["net"], optional = true }
 tonic = { workspace = true, optional = true }
 ttrpc = { workspace = true, features = ["async"], optional = true }
 uuid = { workspace = true, features = ["fast-rng", "v4"] }
@@ -85,11 +86,14 @@ shadow-rs.workspace = true
 [dev-dependencies]
 assert_cmd.workspace = true
 assert-json-diff.workspace = true
-nix.workspace = true
+hyper-util = { workspace = true, features = ["tokio"] }
+nix = { workspace = true, features = ["signal"] }
 rstest.workspace = true
 serial_test.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
+tonic-prost.workspace = true
+tower = { workspace = true, features = ["util"] }
 
 [features]
 default = ["aliyun", "kbs", "bin", "ttrpc", "grpc", "cli"]
@@ -106,7 +110,7 @@ kbs = ["kms/kbs"]
 # Binary RPC type
 bin = ["clap", "shadow-rs", "tracing-subscriber"]
 ttrpc = ["dep:ttrpc", "tokio/signal", "protos/ttrpc"]
-grpc = ["prost", "tonic", "tokio/signal", "protos/grpc"]
+grpc = ["prost", "tonic", "tokio-stream", "tokio/signal", "protos/grpc"]
 
 # for the `secret` CLI
 cli = ["clap/derive", "tokio/rt-multi-thread", "tokio/sync", "tokio/macros"]
