@@ -50,6 +50,7 @@ pub mod nvidia;
 pub mod nvidia_dpu;
 
 pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
+pub type TeeMetadata = serde_json::Value;
 
 impl TryFrom<Tee> for BoxedAttester {
     type Error = anyhow::Error;
@@ -254,6 +255,12 @@ pub trait Attester {
     /// be determined, this function will panic.
     fn ccel_hash_algorithm(&self) -> HashAlgorithm {
         panic!("Unimplemented")
+    }
+
+    /// This function is used to get the tee metadata.
+    /// The tee metadata carries more information about the TEE.
+    fn get_tee_metadata(&self) -> Result<Option<TeeMetadata>> {
+        Ok(None)
     }
 }
 

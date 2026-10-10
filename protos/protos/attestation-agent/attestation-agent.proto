@@ -67,6 +67,18 @@ message GetAdditionalTeesResponse {
     repeated string additional_tees = 1;
 }
 
+message GetTeeMetadataRequest {}
+
+message TeeInfo {
+    string tee = 1;
+    optional string metadata = 2; // JSON string
+}
+
+message GetTeeMetadataResponse {
+    TeeInfo primary_tee = 1;
+    repeated TeeInfo additional_tees = 2;
+}
+
 service AttestationAgentService {
     rpc GetEvidence(GetEvidenceRequest) returns (GetEvidenceResponse) {};
     rpc GetAdditionalEvidence(GetAdditionalEvidenceRequest) returns (GetEvidenceResponse) {};
@@ -75,4 +87,5 @@ service AttestationAgentService {
     rpc BindInitData(BindInitDataRequest) returns (BindInitDataResponse) {};
     rpc GetTeeType(GetTeeTypeRequest) returns (GetTeeTypeResponse) {};
     rpc GetAdditionalTees(GetAdditionalTeesRequest) returns (GetAdditionalTeesResponse) {};
+    rpc GetTeeMetadata(GetTeeMetadataRequest) returns (GetTeeMetadataResponse) {};
 }

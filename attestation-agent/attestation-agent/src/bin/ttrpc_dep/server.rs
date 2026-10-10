@@ -9,14 +9,18 @@ use attestation_agent::{AttestationAPIs, AttestationAgent, RuntimeMeasurement};
 
 use tracing::{debug, error};
 
-use protos::ttrpc::aa::{
-    attestation_agent::{
-        ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse,
-        GetAdditionalEvidenceRequest, GetAdditionalTeesRequest, GetAdditionalTeesResponse,
-        GetEvidenceRequest, GetEvidenceResponse, GetTeeTypeRequest, GetTeeTypeResponse,
-        GetTokenRequest, GetTokenResponse, RuntimeMeasurementResult,
+use protos::{
+    ttrpc::MessageField,
+    ttrpc::aa::{
+        attestation_agent::{
+            ExtendRuntimeMeasurementRequest, ExtendRuntimeMeasurementResponse,
+            GetAdditionalEvidenceRequest, GetAdditionalTeesRequest, GetAdditionalTeesResponse,
+            GetEvidenceRequest, GetEvidenceResponse, GetTeeMetadataRequest, GetTeeMetadataResponse,
+            GetTeeTypeRequest, GetTeeTypeResponse, GetTokenRequest, GetTokenResponse,
+            RuntimeMeasurementResult, TeeInfo,
+        },
+        attestation_agent_ttrpc::AttestationAgentService,
     },
-    attestation_agent_ttrpc::AttestationAgentService,
 };
 
 #[allow(dead_code)]
@@ -198,5 +202,45 @@ impl AttestationAgentService for AA {
         }
         debug!("AA (ttrpc): get additional tees succeeded.");
         ::ttrpc::Result::Ok(res)
+    }
+
+    async fn get_tee_metadata(
+        &self,
+        _ctx: &::ttrpc::r#async::TtrpcContext,
+        _req: GetTeeMetadataRequest,
+    ) -> ::ttrpc::Result<GetTeeMetadataResponse> {
+        debug!("AA (ttrpc): get tee metadata ...");
+
+        let tee_topology = self.inner.get_tee_metadata().map_err(|e| {
+            error!("AA (ttrpc): get tee metadata failed:\n {e:?}");
+            let mut error_status = ::ttrpc::proto::Status::new();
+            error_status.set_code(Code::INTERNAL);
+            error_status.set_message(format!(
+                "[ERROR:{AGENT_NAME}] AA-KBC get tee metadata failed"
+            ));
+            ::ttrpc::Error::RpcStatus(error_status)
+        })?;
+        let mut reply = GetTeeMetadataResponse::new();
+        let primary_tee = TeeInfo {
+            tee: tee_topology.primary.tee.to_string(),
+            metadata: tee_topology
+                .primary
+                .metadata
+                .map(|context| context.to_string()),
+            ..Default::default()
+        };
+        let primary_tee = MessageField::from_option(Some(primary_tee));
+        let additional_tees = tee_topology
+            .additional
+            .into_iter()
+            .map(|tee| TeeInfo {
+                tee: tee.tee.to_string(),
+                metadata: tee.metadata.map(|context| context.to_string()),
+                ..Default::default()
+            })
+            .collect();
+        reply.primary_tee = primary_tee;
+        reply.additional_tees = additional_tees;
+        ::ttrpc::Result::Ok(reply)
     }
 }
