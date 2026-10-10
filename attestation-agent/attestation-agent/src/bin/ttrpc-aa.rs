@@ -150,12 +150,14 @@ rpc: ttrpc
     let mut aa = AttestationAgent::new(config).context("start AA")?;
 
     let mut initdata_digest = None;
+    let mut initdata_alg = None;
     if let Some(initdata_toml_path) = cli.initdata_toml {
         info!("Initdata TOML file is given by parameter");
         let initdata_toml =
             std::fs::read_to_string(&initdata_toml_path).context("read initdata toml file")?;
-        let (_, digest) = Initdata::parse_and_get_digest(&initdata_toml)?;
+        let (initdata, digest) = Initdata::parse_and_get_digest(&initdata_toml)?;
         aa.set_initdata_toml(initdata_toml);
+        initdata_alg = Some(initdata.algorithm);
         initdata_digest = Some(digest);
     } else if let Some(initdata) = cli.initdata_digest {
         info!("Initdata digest is given by parameter");
@@ -165,20 +167,31 @@ rpc: ttrpc
         initdata_digest = Some(initdata);
     }
 
+    // Open the eventlog first, so that initdata measured into it starts from a recovered log.
+    aa.init().await.context("init AA")?;
+
     if let Some(initdata_digest) = initdata_digest {
-        let res = aa.bind_init_data(&initdata_digest).await.context(
-        "The initdata supplied by the parameter is inconsistent with that of the current platform.",
-    )?;
+        let res = aa
+            .bind_init_data(&initdata_digest)
+            .await
+            .context("Failed to bind initdata to the platform")?;
 
         match res {
             attester::InitDataResult::Ok => info!("Check initdata passed."),
             attester::InitDataResult::Unsupported => {
                 info!("Platform does not support initdata checking. Jumping.")
             }
+            attester::InitDataResult::NotBound => {
+                // The event content names the hash algorithm, which only the TOML gives.
+                let alg = initdata_alg
+                    .context("Initdata is not bound: pass --initdata-toml so AA can measure it")?;
+                aa.measure_init_data(alg, &initdata_digest)
+                    .await
+                    .context("Failed to measure initdata")?;
+            }
         }
     }
 
-    aa.init().await.context("init AA")?;
     let att = start_ttrpc_service(aa)?;
 
     let mut atts = Server::new()

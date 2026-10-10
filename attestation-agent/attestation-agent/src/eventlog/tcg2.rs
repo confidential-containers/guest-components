@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use anyhow::{Context, Result, bail};
 use kbs_types::HashAlgorithm;
 use serde::Serialize;
 
@@ -161,5 +162,97 @@ impl Tcg2EventEntry {
         };
         self.digest = vec![el_digest];
         (self, digest)
+    }
+}
+
+/// Return the AAEL plaintext of each entry in a log written by `EventLog`.
+///
+/// Every entry has the shape `Tcg2EventEntry::to_le_bytes` produces, so a truncated tail
+/// or any unexpected header is an error rather than something to skip.
+pub fn aael_plaintexts(mut log: &[u8]) -> Result<Vec<&str>> {
+    fn take<'a>(buf: &mut &'a [u8], n: usize) -> Result<&'a [u8]> {
+        if buf.len() < n {
+            bail!("truncated AAEL entry");
+        }
+        let (head, tail) = buf.split_at(n);
+        *buf = tail;
+        Ok(head)
+    }
+    fn u32_le(buf: &mut &[u8]) -> Result<u32> {
+        Ok(u32::from_le_bytes(take(buf, 4)?.try_into()?))
+    }
+
+    let mut plaintexts = vec![];
+    while !log.is_empty() {
+        let _register = u32_le(&mut log)?;
+        let event_type = u32_le(&mut log)?;
+        let digest_count = u32_le(&mut log)?;
+        if event_type != EV_EVENT_TAG_TYPE || digest_count != 1 {
+            bail!("unexpected AAEL entry header");
+        }
+        let digest_len = match u16::from_le_bytes(take(&mut log, 2)?.try_into()?) {
+            0xB | 0x12 => 32,
+            0xC => 48,
+            0xD => 64,
+            alg => bail!("unknown AAEL digest algorithm {alg:#x}"),
+        };
+        take(&mut log, digest_len)?;
+        let data_len = u32_le(&mut log)? as usize;
+        let mut data = take(&mut log, data_len)?;
+        let tag = u32_le(&mut data)?;
+        if tag != AAEL_TAGGED_EVENT_ID || u32_le(&mut data)? as usize != data.len() {
+            bail!("malformed AAEL tagged event");
+        }
+        plaintexts.push(std::str::from_utf8(data).context("AAEL plaintext is not UTF-8")?);
+    }
+    Ok(plaintexts)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    // Byte offsets in a SHA-384 entry, as `Tcg2EventEntry::to_le_bytes` lays it out.
+    const EVENT_TYPE: usize = 4;
+    const DIGEST_COUNT: usize = 8;
+    const ALGORITHM: usize = 12;
+    const TAG: usize = 66;
+    const TEXT_LEN: usize = 70;
+
+    fn entry(content: &str) -> Vec<u8> {
+        let event = Event::new("domain", "operation", content).unwrap();
+        let (entry, _) = Tcg2EventEntry::from(event)
+            .with_target_measurement_register(4)
+            .digest(HashAlgorithm::Sha384);
+        entry.to_le_bytes()
+    }
+
+    fn set_u32(entry: &mut [u8], at: usize, value: u32) {
+        entry[at..at + 4].copy_from_slice(&value.to_le_bytes());
+    }
+
+    #[test]
+    fn test_aael_plaintexts_reads_every_entry() {
+        let log = [entry("one"), entry("two")].concat();
+        assert_eq!(
+            aael_plaintexts(&log).unwrap(),
+            ["domain operation one", "domain operation two"]
+        );
+    }
+
+    #[rstest]
+    #[case::truncated(|e: &mut Vec<u8>| { e.pop(); })]
+    #[case::event_type(|e: &mut Vec<u8>| set_u32(e, EVENT_TYPE, 1))]
+    #[case::digest_count(|e: &mut Vec<u8>| set_u32(e, DIGEST_COUNT, 2))]
+    #[case::algorithm(|e: &mut Vec<u8>| e[ALGORITHM..ALGORITHM + 2].copy_from_slice(&4u16.to_le_bytes()))]
+    #[case::tag(|e: &mut Vec<u8>| set_u32(e, TAG, 0))]
+    #[case::text_len(|e: &mut Vec<u8>| set_u32(e, TEXT_LEN, 4))]
+    #[case::not_utf8(|e: &mut Vec<u8>| *e.last_mut().unwrap() = 0xff)]
+    fn test_aael_plaintexts_rejects_a_malformed_entry(#[case] corrupt: fn(&mut Vec<u8>)) {
+        let mut bad = entry("two");
+        corrupt(&mut bad);
+        let log = [entry("one"), bad].concat();
+        assert!(aael_plaintexts(&log).is_err());
     }
 }

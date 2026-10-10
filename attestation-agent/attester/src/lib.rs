@@ -8,6 +8,8 @@ use kbs_types::{HashAlgorithm, Tee};
 
 pub mod sample;
 pub mod sample_device;
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils;
 pub mod utils;
 
 #[cfg(feature = "az-snp-vtpm-attester")]
@@ -199,6 +201,9 @@ impl TryFrom<Tee> for BoxedAttester {
 pub enum InitDataResult {
     Ok,
     Unsupported,
+    /// The platform supports initdata binding, but the register meant to carry
+    /// the digest was left unset, so the digest is not bound yet.
+    NotBound,
 }
 
 pub type TeeEvidence = serde_json::Value;
