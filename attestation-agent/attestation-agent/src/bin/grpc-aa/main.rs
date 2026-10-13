@@ -7,7 +7,6 @@ mod server;
 
 use anyhow::*;
 use attestation_agent::{AttestationAPIs, AttestationAgent, config::Config, initdata::Initdata};
-use base64::Engine;
 use clap::Parser;
 use const_format::concatcp;
 use shadow_rs::shadow;
@@ -50,25 +49,7 @@ struct Cli {
     #[arg(short, long)]
     config_file: Option<String>,
 
-    /// Initdata digest to be verified by AA. If initdata check failed, AA will failed to launch.
-    /// The initdata should be base64 standard encoding.
-    ///
-    /// Note that this is an alternative to `--initdata-toml`.
-    ///
-    /// If both `--initdata-toml` and `--initdata-digest` are provided,
-    /// `--initdata-toml` takes precedence.
-    ///
-    /// Example:
-    /// `--initdata-digest AAAAAAAAAAAA`
-    #[arg(short, long)]
-    initdata_digest: Option<String>,
-
     /// Path to the Initdata TOML file to be verified by AA. If initdata check failed, AA will failed to launch.
-    ///
-    /// Note that this is an alternative to `--initdata-digest`.
-    ///
-    /// If both `--initdata-toml` and `--initdata-digest` are provided,
-    /// `--initdata-toml` takes precedence.
     ///
     /// Example:
     /// `--initdata-toml /path/to/initdata.toml`
@@ -123,12 +104,6 @@ rpc: grpc
         let (_, digest) = Initdata::parse_and_get_digest(&initdata_toml)?;
         aa.set_initdata_toml(initdata_toml);
         initdata_digest = Some(digest);
-    } else if let Some(initdata) = cli.initdata_digest {
-        info!("Initdata digest is given by parameter");
-        let initdata = base64::engine::general_purpose::STANDARD
-            .decode(&initdata)
-            .context("base64 decode initdata")?;
-        initdata_digest = Some(initdata);
     }
 
     if let Some(initdata_digest) = initdata_digest {
