@@ -146,7 +146,7 @@ rpc: grpc
 
     aa.init().await.context("init AA")?;
     debug!(
-        "Attestation gRPC service listening on: {:?}",
+        "Starting Attestation gRPC service on: {:?}",
         cli.attestation_sock
     );
 
@@ -155,7 +155,10 @@ rpc: grpc
     tokio::select! {
         _ = hangup.recv() => info!("Client terminal disconnected."),
         _ = interrupt.recv() => info!("SIGINT received, gracefully shutdown."),
-        _ = server::start_grpc_service(attestation_socket, aa) => info!("AA exits."),
+        result = server::start_grpc_service(attestation_socket, aa) => {
+            result.with_context(|| format!("serve Attestation gRPC service on {attestation_socket}"))?;
+            info!("AA exits.");
+        },
     }
 
     Ok(())
