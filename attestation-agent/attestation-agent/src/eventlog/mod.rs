@@ -283,6 +283,14 @@ pub struct Event<'a> {
 
 impl<'a> Event<'a> {
     pub fn new(domain: &'a str, operation: &'a str, content: &'a str) -> Result<Self> {
+        for (name, value) in [("domain", domain), ("operation", operation)] {
+            if value.is_empty() {
+                bail!("{name} is empty");
+            }
+            if value.chars().any(char::is_whitespace) {
+                bail!("{name} contains whitespace");
+            }
+        }
         let content = Content::try_from(content)?;
         Ok(Event {
             domain,
@@ -330,6 +338,52 @@ mod tests {
     use rstest::rstest;
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
+
+    #[test]
+    fn test_event_rejects_whitespace_in_fields() {
+        for whitespace in [' ', '\t', '\n', '\r', '\x0b', '\x0c'] {
+            let invalid = format!("a{whitespace}b");
+            assert!(
+                Event::new(&invalid, "op", "content").is_err(),
+                "domain accepted whitespace {whitespace:?}"
+            );
+            assert!(
+                Event::new("domain", &invalid, "content").is_err(),
+                "operation accepted whitespace {whitespace:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_event_rejects_empty_fields() {
+        for (domain, operation, expected_error) in [
+            ("", "PullImage", "domain is empty"),
+            (
+                "github.com/confidential-containers",
+                "",
+                "operation is empty",
+            ),
+            ("", "", "domain is empty"),
+        ] {
+            let error = Event::new(domain, operation, "content")
+                .err()
+                .expect("empty fields must be rejected");
+            assert_eq!(error.to_string(), expected_error);
+        }
+    }
+
+    #[test]
+    fn test_event_accepts_valid_fields() {
+        let event = Event::new(
+            "github.com/confidential-containers",
+            "PullImage",
+            "c with spaces",
+        )
+        .unwrap();
+        assert_eq!(event.domain, "github.com/confidential-containers");
+        assert_eq!(event.operation, "PullImage");
+        assert_eq!(event.content.0, "c with spaces");
+    }
 
     struct TestWriter {
         content: Arc<Mutex<Vec<u8>>>,
