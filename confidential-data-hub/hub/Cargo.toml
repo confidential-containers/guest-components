@@ -92,7 +92,7 @@ tempfile.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
 
 [features]
-default = ["aliyun", "kbs", "bin", "ttrpc", "grpc", "cli"]
+default = ["kbs", "bin", "ttrpc", "grpc", "cli"]
 
 # support aliyun stacks (KMS, ..)
 aliyun = ["kms/aliyun"]
