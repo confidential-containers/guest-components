@@ -28,18 +28,19 @@ git clone https://github.com/confidential-containers/guest-components
 cd guest-components/confidential-data-hub
 make
 ```
-This will build CDH with `kbs` enabled and `KMS_PROVIDER=aliyun`.
+This will build CDH with `kbs` enabled.
 
-You can explicitly specify KMS_PROVIDER plugins during the build.
-For example if you only want to include `aliyun` KMS_PROVIDER:
+Cloud KMS plugins are off by default. Enable them explicitly with
+`KMS_PROVIDER`, for example Aliyun KMS:
 
 ```shell
 make KMS_PROVIDER=aliyun
 ```
 
-If you don't want to include any KMS_PROVIDER(s) (still with `cc_kbc` / CoCo KBS):
+Or AWS KMS / Secrets Manager:
+
 ```shell
-make KMS_PROVIDER=none
+make KMS_PROVIDER=aws
 ```
 
 If you only want the builtin `offline_fs_kbc` (no `cc_kbc`):
@@ -74,7 +75,8 @@ KMS_PROVIDER plugins (flag `KMS_PROVIDER`)
 | aws          | Use AWS KMS and Secrets Manager for confidential secrets.   |
 
 Note:
-- If no `KMS_PROVIDER` flag is given, `aliyun` is enabled by default.
+- Omit `KMS_PROVIDER` (or set `none`) to build without cloud KMS plugins.
+  Pass `aliyun` and/or `aws` only when those providers are needed.
 
 RPC plugins (flag `RPC`)
 | Feature name        |           Note                                                     |
