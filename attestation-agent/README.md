@@ -19,7 +19,7 @@ for details.
 
 The main body of AA is a rust library crate, which contains attester modules used to generate
 TEE evidence and negotiate an attestation token with a KBS. In addition, this project also
-provides a gRPC/ttrpc service application, which allows callers (such as
+provides a gRPC/ttRPC service application, which allows callers (such as
 `confidential-data-hub`) to call the services provided by AA.
 
 ## Library crate
@@ -32,11 +32,11 @@ attestation-agent = { git = "https://github.com/confidential-containers/guest-co
 
 **Note**: When the version is stable, we will release AA on https://crate.io.
 
-## gRPC Application
+## Service Application
 
-Here are the steps of building and running gRPC application of AA:
+### ttRPC (default)
 
-### Build
+#### Build
 
 Build and install with the default attester(s):
 
@@ -46,65 +46,64 @@ cd guest-components/attestation-agent
 make && make install
 ```
 
-or explicitly specify the platform it supports. Taking `tdx` as example:
+Or explicitly specify the platform. Taking `tdx` as an example:
 
 ```shell
 make ATTESTER=tdx-attester
 ```
 
-with no platform supported
+With no platform supported:
+
 ```shell
 make ATTESTER=none
 ```
 
-with all platforms supported
+With the `all-attesters` feature set:
+
 ```shell
 make ATTESTER=all-attesters
 ```
 
-#### Musl 
+#### Musl
 
-To build and install with musl, just run:
+To build and install with musl:
+
 ```shell
-make LIBC=musl && make install
+make LIBC=musl && make install LIBC=musl
 ```
 
-### Run
+#### Run
 
-For help information, just run:
+For help information:
 
 ```shell
 attestation-agent --help
 ```
 
-Start AA and specify the endpoint of AA's gRPC service:
-
-```shell
-attestation-agent --attestation_sock 127.0.0.1:50002
-```
-
-Or start AA with default address (127.0.0.1:50002)
-
-```
-attestation-agent
-```
-
-If you want to see the runtime log:
-```
-RUST_LOG=attestation_agent attestation-agent --attestation_sock 127.0.0.1:50002
-```
-
-### ttRPC
-
-To build and install ttRPC Attestation Agent, just run:
-```shell
-make ttrpc=true && make install
-```
-
-ttRPC AA now only support Unix Socket, for example:
+ttRPC AA supports Unix sockets only, for example:
 
 ```shell
 attestation-agent --attestation_sock unix:///tmp/attestation.sock
+```
+
+To see the runtime log:
+
+```shell
+RUST_LOG=attestation_agent attestation-agent --attestation_sock unix:///tmp/attestation.sock
+```
+
+### gRPC
+
+To build and install the gRPC Attestation Agent:
+
+```shell
+make ttrpc=false && make install
+```
+
+To run with a TCP endpoint:
+
+```shell
+attestation-agent --attestation_sock 127.0.0.1:50002
 ```
 
 ### Supported Platforms
