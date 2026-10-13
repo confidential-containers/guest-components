@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use async_trait::async_trait;
 use attester::{BoxedAttester, detect_attestable_devices, detect_tee_type};
-use kbs_types::Tee;
+use kbs_types::{HashAlgorithm, Tee};
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
 
@@ -24,6 +24,9 @@ use token::*;
 use tracing::{debug, info};
 
 use crate::{config::Config, eventlog::Event};
+
+const INITDATA_EVENT_DOMAIN: &str = "github.com/confidential-containers";
+const INITDATA_EVENT_OPERATION: &str = "InitData";
 
 pub enum RuntimeMeasurement {
     /// The runtime measurement is extended successfully.
@@ -113,6 +116,33 @@ impl AttestationAgent {
             self.eventlog = Some(Mutex::new(eventlog));
         }
 
+        Ok(())
+    }
+
+    /// Bind the initdata digest through an `InitData` event in the eventlog's default register
+    /// (RTMR3 on TDX), for when [`AttestationAPIs::bind_init_data`] returns `NotBound`. Needs
+    /// the eventlog to be enabled.
+    pub async fn measure_init_data(&self, alg: HashAlgorithm, digest: &[u8]) -> Result<()> {
+        let Some(eventlog) = &self.eventlog else {
+            bail!(
+                "initdata is not bound: enable the eventlog to bind it through a runtime measurement"
+            );
+        };
+        if !self.primary_attester.supports_runtime_measurement() {
+            bail!(
+                "initdata is not bound to any measurement register, and this platform does not support runtime measurement, so it cannot be recorded in the eventlog"
+            );
+        }
+        if digest.len() != alg.digest_len() {
+            bail!(
+                "a {alg} initdata digest is {} bytes, got {}",
+                alg.digest_len(),
+                digest.len()
+            );
+        }
+        let pcr = self.config.read().await.eventlog_config.init_pcr;
+        let extended = extend_init_data_once(&mut *eventlog.lock().await, pcr, alg, digest).await?;
+        info!("Initdata measured into the eventlog (extended: {extended}).");
         Ok(())
     }
 
@@ -256,7 +286,8 @@ impl AttestationAPIs for AttestationAgent {
     }
 
     /// Perform the initdata binding. If current platform does not support initdata
-    /// binding, return `InitdataResult::Unsupported`.
+    /// binding, return `InitdataResult::Unsupported`; if it does but the register for it is
+    /// unset, return `InitDataResult::NotBound`.
     async fn bind_init_data(&self, init_data: &[u8]) -> Result<InitDataResult> {
         self.primary_attester.bind_init_data(init_data).await
     }
@@ -271,3 +302,53 @@ impl AttestationAPIs for AttestationAgent {
         self.additional_attesters.keys().cloned().collect()
     }
 }
+
+/// Parse the hash algorithm sent along with a bare initdata digest. An empty name means none was
+/// sent; a name that is unknown or doesn't fit the digest's length is an error.
+pub fn parse_init_data_algorithm(name: &str, digest: &[u8]) -> Result<Option<HashAlgorithm>> {
+    if name.is_empty() {
+        return Ok(None);
+    }
+    let alg = HashAlgorithm::from_str(name)
+        .map_err(|_| anyhow!("unknown initdata hash algorithm {name:?}"))?;
+    if digest.len() != alg.digest_len() {
+        bail!(
+            "a {alg} initdata digest is {} bytes, got {}",
+            alg.digest_len(),
+            digest.len()
+        );
+    }
+    Ok(Some(alg))
+}
+
+/// Extend and log the initdata digest once per boot. Returns false when an earlier AA run
+/// already recorded the same digest; a different recorded digest is an error.
+async fn extend_init_data_once(
+    eventlog: &mut EventLog,
+    pcr: u64,
+    alg: HashAlgorithm,
+    digest: &[u8],
+) -> Result<bool> {
+    // Canonical JSON (RFC 8785), as the CoCo eventlog spec requires for event content.
+    let content = format!(r#"{{"digest":"{alg}:{}"}}"#, hex::encode(digest));
+    match eventlog
+        .logged_contents(INITDATA_EVENT_DOMAIN, INITDATA_EVENT_OPERATION)?
+        .as_slice()
+    {
+        [] => {
+            let event = Event::new(INITDATA_EVENT_DOMAIN, INITDATA_EVENT_OPERATION, &content)?;
+            eventlog.extend_entry(event, pcr).await?;
+            Ok(true)
+        }
+        [logged] if *logged == content => {
+            debug!("The same initdata AAEL entry has already been recorded, skipping.");
+            Ok(false)
+        }
+        [other] => bail!("eventlog already records different initdata: {other:?}"),
+        entries => bail!(
+            "eventlog records {} initdata entries, expected at most one: {entries:?}",
+            entries.len()
+        ),
+    }
+}
+
