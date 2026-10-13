@@ -4,7 +4,10 @@
 //
 
 use anyhow::*;
-use attestation_agent::{AttestationAPIs, AttestationAgent, RuntimeMeasurement};
+use attestation_agent::{
+    AttestationAPIs, AttestationAgent, InitDataResult, RuntimeMeasurement,
+    parse_init_data_algorithm,
+};
 use protos::grpc::aa::attestation_agent::{
     BindInitDataRequest, BindInitDataResponse, ExtendRuntimeMeasurementRequest,
     ExtendRuntimeMeasurementResponse, GetAdditionalEvidenceRequest, GetAdditionalTeesRequest,
@@ -143,13 +146,38 @@ impl AttestationAgentService for AA {
 
         debug!("AA (grpc): bind init data ...");
 
-        self.inner
+        let alg = parse_init_data_algorithm(&request.algorithm, &request.digest).map_err(|e| {
+            error!("AA (grpc): invalid init data algorithm: {e:?}");
+            Status::invalid_argument(format!("[ERROR:{AGENT_NAME}] {e}"))
+        })?;
+
+        let result = self
+            .inner
             .bind_init_data(&request.digest)
             .await
             .map_err(|e| {
                 error!("AA (grpc): binding init data failed:\n{e:?}");
                 Status::internal(format!("[ERROR:{AGENT_NAME}] AA binding init data failed"))
             })?;
+
+        if let InitDataResult::NotBound = result {
+            // Measuring the digest in the eventlog needs its hash algorithm.
+            let Some(alg) = alg else {
+                error!("AA (grpc): init data is not bound and no hash algorithm was given");
+                return Err(Status::failed_precondition(format!(
+                    "[ERROR:{AGENT_NAME}] AA init data is not bound: measuring it in the eventlog needs the hash algorithm"
+                )));
+            };
+            self.inner
+                .measure_init_data(alg, &request.digest)
+                .await
+                .map_err(|e| {
+                    error!("AA (grpc): measuring init data failed:\n{e:?}");
+                    Status::internal(format!(
+                        "[ERROR:{AGENT_NAME}] AA measuring init data failed"
+                    ))
+                })?;
+        }
 
         debug!("AA (grpc): init data binding successfully!");
 
