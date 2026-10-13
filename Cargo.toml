@@ -82,3 +82,8 @@ ttrpc-codegen = "0.7.0"
 url = "2.5.4"
 uuid = "1"
 zeroize = "1.8.2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
