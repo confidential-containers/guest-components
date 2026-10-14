@@ -243,8 +243,6 @@ jobs:
     # per-variant multi-arch manifests in the publish-manifests job below.
     - uses: oras-project/setup-oras@005458ad77f1c8facd38a094e4af2e69e5607ff4 # v2.0.2
       if: ${{ github.event_name != 'pull_request' }}
-      with:
-        version: 1.2.0
 
     - name: Publish OCI container image
       id: publish-container
