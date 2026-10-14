@@ -938,6 +938,8 @@ pub struct BindInitDataRequest {
     // message fields
     // @@protoc_insertion_point(field:attestation_agent.BindInitDataRequest.Digest)
     pub Digest: ::std::vec::Vec<u8>,
+    // @@protoc_insertion_point(field:attestation_agent.BindInitDataRequest.Algorithm)
+    pub Algorithm: ::std::string::String,
     // special fields
     // @@protoc_insertion_point(special_field:attestation_agent.BindInitDataRequest.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
@@ -955,12 +957,17 @@ impl BindInitDataRequest {
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(1);
+        let mut fields = ::std::vec::Vec::with_capacity(2);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
         fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
             "Digest",
             |m: &BindInitDataRequest| { &m.Digest },
             |m: &mut BindInitDataRequest| { &mut m.Digest },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "Algorithm",
+            |m: &BindInitDataRequest| { &m.Algorithm },
+            |m: &mut BindInitDataRequest| { &mut m.Algorithm },
         ));
         ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<BindInitDataRequest>(
             "BindInitDataRequest",
@@ -983,6 +990,9 @@ impl ::protobuf::Message for BindInitDataRequest {
                 10 => {
                     self.Digest = is.read_bytes()?;
                 },
+                18 => {
+                    self.Algorithm = is.read_string()?;
+                },
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
                 },
@@ -998,6 +1008,9 @@ impl ::protobuf::Message for BindInitDataRequest {
         if !self.Digest.is_empty() {
             my_size += ::protobuf::rt::bytes_size(1, &self.Digest);
         }
+        if !self.Algorithm.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.Algorithm);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
         my_size
@@ -1006,6 +1019,9 @@ impl ::protobuf::Message for BindInitDataRequest {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
         if !self.Digest.is_empty() {
             os.write_bytes(1, &self.Digest)?;
+        }
+        if !self.Algorithm.is_empty() {
+            os.write_string(2, &self.Algorithm)?;
         }
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1025,12 +1041,14 @@ impl ::protobuf::Message for BindInitDataRequest {
 
     fn clear(&mut self) {
         self.Digest.clear();
+        self.Algorithm.clear();
         self.special_fields.clear();
     }
 
     fn default_instance() -> &'static BindInitDataRequest {
         static instance: BindInitDataRequest = BindInitDataRequest {
             Digest: ::std::vec::Vec::new(),
+            Algorithm: ::std::string::String::new(),
             special_fields: ::protobuf::SpecialFields::new(),
         };
         &instance
@@ -1687,26 +1705,27 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     ntent\x18\x03\x20\x01(\tR\x07Content\x12)\n\rRegisterIndex\x18\x04\x20\
     \x01(\x04H\0R\rRegisterIndex\x88\x01\x01B\x10\n\x0e_RegisterIndex\"g\n\
     \x20ExtendRuntimeMeasurementResponse\x12C\n\x06Result\x18\x01\x20\x01(\
-    \x0e2+.attestation_agent.RuntimeMeasurementResultR\x06Result\"-\n\x13Bin\
-    dInitDataRequest\x12\x16\n\x06Digest\x18\x01\x20\x01(\x0cR\x06Digest\"\
-    \x16\n\x14BindInitDataResponse\"\x13\n\x11GetTeeTypeRequest\"&\n\x12GetT\
-    eeTypeResponse\x12\x10\n\x03tee\x18\x01\x20\x01(\tR\x03tee\"\x1a\n\x18Ge\
-    tAdditionalTeesRequest\"D\n\x19GetAdditionalTeesResponse\x12'\n\x0faddit\
-    ional_tees\x18\x01\x20\x03(\tR\x0eadditionalTees*F\n\x18RuntimeMeasureme\
-    ntResult\x12\x06\n\x02OK\x10\0\x12\x11\n\rNOT_SUPPORTED\x10\x01\x12\x0f\
-    \n\x0bNOT_ENABLED\x10\x022\xf0\x05\n\x17AttestationAgentService\x12\\\n\
-    \x0bGetEvidence\x12%.attestation_agent.GetEvidenceRequest\x1a&.attestati\
-    on_agent.GetEvidenceResponse\x12p\n\x15GetAdditionalEvidence\x12/.attest\
-    ation_agent.GetAdditionalEvidenceRequest\x1a&.attestation_agent.GetEvide\
-    nceResponse\x12S\n\x08GetToken\x12\".attestation_agent.GetTokenRequest\
-    \x1a#.attestation_agent.GetTokenResponse\x12\x83\x01\n\x18ExtendRuntimeM\
-    easurement\x122.attestation_agent.ExtendRuntimeMeasurementRequest\x1a3.a\
-    ttestation_agent.ExtendRuntimeMeasurementResponse\x12_\n\x0cBindInitData\
-    \x12&.attestation_agent.BindInitDataRequest\x1a'.attestation_agent.BindI\
-    nitDataResponse\x12Y\n\nGetTeeType\x12$.attestation_agent.GetTeeTypeRequ\
-    est\x1a%.attestation_agent.GetTeeTypeResponse\x12n\n\x11GetAdditionalTee\
-    s\x12+.attestation_agent.GetAdditionalTeesRequest\x1a,.attestation_agent\
-    .GetAdditionalTeesResponseb\x06proto3\
+    \x0e2+.attestation_agent.RuntimeMeasurementResultR\x06Result\"K\n\x13Bin\
+    dInitDataRequest\x12\x16\n\x06Digest\x18\x01\x20\x01(\x0cR\x06Digest\x12\
+    \x1c\n\tAlgorithm\x18\x02\x20\x01(\tR\tAlgorithm\"\x16\n\x14BindInitData\
+    Response\"\x13\n\x11GetTeeTypeRequest\"&\n\x12GetTeeTypeResponse\x12\x10\
+    \n\x03tee\x18\x01\x20\x01(\tR\x03tee\"\x1a\n\x18GetAdditionalTeesRequest\
+    \"D\n\x19GetAdditionalTeesResponse\x12'\n\x0fadditional_tees\x18\x01\x20\
+    \x03(\tR\x0eadditionalTees*F\n\x18RuntimeMeasurementResult\x12\x06\n\x02\
+    OK\x10\0\x12\x11\n\rNOT_SUPPORTED\x10\x01\x12\x0f\n\x0bNOT_ENABLED\x10\
+    \x022\xf0\x05\n\x17AttestationAgentService\x12\\\n\x0bGetEvidence\x12%.a\
+    ttestation_agent.GetEvidenceRequest\x1a&.attestation_agent.GetEvidenceRe\
+    sponse\x12p\n\x15GetAdditionalEvidence\x12/.attestation_agent.GetAdditio\
+    nalEvidenceRequest\x1a&.attestation_agent.GetEvidenceResponse\x12S\n\x08\
+    GetToken\x12\".attestation_agent.GetTokenRequest\x1a#.attestation_agent.\
+    GetTokenResponse\x12\x83\x01\n\x18ExtendRuntimeMeasurement\x122.attestat\
+    ion_agent.ExtendRuntimeMeasurementRequest\x1a3.attestation_agent.ExtendR\
+    untimeMeasurementResponse\x12_\n\x0cBindInitData\x12&.attestation_agent.\
+    BindInitDataRequest\x1a'.attestation_agent.BindInitDataResponse\x12Y\n\n\
+    GetTeeType\x12$.attestation_agent.GetTeeTypeRequest\x1a%.attestation_age\
+    nt.GetTeeTypeResponse\x12n\n\x11GetAdditionalTees\x12+.attestation_agent\
+    .GetAdditionalTeesRequest\x1a,.attestation_agent.GetAdditionalTeesRespon\
+    seb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
