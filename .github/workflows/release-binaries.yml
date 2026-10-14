@@ -77,8 +77,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: oras-project/setup-oras@005458ad77f1c8facd38a094e4af2e69e5607ff4 # v2.0.2
-        with:
-          version: 1.2.0
 
       - name: Build AA
         env:
@@ -164,8 +162,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: oras-project/setup-oras@005458ad77f1c8facd38a094e4af2e69e5607ff4 # v2.0.2
-        with:
-          version: 1.2.0
 
       - name: Build CDH
         env:
@@ -279,8 +275,6 @@ jobs:
       - name: Set up ORAS
         if: env.IS_PUBLISH == 'true'
         uses: oras-project/setup-oras@005458ad77f1c8facd38a094e4af2e69e5607ff4 # v2.0.2
-        with:
-          version: 1.2.0
 
       - name: Build secret CLI
         run: |
@@ -340,8 +334,6 @@ jobs:
 
       - name: Set up ORAS
         uses: oras-project/setup-oras@005458ad77f1c8facd38a094e4af2e69e5607ff4 # v2.0.2
-        with:
-          version: 1.2.0
 
       - name: Assemble and push multi-arch index
         run: |
