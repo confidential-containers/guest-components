@@ -51,6 +51,9 @@ message ExtendRuntimeMeasurementResponse {
 
 message BindInitDataRequest {
     bytes Digest = 1;
+    // Hash algorithm of Digest, e.g. "sha384". Only needed to record the digest in the
+    // eventlog when the platform cannot bind it; leave empty to only check the binding.
+    string Algorithm = 2;
 }
 
 message BindInitDataResponse {}

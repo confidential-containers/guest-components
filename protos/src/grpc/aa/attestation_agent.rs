@@ -51,6 +51,10 @@ pub struct ExtendRuntimeMeasurementResponse {
 pub struct BindInitDataRequest {
     #[prost(bytes = "vec", tag = "1")]
     pub digest: ::prost::alloc::vec::Vec<u8>,
+    /// Hash algorithm of Digest, e.g. "sha384". Only needed to record the digest in the
+    /// eventlog when the platform cannot bind it; leave empty to only check the binding.
+    #[prost(string, tag = "2")]
+    pub algorithm: ::prost::alloc::string::String,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BindInitDataResponse {}
