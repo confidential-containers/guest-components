@@ -220,21 +220,21 @@ impl Router {
                         }
                         (AA_AAEL_URL, &Method::POST) => {
                             info!("Extend AAEL entry");
-                            let aael_entry: AaelEvent = match req
-                                .into_body()
-                                .collect()
-                                .await
-                                .map_err(Error::from)
-                                .and_then(|data| {
-                                    serde_json::from_slice(data.to_bytes().as_ref())
-                                        .map_err(|e| anyhow!("Illegal AAEL eventry format: {e}"))
-                                }) {
-                                std::result::Result::Ok(aael_entry) => aael_entry,
+                            let data = match req.into_body().collect().await {
+                                std::result::Result::Ok(data) => data,
                                 Err(e) => {
-                                    error!("Failed to parse AAEL entry request: {e:#}");
+                                    error!("Failed to read AAEL entry request: {e:#}");
                                     return self.internal_error(e.to_string());
                                 }
                             };
+                            let aael_entry: AaelEvent =
+                                match serde_json::from_slice(data.to_bytes().as_ref()) {
+                                    std::result::Result::Ok(aael_entry) => aael_entry,
+                                    Err(e) => {
+                                        error!("Failed to parse AAEL entry request: {e:#}");
+                                        return self.bad_request();
+                                    }
+                                };
                             match client
                                 .extend_aael_entry(
                                     &aael_entry.domain,
