@@ -37,6 +37,13 @@ struct Cli {
     #[arg(long)]
     kbs: Option<String>,
 
+    /// Role claim included in the JWT used to authenticate against the Key Broker
+    /// Service. KBS admin authorization matches the JWT `role` claim against its ACLs,
+    /// so this value must match a role allowed by the KBS configuration.
+    /// Defaults to `admin`.
+    #[arg(long, default_value = "admin")]
+    admin_role: String,
+
     /// Whether this process is launched in daemon mode. If it is set to
     /// true, the stdio and stderr will be redirected to
     /// `/run/confidential-containers/coco_keyprovider.out` and
@@ -116,7 +123,7 @@ loglevel: {env_filter}
         daemonize.start().context("daemonize failed")?;
     }
 
-    grpc::start_service(cli.socket, cli.auth_private_key, cli.kbs).await?;
+    grpc::start_service(cli.socket, cli.auth_private_key, cli.kbs, cli.admin_role).await?;
 
     Ok(())
 }

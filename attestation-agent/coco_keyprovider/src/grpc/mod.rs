@@ -25,10 +25,15 @@ pub mod protocol;
 pub struct KeyProvider {
     auth_private_key: Option<Ed25519KeyPair>,
     kbs: Option<Url>,
+    admin_role: String,
 }
 
 impl KeyProvider {
-    pub fn new(auth_private_key: Option<Ed25519KeyPair>, kbs: Option<String>) -> Result<Self> {
+    pub fn new(
+        auth_private_key: Option<Ed25519KeyPair>,
+        kbs: Option<String>,
+        admin_role: String,
+    ) -> Result<Self> {
         let kbs = match kbs {
             Some(addr) => addr.parse().ok(),
             None => None,
@@ -37,6 +42,7 @@ impl KeyProvider {
         Ok(Self {
             auth_private_key,
             kbs,
+            admin_role,
         })
     }
 }
@@ -90,7 +96,7 @@ impl KeyProviderService for KeyProvider {
             .collect();
 
         let annotation: String = enc_mods::enc_optsdata_gen_anno(
-            (&self.kbs, &self.auth_private_key),
+            (&self.kbs, &self.auth_private_key, &self.admin_role),
             &engine
                 .decode(optsdata)
                 .map_err(|_| Status::aborted("base64 decode"))?,
@@ -137,6 +143,7 @@ pub async fn start_service(
     socket: SocketAddr,
     auth_private_key: Option<PathBuf>,
     kbs: Option<String>,
+    admin_role: String,
 ) -> Result<()> {
     let auth_private_key = match auth_private_key {
         Some(key_path) => {
@@ -153,6 +160,7 @@ pub async fn start_service(
         .add_service(KeyProviderServiceServer::new(KeyProvider::new(
             auth_private_key,
             kbs,
+            admin_role,
         )?))
         .serve(socket)
         .await?;

@@ -58,6 +58,12 @@ $ cd attestation-agent/coco_keyprovider
 $ RUST_LOG=coco_keyprovider cargo run --release -- --socket 127.0.0.1:50000 &
 ```
 
+When both `--kbs` and `--auth-private-key` are given, the keyprovider automatically registers each generated Key Encryption Key (KEK) into the KBS. The registration is authenticated with a JWT signed by `--auth-private-key`. KBS admin authorization matches the JWT `role` claim against its ACLs, so the role must be allowed by the KBS configuration:
+
+- `--kbs <address>`: Address of the Key Broker Service. Enables automatic KEK registration.
+- `--auth-private-key <path>`: PEM file of the Ed25519 private key used to sign the admin JWT.
+- `--admin-role <role>`: Role claim included in the admin JWT (default `admin`). Must match a role allowed by the KBS `regex_acl`.
+
 Skopeo leverages the [Ocicrypt](https://github.com/containers/ocicrypt) library to encrypt/decrypt images. Create an [Ocicrypt keyprovider](https://github.com/containers/ocicrypt/blob/main/docs/keyprovider.md) configuration file as shown below and export the `OCICRYPT_KEYPROVIDER_CONFIG` variable:
 
 ```shell
