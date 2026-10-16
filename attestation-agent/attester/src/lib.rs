@@ -198,9 +198,13 @@ impl TryFrom<Tee> for BoxedAttester {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum InitDataResult {
     Ok,
     Unsupported,
+    /// The platform supports initdata binding, but the register meant to carry
+    /// the digest was left unset, so the digest is not bound yet.
+    NotBound,
 }
 
 pub type TeeEvidence = serde_json::Value;
