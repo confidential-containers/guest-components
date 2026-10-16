@@ -195,7 +195,7 @@ fn normalize_path(key_id: &str) -> Result<(String, String)> {
 /// | keypath   | path to the KEK, e.g. `/home/key`    | Specify the KEK to encrypted the image in local filesystem                                       |
 /// | algorithm | `A256GCM` or `A256CTR`               | Encryption algorithm, included in the `wrap_type` field of AnnotationPacket. By default `A256GCM`|
 pub async fn enc_optsdata_gen_anno(
-    kbs_parameter: (&Option<Url>, &Option<Ed25519KeyPair>),
+    kbs_parameter: (&Option<Url>, &Option<Ed25519KeyPair>, &str),
     optsdata: &[u8],
     params: Vec<String>,
 ) -> Result<String> {
@@ -210,11 +210,11 @@ pub async fn enc_optsdata_gen_anno(
     let encrypt_optsdata = crypto::encrypt(optsdata, &key, &iv, &algorithm)
         .map_err(|e| anyhow!("Encrypt failed: {:?}", e))?;
 
-    if let (Some(addr), Some(private_key)) = kbs_parameter
+    if let (Some(addr), Some(private_key), role) = kbs_parameter
         && !input_params.sample
     {
         // We do not register KEK for sample kbc
-        register_kek(private_key, addr, key, &k_path)
+        register_kek(private_key, addr, key, &k_path, role)
             .await
             .context("register KEK failed")?;
         info!("register KEK succeeded.");
