@@ -19,7 +19,6 @@ azure-guest-attestation-sdk = { version = "0.1", optional = true }
 azure-tpm = { version = "0.1", optional = true }
 base64.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
-cfg-if.workspace = true
 crypto.path = "../deps/crypto"
 hex.workspace = true
 iocuddle = { version = "0.3.0", optional = true }

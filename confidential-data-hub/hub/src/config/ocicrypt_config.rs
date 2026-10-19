@@ -62,21 +62,18 @@ impl CdhConfig {
 
     /// Build the default ocicrypt keyprovider JSON for this CDH instance.
     fn default_ocicrypt_keyprovider_config(&self) -> String {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "ttrpc")] {
-                // Prefer ttrpc when both RPC features are enabled (CoCo default).
-                format!(
-                    r#"{{"key-providers":{{"{name}":{{"ttrpc":"{socket}"}}}}}}"#,
-                    name = OCICRYPT_KEYPROVIDER_NAME,
-                    socket = self.socket,
-                )
-            } else {
-                format!(
-                    r#"{{"key-providers":{{"{name}":{{"grpc":"{socket}"}}}}}}"#,
-                    name = OCICRYPT_KEYPROVIDER_NAME,
-                    socket = self.socket,
-                )
-            }
+        // Prefer ttrpc when both RPC features are enabled (CoCo default).
+        cfg_select! {
+            feature = "ttrpc" => format!(
+                r#"{{"key-providers":{{"{name}":{{"ttrpc":"{socket}"}}}}}}"#,
+                name = OCICRYPT_KEYPROVIDER_NAME,
+                socket = self.socket,
+            ),
+            _ => format!(
+                r#"{{"key-providers":{{"{name}":{{"grpc":"{socket}"}}}}}}"#,
+                name = OCICRYPT_KEYPROVIDER_NAME,
+                socket = self.socket,
+            ),
         }
     }
 }
