@@ -65,6 +65,11 @@ impl AttestationAgentServiceClient {
         let mut cres = super::attestation_agent::GetAdditionalTeesResponse::new();
         ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetAdditionalTees", cres);
     }
+
+    pub async fn get_tee_metadata(&self, ctx: ttrpc::context::Context, req: &super::attestation_agent::GetTeeMetadataRequest) -> ::ttrpc::Result<super::attestation_agent::GetTeeMetadataResponse> {
+        let mut cres = super::attestation_agent::GetTeeMetadataResponse::new();
+        ::ttrpc::async_client_request!(self, ctx, req, "attestation_agent.AttestationAgentService", "GetTeeMetadata", cres);
+    }
 }
 
 struct GetEvidenceMethod {
@@ -144,6 +149,17 @@ impl ::ttrpc::r#async::MethodHandler for GetAdditionalTeesMethod {
     }
 }
 
+struct GetTeeMetadataMethod {
+    service: Arc<dyn AttestationAgentService + Send + Sync>,
+}
+
+#[async_trait]
+impl ::ttrpc::r#async::MethodHandler for GetTeeMetadataMethod {
+    async fn handler(&self, ctx: ::ttrpc::r#async::TtrpcContext, req: ::ttrpc::Request) -> ::ttrpc::Result<::ttrpc::Response> {
+        ::ttrpc::async_request_handler!(self, ctx, req, attestation_agent, GetTeeMetadataRequest, get_tee_metadata);
+    }
+}
+
 #[async_trait]
 pub trait AttestationAgentService: Sync {
     async fn get_evidence(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetEvidenceRequest) -> ::ttrpc::Result<super::attestation_agent::GetEvidenceResponse> {
@@ -166,6 +182,9 @@ pub trait AttestationAgentService: Sync {
     }
     async fn get_additional_tees(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetAdditionalTeesRequest) -> ::ttrpc::Result<super::attestation_agent::GetAdditionalTeesResponse> {
         Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/GetAdditionalTees is not supported".to_string())))
+    }
+    async fn get_tee_metadata(&self, _ctx: &::ttrpc::r#async::TtrpcContext, _: super::attestation_agent::GetTeeMetadataRequest) -> ::ttrpc::Result<super::attestation_agent::GetTeeMetadataResponse> {
+        Err(::ttrpc::Error::RpcStatus(::ttrpc::get_status(::ttrpc::Code::NOT_FOUND, "/attestation_agent.AttestationAgentService/GetTeeMetadata is not supported".to_string())))
     }
 }
 
@@ -194,6 +213,9 @@ pub fn create_attestation_agent_service(service: Arc<dyn AttestationAgentService
 
     methods.insert("GetAdditionalTees".to_string(),
                     Box::new(GetAdditionalTeesMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
+
+    methods.insert("GetTeeMetadata".to_string(),
+                    Box::new(GetTeeMetadataMethod{service: service.clone()}) as Box<dyn ::ttrpc::r#async::MethodHandler + Send + Sync>);
 
     ret.insert("attestation_agent.AttestationAgentService".to_string(), ::ttrpc::r#async::Service{ methods, streams });
     ret

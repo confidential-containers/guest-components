@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use attester::{BoxedAttester, TeeEvidence, detect_attestable_devices, detect_tee_type};
 use kbs_types::Tee;
 
-use super::EvidenceProvider;
+use super::{EvidenceProvider, TeeInfo, TotalTeeInfo};
 
 use crate::{Error, Result};
 
@@ -76,5 +76,33 @@ impl EvidenceProvider for NativeEvidenceProvider {
 
     async fn get_tee_type(&self) -> Result<Tee> {
         Ok(self.primary_tee)
+    }
+
+    async fn get_tee_metadata(&self) -> Result<TotalTeeInfo> {
+        let res = TotalTeeInfo {
+            primary_tee: TeeInfo {
+                tee: self.primary_tee,
+                metadata: self.primary_attester.get_tee_metadata().map_err(|e| {
+                    Error::NativeEvidenceProvider(format!(
+                        "failed to get attestation request context: {e}"
+                    ))
+                })?,
+            },
+            additional_tees: self
+                .additional_attesters
+                .iter()
+                .map(|(tee, attester)| {
+                    Ok(TeeInfo {
+                        tee: *tee,
+                        metadata: attester.get_tee_metadata().map_err(|e| {
+                            Error::NativeEvidenceProvider(format!(
+                                "failed to get attestation request metadata: {e}"
+                            ))
+                        })?,
+                    })
+                })
+                .collect::<Result<Vec<TeeInfo>>>()?,
+        };
+        Ok(res)
     }
 }
