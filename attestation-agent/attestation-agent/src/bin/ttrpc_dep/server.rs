@@ -22,6 +22,10 @@ use protos::ttrpc::aa::{
 #[allow(dead_code)]
 pub const AGENT_NAME: &str = "attestation-agent";
 
+/// Fixed message produced by the SE attester when the UV rejects the firmware flag.
+#[allow(dead_code)]
+const FIRMWARE_UNSUPPORTED_MSG: &str = "Firmware attestation requires z17 or later";
+
 #[allow(dead_code)]
 pub struct AA {
     pub(crate) inner: AttestationAgent,
@@ -38,9 +42,17 @@ impl AttestationAgentService for AA {
 
         let token = self.inner.get_token(&req.TokenType).await.map_err(|e| {
             error!("AA (ttrpc): get token failed\n {e:?}");
+            // Surface this one actionable reason to the caller (shown in pod events).
+            let reason = if format!("{e:?}").contains(FIRMWARE_UNSUPPORTED_MSG) {
+                format!(": {FIRMWARE_UNSUPPORTED_MSG}")
+            } else {
+                String::new()
+            };
             let mut error_status = ::ttrpc::proto::Status::new();
             error_status.set_code(Code::INTERNAL);
-            error_status.set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get token failed"));
+            error_status.set_message(format!(
+                "[ERROR:{AGENT_NAME}] AA-KBC get token failed{reason}"
+            ));
             ::ttrpc::Error::RpcStatus(error_status)
         })?;
 
@@ -65,10 +77,16 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (ttrpc): get evidence failed:\n {e:?}");
+                let reason = if format!("{e:?}").contains(FIRMWARE_UNSUPPORTED_MSG) {
+                    format!(": {FIRMWARE_UNSUPPORTED_MSG}")
+                } else {
+                    String::new()
+                };
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
-                error_status
-                    .set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get evidence failed"));
+                error_status.set_message(format!(
+                    "[ERROR:{AGENT_NAME}] AA-KBC get evidence failed{reason}"
+                ));
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
@@ -93,10 +111,16 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (ttrpc): get evidence failed:\n {e:?}");
+                let reason = if format!("{e:?}").contains(FIRMWARE_UNSUPPORTED_MSG) {
+                    format!(": {FIRMWARE_UNSUPPORTED_MSG}")
+                } else {
+                    String::new()
+                };
                 let mut error_status = ::ttrpc::proto::Status::new();
                 error_status.set_code(Code::INTERNAL);
-                error_status
-                    .set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get evidence failed"));
+                error_status.set_message(format!(
+                    "[ERROR:{AGENT_NAME}] AA-KBC get evidence failed{reason}"
+                ));
                 ::ttrpc::Error::RpcStatus(error_status)
             })?;
 
