@@ -12,7 +12,6 @@ use base64::Engine;
 use iocuddle::{Group, Ioctl, WriteRead};
 use kbs_types::HashAlgorithm;
 use report::TdReport;
-use scroll::Pread;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::debug;
@@ -91,10 +90,8 @@ impl TdxAttester {
             .ioctl(&mut fd, &mut report)
             .context("Get TD report via ioctl() failed")?;
 
-        let td_report = report
-            .d
-            .pread::<report::TdReport>(0)
-            .context("Parse TD report failed")?;
+        let td_report = TdReport::read_from_bytes(&report.d)
+            .map_err(|e| anyhow!("Parse TD report failed: {e}"))?;
 
         Ok(td_report)
     }
