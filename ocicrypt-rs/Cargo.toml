@@ -17,7 +17,7 @@ base64-serde = { workspace = true, optional = true }
 ctr = { workspace = true, optional = true }
 hmac = { workspace = true, optional = true }
 josekit = { version = ">=0.7", optional = true }
-openssl = { workspace = true, features = ["vendored"], optional = true }
+openssl = { workspace = true, optional = true }
 pin-project-lite = { version = "0.2.17", optional = true }
 protos = { path = "../protos", default-features = false, optional = true }
 serde = { workspace = true, features = ["derive"] }
@@ -34,7 +34,7 @@ ttrpc = { workspace = true, features = ["async"], optional = true }
 aes-gcm.workspace = true
 ctrlc = { version = "3.5", features = ["termination"] }
 hex.workspace = true
-openssl = { workspace = true, features = ["vendored"] }
+openssl.workspace = true
 tokio = { workspace = true, features = ["time", "signal"] }
 
 [features]
