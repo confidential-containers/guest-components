@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use scroll::Pread;
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 #[repr(C)]
-#[derive(Pread)]
+#[derive(Clone, Copy, Debug, FromBytes, IntoBytes, Immutable, KnownLayout)]
 /// Type header of TDREPORT_STRUCT.
 pub(super) struct TdTransportType {
     /// Type of the TDREPORT (0 - SGX, 81 - TDX, rest are reserved).
@@ -24,7 +24,7 @@ pub(super) struct TdTransportType {
 }
 
 #[repr(C)]
-#[derive(Pread)]
+#[derive(Clone, Copy, Debug, FromBytes, IntoBytes, Immutable, KnownLayout)]
 /// TDX guest report data, MAC and TEE hashes.
 pub(super) struct ReportMac {
     /// TDREPORT type header.
@@ -53,7 +53,7 @@ pub(super) struct ReportMac {
 }
 
 #[repr(C)]
-#[derive(Pread)]
+#[derive(Clone, Copy, Debug, FromBytes, IntoBytes, Immutable, KnownLayout)]
 /// TDX guest measurements and configuration.
 pub(super) struct TdInfo {
     /// TDX Guest attributes (like debug, spet_disable, etc).
@@ -82,7 +82,7 @@ pub(super) struct TdInfo {
 }
 
 #[repr(C)]
-#[derive(Pread)]
+#[derive(Clone, Copy, Debug, FromBytes, IntoBytes, Immutable, KnownLayout)]
 /// Output of TDCALL[TDG.MR.REPORT].
 pub(super) struct TdReport {
     /// Mac protected header of size 256 bytes.
@@ -113,7 +113,6 @@ impl TdReport {
 #[cfg(test)]
 mod test {
     use rstest::rstest;
-    use scroll::Pread;
 
     use crate::tdx::{TdxAttester, report::TdReport};
 
@@ -137,6 +136,8 @@ mod test {
         "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
     )]
     fn get_runtime_measurement(#[case] pcr_index: u64, #[case] expected: &str) {
+        use zerocopy::FromBytes;
+
         use crate::Attester;
 
         let report_bin = include_bytes!("../../test/tdx_report_1.bin");
@@ -144,7 +145,7 @@ mod test {
         let rtmr_index = attester.pcr_to_ccmr(pcr_index) as usize - 1;
 
         let expected = hex::decode(expected).unwrap();
-        let td_report = report_bin.pread::<TdReport>(0).unwrap();
+        let td_report = TdReport::read_from_bytes(report_bin).unwrap();
 
         assert_eq!(td_report.get_rtmr(rtmr_index), expected);
     }
