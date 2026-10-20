@@ -128,7 +128,7 @@ jobs:
     strategy:
       matrix:
         platform:
-          - { arch: x86_64,      libc: musl, runner: ubuntu-24.04 }
+          - { arch: x86_64,      libc: gnu, runner: ubuntu-24.04 }
           - { arch: s390x,       libc: gnu,  runner: ubuntu-24.04-s390x }
           - { arch: aarch64,     libc: gnu,  runner: ubuntu-24.04-arm }
           - { arch: powerpc64le, libc: gnu,  runner: ubuntu-24.04-ppc64le }
