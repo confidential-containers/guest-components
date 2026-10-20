@@ -43,9 +43,14 @@ inputs:
     required: false
     default: "false"
   install-build-deps:
-    description: Install protobuf-compiler, libclang-dev, cmake, pkg-config
+    description: Install protobuf-compiler, libclang-dev, cmake, pkg-config, libssl-dev
     required: false
     default: "false"
+  install-openssl:
+    description: Install libssl-dev and pkg-config for system OpenSSL linking
+    required: false
+    # Default on: workspace crates link system OpenSSL (no longer vendored).
+    default: "true"
   install-nvat:
     description: Build and install NVIDIA Attestation SDK
     required: false
@@ -73,7 +78,7 @@ runs:
         cache: ${{ inputs.cache == 'true' }}
 
     - name: Update apt
-      if: inputs.install-tpm == 'true' || inputs.install-dmverity == 'true' || inputs.install-cryptsetup == 'true' || inputs.install-nettle == 'true' || inputs.install-zfs == 'true' || inputs.install-musl == 'true' || inputs.install-build-deps == 'true'
+      if: inputs.install-tpm == 'true' || inputs.install-dmverity == 'true' || inputs.install-cryptsetup == 'true' || inputs.install-nettle == 'true' || inputs.install-zfs == 'true' || inputs.install-musl == 'true' || inputs.install-build-deps == 'true' || inputs.install-openssl == 'true'
       shell: bash
       run: sudo apt-get update
 
@@ -116,7 +121,12 @@ runs:
       shell: bash
       run: |
         sudo apt-get install -y --no-install-recommends \
-          protobuf-compiler libclang-dev cmake pkg-config
+          protobuf-compiler libclang-dev cmake pkg-config libssl-dev
+
+    - name: Install system OpenSSL development packages
+      if: inputs.install-openssl == 'true'
+      shell: bash
+      run: sudo apt-get install -y --no-install-recommends libssl-dev pkg-config
 
     - name: Install NVIDIA Attestation SDK
       if: inputs.install-nvat == 'true'

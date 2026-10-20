@@ -122,7 +122,9 @@ Data flow: `REST API → ttrpc → AA (attestation) + CDH (secrets/images) → i
 
 ### Crypto
 
-OpenSSL is the project-selected cryptographic backend. HTTP clients use vendored native-tls, and ocicrypt-rs uses OpenSSL for cryptographic randomness.
+OpenSSL is the project-selected cryptographic backend. HTTP clients use
+native-tls against the system OpenSSL, and ocicrypt-rs / the shared `crypto`
+crate link the system `libssl`/`libcrypto` (install `libssl-dev` to build).
 These backends are no longer selectable through Cargo features.
 
 ### Feature flags
