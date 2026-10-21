@@ -12,7 +12,7 @@ anyhow.workspace = true
 async-trait.workspace = true
 attester = { path = "../attester", default-features = false }
 base64.workspace = true
-serde_json_canonicalizer = { version = "0.3", optional = true }
+serde_json_canonicalizer = { version = "0.4", optional = true }
 clap = { workspace = true, features = ["derive"], optional = true }
 crypto.path = "../deps/crypto"
 jwt-simple.workspace = true
