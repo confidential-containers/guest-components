@@ -55,17 +55,14 @@ impl SecureChannel {
     /// Create a new [`SecureChannel`] that talks to a `GetResource` service
     /// (typically Confidential Data Hub) over ttrpc or gRPC.
     pub fn new(work_dir: &Path) -> Result<Self> {
-        let client: Box<dyn Client> = {
-            cfg_if::cfg_if! {
-                if #[cfg(feature = "keywrap-ttrpc")] {
-                    info!("secure channel uses ttrpc");
-                    Box::<ttrpc::Ttrpc>::default()
-                } else if #[cfg(feature = "keywrap-grpc")] {
-                    info!("secure channel uses gRPC");
-                    Box::<grpc::Grpc>::default()
-                } else  {
-                    compile_error!("At least one feature of `keywrap-grpc` and `keywrap-ttrpc` must be enabled.");
-                }
+        cfg_select! {
+            feature = "keywrap-ttrpc" => {
+                info!("secure channel uses ttrpc");
+                let client: Box<dyn Client> = Box::<ttrpc::Ttrpc>::default();
+            }
+            feature = "keywrap-grpc" => {
+                info!("secure channel uses gRPC");
+                let client: Box<dyn Client> = Box::<grpc::Grpc>::default();
             }
         };
 

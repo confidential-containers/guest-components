@@ -63,52 +63,29 @@ pub async fn clean() {
 
 pub async fn start_confidential_data_hub() -> Result<Child> {
     let script_dir = format!("{}/{}", std::env!("CARGO_MANIFEST_DIR"), "scripts");
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "keywrap-ttrpc")] {
-            let cdh_path = format!("{}/ttrpc/{}", script_dir, "confidential-data-hub");
-        } else {
-            let cdh_path = format!("{}/grpc/{}", script_dir, "confidential-data-hub");
-        }
+    let rpc = cfg_select! {
+        feature = "keywrap-ttrpc" => "ttrpc",
+        _ => "grpc",
     };
+    let cdh_path = format!("{script_dir}/{rpc}/confidential-data-hub");
     println!("cdh_path: {cdh_path}");
     println!("script_dir: {script_dir}");
 
     if !Path::new(&cdh_path).exists() {
         let script_path = format!("{script_dir}/build_confidential_data_hub.sh");
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "keywrap-ttrpc")] {
-                let output = Command::new(script_path)
-                    .env("RPC", "ttrpc")
-                    .output()
-                    .await
-                    .expect("Failed to build confidential-data-hub");
-                println!("build ttrpc confidential-data-hub: {output:?}");
-            } else {
-                let output = Command::new(script_path)
-                    .env("RPC", "grpc")
-                    .output()
-                    .await
-                    .expect("Failed to build confidential-data-hub");
-                println!("build grpc confidential-data-hub: {output:?}");
-            }
-        }
+        let output = Command::new(script_path)
+            .env("RPC", rpc)
+            .output()
+            .await
+            .expect("Failed to build confidential-data-hub");
+        println!("build {rpc} confidential-data-hub: {output:?}");
     }
 
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "keywrap-ttrpc")] {
-            let mut cdh = Command::new(cdh_path)
-            .env("AA_KBC_PARAM", AA_PARAMETER)
-            .kill_on_drop(true)
-            .spawn()
-            .expect("Failed to start confidential-data-hub");
-        } else {
-            let mut cdh = Command::new(cdh_path)
-            .env("AA_KBC_PARAM", AA_PARAMETER)
-            .kill_on_drop(true)
-            .spawn()
-            .expect("Failed to start confidential-data-hub");
-        }
-    };
+    let mut cdh = Command::new(cdh_path)
+        .env("AA_KBC_PARAM", AA_PARAMETER)
+        .kill_on_drop(true)
+        .spawn()
+        .expect("Failed to start confidential-data-hub");
 
     // Leave some time to let fork-ed AA process to be ready
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;

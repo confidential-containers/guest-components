@@ -37,7 +37,6 @@ anyhow.workspace = true
 async-trait.workspace = true
 attestation-agent = { path = "../../attestation-agent/attestation-agent", default-features = false }
 base64.workspace = true
-cfg-if.workspace = true
 clap = { workspace = true, features = ["derive"], optional = true }
 config = { workspace = true }
 const_format.workspace = true
