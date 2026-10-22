@@ -434,7 +434,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
- "sev",
+ "sev 8.0.0",
  "sha2 0.11.0",
  "strum 0.28.0",
  "tdx-attest-rs",
@@ -842,7 +842,7 @@ dependencies = [
  "serde",
  "serde-big-array",
  "serde_json",
- "sev",
+ "sev 7.1.0",
  "sha2 0.10.9",
  "thiserror 2.0.21",
  "tss-esapi",
@@ -858,7 +858,7 @@ dependencies = [
  "az-cvm-vtpm",
  "clap",
  "serde",
- "sev",
+ "sev 7.1.0",
  "thiserror 2.0.21",
  "ureq",
 ]
@@ -7122,8 +7122,28 @@ dependencies = [
  "iocuddle 0.1.1",
  "lazy_static",
  "libc",
+ "static_assertions",
+ "uuid",
+]
+
+[[package]]
+name = "sev"
+version = "8.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5031e00ad6d00d24f6b9990a181fdc8dc6e6222ba9ef657f2d8cf29e4c36b948"
+dependencies = [
+ "base64 0.22.1",
+ "bitfield 0.19.4",
+ "bitflags 2.13.1",
+ "byteorder",
+ "dirs 6.0.0",
+ "hex",
+ "iocuddle 0.1.1",
+ "lazy_static",
+ "libc",
  "serde",
  "serde-big-array",
+ "serde_bytes",
  "static_assertions",
  "uuid",
 ]

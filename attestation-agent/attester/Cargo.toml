@@ -30,7 +30,7 @@ pv = { version = "0.12.0", package = "s390_pv", optional = true }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
-sev = { version = "7.1.0", default-features = false, features = [
+sev = { version = "8.0.0", default-features = false, features = [
     "snp",
     "serde",
 ], optional = true }
