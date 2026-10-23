@@ -78,6 +78,7 @@ rpc: grpc
 
     let cdh_socket = config.socket.parse::<SocketAddr>()?;
 
+    let services_dir = config.services_dir.clone();
     let cdh = Hub::new(config).await.context("start CDH")?;
 
     let mut interrupt = signal(SignalKind::interrupt())?;
@@ -85,7 +86,10 @@ rpc: grpc
     tokio::select! {
         _ = hangup.recv() => info!("Client terminal disconnected."),
         _ = interrupt.recv() => info!("SIGINT received, gracefully shutdown."),
-        _ = grpc_server::start_grpc_service(cdh_socket, cdh) => info!("CDH exits."),
+        result = grpc_server::start_grpc_service(cdh_socket, cdh, services_dir.as_deref()) => {
+            result?;
+            info!("CDH exits.");
+        },
     }
 
     Ok(())

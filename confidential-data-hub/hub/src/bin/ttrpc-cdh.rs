@@ -101,6 +101,42 @@ rpc: ttrpc
     let server = Server::new(&config).await.context("create CDH instance")?;
     let server = Arc::new(server);
 
+    // Bound before the combined socket, which launchers wait for.
+    let mut service_servers = Vec::new();
+    if let Some(services_dir) = &config.services_dir {
+        for (name, service) in [
+            ("imagepull", create_image_pull_service(server.clone() as _)),
+            (
+                "sealedsecrets",
+                create_sealed_secret_service(server.clone() as _),
+            ),
+            (
+                "securemount",
+                create_secure_mount_service(server.clone() as _),
+            ),
+            (
+                "getresource",
+                create_get_resource_service(server.clone() as _),
+            ),
+        ] {
+            let socket = Path::new(services_dir).join(format!("{name}.sock"));
+            let socket = socket
+                .to_str()
+                .ok_or_else(|| anyhow!("invalid services directory: {services_dir}"))?;
+
+            create_socket_parent_directory(socket).await?;
+            clean_previous_sock_file(socket).await?;
+
+            let mut service_server = TtrpcServer::new()
+                .bind(&format!("{UNIX_SOCKET_PREFIX}{socket}"))
+                .with_context(|| format!("cannot bind cdh ttrpc service to {socket}"))?
+                .register_service(service);
+            service_server.start().await?;
+            info!("[ttRPC] Confidential Data Hub serves {name} on: {socket}");
+            service_servers.push(service_server);
+        }
+    }
+
     let mut server = TtrpcServer::new()
         .bind(&config.socket)
         .context("cannot bind cdh ttrpc service")?
@@ -119,15 +155,14 @@ rpc: ttrpc
     let mut interrupt = signal(SignalKind::interrupt())?;
     let mut hangup = signal(SignalKind::hangup())?;
     tokio::select! {
-        _ = hangup.recv() => {
-            info!("Client terminal disconnected.");
-            server.shutdown().await?;
-        }
-        _ = interrupt.recv() => {
-            info!("SIGINT received, gracefully shutdown.");
-            server.shutdown().await?;
-        }
+        _ = hangup.recv() => info!("Client terminal disconnected."),
+        _ = interrupt.recv() => info!("SIGINT received, gracefully shutdown."),
     };
+
+    server.shutdown().await?;
+    for mut service_server in service_servers {
+        service_server.shutdown().await?;
+    }
 
     Ok(())
 }
