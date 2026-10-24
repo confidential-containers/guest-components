@@ -21,6 +21,9 @@ use tracing::{debug, error};
 
 pub const AGENT_NAME: &str = "attestation-agent";
 
+/// Fixed message produced by the SE attester when the UV rejects the firmware flag.
+const FIRMWARE_UNSUPPORTED_MSG: &str = "Firmware attestation requires z17 or later";
+
 pub struct AA {
     inner: AttestationAgent,
 }
@@ -41,7 +44,13 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (grpc): get token failed:\n{e:?}");
-                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get token failed"))
+                // Surface this one actionable reason to the caller (shown in pod events).
+                let reason = if format!("{e:?}").contains(FIRMWARE_UNSUPPORTED_MSG) {
+                    format!(": {FIRMWARE_UNSUPPORTED_MSG}")
+                } else {
+                    String::new()
+                };
+                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get token failed{reason}"))
             })?;
 
         debug!("AA (grpc): Get token successfully!");
@@ -65,7 +74,14 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (grpc): get evidence failed:\n{e:?}");
-                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get evidence failed"))
+                let reason = if format!("{e:?}").contains(FIRMWARE_UNSUPPORTED_MSG) {
+                    format!(": {FIRMWARE_UNSUPPORTED_MSG}")
+                } else {
+                    String::new()
+                };
+                Status::internal(format!(
+                    "[ERROR:{AGENT_NAME}] AA get evidence failed{reason}"
+                ))
             })?;
 
         debug!("AA (grpc): Get evidence successfully!");
@@ -89,8 +105,13 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (grpc): get additional evidence failed:\n{e:?}");
+                let reason = if format!("{e:?}").contains(FIRMWARE_UNSUPPORTED_MSG) {
+                    format!(": {FIRMWARE_UNSUPPORTED_MSG}")
+                } else {
+                    String::new()
+                };
                 Status::internal(format!(
-                    "[ERROR:{AGENT_NAME}] AA get additional evidence failed"
+                    "[ERROR:{AGENT_NAME}] AA get additional evidence failed{reason}"
                 ))
             })?;
 
