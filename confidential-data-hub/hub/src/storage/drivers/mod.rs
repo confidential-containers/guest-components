@@ -5,7 +5,7 @@
 
 use std::{
     io::Write,
-    process::{Command, Stdio},
+    process::{Command, Output, Stdio},
 };
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -21,28 +21,9 @@ pub mod zfs;
 pub fn run_command(
     command: &str,
     args: &[&str],
-    inputs: Option<Vec<u8>>,
+    inputs: Option<&[u8]>,
 ) -> Result<(String, String)> {
-    let _ = which(command).with_context(|| format!("command `{command}` not found"))?;
-    let mut status = Command::new(command)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .args(args)
-        .spawn()?;
-
-    if let Some(inputs) = inputs {
-        if let Some(mut stdin) = status.stdin.take() {
-            stdin.write_all(&inputs)?;
-            stdin.flush()?;
-        } else {
-            bail!(
-                "Failed to get stdin from the command thus failed to write inputs to the command"
-            );
-        }
-    }
-
-    let output = status.wait_with_output()?;
+    let output = run_command_output(command, args, inputs)?;
     let stdout = String::from_utf8_lossy(&output.stdout).replace("\n", "\n\t");
     let stderr = String::from_utf8_lossy(&output.stderr).replace("\n", "\n\t");
 
@@ -55,6 +36,34 @@ pub fn run_command(
     debug!("command {command} with args: {args:#?} \n\t stdout: {stdout} \n\t stderr: {stderr}");
 
     Ok((stdout, stderr))
+}
+
+/// Run a command without interpreting its exit status.
+///
+/// Some probes use a nonzero exit code to report "not found". Returning the
+/// untouched `Output` lets those callers distinguish that result from a failure
+/// to start or communicate with the child.
+pub fn run_command_output(command: &str, args: &[&str], inputs: Option<&[u8]>) -> Result<Output> {
+    let _ = which(command).with_context(|| format!("command `{command}` not found"))?;
+    let mut status = Command::new(command)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .args(args)
+        .spawn()?;
+
+    if let Some(inputs) = inputs {
+        if let Some(mut stdin) = status.stdin.take() {
+            stdin.write_all(inputs)?;
+            stdin.flush()?;
+        } else {
+            bail!(
+                "Failed to get stdin from the command thus failed to write inputs to the command"
+            );
+        }
+    }
+
+    Ok(status.wait_with_output()?)
 }
 
 /// A wrapper for the loop device backed by a temporary file.
