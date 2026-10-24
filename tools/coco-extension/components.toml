@@ -12,8 +12,7 @@
 schema_version = 1
 
 [paths]
-"ocicrypt-config" = "etc/ocicrypt_config.json"
-"pause-bundle"    = "pause_bundle"
+"pause-bundle" = "pause_bundle"
 
 [[process]]
 id            = "attestation-agent"
@@ -53,7 +52,11 @@ config       = "${cdh_config_path}"
 # /bin. The agent launches CDH with PATH=/bin:/sbin:/usr/bin:/usr/sbin, but
 # setting any env here overrides it wholesale, so prepend the extension's
 # usr/sbin and restore the base dirs.
-env          = { OCICRYPT_KEYPROVIDER_CONFIG = "${ocicrypt_config_path}", PATH = "${extension_root}/usr/sbin:/bin:/sbin:/usr/bin:/usr/sbin" }
+#
+# OCICRYPT_KEYPROVIDER_CONFIG must be writable: CDH creates the keyprovider
+# config there if missing. Its keyprovider entry must use CDH's socket as the
+# ttrpc/grpc address, or CDH fails to start.
+env          = { OCICRYPT_KEYPROVIDER_CONFIG = "/run/confidential-containers/ocicrypt_config.json", PATH = "${extension_root}/usr/sbin:/bin:/sbin:/usr/bin:/usr/sbin" }
 wait_socket  = "${cdh_socket}"
 timeout_secs = "${launch_process_timeout}"
 

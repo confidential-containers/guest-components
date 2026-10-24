@@ -28,6 +28,7 @@ async fn test_pull_image(#[case] image_ref: &str) {
         .expect("Install offline-fs-kbcs's resources failed.");
 
     let tempdir = tempfile::tempdir().unwrap();
+    let keyprovider_config = tempdir.path().join("ocicrypt_config.json");
 
     let cdh_path = format!(
         "{}/../../target/debug/ttrpc-cdh",
@@ -41,6 +42,7 @@ async fn test_pull_image(#[case] image_ref: &str) {
             std::env!("CARGO_MANIFEST_DIR")
         ))
         .env("RUST_LOG", "info")
+        .env("OCICRYPT_KEYPROVIDER_CONFIG", &keyprovider_config)
         .kill_on_drop(true)
         .spawn()
         .unwrap();

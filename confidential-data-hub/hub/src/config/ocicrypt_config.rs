@@ -11,9 +11,7 @@
 
 use std::{env, fs, path::Path};
 
-use anyhow::{Context, Result};
-
-use crate::hub::CDH_BASE_DIR;
+use anyhow::{bail, Context, Result};
 
 use super::CdhConfig;
 
@@ -26,38 +24,87 @@ const OCICRYPT_KEYPROVIDER_NAME: &str = "attestation-agent";
 pub const OCICRYPT_KEYPROVIDER_CONFIG_ENV: &str = "OCICRYPT_KEYPROVIDER_CONFIG";
 
 impl CdhConfig {
-    /// Ensure `OCICRYPT_KEYPROVIDER_CONFIG` is set so `ocicrypt-rs` can unwrap
-    /// image encryption keys via CDH's KeyProvider service.
+    /// Ensure `ocicrypt-rs` is wired up to unwrap image encryption keys via
+    /// CDH's KeyProvider service.
     ///
-    /// If the env var is already set (operator override), it is left alone.
-    /// Otherwise a config file is generated that maps the historical
-    /// `attestation-agent` provider name to this CDH instance's socket.
+    /// * If `OCICRYPT_KEYPROVIDER_CONFIG` is unset, encrypted image support is
+    ///   unavailable and we only warn about it.
+    /// * If it is set but the file it points to does not exist, we write a
+    ///   default config that points `ocicrypt-rs` at this CDH instance's
+    ///   socket.
+    /// * If it is set and the file exists, we only check that the socket it
+    ///   points at matches `self.socket`, erroring out otherwise, since a
+    ///   stale keyprovider config would silently break image decryption.
     pub(super) fn ensure_ocicrypt_keyprovider_config(&self) -> Result<()> {
-        if env::var(OCICRYPT_KEYPROVIDER_CONFIG_ENV).is_ok() {
+        let Ok(path) = env::var(OCICRYPT_KEYPROVIDER_CONFIG_ENV) else {
+            tracing::warn!(
+                "{OCICRYPT_KEYPROVIDER_CONFIG_ENV} is not set; encrypted container images are not supported"
+            );
+            return Ok(());
+        };
+        self.ensure_ocicrypt_keyprovider_config_at(Path::new(&path))
+    }
+
+    /// Same as [`Self::ensure_ocicrypt_keyprovider_config`], but takes the
+    /// configured path directly instead of reading it from the environment,
+    /// so it can be exercised in tests without touching process-global state.
+    fn ensure_ocicrypt_keyprovider_config_at(&self, path: &Path) -> Result<()> {
+        if !path.exists() {
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent)
+                    .with_context(|| format!("failed to create {}", parent.display()))?;
+            }
+            fs::write(path, self.default_ocicrypt_keyprovider_config()).with_context(|| {
+                format!(
+                    "failed to write default ocicrypt keyprovider config to {}",
+                    path.display()
+                )
+            })?;
+            tracing::info!(
+                path = %path.display(),
+                socket = %self.socket,
+                "wrote default ocicrypt keyprovider config pointing at CDH"
+            );
             return Ok(());
         }
 
-        // In CoCo scenarios /run is a ramfs inside the guest, so it cannot be
-        // tampered with by the host.
-        let parent = Path::new(CDH_BASE_DIR);
-        let path = parent.join("ocicrypt_config.json");
-        let parent = path.parent().expect("path has a parent directory");
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-        fs::write(&path, self.default_ocicrypt_keyprovider_config()).with_context(|| {
+        let configured_socket = self.configured_ocicrypt_socket(path)?;
+        if configured_socket != self.socket {
+            bail!(
+                "{OCICRYPT_KEYPROVIDER_CONFIG_ENV} at {} points ocicrypt-rs at socket \
+                 '{configured_socket}', which does not match this CDH instance's socket '{}'",
+                path.display(),
+                self.socket,
+            );
+        }
+        Ok(())
+    }
+
+    /// Read the socket that the ocicrypt keyprovider config at `path` points
+    /// the `attestation-agent` provider at.
+    fn configured_ocicrypt_socket(&self, path: &Path) -> Result<String> {
+        let content = fs::read_to_string(path).with_context(|| {
             format!(
-                "failed to write default ocicrypt keyprovider config to {}",
+                "failed to read ocicrypt keyprovider config {}",
                 path.display()
             )
         })?;
-
-        tracing::info!(
-            path = %path.display(),
-            socket = %self.socket,
-            "OCICRYPT_KEYPROVIDER_CONFIG unset; wrote default keyprovider config pointing at CDH"
-        );
-        env::set_var(OCICRYPT_KEYPROVIDER_CONFIG_ENV, path);
-        Ok(())
+        let parsed: serde_json::Value = serde_json::from_str(&content).with_context(|| {
+            format!(
+                "failed to parse ocicrypt keyprovider config {}",
+                path.display()
+            )
+        })?;
+        let provider = &parsed["key-providers"][OCICRYPT_KEYPROVIDER_NAME];
+        let socket = provider["ttrpc"].as_str().or(provider["grpc"].as_str());
+        socket
+            .with_context(|| {
+                format!(
+                    "ocicrypt keyprovider config {} has no ttrpc/grpc socket for provider '{OCICRYPT_KEYPROVIDER_NAME}'",
+                    path.display()
+                )
+            })
+            .map(str::to_string)
     }
 
     /// Build the default ocicrypt keyprovider JSON for this CDH instance.
@@ -83,12 +130,8 @@ impl CdhConfig {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
-
     use image_rs::config::ImageConfig;
-    use serial_test::serial;
 
-    use super::OCICRYPT_KEYPROVIDER_CONFIG_ENV;
     use crate::{AaConfig, CdhConfig, KbsConfig, LogConfig};
 
     fn test_config(socket: &str) -> CdhConfig {
@@ -108,7 +151,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn default_ocicrypt_keyprovider_config_uses_socket() {
         let config = test_config("unix:///tmp/test-cdh.sock");
 
@@ -128,34 +170,36 @@ mod tests {
     }
 
     #[test]
-    #[serial]
-    fn set_configuration_envs_writes_ocicrypt_config_when_unset() {
-        env::remove_var(OCICRYPT_KEYPROVIDER_CONFIG_ENV);
+    fn writes_config_when_file_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("ocicrypt_config.json");
 
         let config = test_config("unix:///run/confidential-containers/cdh.sock");
-        config.set_configuration_envs().unwrap();
+        config.ensure_ocicrypt_keyprovider_config_at(&path).unwrap();
 
-        let path = env::var(OCICRYPT_KEYPROVIDER_CONFIG_ENV).unwrap();
         let content = std::fs::read_to_string(&path).unwrap();
         assert!(content.contains("attestation-agent"));
         assert!(content.contains(&config.socket));
-
-        env::remove_var(OCICRYPT_KEYPROVIDER_CONFIG_ENV);
-        let _ = std::fs::remove_file(path);
     }
 
     #[test]
-    #[serial]
-    fn set_configuration_envs_preserves_existing_ocicrypt_config() {
-        env::set_var(OCICRYPT_KEYPROVIDER_CONFIG_ENV, "/already/set.json");
+    fn accepts_existing_config_matching_socket() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("ocicrypt_config.json");
+        let config = test_config("unix:///tmp/matching.sock");
+        std::fs::write(&path, config.default_ocicrypt_keyprovider_config()).unwrap();
 
-        let config = test_config("unix:///tmp/other.sock");
-        config.set_configuration_envs().unwrap();
-        assert_eq!(
-            env::var(OCICRYPT_KEYPROVIDER_CONFIG_ENV).unwrap(),
-            "/already/set.json"
-        );
+        config.ensure_ocicrypt_keyprovider_config_at(&path).unwrap();
+    }
 
-        env::remove_var(OCICRYPT_KEYPROVIDER_CONFIG_ENV);
+    #[test]
+    fn errors_on_existing_config_with_mismatched_socket() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("ocicrypt_config.json");
+        let written = test_config("unix:///tmp/other.sock");
+        std::fs::write(&path, written.default_ocicrypt_keyprovider_config()).unwrap();
+
+        let config = test_config("unix:///tmp/self.sock");
+        assert!(config.ensure_ocicrypt_keyprovider_config_at(&path).is_err());
     }
 }
