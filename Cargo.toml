@@ -53,7 +53,7 @@ prost = "0.14"
 protobuf = "3.7.2"
 rand = "0.10.1"
 reqwest = { version = "0.13", default-features = false, features = [
-    "native-tls-vendored",
+    "native-tls",
 ] }
 resource_uri = { path = "attestation-agent/deps/resource_uri" }
 ring = "0.17"
@@ -82,3 +82,8 @@ ttrpc-codegen = "0.7.0"
 url = "2.5.4"
 uuid = "1"
 zeroize = "1.8.2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

@@ -10,7 +10,7 @@ license = "Apache-2.0"
 anyhow.workspace = true
 base64.workspace = true
 kbs-types.workspace = true
-openssl = { workspace = true, features = ["vendored"] }
+openssl.workspace = true
 rand.workspace = true
 
 # This is for API compability of p256 who is using the old version of `rand`

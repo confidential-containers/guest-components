@@ -32,7 +32,8 @@ else
 endif
 # Enable the `kbs` cargo feature (cc_kbc / CoCo KBS). offline_fs_kbc is always built.
 ENABLE_KBS ?= true
-KMS_PROVIDER ?= aliyun
+# Cloud KMS plugins (aliyun/aws). Empty or "none" means no cloud KMS.
+KMS_PROVIDER ?= none
 DESTDIR ?= $(PREFIX)/bin
 RUSTFLAGS_ARGS ?=
 features ?=
@@ -57,7 +58,7 @@ ifeq ($(ENABLE_KBS), true)
     features += kbs
 endif
 
-ifneq ($(KMS_PROVIDER), none)
+ifneq ($(filter-out none,$(KMS_PROVIDER)),)
     features += $(KMS_PROVIDER)
 endif
 
@@ -126,5 +127,5 @@ clean:
 
 help:
 	@echo "==========================Help========================================="
-	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [ENABLE_KBS=(true/false)] [KMS_PROVIDER=aliyun/aws] [RPC=(ttrpc/grpc)]"
+	@echo "build: make [DEBUG=1] [LIBC=(musl)] [ARCH=(x86_64/s390x/ppc64le)] [ENABLE_KBS=(true/false)] [KMS_PROVIDER=none/aliyun/aws] [RPC=(ttrpc/grpc)]"
 	@echo "install: make install [DESTDIR=/path/to/target] [LIBC=(musl)]"
