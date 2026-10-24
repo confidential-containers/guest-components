@@ -14,11 +14,8 @@ pub use aa::*;
 use anyhow::*;
 use async_trait::async_trait;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use jwt_simple::{
-    claims::JWTClaims,
-    prelude::{Clock, UnixTimeStamp},
-};
-use serde_json::Value;
+use serde::Deserialize;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::keypair::TeeKeyPair;
 
@@ -30,11 +27,19 @@ pub trait TokenProvider: Send + Sync {
     async fn get_token(&self) -> crate::Result<(Token, TeeKeyPair)>;
 }
 
+/// The subset of registered JWT claims (RFC 7519) this crate reads locally
+/// (no signature verification is performed here).
+#[derive(Deserialize)]
+struct Claims {
+    exp: Option<f64>,
+    nbf: Option<f64>,
+}
+
 #[derive(Clone, Debug)]
 pub struct Token {
     pub content: String,
-    exp: Option<UnixTimeStamp>,
-    nbf: Option<UnixTimeStamp>,
+    exp: Option<Duration>,
+    nbf: Option<Duration>,
 }
 
 impl Token {
@@ -44,16 +49,16 @@ impl Token {
             .nth(1)
             .ok_or_else(|| anyhow!("illegal token format"))?;
         let claims = URL_SAFE_NO_PAD.decode(claims_b64)?;
-        let claims = serde_json::from_slice::<JWTClaims<Value>>(&claims)?;
+        let claims = serde_json::from_slice::<Claims>(&claims)?;
         Ok(Self {
             content: token,
-            exp: claims.expires_at,
-            nbf: claims.invalid_before,
+            exp: claims.exp.map(Duration::from_secs_f64),
+            nbf: claims.nbf.map(Duration::from_secs_f64),
         })
     }
 
     pub fn check_valid(&self) -> Result<()> {
-        let now = Clock::now_since_epoch();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH)?;
         if let Some(exp) = self.exp
             && exp < now
         {
