@@ -27,4 +27,4 @@ rstest.workspace = true
 [build-dependencies]
 serde_json = { workspace = true }
 shadow-rs.workspace = true
-utoipa = "5"
+utoipa = "6"
