@@ -45,7 +45,7 @@ if [[ "${EUID}" -ne 0 ]]; then
 	exec sudo -E bash "$0" "$@"
 fi
 
-for cmd in cp dd losetup mkfs.erofs parted partprobe sed stat truncate veritysetup; do
+for cmd in cp dd losetup mkfs.erofs parted sed stat truncate udevadm veritysetup; do
 	command -v "${cmd}" >/dev/null 2>&1 || die "${cmd} is required"
 done
 
@@ -133,8 +133,12 @@ attach_loop_device() {
 	local image="$1"
 	local device
 
+	# losetup -P already scans the partition table at attach time.  Do not
+	# re-read it via partprobe: that triggers another asynchronous udev
+	# rescan during which the partition nodes briefly disappear.  Instead,
+	# wait for udev to finish processing the events from the initial scan.
 	device="$(losetup -P -f --show "${image}")"
-	partprobe -s "${device}" >/dev/null
+	udevadm settle --timeout=30
 
 	for _ in $(seq 1 5); do
 		if [[ -b "${device}p1" ]]; then
