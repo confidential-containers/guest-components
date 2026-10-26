@@ -128,13 +128,13 @@ jobs:
       matrix:
         instance:
           - ubuntu-24.04
-          - ubuntu-24.04-s390x
+          - ubuntu-26.04-s390x
           - ubuntu-24.04-arm
           - ubuntu-24.04-ppc64le
         include:
           - instance: ubuntu-24.04
             make_args: ""
-          - instance: ubuntu-24.04-s390x
+          - instance: ubuntu-26.04-s390x
             make_args: "ATTESTER=se-attester"
           - instance: ubuntu-24.04-arm
             make_args: "ATTESTER=cca-attester"
@@ -202,7 +202,7 @@ jobs:
       matrix:
         instance:
           - ubuntu-24.04
-          - ubuntu-24.04-s390x
+          - ubuntu-26.04-s390x
           - ubuntu-24.04-arm
           - ubuntu-24.04-ppc64le
     runs-on: ${{ matrix.instance }}
@@ -253,7 +253,7 @@ jobs:
       matrix:
         instance:
           - ubuntu-24.04
-          - ubuntu-24.04-s390x
+          - ubuntu-26.04-s390x
           - ubuntu-24.04-arm
           - ubuntu-24.04-ppc64le
     runs-on: ${{ matrix.instance }}
@@ -308,7 +308,7 @@ jobs:
       matrix:
         instance:
           - ubuntu-24.04
-          - ubuntu-24.04-s390x
+          - ubuntu-26.04-s390x
           - ubuntu-24.04-arm
           - ubuntu-24.04-ppc64le
     runs-on: ${{ matrix.instance }}
