@@ -482,6 +482,10 @@ mod test {
         ))
         .with_env_var("RUST_LOG", "debug")
         .with_cmd(vec!["/usr/local/bin/start_kbs.sh"])
+        // Allow AF_UNIX socketpair used by Tokio signal handling inside the container.
+        // Without this, Docker's default seccomp profile on newer kernels (e.g. Ubuntu 26.04)
+        // blocks the syscall and causes the KBS process to panic at startup.
+        .with_security_opt("seccomp=unconfined")
         .start()
         .await
         .expect("run kbs failed");
