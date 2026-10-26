@@ -12,8 +12,12 @@ set -o pipefail
 [ -n "${BASH_VERSION:-}" ] && set -o errtrace
 [ -n "${DEBUG:-}" ] && set -o xtrace
 
-# shellcheck disable=SC1091
-source "$HOME/.cargo/env"
+# rustup installs may provide cargo via this env file; other setups
+# (e.g. distro packages) already have cargo in PATH.
+if [ -f "$HOME/.cargo/env" ]; then
+    # shellcheck disable=SC1091
+    source "$HOME/.cargo/env"
+fi
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 CDH_DIR=$SCRIPT_DIR/../../confidential-data-hub

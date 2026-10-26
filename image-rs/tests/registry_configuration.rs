@@ -35,6 +35,10 @@ async fn test_use_registry_configuration(#[case] image_ref: &str, #[case] succes
     let _registry = testcontainers::GenericImage::new("registry", "2")
         .with_wait_for(WaitFor::message_on_stderr("listening on [::]:5000"))
         .with_mapped_port(5000, 5000.tcp())
+        // Docker's default seccomp profile on newer hosts (e.g. Ubuntu 26.04) blocks the
+        // socket syscalls the registry needs to listen on :5000
+        // ("listen tcp :5000: socket: function not implemented").
+        .with_security_opt("seccomp=unconfined")
         .start()
         .await
         .expect("start registry failed");
