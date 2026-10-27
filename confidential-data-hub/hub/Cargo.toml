@@ -110,3 +110,6 @@ grpc = ["prost", "tonic", "tokio/signal", "protos/grpc"]
 
 # for the `secret` CLI
 cli = ["clap/derive", "tokio/rt-multi-thread", "tokio/sync", "tokio/macros"]
+
+# Statically compile OpenSSL. Used for musl builds only.
+openssl-vendored = ["attestation-agent/openssl-vendored"]

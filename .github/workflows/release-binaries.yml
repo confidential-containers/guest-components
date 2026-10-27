@@ -236,8 +236,9 @@ jobs:
     env:
       RUST_TARGET: ${{ matrix.platform.arch }}-unknown-linux-${{ matrix.platform.libc }}
       OCI_ARCH: ${{ matrix.platform.arch == 'x86_64' && 'amd64' || 'arm64' }}
-      # Build all KMS providers.
-      CLI_FEATURES: cli,aliyun,aws,kbs
+      # Build all KMS providers. openssl-vendored: this job is musl-only and
+      # has no musl libssl to link; gnu AA/CDH stay dynamically linked.
+      CLI_FEATURES: cli,aliyun,aws,kbs,openssl-vendored
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
       IS_PUBLISH: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}

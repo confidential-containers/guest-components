@@ -114,6 +114,9 @@ nvidia-dpu-attester = [
     "attester/nvidia-dpu-attester",
 ]
 
+# Statically compile OpenSSL. Used for musl builds only.
+openssl-vendored = ["crypto/openssl-vendored"]
+
 # Binary RPC type
 bin = ["clap", "shadow-rs", "tracing-subscriber", "tokio/rt-multi-thread"]
 grpc = ["tokio/signal", "tonic", "protos/grpc"]

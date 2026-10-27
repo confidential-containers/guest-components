@@ -66,6 +66,8 @@ ifeq ($(LIBC), musl)
     ifeq ($(ARCH), $(filter $(ARCH), s390x powerpc64le))
         $(error ERROR: Confidential Data Hub does not support building with the musl libc target for s390x and ppc64le architectures!)
     endif
+    # No musl libssl in CI. Vendor OpenSSL into the binary; gnu stays dynamic.
+    features += openssl-vendored
     MUSL_ADD := $(shell rustup target add ${ARCH}-unknown-linux-musl)
     ifeq ($(DEBIANOS), true)
         MUSL_INSTALL := $(shell sudo apt-get install -y musl-tools) 
