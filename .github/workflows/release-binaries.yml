@@ -35,12 +35,12 @@ jobs:
           - { tee: all,         arch: x86_64,      libc: gnu,  runner: ubuntu-24.04 }
           - { tee: none,        arch: x86_64,      libc: gnu, runner: ubuntu-24.04 }
           - { tee: none,        arch: s390x,       libc: gnu,  runner: ubuntu-26.04-s390x }
-          - { tee: none,        arch: aarch64,     libc: gnu,  runner: ubuntu-24.04 }
+          - { tee: none,        arch: aarch64,     libc: gnu,  runner: ubuntu-24.04-arm }
           - { tee: amd,         arch: x86_64,      libc: gnu, runner: ubuntu-24.04 }
           - { tee: az-cvm-vtpm, arch: x86_64,      libc: gnu,  runner: ubuntu-24.04 }
           - { tee: tdx,         arch: x86_64,      libc: gnu, runner: ubuntu-24.04 }
           - { tee: cca,         arch: x86_64,      libc: gnu, runner: ubuntu-24.04 }
-          - { tee: cca,         arch: aarch64,     libc: gnu,  runner: ubuntu-24.04 }
+          - { tee: cca,         arch: aarch64,     libc: gnu,  runner: ubuntu-24.04-arm }
           - { tee: se,          arch: s390x,       libc: gnu,  runner: ubuntu-26.04-s390x }
           - { tee: none,        arch: powerpc64le, libc: gnu,  runner: ubuntu-24.04-ppc64le }
     runs-on: ${{ matrix.platform.runner }}
