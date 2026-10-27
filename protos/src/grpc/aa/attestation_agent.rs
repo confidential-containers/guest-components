@@ -21,6 +21,7 @@ pub struct GetTokenRequest {
     pub token_type: ::prost::alloc::string::String,
     /// Extra parameters for the selected token provider. Keys and values are
     /// plain strings; each provider parses the entries it understands.
+    /// See attestation-agent/README.md for the keys each token type accepts.
     #[prost(map = "string, string", tag = "2")]
     pub params: ::std::collections::HashMap<
         ::prost::alloc::string::String,

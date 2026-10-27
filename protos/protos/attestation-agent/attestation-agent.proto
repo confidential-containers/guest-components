@@ -20,6 +20,7 @@ message GetTokenRequest {
 
     // Extra parameters for the selected token provider. Keys and values are
     // plain strings; each provider parses the entries it understands.
+    // See attestation-agent/README.md for the keys each token type accepts.
     map<string, string> Params = 2;
 }
 

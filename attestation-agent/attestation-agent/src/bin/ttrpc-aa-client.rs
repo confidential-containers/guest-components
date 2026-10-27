@@ -76,8 +76,8 @@ struct GetTokenArgs {
     token_type: String,
 
     /// Extra parameter `KEY=VALUE`. May be repeated. Values are forwarded as
-    /// strings; the token provider parses them. `nonce` is URL-safe base64
-    /// without padding.
+    /// strings. `coco_as` accepts `nonce` (URL-safe base64, no padding) or
+    /// `runtime_data` (JSON), but not both. `kbs` accepts no extra parameters.
     #[arg(long = "param", value_name = "KEY=VALUE")]
     param: Vec<String>,
 }
