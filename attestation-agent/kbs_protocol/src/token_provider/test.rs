@@ -15,7 +15,7 @@ use super::TokenProvider;
 pub struct TestTokenProvider {}
 
 /// A test Token expired in ~ 10years.
-const HARDCODED: &str = "eyJhbGciOiJFUzI1NiIsImtpZCI6InNpbXBsZSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2OTA3ODk2MTgsImV4cCI6MjAwNjE0OTYxOCwibmJmIjoxNjkwNzg5NjE4fQ._rGIt6XRHXfMiypJ38G55Qit5XiGEEQz1vvGjPE3jUJheJAbAfU4qR3BnsTVbchSTagwMgz2U45iA5eGiMo3sQ";
+pub(crate) const HARDCODED: &str = "eyJhbGciOiJFUzI1NiIsImtpZCI6InNpbXBsZSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2OTA3ODk2MTgsImV4cCI6MjAwNjE0OTYxOCwibmJmIjoxNjkwNzg5NjE4fQ._rGIt6XRHXfMiypJ38G55Qit5XiGEEQz1vvGjPE3jUJheJAbAfU4qR3BnsTVbchSTagwMgz2U45iA5eGiMo3sQ";
 
 #[async_trait]
 impl TokenProvider for TestTokenProvider {

@@ -4,37 +4,26 @@
 //
 
 use anyhow::{Result, bail};
-use jwt_simple::prelude::{Claims, Duration, Ed25519KeyPair, EdDSAKeyPairLike};
+use openssl::pkey::{PKey, Private};
 use reqwest::Url;
-use serde::Serialize;
 use tracing::debug;
+
+use crate::jwt;
 
 const KBS_URL_PATH_PREFIX: &str = "kbs/v0/resource";
 
-/// Claims for the JWT used to authenticate against the KBS admin API.
-/// The KBS admin authorization checks the JWT `role` claim against its ACL.
-#[derive(Serialize)]
-struct AdminClaims {
-    role: String,
-}
-
 /// Register the given key with kid into the kbs. This request will be authorized with a
-/// JWT token, which will be signed by the private_key.
+/// JWT token signed by the private key. The JWT carries `role` in its claims, which the
+/// KBS admin authorization checks against its ACL.
 pub(crate) async fn register_kek(
-    private_key: &Ed25519KeyPair,
+    private_key: &PKey<Private>,
     kbs_addr: &Url,
     key: Vec<u8>,
     kid: &str,
     role: &str,
 ) -> Result<()> {
     let kid = kid.strip_prefix('/').unwrap_or(kid);
-    let claims = Claims::with_custom_claims(
-        AdminClaims {
-            role: role.to_string(),
-        },
-        Duration::from_hours(2),
-    );
-    let token = private_key.sign(claims)?;
+    let token = jwt::sign_eddsa_jwt(private_key, role)?;
     debug!("sign claims.");
 
     let client = reqwest::Client::new();

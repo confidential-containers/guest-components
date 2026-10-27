@@ -15,7 +15,6 @@ base64.workspace = true
 serde_json_canonicalizer = { version = "0.4", optional = true }
 clap = { workspace = true, features = ["derive"], optional = true }
 crypto.path = "../deps/crypto"
-jwt-simple.workspace = true
 kbs-types.workspace = true
 protobuf = { workspace = true, optional = true }
 protos = { path = "../../protos", default-features = false, optional = true }

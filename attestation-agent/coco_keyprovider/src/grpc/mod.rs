@@ -6,7 +6,7 @@
 use crate::enc_mods;
 use anyhow::*;
 use base64::Engine;
-use jwt_simple::prelude::Ed25519KeyPair;
+use openssl::pkey::{PKey, Private};
 use protos::grpc::cdh::keyprovider::{
     KeyProviderKeyWrapProtocolInput, KeyProviderKeyWrapProtocolOutput,
     key_provider_service_server::{KeyProviderService, KeyProviderServiceServer},
@@ -23,14 +23,14 @@ use protocol::keyprovider_structs::*;
 pub mod protocol;
 
 pub struct KeyProvider {
-    auth_private_key: Option<Ed25519KeyPair>,
+    auth_private_key: Option<PKey<Private>>,
     kbs: Option<Url>,
     admin_role: String,
 }
 
 impl KeyProvider {
     pub fn new(
-        auth_private_key: Option<Ed25519KeyPair>,
+        auth_private_key: Option<PKey<Private>>,
         kbs: Option<String>,
         admin_role: String,
     ) -> Result<Self> {
@@ -151,7 +151,7 @@ pub async fn start_service(
                 .await
                 .context("open auth private key")?;
 
-            Some(Ed25519KeyPair::from_pem(&pem)?)
+            Some(crate::jwt::load_private_key(&pem)?)
         }
         None => None,
     };
