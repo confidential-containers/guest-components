@@ -59,7 +59,7 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 shadow-rs.workspace = true
 
 [features]
-default = ["ttrpc", "grpc"]
+default = ["ttrpc", "grpc", "kbs", "coco_as"]
 
 # Attestation Token support
 token = []

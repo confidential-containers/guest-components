@@ -17,6 +17,10 @@ message GetEvidenceResponse {
 
 message GetTokenRequest {
     string TokenType = 1;
+
+    // Extra parameters for the selected token provider. Keys and values are
+    // plain strings; each provider parses the entries it understands.
+    map<string, string> Params = 2;
 }
 
 message GetTokenResponse {

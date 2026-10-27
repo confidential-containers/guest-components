@@ -36,13 +36,19 @@ impl AttestationAgentService for AA {
     ) -> ::ttrpc::Result<GetTokenResponse> {
         debug!("AA (ttrpc): get token ...");
 
-        let token = self.inner.get_token(&req.TokenType).await.map_err(|e| {
-            error!("AA (ttrpc): get token failed\n {e:?}");
-            let mut error_status = ::ttrpc::proto::Status::new();
-            error_status.set_code(Code::INTERNAL);
-            error_status.set_message(format!("[ERROR:{AGENT_NAME}] AA-KBC get token failed"));
-            ::ttrpc::Error::RpcStatus(error_status)
-        })?;
+        let token = self
+            .inner
+            .get_token(&req.TokenType, &req.Params)
+            .await
+            .map_err(|e| {
+                error!("AA (ttrpc): get token failed\n {e:?}");
+                let mut error_status = ::ttrpc::proto::Status::new();
+                error_status.set_code(Code::INTERNAL);
+                error_status.set_message(format!(
+                    "[ERROR:{AGENT_NAME}] AA-KBC get token failed: {e:#}"
+                ));
+                ::ttrpc::Error::RpcStatus(error_status)
+            })?;
 
         debug!("AA (ttrpc): Get token successfully!");
 
