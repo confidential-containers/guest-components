@@ -159,7 +159,7 @@
     "/aa/token": {
       "get": {
         "tags": [],
-        "description": "Query parameters other than `token_type` are forwarded unchanged as string key-value pairs.",
+        "description": "Forwards every query parameter except `token_type` to the attestation agent. ASR does not filter keys. `kbs` accepts none. `coco_as` accepts at most one of `nonce` (URL-safe base64 without padding, the evidence challenge) or `runtime_data` (a string of JSON text). Use POST to send `runtime_data`.",
         "operationId": "_token",
         "parameters": [
           {
@@ -167,6 +167,15 @@
             "in": "query",
             "description": "Token Type",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nonce",
+            "in": "query",
+            "description": "Optional string parameter. For coco_as, URL-safe base64 (no padding) evidence challenge",
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -197,7 +206,61 @@
             "description": "resource not found"
           },
           "405": {
-            "description": "only Get method allowed"
+            "description": "method not allowed"
+          }
+        }
+      },
+      "post": {
+        "tags": [],
+        "description": "Merges the JSON object of strings in the body with every query parameter except `token_type`. Body values replace query values for the same key. Values must be strings; nested JSON is rejected. `runtime_data` is a string of JSON text. Which keys each token type accepts is decided by the attestation agent.",
+        "operationId": "_token_post",
+        "parameters": [
+          {
+            "name": "token_type",
+            "in": "query",
+            "description": "Token Type",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenParameters"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "success response",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": {
+                  "tee_keypair": "-----BEGIN RSA... ",
+                  "token": "eyJhbGciOiJFUzI1NiI..."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad request for an invalid query or body"
+          },
+          "403": {
+            "description": "forbid external access"
+          },
+          "404": {
+            "description": "resource not found"
+          },
+          "405": {
+            "description": "method not allowed"
           }
         }
       }
@@ -287,6 +350,18 @@
           "operation": {
             "type": "string",
             "description": "Attestation Agent Event Log Operation. Must be non-empty and free of\nwhitespace and control characters."
+          }
+        }
+      },
+      "TokenParameters": {
+        "type": "object",
+        "properties": {
+          "runtime_data": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "String of JSON text forwarded to the attestation service. Not a nested JSON object."
           }
         }
       },

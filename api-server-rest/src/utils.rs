@@ -3,8 +3,35 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result, anyhow, bail};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use std::collections::HashMap;
+
+/// Split `token_type` from the other query parameters.
+///
+/// Every query field except `token_type` is a token parameter. ASR does not
+/// decide which keys a token type accepts.
+pub fn token_query_params(
+    query: &HashMap<String, String>,
+) -> Result<(String, HashMap<String, String>)> {
+    let Some(token_type) = query.get("token_type").cloned() else {
+        bail!("missing token_type");
+    };
+    let mut params = query.clone();
+    params.remove("token_type");
+    Ok((token_type, params))
+}
+
+/// Parse a `POST /aa/token` body as a JSON object of strings.
+///
+/// Values must be strings. Nested JSON, such as `"runtime_data": { ... }`, is
+/// rejected. An empty body contributes no parameters.
+pub fn token_body_params(body: &[u8]) -> Result<HashMap<String, String>> {
+    if body.is_empty() {
+        return Ok(HashMap::new());
+    }
+    serde_json::from_slice(body).context("token parameter body must be a JSON object of strings")
+}
 
 /// Parse `runtime_data` from the evidence query string.
 ///
@@ -50,6 +77,48 @@ mod tests {
         let result = decode_runtime_data(runtime_data, encoding);
         if expect_ok {
             assert_eq!(result.unwrap(), expected.unwrap());
+        } else {
+            assert!(result.is_err());
+        }
+    }
+
+    fn query(entries: &[(&str, &str)]) -> HashMap<String, String> {
+        entries
+            .iter()
+            .map(|(key, value)| (key.to_string(), value.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn token_query_params_keeps_fields_other_than_token_type() {
+        let (token_type, params) =
+            token_query_params(&query(&[("token_type", "coco_as"), ("nonce", "abc")])).unwrap();
+        assert_eq!(token_type, "coco_as");
+        assert_eq!(params.get("nonce").map(String::as_str), Some("abc"));
+        assert!(token_query_params(&query(&[])).is_err());
+    }
+
+    #[rstest]
+    #[case(br#"{"runtime_data":"{\"request\":\"1\"}"}"# as &[u8], true, Some(r#"{"request":"1"}"#))]
+    #[case(br#"not-json"# as &[u8], false, None)]
+    #[case(br#"["runtime_data"]"# as &[u8], false, None)]
+    #[case(br#"{"runtime_data":{"request":"1"}}"# as &[u8], false, None)]
+    #[case(br#"{"runtime_data":null}"# as &[u8], false, None)]
+    #[case(br#"{"runtime_data":1}"# as &[u8], false, None)]
+    fn token_body_params(
+        #[case] body: &[u8],
+        #[case] expect_ok: bool,
+        #[case] runtime_data: Option<&str>,
+    ) {
+        let result = super::token_body_params(body);
+        if expect_ok {
+            assert_eq!(
+                result
+                    .expect("body")
+                    .get("runtime_data")
+                    .map(String::as_str),
+                runtime_data
+            );
         } else {
             assert!(result.is_err());
         }
