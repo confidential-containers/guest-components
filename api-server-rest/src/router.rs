@@ -157,17 +157,22 @@ impl Router {
                     match (url_path, method) {
                         (AA_TOKEN_URL, &Method::GET) => {
                             info!("Get token");
-                            match params.get("token_type") {
-                                Some(token_type) => match client.get_token(token_type).await {
-                                    std::result::Result::Ok(results) => {
-                                        return self.octet_stream_response(results);
-                                    }
-                                    Err(e) => {
-                                        error!("Failed to get token: {e:#}");
-                                        return self.internal_error(e.to_string());
-                                    }
-                                },
-                                None => return self.bad_request(),
+                            let Some(token_type) = params.get("token_type").cloned() else {
+                                return self.bad_request();
+                            };
+                            // Every query parameter except token_type is an extra
+                            // parameter. Providers parse the strings themselves.
+                            let mut token_params = params.clone();
+                            token_params.remove("token_type");
+
+                            match client.get_token(&token_type, &token_params).await {
+                                std::result::Result::Ok(results) => {
+                                    return self.octet_stream_response(results);
+                                }
+                                Err(e) => {
+                                    error!("Failed to get token: {e:#}");
+                                    return self.internal_error(e.to_string());
+                                }
                             }
                         }
                         (AA_EVIDENCE_URL, &Method::GET) => {

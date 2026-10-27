@@ -159,6 +159,7 @@
     "/aa/token": {
       "get": {
         "tags": [],
+        "description": "Query parameters other than `token_type` are forwarded unchanged as string key-value pairs.",
         "operationId": "_token",
         "parameters": [
           {
@@ -187,7 +188,7 @@
             }
           },
           "400": {
-            "description": "bad request for invalid token type"
+            "description": "bad request for a missing token type"
           },
           "403": {
             "description": "forbid external access"

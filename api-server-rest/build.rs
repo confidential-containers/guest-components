@@ -11,6 +11,7 @@ use utoipa::{OpenApi, ToSchema};
 #[utoipa::path(
     get,
     path = "/aa/token",
+    description = "Query parameters other than `token_type` are forwarded unchanged as string key-value pairs.",
     params(
         ("token_type" = String, Query, description = "Token Type")
     ),
@@ -19,7 +20,7 @@ use utoipa::{OpenApi, ToSchema};
                 content_type = "application/octet-stream",
                 body = String,
                 example = json!({"token": "eyJhbGciOiJFUzI1NiI...", "tee_keypair": "-----BEGIN RSA... "})),
-        (status = 400, description = "bad request for invalid token type"),
+        (status = 400, description = "bad request for a missing token type"),
         (status = 403, description = "forbid external access"),
         (status = 404, description = "resource not found"),
         (status = 405, description = "only Get method allowed")
