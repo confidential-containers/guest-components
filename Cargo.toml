@@ -46,7 +46,7 @@ hmac = "0.13.0"
 jwt-simple = { version = "0.15", default-features = false, features = [
     "pure-rust",
 ] }
-kbs-types = "0.18.0"
+kbs-types = { git = "https://github.com/confidential-containers/kbs-types.git", rev = "1de87bd35bdd8b58a798b4d80fdc20d9830ac52d" }
 nix = "0.31"
 openssl = "0.10"
 prost = "0.14"
