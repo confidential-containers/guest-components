@@ -17,7 +17,7 @@ shadow-rs.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 futures = "0.3.32"
-jwt-simple.workspace = true
+openssl = { workspace = true, features = ["vendored"] }
 protos = { path = "../../protos", default-features = false, features = [
     "grpc",
 ] }

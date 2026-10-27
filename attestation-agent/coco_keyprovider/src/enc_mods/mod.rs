@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use anyhow::{Context, Result, anyhow, bail};
 use base64::Engine;
-use jwt_simple::prelude::Ed25519KeyPair;
+use openssl::pkey::{PKey, Private};
 use rand::RngExt;
 use reqwest::Url;
 use resource_uri::ResourceUri;
@@ -195,7 +195,7 @@ fn normalize_path(key_id: &str) -> Result<(String, String)> {
 /// | keypath   | path to the KEK, e.g. `/home/key`    | Specify the KEK to encrypted the image in local filesystem                                       |
 /// | algorithm | `A256GCM` or `A256CTR`               | Encryption algorithm, included in the `wrap_type` field of AnnotationPacket. By default `A256GCM`|
 pub async fn enc_optsdata_gen_anno(
-    kbs_parameter: (&Option<Url>, &Option<Ed25519KeyPair>, &str),
+    kbs_parameter: (&Option<Url>, &Option<PKey<Private>>, &str),
     optsdata: &[u8],
     params: Vec<String>,
 ) -> Result<String> {
