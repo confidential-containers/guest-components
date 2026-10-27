@@ -8,6 +8,8 @@ use std::str::FromStr;
 use strum::EnumString;
 use tempfile::tempdir_in;
 use thiserror::Error;
+// A standard one-shot request writes only inblob.
+const STANDARD_REPORT_EXPECTED_GENERATION: u32 = 1;
 // SVSM vTPM additionally writes service_provider and service_guid.
 const SVSM_VTPM_EXPECTED_GENERATION: u32 = 3;
 
@@ -30,16 +32,14 @@ pub enum TsmReportError {
     MissingProvider(TsmReportProvider, TsmReportProvider),
     #[error("Failed to open TSM Report path: unknown provider ({0})")]
     UnknownProvider(#[from] strum::ParseError),
-    #[error("Failed to generate TSM Report: inblob write conflict (generation={0}, expected 1)")]
-    InblobConflict(u32),
     #[error("Failed to generate TSM Report: missing inblob (len=0)")]
     InblobLen,
     #[error("Failed to generate SVSM TSM Report: invalid inblob length (len={0}, expected 64)")]
     SvsmInblobLen(usize),
     #[error(
-        "Failed to generate SVSM TSM Report: write conflict (generation={generation}, expected {expected})"
+        "Failed to generate TSM Report: write conflict (generation={generation}, expected {expected})"
     )]
-    SvsmWriteConflict { generation: u32, expected: u32 },
+    WriteConflict { generation: u32, expected: u32 },
 }
 
 #[derive(PartialEq, Debug, EnumString)]
@@ -107,7 +107,7 @@ impl TsmReportPath {
         let aux = std::fs::read(report_path.join("auxblob"))
             .map_err(|e| TsmReportError::Access("auxblob", e))?;
 
-        check_inblob_write_race(report_path)?;
+        check_write_race(report_path, STANDARD_REPORT_EXPECTED_GENERATION)?;
 
         Ok(aux)
     }
@@ -117,9 +117,9 @@ fn attestation_report_from_path(
     report_path: &Path,
     provider_data: TsmReportData,
 ) -> Result<Vec<u8>, TsmReportError> {
-    let (report_data, svsm_vtpm) = match provider_data {
+    let (report_data, expected_generation) = match provider_data {
         TsmReportData::Cca(data) | TsmReportData::Tdx(data) | TsmReportData::Sev(data) => {
-            (data, false)
+            (data, STANDARD_REPORT_EXPECTED_GENERATION)
         }
 
         TsmReportData::SvsmVtpm(nonce) => {
@@ -133,7 +133,7 @@ fn attestation_report_from_path(
                 .map_err(|e| TsmReportError::Access("service_provider", e))?;
             std::fs::write(report_path.join("service_guid"), SVSM_VTPM_SERVICE_GUID)
                 .map_err(|e| TsmReportError::Access("service_guid", e))?;
-            (nonce, true)
+            (nonce, SVSM_VTPM_EXPECTED_GENERATION)
         }
     };
 
@@ -146,40 +146,19 @@ fn attestation_report_from_path(
     let report = std::fs::read(report_path.join("outblob"))
         .map_err(|e| TsmReportError::Access("outblob", e))?;
 
-    if svsm_vtpm {
-        check_svsm_write_race(report_path)?;
-    } else {
-        check_inblob_write_race(report_path)?;
-    }
+    check_write_race(report_path, expected_generation)?;
 
     Ok(report)
 }
 
-/// check_inblob_write_race checks that the returned outblob/auxblob
+/// check_write_race checks that the returned outblob/auxblob
 /// matches the quote generation request originally triggered when
-/// inblob was written by the TsmReportPath instance. It prevents
+/// inblob was written by the TsmReportPath instance. It checks that
+/// generation matches expected_generation, accounting for writes to
+/// both inblob and any service configuration attributes. It prevents
 /// the race condition that someone else could use the same temporary
 /// directory to generate a quote.
-fn check_inblob_write_race(report_path: &Path) -> Result<(), TsmReportError> {
-    let g = std::fs::read_to_string(report_path.join("generation"))
-        .map_err(|e| TsmReportError::Access("generation", e))?;
-
-    let generation = g
-        .trim_matches('\n')
-        .to_string()
-        .parse::<u32>()
-        .map_err(TsmReportError::Parse)?;
-
-    if generation > 1 {
-        return Err(TsmReportError::InblobConflict(generation));
-    }
-
-    Ok(())
-}
-
-/// Check the three attribute writes made by an SVSM vTPM request.
-fn check_svsm_write_race(report_path: &Path) -> Result<(), TsmReportError> {
-    let expected_generation = SVSM_VTPM_EXPECTED_GENERATION;
+fn check_write_race(report_path: &Path, expected_generation: u32) -> Result<(), TsmReportError> {
     let generation = std::fs::read_to_string(report_path.join("generation"))
         .map_err(|e| TsmReportError::Access("generation", e))?;
 
@@ -189,7 +168,7 @@ fn check_svsm_write_race(report_path: &Path) -> Result<(), TsmReportError> {
         .map_err(TsmReportError::Parse)?;
 
     if generation != expected_generation {
-        return Err(TsmReportError::SvsmWriteConflict {
+        return Err(TsmReportError::WriteConflict {
             generation,
             expected: expected_generation,
         });
@@ -228,7 +207,7 @@ mod tests {
     #[case("provider", "tdx_guest\n", false)]
     #[case("provider", "sev_guest\n", true)]
     #[case("provider", "foo_guest\n", true)]
-    #[case("generation", "0\n", false)]
+    #[case("generation", "0\n", true)]
     #[case("generation", "1\n", false)]
     #[case("generation", "2\n", true)]
     #[case("generation", "parseerror\n", true)]
@@ -244,7 +223,7 @@ mod tests {
             ),
             "generation" => assert_eq!(
                 expect_error,
-                check_inblob_write_race(tsm_dir.path()).is_err(),
+                check_write_race(tsm_dir.path(), STANDARD_REPORT_EXPECTED_GENERATION).is_err(),
             ),
             _ => unimplemented!(),
         }
@@ -254,15 +233,15 @@ mod tests {
     #[case(2, true)]
     #[case(3, false)]
     #[case(4, true)]
-    fn test_tsm_svsm_report(#[case] generation: u32, #[case] expect_error: bool) {
+    fn test_expected_generation(#[case] generation: u32, #[case] expect_error: bool) {
         let tsm_dir = tempfile::tempdir().unwrap();
         std::fs::write(tsm_dir.path().join("generation"), generation.to_string()).unwrap();
 
-        let result = check_svsm_write_race(tsm_dir.path());
+        let result = check_write_race(tsm_dir.path(), 3);
         if expect_error {
             assert!(matches!(
                 result,
-                Err(TsmReportError::SvsmWriteConflict { generation: actual, expected: 3 })
+                Err(TsmReportError::WriteConflict { generation: actual, expected: 3 })
                     if actual == generation
             ));
         } else {
@@ -292,6 +271,6 @@ mod tests {
         // SNP report REPORT_DATA occupies bytes 0x50..0x90.
         let report_data = report.get(0x50..0x90).expect("truncated SNP report");
         assert_eq!(report_data, &expected[..]);
-        check_svsm_write_race(&tsm.path).unwrap();
+        check_write_race(&tsm.path, SVSM_VTPM_EXPECTED_GENERATION).unwrap();
     }
 }
