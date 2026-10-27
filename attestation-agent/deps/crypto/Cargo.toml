@@ -25,3 +25,5 @@ rstest.workspace = true
 
 [features]
 default = []
+# musl builds have no system libssl to link. gnu builds leave this off.
+openssl-vendored = ["openssl/vendored"]
