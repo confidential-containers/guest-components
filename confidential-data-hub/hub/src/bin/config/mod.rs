@@ -12,6 +12,12 @@ use tracing::info;
 const CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS: &str =
     "CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS";
 
+// Set when the config file omits services_dir. A launcher that does not own
+// the rest of the config (kbc still comes from the kernel command line, or
+// from an initdata file) cannot add this one field: a file without kbc fails
+// to load. An explicit services_dir in the config is left unchanged.
+const CDH_SERVICES_DIR: &str = "CDH_SERVICES_DIR";
+
 pub fn read_config(config_path: Option<String>) -> Result<(CdhConfig, String)> {
     let (mut config, config_log) = match config_path {
         Some(config_path) => {
@@ -33,6 +39,15 @@ pub fn read_config(config_path: Option<String>) -> Result<(CdhConfig, String)> {
     {
         info!("Read authenticated registry credentials URI from env: {env}");
         config.image.authenticated_registry_credentials_uri = Some(env);
+    }
+
+    if config.services_dir.is_none() {
+        if let Ok(dir) = env::var(CDH_SERVICES_DIR) {
+            if !dir.is_empty() {
+                info!("Read per-service socket directory from env: {dir}");
+                config.services_dir = Some(dir);
+            }
+        }
     }
 
     config.extend_credentials_from_kernel_cmdline()?;
@@ -85,11 +100,43 @@ authenticated_registry_credentials_uri = "kbs:///default/auth/1"
         );
         env::remove_var("CDH_DEFAULT_IMAGE_AUTHENTICATED_REGISTRY_CREDENTIALS");
 
+        // services_dir from the environment fills the field only when the file
+        // omits it.
+        env::remove_var("CDH_SERVICES_DIR");
+        let (config, _) = read_config(Some(config_path.clone())).unwrap();
+        assert_eq!(config.services_dir, None);
+
+        env::set_var("CDH_SERVICES_DIR", "/run/guest-services");
+        let (config, _) = read_config(Some(config_path.clone())).unwrap();
+        assert_eq!(config.services_dir.as_deref(), Some("/run/guest-services"));
+        env::set_var("CDH_SERVICES_DIR", "");
+        let (config, _) = read_config(Some(config_path.clone())).unwrap();
+        assert_eq!(config.services_dir, None);
+        env::remove_var("CDH_SERVICES_DIR");
+
         // no env again
         let (config, _) = read_config(Some(config_path)).unwrap();
         assert_eq!(
             config.image.authenticated_registry_credentials_uri,
             Some("kbs:///default/auth/1".into())
         );
+    }
+
+    #[test]
+    #[serial]
+    fn test_config_services_dir_in_file_is_kept() {
+        let config = r#"
+services_dir = "/from-file"
+
+[kbc]
+name = "offline_fs_kbc"
+        "#;
+        let mut file = tempfile::Builder::new().suffix(".toml").tempfile().unwrap();
+        file.write_all(config.as_bytes()).unwrap();
+
+        env::set_var("CDH_SERVICES_DIR", "/from-env");
+        let (config, _) = read_config(Some(file.path().to_str().unwrap().to_string())).unwrap();
+        assert_eq!(config.services_dir.as_deref(), Some("/from-file"));
+        env::remove_var("CDH_SERVICES_DIR");
     }
 }
