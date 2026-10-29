@@ -19,7 +19,6 @@ async-compression = { version = "0.4.37", features = [
 async-trait.workspace = true
 base64.workspace = true
 cfg-if.workspace = true
-devicemapper = { version = "0.34.6", optional = true }
 filetime = "0.2"
 flate2 = "1.1"
 futures-util = "0.3"
@@ -114,8 +113,6 @@ signature-simple = ["signature", "pgp", "serde_yaml"]
 # it will try to connect to a service with `GetResource` API, typically `Confidential Data Hub`.
 # The concrete way is via ttrpc (aligns with feature `keywrap-ttrpc`) or gRPC (aligns with `keywrap-grpc`).
 kbs = []
-
-verity = ["devicemapper"]
 
 [[bench]]
 name = "image-pull"
