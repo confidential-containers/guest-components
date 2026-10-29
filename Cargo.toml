@@ -35,7 +35,6 @@ aws-sdk-secretsmanager = { version = "1.109", default-features = false, features
 base64 = "0.23.1"
 base64-serde = "0.8"
 bincode = "2.0.1"
-cfg-if = "1.0.4"
 chrono = "0.4.44"
 clap = "~4.6.1"
 config = "0.15.23"

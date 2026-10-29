@@ -17,13 +17,10 @@ mod ocicrypt_config;
 #[cfg(any(feature = "ttrpc", feature = "grpc"))]
 pub use ocicrypt_config::OCICRYPT_KEYPROVIDER_CONFIG_ENV;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "ttrpc")] {
-        pub const DEFAULT_CDH_SOCKET_ADDR: &str = "unix:///run/confidential-containers/cdh.sock";
-    } else {
-        pub const DEFAULT_CDH_SOCKET_ADDR: &str = "127.0.0.1:50000";
-    }
-}
+pub const DEFAULT_CDH_SOCKET_ADDR: &str = cfg_select! {
+    feature = "ttrpc" => "unix:///run/confidential-containers/cdh.sock",
+    _ => "127.0.0.1:50000",
+};
 
 pub const DEFAULT_AA_SOCKET_ADDR: &str =
     "unix:///run/confidential-containers/attestation-agent/attestation-agent.sock";
