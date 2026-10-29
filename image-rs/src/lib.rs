@@ -18,5 +18,3 @@ pub mod resource;
 pub mod signature;
 pub mod snapshots;
 pub mod stream;
-#[cfg(feature = "verity")]
-pub mod verity;
