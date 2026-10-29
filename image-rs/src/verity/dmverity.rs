@@ -46,7 +46,38 @@ impl DmVerityOption {
                     );
                 }
             }
-            // TODO: support ["sha224", "sha384", "sha512", "ripemd160"];
+            "sha224" => {
+                if self.hash.len() != 56 || hex::decode(&self.hash).is_err() {
+                    bail!(
+                        "Invalid hash value sha224:{} for DmVerity device with sha224",
+                        self.hash,
+                    );
+                }
+            }
+            "sha384" => {
+                if self.hash.len() != 96 || hex::decode(&self.hash).is_err() {
+                    bail!(
+                        "Invalid hash value sha384:{} for DmVerity device with sha384",
+                        self.hash,
+                    );
+                }
+            }
+            "sha512" => {
+                if self.hash.len() != 128 || hex::decode(&self.hash).is_err() {
+                    bail!(
+                        "Invalid hash value sha512:{} for DmVerity device with sha512",
+                        self.hash,
+                    );
+                }
+            }
+            "ripemd160" => {
+                if self.hash.len() != 40 || hex::decode(&self.hash).is_err() {
+                    bail!(
+                        "Invalid hash value ripemd160:{} for DmVerity device with ripemd160",
+                        self.hash,
+                    );
+                }
+            }
             _ => {
                 bail!(
                     "Unsupported hash algorithm {} for DmVerity device {}",
@@ -375,6 +406,99 @@ mod tests {
             hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174".to_string(),
         };
         test_data.validate().unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_validate_additional_hash_algorithms() {
+        // Valid cases: each algorithm with a correctly-sized hex hash.
+        let valid_cases = &[
+            // sha224: 28 bytes = 56 hex chars
+            DmVerityOption {
+                hashtype: "sha224".to_string(),
+                blocksize: 512,
+                hashsize: 512,
+                blocknum: 16384,
+                offset: 8388608,
+                hash: "b94f6f125c79e46f6781ae2d4d2cb8b77d7b2650e87f4e2d4e1f3b0a".to_string(),
+            },
+            // sha384: 48 bytes = 96 hex chars
+            DmVerityOption {
+                hashtype: "sha384".to_string(),
+                blocksize: 512,
+                hashsize: 512,
+                blocknum: 16384,
+                offset: 8388608,
+                hash: "38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b".to_string(),
+            },
+            // sha512: 64 bytes = 128 hex chars
+            DmVerityOption {
+                hashtype: "sha512".to_string(),
+                blocksize: 512,
+                hashsize: 512,
+                blocknum: 16384,
+                offset: 8388608,
+                hash: "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e".to_string(),
+            },
+            // ripemd160: 20 bytes = 40 hex chars
+            DmVerityOption {
+                hashtype: "ripemd160".to_string(),
+                blocksize: 512,
+                hashsize: 512,
+                blocknum: 16384,
+                offset: 8388608,
+                hash: "9c1185a5c5e9fc54612808977ee8f548b2258d31".to_string(),
+            },
+        ];
+        for d in valid_cases.iter() {
+            d.validate().unwrap();
+        }
+
+        // Invalid cases: each algorithm with a hash of the wrong length.
+        let invalid_cases = &[
+            DmVerityOption {
+                hashtype: "sha224".to_string(),
+                blocksize: 512,
+                hashsize: 512,
+                blocknum: 16384,
+                offset: 8388608,
+                // 64 hex chars (sha256 length) instead of 56
+                hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
+                    .to_string(),
+            },
+            DmVerityOption {
+                hashtype: "sha384".to_string(),
+                blocksize: 512,
+                hashsize: 512,
+                blocknum: 16384,
+                offset: 8388608,
+                // 64 hex chars instead of 96
+                hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
+                    .to_string(),
+            },
+            DmVerityOption {
+                hashtype: "sha512".to_string(),
+                blocksize: 512,
+                hashsize: 512,
+                blocknum: 16384,
+                offset: 8388608,
+                // 64 hex chars instead of 128
+                hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
+                    .to_string(),
+            },
+            DmVerityOption {
+                hashtype: "ripemd160".to_string(),
+                blocksize: 512,
+                hashsize: 512,
+                blocknum: 16384,
+                offset: 8388608,
+                // 64 hex chars instead of 40
+                hash: "9de18652fe74edfb9b805aaed72ae2aa48f94333f1ba5c452ac33b1c39325174"
+                    .to_string(),
+            },
+        ];
+        for d in invalid_cases.iter() {
+            d.validate().unwrap_err();
+        }
     }
 
     #[tokio::test]
