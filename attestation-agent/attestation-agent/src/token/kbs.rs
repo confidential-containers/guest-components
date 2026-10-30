@@ -8,6 +8,7 @@ use crate::config::kbs::KbsConfig;
 use anyhow::*;
 use kbs_protocol::{KbsClientBuilder, TeeKeyAlgorithm, evidence_provider::NativeEvidenceProvider};
 use serde::Serialize;
+use std::collections::HashMap;
 
 #[derive(Serialize)]
 struct Message {
@@ -23,8 +24,22 @@ pub struct KbsTokenGetter {
     attestation_policy_selector: String,
 }
 
+/// kbs currently accepts no extra parameters. Any key is reported as unsupported.
+fn parse_params(params: &HashMap<String, String>) -> Result<()> {
+    if let Some(key) = params.keys().next() {
+        bail!("{key} parameter is not supported for kbs token");
+    }
+    Ok(())
+}
+
 impl KbsTokenGetter {
-    pub async fn get_token(&self, initdata: Option<&str>) -> Result<Vec<u8>> {
+    pub async fn get_token(
+        &self,
+        initdata: Option<&str>,
+        params: &HashMap<String, String>,
+    ) -> Result<Vec<u8>> {
+        parse_params(params)?;
+
         let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
 
         let mut builder =
@@ -64,5 +79,26 @@ impl KbsTokenGetter {
             tee_key_algorithm: config.tee_key_algorithm,
             attestation_policy_selector: config.attestation_policy_selector.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[tokio::test]
+    async fn any_parameter_is_rejected() {
+        let getter = KbsTokenGetter::default();
+        let mut params = HashMap::new();
+        params.insert("nonce".to_string(), "value".to_string());
+        let err = getter
+            .get_token(None, &params)
+            .await
+            .expect_err("kbs must reject parameters");
+        assert_eq!(
+            err.to_string(),
+            "nonce parameter is not supported for kbs token"
+        );
     }
 }

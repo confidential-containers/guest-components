@@ -19,7 +19,7 @@ use crate::client::{
     },
     cdh::{CDH_RESOURCE_URL, CDH_ROOT, CDHClient},
 };
-use crate::utils::{decode_runtime_data, split_nth_slash};
+use crate::utils::{decode_runtime_data, split_nth_slash, token_body_params, token_query_params};
 
 pub struct Router {
     aa_client: Option<AAClient>,
@@ -157,17 +157,57 @@ impl Router {
                     match (url_path, method) {
                         (AA_TOKEN_URL, &Method::GET) => {
                             info!("Get token");
-                            match params.get("token_type") {
-                                Some(token_type) => match client.get_token(token_type).await {
-                                    std::result::Result::Ok(results) => {
-                                        return self.octet_stream_response(results);
-                                    }
-                                    Err(e) => {
-                                        error!("Failed to get token: {e:#}");
-                                        return self.internal_error(e.to_string());
-                                    }
-                                },
-                                None => return self.bad_request(),
+                            let (token_type, token_params) = match token_query_params(&params) {
+                                std::result::Result::Ok(parsed) => parsed,
+                                Err(e) => {
+                                    error!("Invalid token query: {e:#}");
+                                    return self.bad_request();
+                                }
+                            };
+
+                            match client.get_token(&token_type, &token_params).await {
+                                std::result::Result::Ok(results) => {
+                                    return self.octet_stream_response(results);
+                                }
+                                Err(e) => {
+                                    error!("Failed to get token: {e:#}");
+                                    return self.internal_error(e.to_string());
+                                }
+                            }
+                        }
+                        (AA_TOKEN_URL, &Method::POST) => {
+                            info!("Get token");
+                            let (token_type, mut token_params) = match token_query_params(&params) {
+                                std::result::Result::Ok(parsed) => parsed,
+                                Err(e) => {
+                                    error!("Invalid token query: {e:#}");
+                                    return self.bad_request();
+                                }
+                            };
+                            let data = match req.into_body().collect().await {
+                                std::result::Result::Ok(data) => data,
+                                Err(e) => {
+                                    error!("Failed to read token request: {e:#}");
+                                    return self.internal_error(e.to_string());
+                                }
+                            };
+                            let body_params = match token_body_params(data.to_bytes().as_ref()) {
+                                std::result::Result::Ok(params) => params,
+                                Err(e) => {
+                                    error!("Failed to parse token parameters: {e:#}");
+                                    return self.bad_request();
+                                }
+                            };
+                            // Body values replace query values when a key appears in both.
+                            token_params.extend(body_params);
+                            match client.get_token(&token_type, &token_params).await {
+                                std::result::Result::Ok(results) => {
+                                    return self.octet_stream_response(results);
+                                }
+                                Err(e) => {
+                                    error!("Failed to get token: {e:#}");
+                                    return self.internal_error(e.to_string());
+                                }
                             }
                         }
                         (AA_EVIDENCE_URL, &Method::GET) => {
@@ -477,6 +517,7 @@ mod tests {
 
     #[rstest]
     #[case(Method::GET, "/aa/token?token_type=kbs")]
+    #[case(Method::POST, "/aa/token")]
     #[case(Method::GET, "/aa/evidence?runtime_data=aGVsbG8")]
     #[case(Method::GET, "/aa/additional-evidence?runtime_data=aGVsbG8")]
     #[case(Method::GET, "/aa/aael")]

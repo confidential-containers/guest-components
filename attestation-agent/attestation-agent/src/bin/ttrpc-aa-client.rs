@@ -13,6 +13,7 @@ use protos::ttrpc::aa::{
     },
     attestation_agent_ttrpc::AttestationAgentServiceClient,
 };
+use std::collections::HashMap;
 use ttrpc::context;
 
 mod ttrpc_dep;
@@ -73,6 +74,12 @@ struct GetTokenArgs {
     /// token type
     #[arg(short, long)]
     token_type: String,
+
+    /// Extra parameter `KEY=VALUE`. May be repeated. Values are forwarded as
+    /// strings. `coco_as` accepts `nonce` (URL-safe base64, no padding) or
+    /// `runtime_data` (JSON), but not both. `kbs` accepts no extra parameters.
+    #[arg(long = "param", value_name = "KEY=VALUE")]
+    param: Vec<String>,
 }
 
 #[derive(Args)]
@@ -129,8 +136,19 @@ pub async fn main() {
             println!("{evidence}");
         }
         Operation::GetToken(get_token_args) => {
+            let mut params = HashMap::new();
+            for raw in get_token_args.param {
+                let Some((key, value)) = raw.split_once('=') else {
+                    panic!("param must be KEY=VALUE, got {raw}");
+                };
+                if key.is_empty() {
+                    panic!("param key must not be empty");
+                }
+                params.insert(key.to_string(), value.to_string());
+            }
             let req = GetTokenRequest {
                 TokenType: get_token_args.token_type,
+                Params: params,
                 ..Default::default()
             };
             let res = client

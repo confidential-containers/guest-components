@@ -396,6 +396,8 @@ pub struct GetTokenRequest {
     // message fields
     // @@protoc_insertion_point(field:attestation_agent.GetTokenRequest.TokenType)
     pub TokenType: ::std::string::String,
+    // @@protoc_insertion_point(field:attestation_agent.GetTokenRequest.Params)
+    pub Params: ::std::collections::HashMap<::std::string::String, ::std::string::String>,
     // special fields
     // @@protoc_insertion_point(special_field:attestation_agent.GetTokenRequest.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
@@ -413,12 +415,17 @@ impl GetTokenRequest {
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(1);
+        let mut fields = ::std::vec::Vec::with_capacity(2);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
         fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
             "TokenType",
             |m: &GetTokenRequest| { &m.TokenType },
             |m: &mut GetTokenRequest| { &mut m.TokenType },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_map_simpler_accessor_new::<_, _>(
+            "Params",
+            |m: &GetTokenRequest| { &m.Params },
+            |m: &mut GetTokenRequest| { &mut m.Params },
         ));
         ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<GetTokenRequest>(
             "GetTokenRequest",
@@ -441,6 +448,21 @@ impl ::protobuf::Message for GetTokenRequest {
                 10 => {
                     self.TokenType = is.read_string()?;
                 },
+                18 => {
+                    let len = is.read_raw_varint32()?;
+                    let old_limit = is.push_limit(len as u64)?;
+                    let mut key = ::std::default::Default::default();
+                    let mut value = ::std::default::Default::default();
+                    while let Some(tag) = is.read_raw_tag_or_eof()? {
+                        match tag {
+                            10 => key = is.read_string()?,
+                            18 => value = is.read_string()?,
+                            _ => ::protobuf::rt::skip_field_for_tag(tag, is)?,
+                        };
+                    }
+                    is.pop_limit(old_limit);
+                    self.Params.insert(key, value);
+                },
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
                 },
@@ -456,6 +478,12 @@ impl ::protobuf::Message for GetTokenRequest {
         if !self.TokenType.is_empty() {
             my_size += ::protobuf::rt::string_size(1, &self.TokenType);
         }
+        for (k, v) in &self.Params {
+            let mut entry_size = 0;
+            entry_size += ::protobuf::rt::string_size(1, &k);
+            entry_size += ::protobuf::rt::string_size(2, &v);
+            my_size += 1 + ::protobuf::rt::compute_raw_varint64_size(entry_size) + entry_size
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
         my_size
@@ -465,6 +493,15 @@ impl ::protobuf::Message for GetTokenRequest {
         if !self.TokenType.is_empty() {
             os.write_string(1, &self.TokenType)?;
         }
+        for (k, v) in &self.Params {
+            let mut entry_size = 0;
+            entry_size += ::protobuf::rt::string_size(1, &k);
+            entry_size += ::protobuf::rt::string_size(2, &v);
+            os.write_raw_varint32(18)?; // Tag.
+            os.write_raw_varint32(entry_size as u32)?;
+            os.write_string(1, &k)?;
+            os.write_string(2, &v)?;
+        };
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -483,15 +520,13 @@ impl ::protobuf::Message for GetTokenRequest {
 
     fn clear(&mut self) {
         self.TokenType.clear();
+        self.Params.clear();
         self.special_fields.clear();
     }
 
     fn default_instance() -> &'static GetTokenRequest {
-        static instance: GetTokenRequest = GetTokenRequest {
-            TokenType: ::std::string::String::new(),
-            special_fields: ::protobuf::SpecialFields::new(),
-        };
-        &instance
+        static instance: ::protobuf::rt::Lazy<GetTokenRequest> = ::protobuf::rt::Lazy::new();
+        instance.get(GetTokenRequest::new)
     }
 }
 
@@ -1697,35 +1732,38 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     ceRequest\x12\x20\n\x0bRuntimeData\x18\x01\x20\x01(\x0cR\x0bRuntimeData\
     \"@\n\x1cGetAdditionalEvidenceRequest\x12\x20\n\x0bRuntimeData\x18\x01\
     \x20\x01(\x0cR\x0bRuntimeData\"1\n\x13GetEvidenceResponse\x12\x1a\n\x08E\
-    vidence\x18\x01\x20\x01(\x0cR\x08Evidence\"/\n\x0fGetTokenRequest\x12\
-    \x1c\n\tTokenType\x18\x01\x20\x01(\tR\tTokenType\"(\n\x10GetTokenRespons\
-    e\x12\x14\n\x05Token\x18\x01\x20\x01(\x0cR\x05Token\"\xae\x01\n\x1fExten\
-    dRuntimeMeasurementRequest\x12\x16\n\x06Domain\x18\x01\x20\x01(\tR\x06Do\
-    main\x12\x1c\n\tOperation\x18\x02\x20\x01(\tR\tOperation\x12\x18\n\x07Co\
-    ntent\x18\x03\x20\x01(\tR\x07Content\x12)\n\rRegisterIndex\x18\x04\x20\
-    \x01(\x04H\0R\rRegisterIndex\x88\x01\x01B\x10\n\x0e_RegisterIndex\"g\n\
-    \x20ExtendRuntimeMeasurementResponse\x12C\n\x06Result\x18\x01\x20\x01(\
-    \x0e2+.attestation_agent.RuntimeMeasurementResultR\x06Result\"K\n\x13Bin\
-    dInitDataRequest\x12\x16\n\x06Digest\x18\x01\x20\x01(\x0cR\x06Digest\x12\
-    \x1c\n\tAlgorithm\x18\x02\x20\x01(\tR\tAlgorithm\"\x16\n\x14BindInitData\
-    Response\"\x13\n\x11GetTeeTypeRequest\"&\n\x12GetTeeTypeResponse\x12\x10\
-    \n\x03tee\x18\x01\x20\x01(\tR\x03tee\"\x1a\n\x18GetAdditionalTeesRequest\
-    \"D\n\x19GetAdditionalTeesResponse\x12'\n\x0fadditional_tees\x18\x01\x20\
-    \x03(\tR\x0eadditionalTees*F\n\x18RuntimeMeasurementResult\x12\x06\n\x02\
-    OK\x10\0\x12\x11\n\rNOT_SUPPORTED\x10\x01\x12\x0f\n\x0bNOT_ENABLED\x10\
-    \x022\xf0\x05\n\x17AttestationAgentService\x12\\\n\x0bGetEvidence\x12%.a\
-    ttestation_agent.GetEvidenceRequest\x1a&.attestation_agent.GetEvidenceRe\
-    sponse\x12p\n\x15GetAdditionalEvidence\x12/.attestation_agent.GetAdditio\
-    nalEvidenceRequest\x1a&.attestation_agent.GetEvidenceResponse\x12S\n\x08\
-    GetToken\x12\".attestation_agent.GetTokenRequest\x1a#.attestation_agent.\
-    GetTokenResponse\x12\x83\x01\n\x18ExtendRuntimeMeasurement\x122.attestat\
-    ion_agent.ExtendRuntimeMeasurementRequest\x1a3.attestation_agent.ExtendR\
-    untimeMeasurementResponse\x12_\n\x0cBindInitData\x12&.attestation_agent.\
-    BindInitDataRequest\x1a'.attestation_agent.BindInitDataResponse\x12Y\n\n\
-    GetTeeType\x12$.attestation_agent.GetTeeTypeRequest\x1a%.attestation_age\
-    nt.GetTeeTypeResponse\x12n\n\x11GetAdditionalTees\x12+.attestation_agent\
-    .GetAdditionalTeesRequest\x1a,.attestation_agent.GetAdditionalTeesRespon\
-    seb\x06proto3\
+    vidence\x18\x01\x20\x01(\x0cR\x08Evidence\"\xb2\x01\n\x0fGetTokenRequest\
+    \x12\x1c\n\tTokenType\x18\x01\x20\x01(\tR\tTokenType\x12F\n\x06Params\
+    \x18\x02\x20\x03(\x0b2..attestation_agent.GetTokenRequest.ParamsEntryR\
+    \x06Params\x1a9\n\x0bParamsEntry\x12\x10\n\x03key\x18\x01\x20\x01(\tR\
+    \x03key\x12\x14\n\x05value\x18\x02\x20\x01(\tR\x05value:\x028\x01\"(\n\
+    \x10GetTokenResponse\x12\x14\n\x05Token\x18\x01\x20\x01(\x0cR\x05Token\"\
+    \xae\x01\n\x1fExtendRuntimeMeasurementRequest\x12\x16\n\x06Domain\x18\
+    \x01\x20\x01(\tR\x06Domain\x12\x1c\n\tOperation\x18\x02\x20\x01(\tR\tOpe\
+    ration\x12\x18\n\x07Content\x18\x03\x20\x01(\tR\x07Content\x12)\n\rRegis\
+    terIndex\x18\x04\x20\x01(\x04H\0R\rRegisterIndex\x88\x01\x01B\x10\n\x0e_\
+    RegisterIndex\"g\n\x20ExtendRuntimeMeasurementResponse\x12C\n\x06Result\
+    \x18\x01\x20\x01(\x0e2+.attestation_agent.RuntimeMeasurementResultR\x06R\
+    esult\"K\n\x13BindInitDataRequest\x12\x16\n\x06Digest\x18\x01\x20\x01(\
+    \x0cR\x06Digest\x12\x1c\n\tAlgorithm\x18\x02\x20\x01(\tR\tAlgorithm\"\
+    \x16\n\x14BindInitDataResponse\"\x13\n\x11GetTeeTypeRequest\"&\n\x12GetT\
+    eeTypeResponse\x12\x10\n\x03tee\x18\x01\x20\x01(\tR\x03tee\"\x1a\n\x18Ge\
+    tAdditionalTeesRequest\"D\n\x19GetAdditionalTeesResponse\x12'\n\x0faddit\
+    ional_tees\x18\x01\x20\x03(\tR\x0eadditionalTees*F\n\x18RuntimeMeasureme\
+    ntResult\x12\x06\n\x02OK\x10\0\x12\x11\n\rNOT_SUPPORTED\x10\x01\x12\x0f\
+    \n\x0bNOT_ENABLED\x10\x022\xf0\x05\n\x17AttestationAgentService\x12\\\n\
+    \x0bGetEvidence\x12%.attestation_agent.GetEvidenceRequest\x1a&.attestati\
+    on_agent.GetEvidenceResponse\x12p\n\x15GetAdditionalEvidence\x12/.attest\
+    ation_agent.GetAdditionalEvidenceRequest\x1a&.attestation_agent.GetEvide\
+    nceResponse\x12S\n\x08GetToken\x12\".attestation_agent.GetTokenRequest\
+    \x1a#.attestation_agent.GetTokenResponse\x12\x83\x01\n\x18ExtendRuntimeM\
+    easurement\x122.attestation_agent.ExtendRuntimeMeasurementRequest\x1a3.a\
+    ttestation_agent.ExtendRuntimeMeasurementResponse\x12_\n\x0cBindInitData\
+    \x12&.attestation_agent.BindInitDataRequest\x1a'.attestation_agent.BindI\
+    nitDataResponse\x12Y\n\nGetTeeType\x12$.attestation_agent.GetTeeTypeRequ\
+    est\x1a%.attestation_agent.GetTeeTypeResponse\x12n\n\x11GetAdditionalTee\
+    s\x12+.attestation_agent.GetAdditionalTeesRequest\x1a,.attestation_agent\
+    .GetAdditionalTeesResponseb\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file

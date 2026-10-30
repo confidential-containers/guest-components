@@ -15,10 +15,18 @@ pub struct GetEvidenceResponse {
     #[prost(bytes = "vec", tag = "1")]
     pub evidence: ::prost::alloc::vec::Vec<u8>,
 }
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetTokenRequest {
     #[prost(string, tag = "1")]
     pub token_type: ::prost::alloc::string::String,
+    /// Extra parameters for the selected token provider. Keys and values are
+    /// plain strings; each provider parses the entries it understands.
+    /// See attestation-agent/README.md for the keys each token type accepts.
+    #[prost(map = "string, string", tag = "2")]
+    pub params: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetTokenResponse {

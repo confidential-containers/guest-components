@@ -11,21 +11,50 @@ use utoipa::{OpenApi, ToSchema};
 #[utoipa::path(
     get,
     path = "/aa/token",
+    description = "Forwards every query parameter except `token_type` to the attestation agent. ASR does not filter keys. `kbs` accepts none. `coco_as` accepts at most one of `nonce` (URL-safe base64 without padding, the evidence challenge) or `runtime_data` (a string of JSON text). Use POST to send `runtime_data`.",
     params(
-        ("token_type" = String, Query, description = "Token Type")
+        ("token_type" = String, Query, description = "Token Type"),
+        ("nonce" = Option<String>, Query, description = "Optional string parameter. For coco_as, URL-safe base64 (no padding) evidence challenge")
     ),
     responses(
         (status = 200, description = "success response",
                 content_type = "application/octet-stream",
                 body = String,
                 example = json!({"token": "eyJhbGciOiJFUzI1NiI...", "tee_keypair": "-----BEGIN RSA... "})),
-        (status = 400, description = "bad request for invalid token type"),
+        (status = 400, description = "bad request for a missing token type"),
         (status = 403, description = "forbid external access"),
         (status = 404, description = "resource not found"),
-        (status = 405, description = "only Get method allowed")
+        (status = 405, description = "method not allowed")
     )
 )]
 fn _token() {}
+
+#[derive(ToSchema)]
+pub struct TokenParameters {
+    /// String of JSON text forwarded to the attestation service. Not a nested JSON object.
+    pub runtime_data: Option<String>,
+}
+
+#[utoipa::path(
+    post,
+    path = "/aa/token",
+    description = "Merges the JSON object of strings in the body with every query parameter except `token_type`. Body values replace query values for the same key. Values must be strings; nested JSON is rejected. `runtime_data` is a string of JSON text. Which keys each token type accepts is decided by the attestation agent.",
+    params(
+        ("token_type" = String, Query, description = "Token Type")
+    ),
+    request_body = TokenParameters,
+    responses(
+        (status = 200, description = "success response",
+                content_type = "application/octet-stream",
+                body = String,
+                example = json!({"token": "eyJhbGciOiJFUzI1NiI...", "tee_keypair": "-----BEGIN RSA... "})),
+        (status = 400, description = "bad request for an invalid query or body"),
+        (status = 403, description = "forbid external access"),
+        (status = 404, description = "resource not found"),
+        (status = 405, description = "method not allowed")
+    )
+)]
+fn _token_post() {}
 
 #[utoipa::path(
     get,
@@ -151,7 +180,7 @@ fn generate_openapi_document() -> std::io::Result<()> {
         (url = "http://127.0.0.1:8006", description = "CoCo RESTful API")
      ),
 
-    paths(_token, _evidence, _additional_evidence, _aael, _resource, _version)
+    paths(_token, _token_post, _evidence, _additional_evidence, _aael, _resource, _version)
  )]
     struct ApiDoc;
     let mut file = File::create("openapi/api.json")?;
