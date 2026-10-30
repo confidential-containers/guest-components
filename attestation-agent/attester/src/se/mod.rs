@@ -126,7 +126,14 @@ impl Attester for SeAttester {
             additional_size,
         )?;
         let uv = UvDevice::open()?;
-        uv.send_cmd(&mut uvc)?;
+        uv.send_cmd(&mut uvc).map_err(|e| {
+            let msg = e.to_string();
+            if msg.contains("Unsupported plaintext attestation flag set") {
+                anyhow!("Firmware attestation requires z17 or later")
+            } else {
+                anyhow!("Ultravisor command failed: {e}")
+            }
+        })?;
         let cuid = uvc.cuid();
         let additional_data = uvc
             .additional_owned()
