@@ -77,14 +77,17 @@ struct TdxReportReq {
 const TDX: Group = Group::new(b'T');
 const TDX_CMD_GET_REPORT0: Ioctl<WriteRead, &TdxReportReq> = unsafe { TDX.write_read(0x1) };
 
+fn open_tdx_guest_device() -> Result<std::fs::File> {
+    std::fs::File::open(TDX_GUEST_IOCTL).with_context(|| format!("open {TDX_GUEST_IOCTL} failed"))
+}
+
 impl TdxAttester {
     fn ioctl_get_report(&self) -> Result<TdReport> {
         let mut report = TdxReportReq {
             report_data: [0; 64],
             d: [0; 1024],
         };
-        let mut fd = std::fs::File::open(TDX_GUEST_IOCTL)
-            .with_context(|| format!("open {TDX_GUEST_IOCTL} failed"))?;
+        let mut fd = open_tdx_guest_device()?;
 
         TDX_CMD_GET_REPORT0
             .ioctl(&mut fd, &mut report)
