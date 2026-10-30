@@ -63,7 +63,10 @@ async fn main() -> Result<()> {
         None => EnvFilter::new("info"),
     };
 
-    Subscriber::builder().with_env_filter(env_filter).init();
+    Subscriber::builder()
+        .with_env_filter(env_filter)
+        .with_writer(std::io::stderr)
+        .init();
 
     let cli = Cli::parse();
 
