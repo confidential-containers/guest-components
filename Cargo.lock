@@ -437,7 +437,6 @@ dependencies = [
  "sev",
  "sha2 0.11.0",
  "strum 0.28.0",
- "tdx-attest-rs",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
@@ -1013,26 +1012,6 @@ dependencies = [
  "rustc-hash 1.1.0",
  "shlex 1.3.0",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "bindgen"
-version = "0.70.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f49d8fed880d473ea71efb9bf597651e77201bdd4893efe54c9e5d65ae04ce6f"
-dependencies = [
- "bitflags 2.13.1",
- "cexpr",
- "clang-sys",
- "itertools 0.13.0",
- "log",
- "prettyplease 0.2.37",
- "proc-macro2",
- "quote",
- "regex",
- "rustc-hash 1.1.0",
- "shlex 1.3.0",
- "syn 2.0.117",
 ]
 
 [[package]]
@@ -2414,34 +2393,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "devicemapper"
-version = "0.34.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d95021344f9715868259d6b500aa0fb2a3b53c39b5c88fc45814355e53ce83a"
-dependencies = [
- "bitflags 2.13.1",
- "cfg-if",
- "devicemapper-sys",
- "env_logger",
- "log",
- "nix 0.31.3",
- "rand 0.10.3",
- "retry",
- "semver",
- "serde",
-]
-
-[[package]]
-name = "devicemapper-sys"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06421aaad10b53bd5d1fe004c26efddfaaeaa4438ff52b84a0f660b3c87d63e6"
-dependencies = [
- "bindgen 0.72.1",
- "pkg-config",
-]
-
-[[package]]
 name = "difflib"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2762,29 +2713,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
-]
-
-[[package]]
-name = "env_filter"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32e90c2accc4b07a8456ea0debdc2e7587bdd890680d71173a15d4ae604f6eef"
-dependencies = [
- "log",
- "regex",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.11.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0621c04f2196ac3f488dd583365b9c09be011a4ab8b9f37248ffcc8f6198b56a"
-dependencies = [
- "anstream",
- "anstyle",
- "env_filter",
- "jiff",
- "log",
 ]
 
 [[package]]
@@ -3807,7 +3735,6 @@ dependencies = [
  "base64 0.23.1",
  "cfg-if",
  "criterion",
- "devicemapper",
  "filetime",
  "flate2",
  "futures-util",
@@ -6373,12 +6300,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "retry"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1cab9bd343c737660e523ee69f788018f3db686d537d2fd0f99c9f747c1bda4f"
-
-[[package]]
 name = "rfc6979"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7521,22 +7442,6 @@ name = "target-lexicon"
 version = "0.12.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
-
-[[package]]
-name = "tdx-attest-rs"
-version = "0.1.2"
-source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.27.101#64b78f3766e7196d3d2c60e401540f0f853b2deb"
-dependencies = [
- "tdx-attest-sys",
-]
-
-[[package]]
-name = "tdx-attest-sys"
-version = "0.1.0"
-source = "git+https://github.com/intel/confidential-computing.tee.dcap?tag=DCAP_1.27.101#64b78f3766e7196d3d2c60e401540f0f853b2deb"
-dependencies = [
- "bindgen 0.70.1",
-]
 
 [[package]]
 name = "tempfile"
