@@ -9,6 +9,8 @@ use crate::InitDataResult;
 use crate::utils::{pad, read_eventlog};
 use anyhow::*;
 use base64::Engine;
+#[cfg(feature = "tdx-attest-dcap-ioctls")]
+use iocuddle::Write;
 use iocuddle::{Group, Ioctl, WriteRead};
 use kbs_types::HashAlgorithm;
 use report::TdReport;
@@ -18,7 +20,6 @@ use tracing::debug;
 use zerocopy::{FromBytes, Immutable, IntoBytes};
 
 mod report;
-mod rtmr;
 
 const TDX_REPORT_DATA_SIZE: usize = 64;
 
@@ -76,6 +77,28 @@ struct TdxReportReq {
 
 const TDX: Group = Group::new(b'T');
 const TDX_CMD_GET_REPORT0: Ioctl<WriteRead, &TdxReportReq> = unsafe { TDX.write_read(0x1) };
+
+/// Intel's DCAP TDX guest driver's "extend RTMR" ioctl
+/// (`TDX_CMD_EXTEND_RTMR` / `struct tdx_extend_rtmr_req` in `tdx_attest.c`).
+/// Not part of the upstream kernel's `tdx-guest.h` UAPI. The driver
+/// declares it `_IOR` though it's write-only, so we keep the real `_IOR`
+/// request number but reinterpret it as `Write` to pass our request as
+/// input.
+#[cfg(feature = "tdx-attest-dcap-ioctls")]
+const TDX_CMD_EXTEND_RTMR: Ioctl<Write, &TdxExtendRtmrReq> =
+    unsafe { TDX.read::<TdxExtendRtmrReq>(0x3).lie() };
+
+/// Request struct for [`TDX_CMD_EXTEND_RTMR`].
+#[cfg(feature = "tdx-attest-dcap-ioctls")]
+#[repr(C)]
+#[derive(IntoBytes, Immutable)]
+struct TdxExtendRtmrReq {
+    /// Data that will be used to extend the RTMR.
+    extend_data: [u8; 48],
+
+    /// The RTMR that will be extended.
+    index: u8,
+}
 
 fn open_tdx_guest_device() -> Result<std::fs::File> {
     std::fs::File::open(TDX_GUEST_IOCTL).with_context(|| format!("open {TDX_GUEST_IOCTL} failed"))
@@ -156,21 +179,15 @@ impl Attester for TdxAttester {
 
         #[cfg(feature = "tdx-attest-dcap-ioctls")]
         {
-            let event: Vec<u8> = rtmr::TdxRtmrEvent::default()
-                .with_extend_data(extend_data)
-                .with_rtmr_index(rtmr_index)
-                .into();
-            match tdx_attest_rs::tdx_att_extend(&event) {
-                tdx_attest_rs::tdx_attest_error_t::TDX_ATTEST_SUCCESS => {
-                    debug!("TDX extend runtime measurement succeeded.")
-                }
-                error_code => {
-                    bail!(
-                        "TDX Attester: Failed to extend RTMR. Error code: {:?}",
-                        error_code
-                    );
-                }
-            }
+            let mut fd = open_tdx_guest_device()?;
+            let req = TdxExtendRtmrReq {
+                extend_data,
+                index: rtmr_index as u8,
+            };
+            TDX_CMD_EXTEND_RTMR
+                .ioctl(&mut fd, &req)
+                .context("TDX Attester: Failed to extend RTMR via ioctl")?;
+            debug!("TDX extend runtime measurement succeeded.");
         }
 
         Ok(())
