@@ -23,7 +23,7 @@ cargo build -p kbs_protocol --bin trustee-attester --no-default-features
 ## Run: ##
 
 ```bash
-$ trustee-attester --url <Trustee-URL> [--cert-file <path>] get-resource --path <resource-path> [--initdata <initdata>]
+$ trustee-attester --url <Trustee-URL> [--cert-file <path>] get-resource --path <resource-path> [--initdata <initdata> | --attestation-result <base64-json>]
 $ trustee-attester --url <Trustee-URL> [--cert-file <path>] attest [--initdata <initdata>]
 ```
 
@@ -45,6 +45,18 @@ $ trustee-attester --url http://localhost:50000 attest | base64 --decode | jq .
 ```
 
 The decoded output contains private key material and must be handled as a secret.
+
+The result can be reused to fetch resources without performing another attestation:
+
+```bash
+$ ATTESTATION_RESULT=$(trustee-attester --url http://localhost:50000 attest)
+$ trustee-attester --url http://localhost:50000 get-resource \
+    --path default/keys/dummy \
+    --attestation-result "$ATTESTATION_RESULT"
+```
+
+When `--attestation-result` is supplied, `get-resource` uses its key and token directly.
+It cannot be combined with `--initdata`, because no new attestation is performed.
 
 ## Example: ##
 
