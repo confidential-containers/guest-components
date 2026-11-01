@@ -42,6 +42,13 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Attest and print the TEE key and token as Base64-encoded JSON
+    Attest {
+        /// Initdata string
+        #[clap(long)]
+        initdata: Option<String>,
+    },
+
     /// Get confidential resource
     #[clap(arg_required_else_help = true)]
     GetResource {
@@ -54,6 +61,20 @@ enum Commands {
         #[clap(long)]
         initdata: Option<String>,
     },
+}
+
+#[derive(serde::Serialize)]
+struct AttestationResult {
+    key: String,
+    token: String,
+}
+
+fn encode_attestation_result(key: &str, token: &str) -> Result<String> {
+    let json = serde_json::to_vec(&AttestationResult {
+        key: key.to_string(),
+        token: token.to_string(),
+    })?;
+    Ok(STANDARD.encode(json))
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -97,6 +118,19 @@ async fn main() -> Result<()> {
     }
 
     match cli.command {
+        Commands::Attest { initdata } => {
+            if let Some(init) = initdata {
+                client_builder = client_builder.add_initdata(init);
+            }
+            let mut client = client_builder.build()?;
+
+            let (token, key) = client.get_token().await?;
+            let key = key.to_pem()?;
+            println!(
+                "{}",
+                encode_attestation_result(key.as_str(), &token.content)?
+            );
+        }
         Commands::GetResource { path, initdata } => {
             if let Some(init) = initdata {
                 client_builder = client_builder.add_initdata(init);

@@ -7,6 +7,9 @@ trustee-attester \- attest and fetch secrets from Trustee
 .SH SYNOPSIS
 .B trustee-attester
 \-\-url <URL-of-Trustee> [ OPTIONS ] get-resource \-\-path <resource-path> [ RESOURCE-OPTIONS ]
+.br
+.B trustee-attester
+\-\-url <URL-of-Trustee> [ OPTIONS ] attest [\-\-initdata <initdata-string>]
 
 .SH DESCRIPTION
 trustee-attester is a simple client to easily attest and fetch secrets
@@ -40,12 +43,31 @@ Plaintext initdata can optionally be passed as a string with the
 .B \-\-initdata
 flag. The verifier will generally expect its hash to be measured,
 e.g. in PCR8 when using the TPM attester.
+.RE
+
+.IR attest
+[\-\-initdata <initdata-string>]
+
+.RS
+Perform attestation without requesting a resource. The command prints one
+Base64-encoded JSON object with two string fields:
+.B key,
+containing the generated private TEE key in PEM format, and
+.B token,
+containing the attestation token.
+The decoded output contains private key material and must be handled as a secret.
+
+Plaintext initdata can optionally be supplied with
+.BR \-\-initdata .
+.RE
 
 For more information look at
 https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docs/KBS_URI.md
 
 .SH EXAMPLES
 trustee-attester --url http://10.0.0.4:50000 get-resource --path default/secrets/secret1
+
+trustee-attester --url http://10.0.0.4:50000 attest | base64 --decode
 
 trustee-attester --url https://10.0.0.4:50000 --cert-file /etc/trustee-attester/server_cert.pem
 get-resource --path myrepo/keys/mykey1

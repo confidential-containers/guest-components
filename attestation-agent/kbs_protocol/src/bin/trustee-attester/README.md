@@ -24,7 +24,27 @@ cargo build -p kbs_protocol --bin trustee-attester --no-default-features
 
 ```bash
 $ trustee-attester --url <Trustee-URL> [--cert-file <path>] get-resource --path <resource-path> [--initdata <initdata>]
+$ trustee-attester --url <Trustee-URL> [--cert-file <path>] attest [--initdata <initdata>]
 ```
+
+The `attest` command performs attestation without requesting a resource. It prints one
+Base64-encoded JSON object containing the generated private TEE key in PEM format and the
+attestation token:
+
+```json
+{
+  "key": "-----BEGIN PRIVATE KEY-----\n...",
+  "token": "<JWT>"
+}
+```
+
+The output can be decoded with:
+
+```bash
+$ trustee-attester --url http://localhost:50000 attest | base64 --decode | jq .
+```
+
+The decoded output contains private key material and must be handled as a secret.
 
 ## Example: ##
 
