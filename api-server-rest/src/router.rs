@@ -164,7 +164,7 @@ impl Router {
                                     }
                                     Err(e) => {
                                         error!("Failed to get token: {e:#}");
-                                        return self.internal_error(e.to_string());
+                                        return self.internal_error(format!("{e:#}"));
                                     }
                                 },
                                 None => return self.bad_request(),
@@ -187,7 +187,7 @@ impl Router {
                                         }
                                         Err(e) => {
                                             error!("Failed to get evidence: {e:#}");
-                                            return self.internal_error(e.to_string());
+                                            return self.internal_error(format!("{e:#}"));
                                         }
                                     }
                                 }
@@ -211,7 +211,7 @@ impl Router {
                                         }
                                         Err(e) => {
                                             error!("Failed to get additional evidence: {e:#}");
-                                            return self.internal_error(e.to_string());
+                                            return self.internal_error(format!("{e:#}"));
                                         }
                                     }
                                 }
@@ -224,7 +224,7 @@ impl Router {
                                 std::result::Result::Ok(data) => data,
                                 Err(e) => {
                                     error!("Failed to read AAEL entry request: {e:#}");
-                                    return self.internal_error(e.to_string());
+                                    return self.internal_error(format!("{e:#}"));
                                 }
                             };
                             let aael_entry: AaelEvent =
@@ -253,7 +253,7 @@ impl Router {
                                 }
                                 Err(e) => {
                                     error!("Failed to extend AAEL entry: {e:#}");
-                                    return self.internal_error(e.to_string());
+                                    return self.internal_error(format!("{e:#}"));
                                 }
                             }
                         }
@@ -279,7 +279,7 @@ impl Router {
                                 }
                                 Err(e) => {
                                     error!("Failed to get resource: {e:#}");
-                                    return self.internal_error(e.to_string());
+                                    return self.internal_error(format!("{e:#}"));
                                 }
                             },
                             _ => {
