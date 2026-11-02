@@ -16,6 +16,7 @@ shadow!(build);
 
 pub mod enc_mods;
 pub mod grpc;
+pub mod jwt;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
