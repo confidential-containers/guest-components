@@ -43,9 +43,7 @@ const_format = "0.2.36"
 ctr = "0.10.0"
 hex = "0.4.3"
 hmac = "0.13.0"
-jwt-simple = { version = "0.15", default-features = false, features = [
-    "pure-rust",
-] }
+josekit = "0.10.3"
 kbs-types = { git = "https://github.com/confidential-containers/kbs-types.git", rev = "1de87bd35bdd8b58a798b4d80fdc20d9830ac52d" }
 nix = "0.31"
 openssl = "0.10"
