@@ -135,17 +135,17 @@ impl KbsClient<Box<dyn EvidenceProvider>> {
             let res = self
                 .rcar_handshake()
                 .await
-                .map_err(|e| Error::RcarHandshake(format!("{e:#?}")));
+                .map_err(|e| Error::RcarHandshake(format!("{e:#}")));
 
             match res {
                 Ok(_) => break,
                 Err(e) => {
                     if retry_count >= RCAR_MAX_ATTEMPT {
                         return Err(Error::RcarHandshake(format!(
-                            "Unable to get token. RCAR handshake retried {RCAR_MAX_ATTEMPT} times. Final attempt failed with: {e:?}"
+                            "Unable to get token. RCAR handshake retried {RCAR_MAX_ATTEMPT} times. Final attempt failed with: {e:#}"
                         )));
                     } else {
-                        warn!("RCAR handshake failed: {e:?}, retry {retry_count}...");
+                        warn!("RCAR handshake failed: {e:#}, retry {retry_count}...");
                         retry_count += 1;
                         tokio::time::sleep(Duration::from_secs(RCAR_RETRY_TIMEOUT_SECOND)).await;
                     }
@@ -353,39 +353,39 @@ impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
                 .get(&remote_url)
                 .send()
                 .await
-                .map_err(|e| Error::HttpError(format!("get failed: {e:?}")))?;
+                .map_err(|e| Error::HttpError(format!("get failed: {e:#}")))?;
 
             match res.status() {
                 reqwest::StatusCode::OK => {
                     let response = res
                         .json::<Response>()
                         .await
-                        .map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?;
+                        .map_err(|e| Error::KbsResponseDeserializationFailed(format!("{e:#}")))?;
                     let payload_data = self
                         .tee_key
                         .decrypt_response(response)
-                        .map_err(|e| Error::DecryptResponseFailed(e.to_string()))?;
+                        .map_err(|e| Error::DecryptResponseFailed(format!("{e:#}")))?;
                     return Ok(payload_data);
                 }
                 reqwest::StatusCode::UNAUTHORIZED => {
                     warn!(
                         "Authenticating with KBS failed. Perform a new RCAR handshake: {:#?}",
-                        res.json::<ErrorInformation>()
-                            .await
-                            .map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?,
+                        res.json::<ErrorInformation>().await.map_err(|e| {
+                            Error::KbsResponseDeserializationFailed(format!("{e:#}"))
+                        })?,
                     );
                     self.rcar_handshake()
                         .await
-                        .map_err(|e| Error::RcarHandshake(format!("{e:#?}")))?;
+                        .map_err(|e| Error::RcarHandshake(format!("{e:#}")))?;
 
                     continue;
                 }
                 reqwest::StatusCode::NOT_FOUND => {
                     let errorinfo = format!(
                         "KBS resource Not Found (Error 404): {:#?}",
-                        res.json::<ErrorInformation>()
-                            .await
-                            .map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?
+                        res.json::<ErrorInformation>().await.map_err(|e| {
+                            Error::KbsResponseDeserializationFailed(format!("{e:#}"))
+                        })?
                     );
 
                     return Err(Error::ResourceNotFound(errorinfo));
@@ -393,9 +393,9 @@ impl KbsClientCapabilities for KbsClient<Box<dyn EvidenceProvider>> {
                 _ => {
                     let errorinfo = format!(
                         "KBS Server Internal Failed, Response: {:#?}",
-                        res.json::<ErrorInformation>()
-                            .await
-                            .map_err(|e| Error::KbsResponseDeserializationFailed(e.to_string()))?
+                        res.json::<ErrorInformation>().await.map_err(|e| {
+                            Error::KbsResponseDeserializationFailed(format!("{e:#}"))
+                        })?
                     );
 
                     return Err(Error::KbsInternalError(errorinfo));
