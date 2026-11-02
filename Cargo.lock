@@ -419,7 +419,7 @@ dependencies = [
  "hex",
  "hyper 0.14.32",
  "hyper-tls 0.5.0",
- "iocuddle 0.3.0",
+ "iocuddle 0.4.0",
  "kbs-types",
  "num-traits",
  "nv-attestation-sdk",
@@ -3825,9 +3825,9 @@ checksum = "d8972d5be69940353d5347a1344cb375d9b457d6809b428b05bb1ca2fb9ce007"
 
 [[package]]
 name = "iocuddle"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5fab23069aa80df2de983e9d2e989f838af07041e99d85245ea4b1dac7a5933"
+checksum = "b9faa2eb1051fb714783e08c74354aebf4ebf5c0cd3a11ed1059a4b474b4a5db"
 dependencies = [
  "zerocopy",
 ]
