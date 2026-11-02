@@ -41,7 +41,7 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (grpc): get token failed:\n{e:?}");
-                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get token failed"))
+                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get token failed: {e:#}"))
             })?;
 
         debug!("AA (grpc): Get token successfully!");
@@ -65,7 +65,9 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (grpc): get evidence failed:\n{e:?}");
-                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get evidence failed"))
+                Status::internal(format!(
+                    "[ERROR:{AGENT_NAME}] AA get evidence failed: {e:#}"
+                ))
             })?;
 
         debug!("AA (grpc): Get evidence successfully!");
@@ -90,7 +92,7 @@ impl AttestationAgentService for AA {
             .map_err(|e| {
                 error!("AA (grpc): get additional evidence failed:\n{e:?}");
                 Status::internal(format!(
-                    "[ERROR:{AGENT_NAME}] AA get additional evidence failed"
+                    "[ERROR:{AGENT_NAME}] AA get additional evidence failed: {e:#}"
                 ))
             })?;
 
@@ -121,7 +123,7 @@ impl AttestationAgentService for AA {
             .map_err(|e| {
                 error!("AA (grpc): extend runtime measurement failed:\n{e:?}");
                 Status::internal(format!(
-                    "[ERROR:{AGENT_NAME}] AA extend runtime measurement failed"
+                    "[ERROR:{AGENT_NAME}] AA extend runtime measurement failed: {e:#}"
                 ))
             })?;
 
@@ -157,7 +159,9 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (grpc): binding init data failed:\n{e:?}");
-                Status::internal(format!("[ERROR:{AGENT_NAME}] AA binding init data failed"))
+                Status::internal(format!(
+                    "[ERROR:{AGENT_NAME}] AA binding init data failed: {e:#}"
+                ))
             })?;
 
         if let InitDataResult::NotBound = result {
@@ -174,7 +178,7 @@ impl AttestationAgentService for AA {
                 .map_err(|e| {
                     error!("AA (grpc): measuring init data failed:\n{e:?}");
                     Status::internal(format!(
-                        "[ERROR:{AGENT_NAME}] AA measuring init data failed"
+                        "[ERROR:{AGENT_NAME}] AA measuring init data failed: {e:#}"
                     ))
                 })?;
         }
