@@ -16,21 +16,21 @@ pub type Result<T> = std::result::Result<T, EnvelopeError>;
 
 #[derive(Error, Debug)]
 pub enum EnvelopeError {
-    #[error("base64 decoding failed when {context}")]
+    #[error("base64 decoding failed when {context}: {source}")]
     Base64DecodeFailed {
         #[source]
         source: base64::DecodeError,
         context: &'static str,
     },
 
-    #[error("kms interface when {context}")]
+    #[error("kms interface when {context}: {source}")]
     KmsError {
         #[source]
         source: kms::Error,
         context: &'static str,
     },
 
-    #[error("decrypt envelope")]
+    #[error("decrypt envelope: {0}")]
     Decrypt(#[from] anyhow::Error),
 }
 

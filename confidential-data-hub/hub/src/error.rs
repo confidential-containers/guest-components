@@ -10,7 +10,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("kbs client initialization failed")]
+    #[error("kbs client initialization failed: {source}")]
     KbsClient {
         #[source]
         source: kms::Error,
@@ -22,16 +22,16 @@ pub enum Error {
         source: kms::Error,
     },
 
-    #[error("Decrypt Image (UnwrapKey) failed")]
+    #[error(transparent)]
     ImageDecryption(#[from] image::Error),
 
     #[error("init Hub failed: {0}")]
     InitializationFailed(String),
 
-    #[error("Unseal Secret failed")]
+    #[error("Unseal Secret failed: {0}")]
     UnsealSecret(#[from] secret::SecretError),
 
-    #[error("Secure Mount failed")]
+    #[error("Secure Mount failed: {0}")]
     SecureMount(#[from] storage::Error),
 
     #[error("Image Pull error: {0}")]
@@ -54,17 +54,30 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case(Error::KbsClient { source: kms::Error::KbsClientError("details".into()) }, "kbs client initialization failed")]
+    #[case(Error::KbsClient { source: kms::Error::KbsClientError("details".into()) }, "kbs client initialization failed: Kbs client error: details")]
     #[case(Error::GetResource { source: kms::Error::KbsClientError("details".into()) }, "Get Resource failed: Kbs client error: details")]
     #[case(
         Error::UnsealSecret(secret::SecretError::VersionError),
-        "Unseal Secret failed"
+        "Unseal Secret failed: version not supported, only 0.1.0 supported"
+    )]
+    #[case(
+        Error::UnsealSecret(secret::SecretError::UnsealVaultFailed(
+            secret::layout::vault::VaultError::KmsError {
+                source: kms::Error::KbsClientError("details".into()),
+                context: "get secret",
+            }
+        )),
+        "Unseal Secret failed: kms interface when get secret: Kbs client error: details"
+    )]
+    #[case(
+        Error::ImageDecryption(image::Error::UnknownWrapType("foo".into())),
+        "Unknown WrapType: foo"
     )]
     #[case(
         Error::SecureMount(storage::Error::StorageTypeNotRecognized(
             strum::ParseError::VariantNotFound
         )),
-        "Secure Mount failed"
+        "Secure Mount failed: Failed to recognize the storage type: Matching variant not found"
     )]
     #[case(Error::ImagePull(image_rs::image::PullImageError::SignatureValidationFailed(SignatureError::DeniedByPolicy { source: anyhow!("some details")})), "Image Pull error: Image policy rejected: Denied by policy: some details")]
     fn test_brief_message(#[case] error: Error, #[case] expected: &str) {

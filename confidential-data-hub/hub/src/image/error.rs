@@ -12,27 +12,27 @@ pub enum Error {
     #[error("Unknown WrapType: {0}")]
     UnknownWrapType(String),
 
-    #[error("kms interface when {context}")]
+    #[error("kms interface when {context}: {source}")]
     KmsError {
         #[source]
         source: kms::Error,
         context: &'static str,
     },
 
-    #[error("base64 decoding failed when {context}")]
+    #[error("base64 decoding failed when {context}: {source}")]
     Base64DecodeFailed {
         #[source]
         source: base64::DecodeError,
         context: &'static str,
     },
 
-    #[error("decrypt LEK using KEK failed")]
+    #[error("decrypt LEK using KEK failed: {source}")]
     DecryptFailed {
         #[source]
         source: anyhow::Error,
     },
 
-    #[error("malwared AnnotationPacket format")]
+    #[error("malwared AnnotationPacket format: {source}")]
     ParseAnnotationPacket {
         #[source]
         source: anyhow::Error,

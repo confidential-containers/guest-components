@@ -17,27 +17,27 @@ pub enum SecretError {
     #[error("version not supported, only {} supported", VERSION)]
     VersionError,
 
-    #[error("unseal envelope secret failed")]
+    #[error(transparent)]
     UnsealEnvelopeFailed(#[from] EnvelopeError),
 
-    #[error("unseal vault secret failed")]
+    #[error(transparent)]
     UnsealVaultFailed(#[from] VaultError),
 
     #[error("parse SealedSecret failed: {0}")]
     ParseFailed(&'static str),
 
-    #[error("Signature Error: {0}")]
+    #[error(transparent)]
     SignatureError(#[from] p256::ecdsa::Error),
 
-    #[error("JSON Parsing Error: {0}")]
+    #[error(transparent)]
     JsonError(#[from] serde_json::Error),
 
     #[error("Signing key error: {0}")]
     BadSigningKey(&'static str),
 
-    #[error("Failed to get key from KMS: {0}")]
+    #[error(transparent)]
     KmsError(#[from] kms::Error),
 
-    #[error("IO Operation Failed: {0}")]
+    #[error(transparent)]
     IoError(#[from] std::io::Error),
 }

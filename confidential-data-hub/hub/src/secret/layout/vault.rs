@@ -13,7 +13,7 @@ pub type Result<T> = std::result::Result<T, VaultError>;
 
 #[derive(Error, Debug)]
 pub enum VaultError {
-    #[error("kms interface when {context}")]
+    #[error("kms interface when {context}: {source}")]
     KmsError {
         #[source]
         source: kms::Error,
