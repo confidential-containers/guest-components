@@ -5,7 +5,7 @@
 
 use super::{Attester, InitDataResult, TeeEvidence};
 use crate::az_snp_vtpm::{TpmQuote, utils};
-use crate::utils::truncate_digest;
+use crate::utils::{read_eventlog, truncate_digest};
 use anyhow::*;
 use az_tdx_vtpm::{hcl, is_tdx_cvm, tdx::TdReport, vtpm};
 use azure_guest_attestation_sdk::guest_attest::ImdsClient;
@@ -44,6 +44,9 @@ const EVIDENCE_VERSION: u32 = 2;
 /// - `tpm_quote` - TPM quote containing PCR values and a signature
 /// - `hcl_report` - Hardware Compatibility Layer report containing the TD report
 /// - `td_quote` - Intel TDX quote signed by the Quoting Enclave
+/// - `cc_eventlog` - Base64-encoded runtime eventlog (AAEL in TCG2 encoding),
+///    or `None` when no runtime eventlog has been recorded. Mirrors the shape
+///    used by the SNP attester so the verifier can consume it uniformly.
 #[serde_as]
 #[derive(Serialize, Deserialize)]
 struct Evidence {
@@ -53,9 +56,13 @@ struct Evidence {
     hcl_report: Vec<u8>,
     #[serde_as(as = "UrlSafeBase64")]
     td_quote: Vec<u8>,
+    cc_eventlog: Option<String>,
 }
 
-fn get_evidence_sync(report_data: &[u8]) -> anyhow::Result<TeeEvidence> {
+fn get_evidence_sync(
+    report_data: &[u8],
+    cc_eventlog: Option<String>,
+) -> anyhow::Result<TeeEvidence> {
     let hcl_report = vtpm::get_report_with_report_data(report_data)?;
     let td_report: TdReport = hcl::HclReport::new(hcl_report.clone())?.try_into()?;
     let td_quote = ImdsClient::new().get_td_quote(td_report.as_bytes())?;
@@ -66,6 +73,7 @@ fn get_evidence_sync(report_data: &[u8]) -> anyhow::Result<TeeEvidence> {
         tpm_quote,
         hcl_report,
         td_quote,
+        cc_eventlog,
     };
     Ok(serde_json::to_value(&evidence)?)
 }
@@ -73,7 +81,10 @@ fn get_evidence_sync(report_data: &[u8]) -> anyhow::Result<TeeEvidence> {
 #[async_trait::async_trait]
 impl Attester for AzTdxVtpmAttester {
     async fn get_evidence(&self, report_data: Vec<u8>) -> Result<TeeEvidence> {
-        spawn_blocking(move || get_evidence_sync(&report_data)).await?
+        // Read the runtime eventlog (AAEL) before entering the blocking section:
+        // `read_eventlog` is async, whereas the vTPM calls below are blocking.
+        let cc_eventlog = read_eventlog().await?;
+        spawn_blocking(move || get_evidence_sync(&report_data, cc_eventlog)).await?
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> anyhow::Result<InitDataResult> {
@@ -104,6 +115,9 @@ impl Attester for AzTdxVtpmAttester {
         HashAlgorithm::Sha256
     }
 
-    // TODO: add get_runtime_measurement function
-    // See https://github.com/confidential-containers/guest-components/issues/1201
+    /// Read the current value of a runtime measurement register (PCR).
+    /// This is the read counterpart of [`extend_runtime_measurement`]
+    async fn get_runtime_measurement(&self, pcr_index: u64) -> Result<Vec<u8>> {
+        spawn_blocking(move || utils::read_pcr_sync(pcr_index)).await?
+    }
 }
