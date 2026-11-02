@@ -11,7 +11,7 @@ use anyhow::*;
 use base64::Engine;
 #[cfg(feature = "tdx-attest-dcap-ioctls")]
 use iocuddle::Write;
-use iocuddle::{Group, Ioctl, WriteRead};
+use iocuddle::{Group, Ioctl, Size, WriteRead};
 use kbs_types::HashAlgorithm;
 use report::TdReport;
 use serde::{Deserialize, Serialize};
@@ -75,6 +75,8 @@ struct TdxReportReq {
     d: [u8; 1024],
 }
 
+impl Size for TdxReportReq {}
+
 const TDX: Group = Group::new(b'T');
 const TDX_CMD_GET_REPORT0: Ioctl<WriteRead, &TdxReportReq> = unsafe { TDX.write_read(0x1) };
 
@@ -92,7 +94,7 @@ const TDX_CMD_EXTEND_RTMR: Ioctl<Write, &TdxExtendRtmrReq> =
 /// Request struct for [`TDX_CMD_EXTEND_RTMR`].
 #[cfg(feature = "tdx-attest-dcap-ioctls")]
 #[repr(C)]
-#[derive(IntoBytes, Immutable)]
+#[derive(FromBytes, IntoBytes, Immutable)]
 struct TdxExtendRtmrReq {
     /// Data that will be used to extend the RTMR.
     extend_data: [u8; 48],
@@ -100,6 +102,9 @@ struct TdxExtendRtmrReq {
     /// The RTMR that will be extended.
     index: u8,
 }
+
+#[cfg(feature = "tdx-attest-dcap-ioctls")]
+impl Size for TdxExtendRtmrReq {}
 
 fn open_tdx_guest_device() -> Result<std::fs::File> {
     std::fs::File::open(TDX_GUEST_IOCTL).with_context(|| format!("open {TDX_GUEST_IOCTL} failed"))
