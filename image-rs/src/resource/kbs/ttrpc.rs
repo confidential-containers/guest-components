@@ -37,7 +37,7 @@ impl Client for Ttrpc {
             .await?
             .get_resource(context::with_timeout(50 * 1000 * 1000 * 1000), &req)
             .await
-            .context("ttrpc request error")?;
+            .map_err(|e| anyhow!("ttrpc request error: {e}"))?;
         Ok(res.Resource)
     }
 }
