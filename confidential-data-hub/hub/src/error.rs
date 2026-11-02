@@ -67,7 +67,7 @@ mod tests {
                 context: "get secret",
             }
         )),
-        "Unseal Secret failed: kms interface when get secret: Kbs client error: details"
+        "Unseal Secret failed: get secret: Kbs client error: details"
     )]
     #[case(
         Error::ImageDecryption(image::Error::UnknownWrapType("foo".into())),

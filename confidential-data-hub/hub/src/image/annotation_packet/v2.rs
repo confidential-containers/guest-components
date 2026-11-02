@@ -125,7 +125,7 @@ impl AnnotationPacketV2 {
                     .decrypt(
                         &STANDARD.decode(&self.wrapped_data).map_err(|e| {
                             Error::Base64DecodeFailed {
-                                context: "base64 decode `wrapped_data`",
+                                context: "`wrapped_data`",
                                 source: e,
                             }
                         })?,

@@ -12,14 +12,14 @@ pub enum Error {
     #[error("Unknown WrapType: {0}")]
     UnknownWrapType(String),
 
-    #[error("kms interface when {context}: {source}")]
+    #[error("{context}: {source}")]
     KmsError {
         #[source]
         source: kms::Error,
         context: &'static str,
     },
 
-    #[error("base64 decoding failed when {context}: {source}")]
+    #[error("base64 decode {context}: {source}")]
     Base64DecodeFailed {
         #[source]
         source: base64::DecodeError,
