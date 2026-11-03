@@ -385,6 +385,94 @@ jobs:
         working-directory: ./ocicrypt-rs
         run: make test
 
+  msrv:
+    name: MSRV
+    needs: changes
+    permissions:
+      contents: read
+    if: |
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'create' ||
+        needs.changes.outputs.rust == 'true'
+      )
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Read workspace rust-version
+        id: msrv
+        run: |
+          version="$(sed -n 's/^rust-version = "\([^"]*\)"/\1/p' Cargo.toml | head -n1)"
+          if ! [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Cargo.toml workspace rust-version must be x.y.z, got '${version}'" >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - uses: $/.github/actions/setup-rust-ci
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
+          install-tpm: "true"
+          install-dmverity: "true"
+          install-nvat: "true"
+          install-nettle: "true"
+          install-cryptsetup: "true"
+          install-build-deps: "true"
+
+      - name: Confirm rustc matches rust-version
+        env:
+          EXPECTED_RUST_VERSION: ${{ steps.msrv.outputs.version }}
+        run: |
+          actual="$(rustc --version | awk '{print $2}')"
+          if [ "${actual}" != "${EXPECTED_RUST_VERSION}" ]; then
+            echo "expected rustc ${EXPECTED_RUST_VERSION}, got ${actual}" >&2
+            exit 1
+          fi
+
+      - name: Assert every workspace package declares that rust-version
+        env:
+          EXPECTED_RUST_VERSION: ${{ steps.msrv.outputs.version }}
+        run: |
+          mismatched="$(cargo metadata --locked --no-deps --format-version 1 \
+            | jq -r --arg expected "${EXPECTED_RUST_VERSION}" '
+                .packages[]
+                | select(.rust_version != $expected)
+                | "\(.name) rust-version=\(.rust_version // "unset")"
+              ')"
+          if [ -n "${mismatched}" ]; then
+            echo "Packages whose rust-version is not ${EXPECTED_RUST_VERSION}:" >&2
+            echo "${mismatched}" >&2
+            exit 1
+          fi
+
+      - name: Check the workspace on the MSRV toolchain
+        run: |
+          cargo check --locked --workspace --all-targets --all-features \
+            --exclude attestation-agent \
+            --exclude confidential-data-hub \
+            --exclude crypto \
+            --exclude protos
+
+          # Skip openssl-vendored; that feature statically compiles OpenSSL.
+          cargo check --locked --all-targets -p crypto
+
+          # Skip the `build` feature; it runs protoc and writes generated sources.
+          cargo check --locked --all-targets -p protos
+
+          # All features except openssl-vendored, which statically compiles OpenSSL.
+          # all-attesters covers the individual attesters; grpc and ttrpc are defaults.
+          cargo check --locked --all-targets -p attestation-agent --features "all-attesters,bin,coco_as,kbs,tdx-attester-libtdx"
+          cargo check --locked --all-targets -p confidential-data-hub --features "aliyun,aws"
+
   rust-stable-clippy:
     name: clippy on Rust stable (Weekly)
     if: github.event_name == 'schedule'

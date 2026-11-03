@@ -7,6 +7,7 @@ readme = "README.md"
 license = "Apache-2.0"
 authors = ["The image-rs Authors"]
 edition = "2024"
+rust-version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
@@ -66,7 +67,7 @@ nix = { workspace = true, features = ["user"] }
 ring.workspace = true
 rsa.workspace = true
 rstest.workspace = true
-serial_test = "4.0.1"
+serial_test.workspace = true
 strum.workspace = true
 tempfile.workspace = true
 testcontainers.workspace = true
