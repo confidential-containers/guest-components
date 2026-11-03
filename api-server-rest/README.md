@@ -26,6 +26,15 @@ $ curl "http://127.0.0.1:8006/aa/additional-evidence?runtime_data=eHh4eA&encodin
 $ curl http://127.0.0.1:8006/aa/token\?token_type\=kbs
 {"token":"eyJhbGciOiJFi...","tee_keypair":"-----BEGIN... "}
 
+# Query parameters other than token_type are forwarded. nonce is a string.
+$ curl "http://127.0.0.1:8006/aa/token?token_type=coco_as&nonce=Y2hhbGxlbmdl"
+
+# POST body is a JSON object of strings, merged with the query. runtime_data is
+# JSON text, not a nested object.
+$ curl -X POST "http://127.0.0.1:8006/aa/token?token_type=coco_as" \
+     -H "Content-Type: application/json" \
+     -d '{"runtime_data":"{\"request\":\"1\"}"}'
+
 $ curl http://127.0.0.1:8006/info
 {"version":"v1.0.0","tee":"tdx","additional_tees":[]}
 

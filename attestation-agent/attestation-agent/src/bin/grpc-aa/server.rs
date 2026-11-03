@@ -37,11 +37,11 @@ impl AttestationAgentService for AA {
 
         let token = self
             .inner
-            .get_token(&request.token_type)
+            .get_token(&request.token_type, &request.params)
             .await
             .map_err(|e| {
                 error!("AA (grpc): get token failed:\n{e:?}");
-                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get token failed"))
+                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get token failed: {e:#}"))
             })?;
 
         debug!("AA (grpc): Get token successfully!");

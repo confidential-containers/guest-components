@@ -35,6 +35,7 @@ kbs_protocol = { path = "../kbs_protocol", default-features = false, optional = 
 kbs-types.workspace = true
 protos = { path = "../../protos", default-features = false, optional = true }
 reqwest = { workspace = true, features = ["json"], optional = true }
+serde_json_canonicalizer = { version = "0.3", optional = true }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
@@ -59,7 +60,7 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 shadow-rs.workspace = true
 
 [features]
-default = ["ttrpc", "grpc"]
+default = ["ttrpc", "grpc", "kbs", "coco_as"]
 
 # Attestation Token support
 token = []
@@ -68,7 +69,7 @@ token = []
 kbs = ["kbs_protocol/background_check", "token"]
 
 # CoCoAS Attestation Token
-coco_as = ["reqwest", "token"]
+coco_as = ["reqwest", "token", "dep:serde_json_canonicalizer"]
 
 all-attesters = [
     "tdx-attester",

@@ -10,6 +10,7 @@ use protos::ttrpc::aa::attestation_agent::{
 };
 use protos::ttrpc::aa::attestation_agent_ttrpc::AttestationAgentServiceClient;
 use serde::Deserialize;
+use std::collections::HashMap;
 
 use crate::TTRPC_TIMEOUT;
 use crate::client::ttrpc_client::CachedTtrpcClient;
@@ -64,17 +65,26 @@ impl AAClient {
         Ok(Self { client })
     }
 
-    pub async fn get_token(&self, token_type: &str) -> Result<Vec<u8>> {
+    pub async fn get_token(
+        &self,
+        token_type: &str,
+        params: &HashMap<String, String>,
+    ) -> Result<Vec<u8>> {
         let res = self
             .client
-            .call_with_retry(|client| async move {
-                let req = GetTokenRequest {
-                    TokenType: token_type.to_string(),
-                    ..Default::default()
-                };
-                client
-                    .get_token(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
-                    .await
+            .call_with_retry(move |client| {
+                let token_type = token_type.to_string();
+                let params = params.clone();
+                async move {
+                    let req = GetTokenRequest {
+                        TokenType: token_type,
+                        Params: params,
+                        ..Default::default()
+                    };
+                    client
+                        .get_token(ttrpc::context::with_timeout(TTRPC_TIMEOUT), &req)
+                        .await
+                }
             })
             .await?;
 

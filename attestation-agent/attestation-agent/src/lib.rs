@@ -69,8 +69,15 @@ pub enum RuntimeMeasurement {
 ///  to the Relying Party (Key Broker Service) in Confidential Containers.
 #[async_trait]
 pub trait AttestationAPIs {
-    /// Get attestation Token
-    async fn get_token(&self, token_type: &str) -> Result<Vec<u8>>;
+    /// Get an attestation token.
+    ///
+    /// `params` is forwarded unchanged to the selected token provider. Each
+    /// provider parses the entries it understands.
+    async fn get_token(
+        &self,
+        token_type: &str,
+        params: &HashMap<String, String>,
+    ) -> Result<Vec<u8>>;
 
     /// Get TEE hardware evidence from the primary attester with runtime
     /// data included.
@@ -176,7 +183,11 @@ impl AttestationAgent {
 
 #[async_trait]
 impl AttestationAPIs for AttestationAgent {
-    async fn get_token(&self, token_type: &str) -> Result<Vec<u8>> {
+    async fn get_token(
+        &self,
+        token_type: &str,
+        _params: &HashMap<String, String>,
+    ) -> Result<Vec<u8>> {
         let token_type = TokenType::from_str(token_type).context("Unsupported token type")?;
 
         match token_type {
@@ -193,7 +204,7 @@ impl AttestationAPIs for AttestationAgent {
                             "kbs token config not configured in config file"
                         ))?,
                 )
-                .get_token(self.initdata.as_deref())
+                .get_token(self.initdata.as_deref(), _params)
                 .await
             }
             // TODO: add initdata plaintext for CoCoAS token
@@ -210,7 +221,7 @@ impl AttestationAPIs for AttestationAgent {
                             "coco_as token config not configured in config file"
                         ))?,
                 )
-                .get_token()
+                .get_token(_params)
                 .await
             }
         }

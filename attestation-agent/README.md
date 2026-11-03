@@ -106,6 +106,27 @@ To run with a TCP endpoint:
 attestation-agent --attestation_sock 127.0.0.1:50002
 ```
 
+### GetToken parameters
+
+`GetToken` takes a `token_type` and a string map of extra parameters. Each token
+type accepts a fixed set of keys. Any other key is rejected.
+
+| Token type | Allowed parameters |
+| ---------- | ------------------ |
+| `kbs`      | none               |
+| `coco_as`  | `nonce` or `runtime_data`, at most one |
+
+- `nonce`: URL-safe base64 without padding. The decoded bytes are the evidence
+  challenge.
+- `runtime_data`: a string containing JSON text, not a nested JSON object.
+  The evidence challenge is the SHA-384 digest of that JSON after RFC 8785
+  canonicalization, which is how CoCo Attestation Service checks `structured`
+  runtime data against report data. The parsed JSON is sent to the service as
+  `runtime_data.structured`.
+
+Omitting both `coco_as` parameters requests a token with an empty challenge and
+no runtime data. Setting both is rejected.
+
 ### Supported Platforms
 
 AA supports different kinds of hardware TEE attesters, now
