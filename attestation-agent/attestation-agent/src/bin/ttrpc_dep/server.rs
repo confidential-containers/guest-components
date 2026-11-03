@@ -139,7 +139,6 @@ impl AttestationAgentService for AA {
         reply.Result = match res {
             RuntimeMeasurement::Ok => RuntimeMeasurementResult::OK.into(),
             RuntimeMeasurement::NotSupported => RuntimeMeasurementResult::NOT_SUPPORTED.into(),
-            RuntimeMeasurement::NotEnabled => RuntimeMeasurementResult::NOT_ENABLED.into(),
         };
         ::ttrpc::Result::Ok(reply)
     }
