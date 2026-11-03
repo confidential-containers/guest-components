@@ -25,7 +25,7 @@ futures-util = "0.3"
 hex.workspace = true
 loopdev = { git = "https://github.com/mdaffin/loopdev", rev = "c9f91e8f0326ce8a3364ac911e81eb32328a5f27" }
 nix = { workspace = true, features = ["mount", "fs"] }
-oci-client = { version = "0.17.0", default-features = false, features = [
+oci-client = { version = "0.18.0", default-features = false, features = [
     "native-tls",
 ] }
 oci-spec = "0.10.0"
