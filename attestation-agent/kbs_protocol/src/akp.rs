@@ -95,7 +95,7 @@ impl AkpKeyPair {
         let shared_secret = self
             .decap_key
             .decapsulate_slice(kem_ciphertext)
-            .map_err(|e| anyhow!("ML-KEM-768 decapsulate failed: {e:?}"))?;
+            .map_err(|e| anyhow!("ML-KEM-768 decapsulate failed: {e:#}"))?;
 
         let kwk = kmac256_kdf(
             shared_secret.as_slice(),
@@ -107,11 +107,11 @@ impl AkpKeyPair {
             .map_err(|_| anyhow!("KDF output not {A192KW_KEY_LEN} bytes"))?;
 
         let unwrapper =
-            KwAes192::new_from_slice(&kwk).map_err(|e| anyhow!("AES-KW key init failed: {e:?}"))?;
+            KwAes192::new_from_slice(&kwk).map_err(|e| anyhow!("AES-KW key init failed: {e:#}"))?;
         let mut cek = vec![0u8; A256_CEK_LEN];
         unwrapper
             .unwrap_key(wrapped_cek, &mut cek)
-            .map_err(|e| anyhow!("AES-KW unwrap failed: {e:?}"))?;
+            .map_err(|e| anyhow!("AES-KW unwrap failed: {e:#}"))?;
         Ok(cek)
     }
 }

@@ -36,7 +36,7 @@ impl AnnotationPacket {
         let kbs_client = kms::new_getter(VaultProvider::Kbs.as_ref(), ProviderSettings::default())
             .await
             .map_err(|e| Error::KmsError {
-                context: "create KBC failed",
+                context: "create KBC",
                 source: e,
             })?;
         let name = self.kid.whole_uri();
@@ -44,7 +44,7 @@ impl AnnotationPacket {
             .get_secret(&name, &Annotations::default())
             .await
             .map_err(|e| Error::KmsError {
-                context: "get KEK failed",
+                context: "get KEK",
                 source: e,
             })?;
 
@@ -53,13 +53,13 @@ impl AnnotationPacket {
             STANDARD
                 .decode(&self.wrapped_data)
                 .map_err(|e| Error::Base64DecodeFailed {
-                    context: "decode `wrapped_data`",
+                    context: "`wrapped_data`",
                     source: e,
                 })?,
             STANDARD
                 .decode(&self.iv)
                 .map_err(|e| Error::Base64DecodeFailed {
-                    context: "decode `iv`",
+                    context: "`iv`",
                     source: e,
                 })?,
             wrap_type,

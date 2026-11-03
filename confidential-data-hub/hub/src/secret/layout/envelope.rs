@@ -16,21 +16,21 @@ pub type Result<T> = std::result::Result<T, EnvelopeError>;
 
 #[derive(Error, Debug)]
 pub enum EnvelopeError {
-    #[error("base64 decoding failed when {context}")]
+    #[error("base64 decode {context}: {source}")]
     Base64DecodeFailed {
         #[source]
         source: base64::DecodeError,
         context: &'static str,
     },
 
-    #[error("kms interface when {context}")]
+    #[error("{context}: {source}")]
     KmsError {
         #[source]
         source: kms::Error,
         context: &'static str,
     },
 
-    #[error("decrypt envelope")]
+    #[error("decrypt envelope: {0}")]
     Decrypt(#[from] anyhow::Error),
 }
 
@@ -74,7 +74,7 @@ impl EnvelopeSecret {
         // get encryption key
         let enc_dek = STANDARD.decode(&self.encrypted_key).map_err(|e| {
             EnvelopeError::Base64DecodeFailed {
-                context: "decode `encrypted_key`",
+                context: "`encrypted_key`",
                 source: e,
             }
         })?;
@@ -98,12 +98,12 @@ impl EnvelopeSecret {
         let iv = STANDARD
             .decode(&self.iv)
             .map_err(|e| EnvelopeError::Base64DecodeFailed {
-                context: "decode iv",
+                context: "iv",
                 source: e,
             })?;
         let encrypted_data = STANDARD.decode(&self.encrypted_data).map_err(|e| {
             EnvelopeError::Base64DecodeFailed {
-                context: "decode encrypted_data",
+                context: "encrypted_data",
                 source: e,
             }
         })?;

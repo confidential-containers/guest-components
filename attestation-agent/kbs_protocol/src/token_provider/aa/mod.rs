@@ -39,7 +39,7 @@ impl AATokenProvider {
     pub async fn new_with_socket(aa_socket: &str) -> Result<Self> {
         let c = ttrpc::r#async::Client::connect(aa_socket)
             .await
-            .map_err(|e| Error::AATokenProvider(format!("ttrpc connect failed {e:?}")))?;
+            .map_err(|e| Error::AATokenProvider(format!("ttrpc connect failed: {e:#}")))?;
         let client = AttestationAgentServiceClient::new(c);
         Ok(Self { client })
     }
@@ -56,14 +56,14 @@ impl TokenProvider for AATokenProvider {
             .client
             .get_token(context::with_timeout(50 * 1000 * 1000 * 1000), &req)
             .await
-            .map_err(|e| Error::AATokenProvider(format!("cal ttrpc failed: {e:?}")))?;
+            .map_err(|e| Error::AATokenProvider(format!("cal ttrpc failed: {e:#}")))?;
         let message: Message = serde_json::from_slice(&bytes.Token).map_err(|e| {
-            Error::AATokenProvider(format!("deserialize attestation-agent reply failed: {e:?}"))
+            Error::AATokenProvider(format!("deserialize attestation-agent reply failed: {e:#}"))
         })?;
         let token = Token::new(message.token)
-            .map_err(|e| Error::AATokenProvider(format!("deserialize token failed: {e:?}")))?;
+            .map_err(|e| Error::AATokenProvider(format!("deserialize token failed: {e:#}")))?;
         let tee_keypair = TeeKeyPair::from_pem(&message.tee_keypair).map_err(|e| {
-            Error::AATokenProvider(format!("deserialize tee keypair failed: {e:?}"))
+            Error::AATokenProvider(format!("deserialize tee keypair failed: {e:#}"))
         })?;
         Ok((token, tee_keypair))
     }

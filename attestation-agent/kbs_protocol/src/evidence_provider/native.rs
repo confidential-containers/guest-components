@@ -23,14 +23,14 @@ impl NativeEvidenceProvider {
     pub fn new() -> Result<Self> {
         let primary_tee = detect_tee_type();
         let primary_attester = BoxedAttester::try_from(primary_tee).map_err(|e| {
-            Error::NativeEvidenceProvider(format!("failed to initialize primary attester: {e}"))
+            Error::NativeEvidenceProvider(format!("failed to initialize primary attester: {e:#}"))
         })?;
         let additional_attesters = detect_attestable_devices()
             .into_iter()
             .map(|tee| -> Result<_> {
                 let boxed_attester = TryInto::<BoxedAttester>::try_into(tee).map_err(|e| {
                     Error::NativeEvidenceProvider(format!(
-                        "failed to initialize additional attester: {e}"
+                        "failed to initialize additional attester: {e:#}"
                     ))
                 })?;
                 Ok((tee, boxed_attester))
@@ -50,7 +50,7 @@ impl EvidenceProvider for NativeEvidenceProvider {
         self.primary_attester
             .get_evidence(runtime_data)
             .await
-            .map_err(|e| Error::GetEvidence(e.to_string()))
+            .map_err(|e| Error::GetEvidence(format!("{e:#}")))
     }
 
     async fn get_additional_evidence(&self, runtime_data: Vec<u8>) -> Result<String> {
@@ -60,7 +60,7 @@ impl EvidenceProvider for NativeEvidenceProvider {
             let evidence = attester
                 .get_evidence(runtime_data.to_vec())
                 .await
-                .map_err(|e| Error::GetEvidence(e.to_string()))?;
+                .map_err(|e| Error::GetEvidence(format!("{e:#}")))?;
             additional_evidences_map.insert(tee, evidence);
         }
 
@@ -69,7 +69,7 @@ impl EvidenceProvider for NativeEvidenceProvider {
         }
 
         let additional_evidences = serde_json::to_string(&additional_evidences_map)
-            .map_err(|e| Error::GetEvidence(e.to_string()))?;
+            .map_err(|e| Error::GetEvidence(format!("{e:#}")))?;
 
         Ok(additional_evidences)
     }

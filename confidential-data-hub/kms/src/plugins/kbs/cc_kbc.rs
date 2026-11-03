@@ -25,9 +25,7 @@ impl CcKbc {
     pub async fn new(kbs_host_url: &str, aa_socket: &str) -> Result<Self> {
         let token_provider = AATokenProvider::new_with_socket(aa_socket)
             .await
-            .map_err(|e| {
-                Error::KbsClientError(format!("create AA token provider failed: {e:?}"))
-            })?;
+            .map_err(|e| Error::KbsClientError(format!("create AA token provider: {e:#}")))?;
         let client = kbs_protocol::KbsClientBuilder::with_token_provider(
             Box::new(token_provider),
             kbs_host_url,
@@ -46,7 +44,7 @@ impl CcKbc {
 
         let client = client
             .build()
-            .map_err(|e| Error::KbsClientError(format!("create kbs client failed: {e:?}")))?;
+            .map_err(|e| Error::KbsClientError(format!("create client: {e:#}")))?;
 
         Ok(Self { client })
     }
@@ -59,7 +57,7 @@ impl Kbc for CcKbc {
             .client
             .get_resource(rid)
             .await
-            .map_err(|e| Error::KbsClientError(format!("get resource failed: {e:?}")))?;
+            .map_err(|e| Error::KbsClientError(format!("{e:#}")))?;
         Ok(secret)
     }
 }

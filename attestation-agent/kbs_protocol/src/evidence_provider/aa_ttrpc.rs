@@ -31,7 +31,7 @@ impl AAEvidenceProvider {
     pub async fn new() -> Result<Self> {
         let c = ttrpc::r#async::Client::connect(AA_SOCKET_FILE)
             .await
-            .map_err(|e| Error::AATokenProvider(format!("ttrpc connect failed {e}")))?;
+            .map_err(|e| Error::AATokenProvider(format!("ttrpc connect failed: {e:#}")))?;
         let client = AttestationAgentServiceClient::new(c);
         Ok(Self { client })
     }
@@ -52,9 +52,9 @@ impl EvidenceProvider for AAEvidenceProvider {
                 &req,
             )
             .await
-            .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e}")))?;
+            .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e:#}")))?;
         let evidence = serde_json::from_slice(&res.Evidence)
-            .map_err(|e| Error::AAEvidenceProvider(format!("illegal evidence format: {e}")))?;
+            .map_err(|e| Error::AAEvidenceProvider(format!("illegal evidence format: {e:#}")))?;
         Ok(evidence)
     }
 
@@ -71,10 +71,10 @@ impl EvidenceProvider for AAEvidenceProvider {
                 &req,
             )
             .await
-            .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e}")))?;
+            .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e:#}")))?;
 
         let evidence = String::from_utf8(res.Evidence)
-            .map_err(|e| Error::AAEvidenceProvider(format!("failed to parse evidence: {e}")))?;
+            .map_err(|e| Error::AAEvidenceProvider(format!("failed to parse evidence: {e:#}")))?;
 
         Ok(evidence)
     }
@@ -91,10 +91,10 @@ impl EvidenceProvider for AAEvidenceProvider {
                 &req,
             )
             .await
-            .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e}")))?;
+            .map_err(|e| Error::AAEvidenceProvider(format!("call ttrpc failed: {e:#}")))?;
 
         let tee = serde_json::from_value(json!(res.tee))
-            .map_err(|e| Error::AAEvidenceProvider(format!("failed to parse Tee type: {e}")))?;
+            .map_err(|e| Error::AAEvidenceProvider(format!("failed to parse Tee type: {e:#}")))?;
         Ok(tee)
     }
 }

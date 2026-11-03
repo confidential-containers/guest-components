@@ -41,7 +41,7 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (grpc): get token failed:\n{e:?}");
-                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get token failed"))
+                Status::internal(format!("AA get token failed: {e:#}"))
             })?;
 
         debug!("AA (grpc): Get token successfully!");
@@ -65,7 +65,7 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (grpc): get evidence failed:\n{e:?}");
-                Status::internal(format!("[ERROR:{AGENT_NAME}] AA get evidence failed"))
+                Status::internal(format!("AA get evidence failed: {e:#}"))
             })?;
 
         debug!("AA (grpc): Get evidence successfully!");
@@ -89,9 +89,7 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (grpc): get additional evidence failed:\n{e:?}");
-                Status::internal(format!(
-                    "[ERROR:{AGENT_NAME}] AA get additional evidence failed"
-                ))
+                Status::internal(format!("AA get additional evidence failed: {e:#}"))
             })?;
 
         debug!("AA (grpc): Get evidence successfully!");
@@ -120,9 +118,7 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (grpc): extend runtime measurement failed:\n{e:?}");
-                Status::internal(format!(
-                    "[ERROR:{AGENT_NAME}] AA extend runtime measurement failed"
-                ))
+                Status::internal(format!("AA extend runtime measurement failed: {e:#}"))
             })?;
 
         debug!("AA (grpc): extend runtime measurement succeeded.");
@@ -148,7 +144,7 @@ impl AttestationAgentService for AA {
 
         let alg = parse_init_data_algorithm(&request.algorithm, &request.digest).map_err(|e| {
             error!("AA (grpc): invalid init data algorithm: {e:?}");
-            Status::invalid_argument(format!("[ERROR:{AGENT_NAME}] {e}"))
+            Status::invalid_argument(format!("invalid init data algorithm: {e}"))
         })?;
 
         let result = self
@@ -157,25 +153,23 @@ impl AttestationAgentService for AA {
             .await
             .map_err(|e| {
                 error!("AA (grpc): binding init data failed:\n{e:?}");
-                Status::internal(format!("[ERROR:{AGENT_NAME}] AA binding init data failed"))
+                Status::internal(format!("AA binding init data failed: {e:#}"))
             })?;
 
         if let InitDataResult::NotBound = result {
             // Measuring the digest in the eventlog needs its hash algorithm.
             let Some(alg) = alg else {
                 error!("AA (grpc): init data is not bound and no hash algorithm was given");
-                return Err(Status::failed_precondition(format!(
-                    "[ERROR:{AGENT_NAME}] AA init data is not bound: measuring it in the eventlog needs the hash algorithm"
-                )));
+                return Err(Status::failed_precondition(
+                    "AA init data is not bound: measuring it in the eventlog needs the hash algorithm",
+                ));
             };
             self.inner
                 .measure_init_data(alg, &request.digest)
                 .await
                 .map_err(|e| {
                     error!("AA (grpc): measuring init data failed:\n{e:?}");
-                    Status::internal(format!(
-                        "[ERROR:{AGENT_NAME}] AA measuring init data failed"
-                    ))
+                    Status::internal(format!("AA measuring init data failed: {e:#}"))
                 })?;
         }
 
