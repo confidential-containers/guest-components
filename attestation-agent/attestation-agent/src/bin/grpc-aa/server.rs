@@ -131,7 +131,6 @@ impl AttestationAgentService for AA {
             result: match res {
                 RuntimeMeasurement::Ok => RuntimeMeasurementResult::Ok.into(),
                 RuntimeMeasurement::NotSupported => RuntimeMeasurementResult::NotSupported.into(),
-                RuntimeMeasurement::NotEnabled => RuntimeMeasurementResult::NotEnabled.into(),
             },
         };
 

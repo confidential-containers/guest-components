@@ -10,4 +10,3 @@ url = "https://127.0.0.1:8080"
 
 [eventlog_config]
 init_pcr = 17
-enable_eventlog = false

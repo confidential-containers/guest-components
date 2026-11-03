@@ -21,7 +21,7 @@ pub mod token;
 
 use eventlog::EventLog;
 use token::*;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::{config::Config, eventlog::Event};
 
@@ -34,9 +34,6 @@ pub enum RuntimeMeasurement {
 
     /// The runtime measurement is not supported by the attester.
     NotSupported,
-
-    /// The runtime measurement is not enabled by the attestation agent configuration.
-    NotEnabled,
 }
 
 /// Attestation Agent (AA for short) is a rust library crate for attestation procedure
@@ -109,11 +106,16 @@ pub struct AttestationAgent {
 
 impl AttestationAgent {
     pub async fn init(&mut self) -> Result<()> {
-        let config = self.config.read().await;
-        if config.eventlog_config.enable_eventlog {
+        if self.primary_attester.supports_runtime_measurement() {
             let eventlog = EventLog::new(self.primary_attester.clone()).await?;
-
             self.eventlog = Some(Mutex::new(eventlog));
+        } else {
+            warn!(
+                "The primary attester {:?} does not support runtime measurement; \
+                 eventlog is disabled and runtime measurement extensions will report \
+                 `not supported`.",
+                self.primary_tee
+            );
         }
 
         Ok(())
@@ -125,7 +127,7 @@ impl AttestationAgent {
     pub async fn measure_init_data(&self, alg: HashAlgorithm, digest: &[u8]) -> Result<()> {
         let Some(eventlog) = &self.eventlog else {
             bail!(
-                "initdata is not bound: enable the eventlog to bind it through a runtime measurement"
+                "initdata is not bound: the platform does not support runtime measurement, so the digest cannot be recorded in the eventlog"
             );
         };
         if !self.primary_attester.supports_runtime_measurement() {
@@ -259,12 +261,8 @@ impl AttestationAPIs for AttestationAgent {
         register_index: Option<u64>,
     ) -> Result<RuntimeMeasurement> {
         let Some(ref eventlog) = self.eventlog else {
-            return Ok(RuntimeMeasurement::NotEnabled);
-        };
-
-        if !self.primary_attester.supports_runtime_measurement() {
             return Ok(RuntimeMeasurement::NotSupported);
-        }
+        };
 
         let (pcr, log_entry) = {
             let config = self.config.read().await;

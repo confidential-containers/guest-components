@@ -88,16 +88,12 @@ impl Config {
 pub struct EventlogConfig {
     /// PCR Register to extend INIT entry
     pub init_pcr: u64,
-
-    /// Flag whether enable eventlog recording
-    pub enable_eventlog: bool,
 }
 
 impl Default for EventlogConfig {
     fn default() -> Self {
         Self {
             init_pcr: DEFAULT_PCR_INDEX,
-            enable_eventlog: false,
         }
     }
 }
@@ -133,7 +129,6 @@ impl TryFrom<&str> for Config {
         let c = config::Config::builder()
             .add_source(config::File::with_name(config_path))
             .set_default("eventlog_config.init_pcr", DEFAULT_PCR_INDEX)?
-            .set_default("eventlog_config.enable_eventlog", "false")?
             .build()?;
 
         let cfg = c.try_deserialize()?;
@@ -187,7 +182,6 @@ M9QaC1mzQ/OStg==
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
-            enable_eventlog: false,
         },
         log: LogConfig::default(),
     })]
@@ -230,7 +224,6 @@ M9QaC1mzQ/OStg==
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
-            enable_eventlog: false,
         },
         log: LogConfig::default(),
     })]
@@ -252,7 +245,6 @@ M9QaC1mzQ/OStg==
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
-            enable_eventlog: false,
         },
         log: LogConfig { level: "warn".to_string() },
     })]
@@ -272,7 +264,6 @@ M9QaC1mzQ/OStg==
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
-            enable_eventlog: false,
         },
         log: LogConfig { level: "warn".to_string() },
     })]
@@ -292,7 +283,6 @@ M9QaC1mzQ/OStg==
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
-            enable_eventlog: false,
         },
         log: LogConfig { level: "warn".to_string() },
     })]
@@ -307,7 +297,6 @@ M9QaC1mzQ/OStg==
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
-            enable_eventlog: false,
         },
         log: LogConfig { level: "warn".to_string() },
     })]
@@ -322,7 +311,6 @@ M9QaC1mzQ/OStg==
         },
         eventlog_config: EventlogConfig {
             init_pcr: 17,
-            enable_eventlog: false,
         },
         log: LogConfig::default(),
     })]
@@ -337,7 +325,6 @@ M9QaC1mzQ/OStg==
             },
             eventlog_config: EventlogConfig {
                 init_pcr: 17,
-                enable_eventlog: false,
             },
             log: LogConfig::default(),
         })]
