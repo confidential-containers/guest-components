@@ -158,12 +158,7 @@ impl CosignParameters {
             .with_oci_client_config(config)
             .build()?;
 
-        // Get the cosign signature "image"'s uri and the signed image's digest
-        let (cosign_image, source_image_digest) = client.triangulate(&image_ref, &auth).await?;
-
-        let signature_layers = client
-            .trusted_signature_layers(&auth, &source_image_digest, &cosign_image)
-            .await?;
+        let signature_layers = client.trusted_signature_layers(&auth, &image_ref).await?;
 
         // Some cosign implementations leave newlines in the signature. Strip these out.
         let signature_layers: Vec<sigstore::cosign::SignatureLayer> = signature_layers
@@ -208,12 +203,9 @@ mod tests {
     };
 
     use oci_client::Reference;
-    use rsa::RsaPrivateKey;
-    use rsa::pkcs8::{EncodePublicKey, LineEnding};
-    use rsa::rand_core::OsRng;
     use rstest::rstest;
     use serial_test::serial;
-    use sigstore::crypto::SigningScheme;
+    use sigstore::crypto::{CosignVerificationKey, Signature, SigningScheme};
 
     #[test]
     fn ecdsa_fixture_pubkey_matches_some_scheme() {
@@ -233,19 +225,40 @@ mod tests {
 
     #[test]
     fn generated_rsa_pubkey_matches_some_scheme() {
-        let mut rng = OsRng;
-        let private_key = RsaPrivateKey::new(&mut rng, 2048).expect("rsa keygen");
-        let public_key = private_key.to_public_key();
-        let pem = public_key
-            .to_public_key_pem(LineEnding::LF)
-            .expect("pem encode");
-        assert!(
-            PublicKeyVerifier::new(pem.as_bytes(), &SigningScheme::ECDSA_P256_SHA256_ASN1).is_err(),
-            "RSA pubkey must not parse as ECDSA P-256",
-        );
+        let signer = SigningScheme::RSA_PKCS1_SHA256(2048)
+            .create_signer()
+            .expect("create RSA signer");
+        let pem = signer
+            .to_sigstore_keypair()
+            .expect("extract keypair")
+            .public_key_to_pem()
+            .expect("export RSA public key as PEM");
+
         assert!(
             PublicKeyVerifier::try_from(pem.as_bytes()).is_ok(),
             "RSA pubkey should parse with PublicKeyVerifier::try_from",
+        );
+
+        let msg = b"guest-components cosign unit test";
+        let sig = signer.sign(msg).expect("sign message with RSA");
+
+        let verification_key = CosignVerificationKey::try_from_pem(pem.as_bytes())
+            .expect("RSA pubkey should parse with CosignVerificationKey::try_from_pem");
+        assert!(
+            verification_key
+                .verify_signature(Signature::Raw(&sig), msg)
+                .is_ok(),
+            "RSA signature should verify with the auto-detected verification key",
+        );
+
+        let mismatched =
+            CosignVerificationKey::from_pem(pem.as_bytes(), &SigningScheme::ECDSA_P256_SHA256_ASN1)
+                .expect("mismatched scheme is no longer rejected at construction time");
+        assert!(
+            mismatched
+                .verify_signature(Signature::Raw(&sig), msg)
+                .is_err(),
+            "RSA signature must not verify under the ECDSA P-256 scheme",
         );
     }
 
@@ -384,8 +397,10 @@ mod tests {
         "ghcr.io/confidential-containers/test-container-image-rs:cosign-signed",
         "sha256:4f926abc2dc7b29781fd7870c7c91a1550f390fc86e10b7b3d5fa795eb5a3d39",
         false,
-        // Wrong key: only ECDSA P-256 schemes are tried for this SPKI.
-        "[PublicKeyVerifier { key: ECDSA_P256_SHA256_ASN1(VerifyingKey { inner: PublicKey { point: AffinePoint { x: FieldElement(0x4D1167C9BBBCDB6CC1C867394D50C1777D5C2FCC46374E6B07819141E8D2CFAF), y: FieldElement(0xDB4E43CA897D2EE05C70836839AF5DBEE8B62EC4B93563FB044D92551FE33EEE), infinity: 0 } } }) }]"
+        // Wrong key: the unsatisfied `PublicKeyVerifier` constraint is
+        // reported through its Debug representation, whose internals changed
+        // with the sigstore 0.14 upgrade, so only match the type name.
+        "PublicKeyVerifier",
     )]
     #[case(
         &format!("\
@@ -453,8 +468,8 @@ mod tests {
             );
             if !allow {
                 let err_msg = res.unwrap_err().to_string();
-                assert_eq!(
-                    err_msg, failed_reason,
+                assert!(
+                    err_msg.contains(failed_reason),
                     "test failed: failed reason unmatched.\nneed:{failed_reason}\ngot:{err_msg}",
                 );
             }
