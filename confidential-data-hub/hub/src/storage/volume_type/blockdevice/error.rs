@@ -27,6 +27,12 @@ pub enum BlockDeviceError {
     #[error("The scheme of the key uri should be `kbs`, `file` or `sealed`")]
     IllegalKeyScheme,
 
+    #[error("Invalid persistent LUKS2 configuration: {reason}")]
+    InvalidPersistentConfiguration { reason: &'static str },
+
+    #[error("Invalid persistent volume ID")]
+    InvalidPersistentVolumeId,
+
     #[error("Failed to get key: {source}")]
     GetKeyFailed {
         #[source]
