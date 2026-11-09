@@ -893,6 +893,28 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_unpack_tar_codec_pax() {
+        use tar_codec::{ArchiveBuilder as _, EntryMetadata, TarEncoder};
+
+        let mut encoded = Vec::new();
+        {
+            let mut encoder = TarEncoder::new(&mut encoded).builder();
+            encoder
+                .add_file("file.txt", b"hello".as_slice(), EntryMetadata::default())
+                .await
+                .unwrap();
+            encoder.finish().await.unwrap();
+        }
+
+        let destination = tempfile::tempdir().unwrap().path().join("layer");
+        unpack(encoded.as_slice(), &destination).await.unwrap();
+        assert_eq!(
+            fs::read(destination.join("file.txt")).await.unwrap(),
+            b"hello"
+        );
+    }
+
+    #[tokio::test]
     async fn test_unpack_layer_root_mtime() {
         let root_mtime = filetime::FileTime::from_unix_time(42_000, 0);
         let mut ar = Builder::new(Vec::new());
@@ -921,8 +943,85 @@ mod tests {
         assert_eq!(root_mtime, new_mtime);
     }
 
+    fn header(kind: EntryType, path: &str, size: u64) -> Header {
+        let mut hdr = Header::new_gnu();
+        hdr.set_entry_type(kind);
+        hdr.set_path(path).unwrap();
+        hdr.set_size(size);
+        hdr.set_mode(0o755);
+        hdr.set_uid(0);
+        hdr.set_gid(0);
+        hdr.set_mtime(20_000);
+        hdr
+    }
+
+    #[tokio::test]
+    async fn test_unpack_metadata_stays_inside_layer() {
+        let td = tempfile::tempdir().unwrap();
+        let outside = td.path().join("outside");
+        fs::create_dir(&outside).await.unwrap();
+        let victim = outside.join("f");
+        fs::write(&victim, b"host").await.unwrap();
+        let victim_dir = outside.join("d");
+        fs::create_dir(&victim_dir).await.unwrap();
+        let victim_mtime = filetime::FileTime::from_unix_time(1_000_000, 0);
+        filetime::set_file_mtime(&victim, victim_mtime).unwrap();
+        filetime::set_file_mtime(&victim_dir, victim_mtime).unwrap();
+
+        // `a` resolves to `layer/outside` through pathrs, but to `td/outside`
+        // through the kernel.
+        let mut ar = Builder::new(Vec::new());
+        let mut hdr = header(EntryType::Directory, "outside/", 0);
+        hdr.set_cksum();
+        ar.append(&hdr, empty()).await.unwrap();
+        let mut hdr = header(EntryType::Symlink, "a", 0);
+        hdr.set_link_name("../outside").unwrap();
+        hdr.set_cksum();
+        ar.append(&hdr, empty()).await.unwrap();
+        let mut hdr = header(EntryType::Directory, "a/d/", 0);
+        hdr.set_cksum();
+        ar.append(&hdr, empty()).await.unwrap();
+        let mut hdr = header(EntryType::Regular, "a/f", 4);
+        hdr.set_cksum();
+        ar.append(&hdr, b"evil".as_slice()).await.unwrap();
+        let data = ar.into_inner().await.unwrap();
+
+        let destination = td.path().join("dest");
+        unpack(data.as_slice(), &destination).await.unwrap();
+
+        let mtime_of = |path: PathBuf| async move {
+            filetime::FileTime::from_last_modification_time(&fs::metadata(path).await.unwrap())
+        };
+        assert_eq!(mtime_of(victim.clone()).await, victim_mtime);
+        assert_eq!(fs::read(&victim).await.unwrap(), b"host");
+        assert_eq!(mtime_of(victim_dir.clone()).await, victim_mtime);
+
+        let unpacked = mtime_of(destination.join("outside/f")).await;
+        assert_eq!(unpacked, filetime::FileTime::from_unix_time(20_000, 0));
+        let unpacked_dir = mtime_of(destination.join("outside/d")).await;
+        assert_eq!(unpacked_dir, filetime::FileTime::from_unix_time(20_000, 0));
+    }
+
+    #[tokio::test]
+    async fn test_unpack_rejects_missing_uid() {
+        let mut hdr = header(EntryType::Regular, "f", 0);
+        hdr.as_old_mut().uid = [0; 8];
+        hdr.set_cksum();
+        let mut ar = Builder::new(Vec::new());
+        ar.append(&hdr, empty()).await.unwrap();
+        let data = ar.into_inner().await.unwrap();
+
+        let destination = tempfile::tempdir().unwrap().path().join("layer");
+        let res = unpack(data.as_slice(), &destination).await;
+        assert!(
+            matches!(res, Err(UnpackError::IllegalUid { .. })),
+            "{res:?}"
+        );
+    }
+
     #[rstest]
     #[case::absolute_link_target("/etc/os-release", true)]
+    #[case::relative_link_target("etc/os-release", true)]
     #[case::relative_escape_link_target("../../etc/os-release", false)]
     #[tokio::test]
     async fn test_unpack_hardlink_tar_cases(#[case] link_name: &str, #[case] expect_ok: bool) {

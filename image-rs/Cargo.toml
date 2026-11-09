@@ -62,6 +62,7 @@ anyhow.workspace = true
 
 [dev-dependencies]
 astral-tokio-tar = "0.7.0" # test Builder only (uid/gid/mtime fixtures)
+tar-codec = "0.0.16" # test encoder only
 cfg-if.workspace = true
 criterion = "0.8.2"
 nix = { workspace = true, features = ["user"] }
