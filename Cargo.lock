@@ -3551,6 +3551,7 @@ dependencies = [
  "sigstore",
  "strum 0.28.0",
  "strum_macros 0.28.0",
+ "tar-framing",
  "tempfile",
  "test-utils",
  "testcontainers",
@@ -7134,6 +7135,16 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
+
+[[package]]
+name = "tar-framing"
+version = "0.0.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "49727b1a300514960d425d0e741a7da3e693170f3db39de3180fdbbc07e542c5"
+dependencies = [
+ "thiserror 2.0.21",
+ "tokio",
+]
 
 [[package]]
 name = "target-lexicon"

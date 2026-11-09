@@ -4,27 +4,36 @@
 
 use anyhow::{Context, Result, anyhow, bail};
 use filetime::FileTime;
-use futures_util::StreamExt;
 use nix::libc;
 use nix::libc::timeval;
+use nix::sys::{
+    stat::{UtimensatFlags, utimensat},
+    time::TimeSpec,
+};
 use pathrs::{InodeType, Root, flags::OpenFlags};
+use tar_framing::{
+    ArchiveFormat, PaxKeyword, PaxRecord, PaxValue, StreamPolicy, UstarKind,
+    logical::{MemberExtensions, MemberFrame, TarReader},
+};
 use thiserror::Error;
 use tracing::{debug, warn};
 
 use std::{
     collections::HashMap,
     convert::TryInto,
-    ffi::CString,
+    ffi::{CString, OsStr},
     fs::Permissions,
     io,
     os::{
         fd::{AsFd, AsRawFd, BorrowedFd},
         unix::{ffi::OsStrExt, fs::PermissionsExt},
     },
-    path::Path,
+    path::{Component, Path, PathBuf},
 };
-use tokio::{fs, io::AsyncRead};
-use tokio_tar::{Archive, ArchiveBuilder, Entry};
+use tokio::{
+    fs,
+    io::{AsyncRead, AsyncWriteExt},
+};
 use xattr::FileExt;
 
 pub type UnpackResult<T> = std::result::Result<T, UnpackError>;
@@ -110,6 +119,17 @@ pub enum UnpackError {
     },
 }
 
+/// The chunk size for reading the payload of the tar entry.
+const PAYLOAD_CHUNK_BYTES: usize = 128 * 1024;
+
+/// Creation modes before the header mode is applied, subject to the process
+/// umask. These match `std::fs` defaults used by tokio-tar.
+const CREATE_FILE_MODE: u32 = 0o666;
+const CREATE_DIR_MODE: u32 = 0o777;
+
+/// The mode mask is used to mask the mode of the file or directory.
+const MODE_MASK: u32 = 0o7777;
+
 // TODO: Add unit tests for both xattr supporting case and
 // non-supporting case.
 fn is_attr_available(path: &Path) -> bool {
@@ -149,25 +169,15 @@ fn is_layer_root_entry(path: &Path) -> bool {
 /// ownership, mode, and deferred mtime after unpack.
 ///
 /// OCI layer tars are usually ustar or PAX. In those formats, directories are
-/// identified by typeflag `5` ([`EntryType::Directory`]), which
-/// [`EntryType::is_dir`] checks.
+/// identified by typeflag `5` ([`UstarKind::Directory`]).
 ///
-/// Pre-ustar (v7 / old BSD) headers do not carry a reliable directory typeflag;
-/// there, a trailing `/` on the path name historically meant "directory". That
-/// heuristic is applied only when [`Header::as_ustar`] is `None`, so ustar and
-/// later headers rely on the typeflag alone. This matches
-/// `tokio_tar::Entry::unpack` ("Old BSD-tar compatibility").
-fn is_dir<R: AsyncRead + Unpin>(
-    kind: &tokio_tar::EntryType,
-    file: &Entry<Archive<R>>,
-) -> UnpackResult<bool> {
-    let is_dir = kind.is_dir()
-        || file.header().as_ustar().is_none()
-            && file
-                .path_bytes()
-                .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?
-                .ends_with(b"/");
-    Ok(is_dir)
+/// Headers without the POSIX ustar magic do not carry a reliable directory
+/// typeflag; there, a trailing `/` on the path name historically meant
+/// "directory". tar-framing rejects v7 headers, so the only such headers left
+/// are GNU ones. This matches `tokio_tar::Entry::unpack` ("Old BSD-tar
+/// compatibility"), where `Header::as_ustar` is `None` for GNU headers.
+fn is_dir(kind: UstarKind, format: ArchiveFormat, path_bytes: &[u8]) -> bool {
+    kind == UstarKind::Directory || (format == ArchiveFormat::Gnu && path_bytes.ends_with(b"/"))
 }
 
 /// Converts a whiteout file or opaque directory.
@@ -227,26 +237,22 @@ async fn convert_whiteout(
     Ok(())
 }
 
-/// Unpack the contents of a layer tarball into `layer_dir`.
+/// Unpack a layer tarball into `layer_dir`.
 ///
-/// Metadata is applied in two phases: `unpack_in` via astral-tokio-tar 0.6
-/// (`preserve_permissions=true`, `preserve_mtime=true`), then image-rs corrections.
-/// Astral never sets uid/gid; our chown/chmod also bumps mtime, so we restore mtime after
-/// our changes whenever astral may have set it during `unpack_in`.
+/// Decoded via tar-framing (tar-codec's engine). `Archive::extract_in` is not
+/// used: it drops uid/gid/mtime, normalizes modes, rejects specials, and does
+/// not restore vendor xattrs or overlay whiteouts.
 ///
-/// Legend: astral = set by astral during unpack_in; us = set by image-rs; defer = after all
-///         entries; - = not applied from tar header
+/// TODO: refactor the logic once https://github.com/astral-sh/astral-codec/issues/308 is resolved
 ///
 /// | entry type                         | uid/gid | mode        | mtime       |
 /// |------------------------------------|---------|-------------|-------------|
 /// | whiteout                           | -       | us (0o000)  | -           |
 /// | layer root "."                     | us      | us          | defer       |
-/// | directory                          | us      | astral only | defer       |
-/// | symlink                            | us      | -           | astral + us |
+/// | directory                          | us      | us          | defer       |
+/// | symlink                            | us      | -           | us          |
 /// | hard link                          | us      | -           | us          |
-/// | regular file / fifo / char / block | us      | astral + us | astral + us |
-///
-/// See issue https://github.com/astral-sh/tokio-tar/issues/81
+/// | regular file / fifo / char / block | us      | us          | us          |
 pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackResult<()> {
     if layer_dir.exists() {
         warn!("layer_dir {layer_dir:?} already exists, will delete and rewrite the layer",);
@@ -263,57 +269,53 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
         Root::open(layer_dir).map_err(|source| UnpackError::PathRsFailed { source })?;
 
     let attr_available = is_attr_available(layer_dir);
-    let mut archive = ArchiveBuilder::new(input)
-        .set_ignore_zeros(true)
-        .set_unpack_xattrs(attr_available)
-        .set_preserve_permissions(true)
-        .build();
+    let mut archive = TarReader::new(input)
+        .with_policy(StreamPolicy::default().allow_header_uname_and_gname_without_terminator(true));
+    let mut chunk = Vec::new();
 
-    let mut entries = archive
-        .entries()
-        .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?;
-
-    let mut dirs: HashMap<CString, [timeval; 2]> = HashMap::default();
+    let mut dirs: HashMap<PathBuf, i64> = HashMap::default();
     let mut root_times: Option<[timeval; 2]> = None;
-    while let Some(file) = entries.next().await {
-        let mut file = file.map_err(|source| UnpackError::ReadTarEntriesFailed { source })?;
-
+    while let Some(file) =
+        archive
+            .next_frame()
+            .await
+            .map_err(|source| UnpackError::ReadTarEntriesFailed {
+                source: io::Error::other(source),
+            })?
+    {
         // 1. collect the entry path, name, uid, gid, mode, and mtime
-        let entry_path = file
-            .path()
-            .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?
+        let path_bytes = file
+            .effective_path()
+            .map_err(|source| UnpackError::ReadTarEntriesFailed {
+                source: io::Error::other(source),
+            })?
             .into_owned();
+        let entry_path = layer_relative_path(Path::new(OsStr::from_bytes(&path_bytes)));
         let entry_name = entry_path.file_name().unwrap_or_default().to_str().ok_or(
             UnpackError::IllegalEntryName(entry_path.to_string_lossy().to_string()),
         )?;
-        let uid = file
-            .header()
-            .uid()
-            .map_err(|e| UnpackError::IllegalUid {
-                source: anyhow!("corrupted UID in header: {e:?}"),
-            })?
-            .try_into()
-            .map_err(|_| UnpackError::IllegalUid {
-                source: anyhow!("UID too large"),
-            })?;
-        let gid = file
-            .header()
-            .gid()
-            .map_err(|e| UnpackError::IllegalGid {
-                source: anyhow!("corrupted GID in header: {e:?}"),
-            })?
-            .try_into()
-            .map_err(|_| UnpackError::IllegalGid {
-                source: anyhow!("GID too large"),
-            })?;
-        let mode = file.header().mode().ok();
-        let kind = file.header().entry_type();
-        let mtime = file
-            .header()
-            .mtime()
-            .map_err(|source| UnpackError::IllegalMtime { source })? as i64;
+        let uid = owner_id(
+            file.header.uid,
+            &file.extensions,
+            PaxKeyword::Uid,
+            "UID",
+            |e| UnpackError::IllegalUid { source: e },
+        )?;
+        let gid = owner_id(
+            file.header.gid,
+            &file.extensions,
+            PaxKeyword::Gid,
+            "GID",
+            |e| UnpackError::IllegalGid { source: e },
+        )?;
+        let mode = file.header.mode.map(|mode| (mode as u32) & MODE_MASK);
+        let kind = file.header.kind;
+        // ustar/GNU header mtime only. Pax `mtime` is not applied.
+        let mtime = file.header.mtime.ok_or_else(|| UnpackError::IllegalMtime {
+            source: io::Error::other("corrupted mtime in header"),
+        })? as i64;
 
-        // 2. whiteout: astral-tokio-tar does not handle overlay whiteouts.
+        // 2. whiteout: tar-framing does not handle overlay whiteouts.
         if is_whiteout(entry_name) {
             convert_whiteout(entry_name, &entry_path, layer_dir, attr_available)
                 .await
@@ -321,9 +323,9 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
             continue;
         }
 
-        let is_dir = is_dir(&kind, &file)?;
+        let is_dir = is_dir(kind, file.header.format, &path_bytes);
 
-        // 3. layer root ".": do not unpack_in; apply ownership and mode, defer mtime.
+        // 3. layer root ".": do not unpack; apply ownership and mode, defer mtime.
         if is_layer_root_entry(&entry_path) {
             if is_dir {
                 let path = layer_dir.display().to_string();
@@ -352,24 +354,26 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
         }
 
         // 4. unpack the entry to the layer directory
-        // Both of these paths ensure that the entry is actually inside the layer dir
-        if let Err(e) = file.unpack_in(layer_dir).await {
-            match try_hardlink_fallback(&kind, &mut file, layer_dir).await {
-                Ok(true) => {}
-                Ok(false) => return Err(UnpackError::UnpackFailed { source: e }),
-                Err(f) => {
-                    return Err(UnpackError::UnpackFailed {
-                        source: io::Error::other(format!(
-                            "Try hardlink fallback failed, {f:?}, after original unpack error: {e:?}"
-                        )),
-                    });
-                }
-            }
+        // Like tokio-tar's `unpack_in`, an entry whose path contains a `..`
+        // component is silently not extracted, and unpacking continues.
+        if entry_path
+            .components()
+            .any(|c| matches!(c, Component::ParentDir))
+        {
+            continue;
         }
+        extract_entry(
+            file,
+            &layer_root,
+            &entry_path,
+            is_dir,
+            attr_available,
+            &mut chunk,
+        )
+        .await?;
 
         // 5. apply ownership / mode / mtime (see `unpack` doc comment for per-type details).
-        let abs_path = layer_dir.join(&entry_path);
-        let err_path = abs_path.display().to_string();
+        let err_path = layer_dir.join(&entry_path).display().to_string();
 
         if is_dir {
             let handle = layer_root
@@ -381,10 +385,16 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
                     path: err_path.to_string(),
                 }
             })?;
-            let path_cstring = path_cstring(&abs_path)
-                .map_err(|_| UnpackError::IllegalEntryName(err_path.clone()))?;
-            dirs.insert(path_cstring, dir_times(mtime));
-        } else if kind.is_symlink() {
+            if let Some(mode) = mode {
+                fchmodat(handle.as_fd(), mode).map_err(|source| {
+                    UnpackError::SetPermissionsFailed {
+                        source,
+                        path: err_path.to_string(),
+                    }
+                })?;
+            }
+            dirs.insert(entry_path, mtime);
+        } else if kind == UstarKind::SymbolicLink {
             let handle = layer_root
                 .resolve_nofollow(&entry_path)
                 .map_err(|source| UnpackError::PathRsFailed { source })?;
@@ -394,14 +404,8 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
                     path: err_path.to_string(),
                 }
             })?;
-            let ft = FileTime::from_unix_time(mtime, 0);
-            filetime::set_symlink_file_times(layer_dir.join(entry_path), ft, ft).map_err(
-                |source| UnpackError::SetMTimeFailed {
-                    source: source.into(),
-                    path: err_path.to_string(),
-                },
-            )?;
-        } else if kind.is_hard_link() {
+            set_times(&layer_root, layer_dir, &entry_path, mtime)?;
+        } else if kind == UstarKind::HardLink {
             let handle = layer_root
                 .resolve(&entry_path)
                 .map_err(|source| UnpackError::PathRsFailed { source })?;
@@ -411,13 +415,7 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
                     path: err_path.to_string(),
                 }
             })?;
-            let ft = FileTime::from_unix_time(mtime, 0);
-            filetime::set_file_times(layer_dir.join(entry_path), ft, ft).map_err(|source| {
-                UnpackError::SetMTimeFailed {
-                    source: source.into(),
-                    path: err_path.to_string(),
-                }
-            })?;
+            set_times(&layer_root, layer_dir, &entry_path, mtime)?;
         } else {
             let handle = layer_root
                 .resolve(&entry_path)
@@ -436,28 +434,13 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
                     }
                 })?;
             }
-            let ft = FileTime::from_unix_time(mtime, 0);
-            filetime::set_file_times(layer_dir.join(entry_path), ft, ft).map_err(|source| {
-                UnpackError::SetMTimeFailed {
-                    source: source.into(),
-                    path: err_path.to_string(),
-                }
-            })?;
+            set_times(&layer_root, layer_dir, &entry_path, mtime)?;
         }
     }
 
     // Directory timestamps need update after all files are extracted.
-    for (k, v) in dirs.iter() {
-        let ret = unsafe { nix::libc::utimes(k.as_ptr(), v.as_ptr()) };
-        if ret != 0 {
-            return Err(UnpackError::SetMTimeFailed {
-                source: anyhow!(
-                    "change directory utime error: {:?}",
-                    io::Error::last_os_error(),
-                ),
-                path: k.to_string_lossy().to_string(),
-            });
-        }
+    for (path, mtime) in dirs.iter() {
+        set_times(&layer_root, layer_dir, path, *mtime)?;
     }
 
     // The layer root directory is created before unpacking and is modified while
@@ -474,17 +457,254 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
     Ok(())
 }
 
+/// Creates `path` inside the layer from a tar member, in place of tokio-tar's
+/// `Entry::unpack_in`. Ownership, mode and mtime are applied by the caller.
+///
+/// All paths are resolved by pathrs inside `layer_root`. As with tokio-tar, an
+/// existing file or symlink is replaced, an existing directory is kept, hard
+/// links never replace an existing path, and fifo / char / block members are
+/// written as regular files.
+async fn extract_entry<R: AsyncRead + Unpin>(
+    file: MemberFrame<'_, R>,
+    layer_root: &Root,
+    path: &Path,
+    is_dir: bool,
+    unpack_xattrs: bool,
+    chunk: &mut Vec<u8>,
+) -> UnpackResult<()> {
+    let kind = file.header.kind;
+    let link_target = matches!(kind, UstarKind::HardLink | UstarKind::SymbolicLink)
+        .then(|| {
+            file.effective_link_path()
+                .map(|p| PathBuf::from(OsStr::from_bytes(p.as_ref())))
+                .map_err(|source| UnpackError::ReadTarEntriesFailed {
+                    source: io::Error::other(source),
+                })
+        })
+        .transpose()?;
+    let xattrs = match unpack_xattrs {
+        true => collect_xattrs(&file.extensions),
+        false => Vec::new(),
+    };
+    let mut payload = file.payload;
+
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        layer_root
+            .mkdir_all(parent, &Permissions::from_mode(CREATE_DIR_MODE))
+            .map_err(|source| UnpackError::PathRsFailed { source })?;
+    }
+
+    let require_link_target = || {
+        link_target
+            .as_deref()
+            .ok_or_else(|| UnpackError::UnpackFailed {
+                source: io::Error::other("link listed but no link name found"),
+            })
+    };
+    match kind {
+        UstarKind::SymbolicLink => {
+            let target = require_link_target()?;
+            remove_existing(layer_root, path)?;
+            layer_root
+                .create(path, &InodeType::Symlink(target.to_path_buf()))
+                .map_err(|source| UnpackError::PathRsFailed { source })
+        }
+        UstarKind::HardLink => {
+            let target = resolve_hardlink_target(require_link_target()?).ok_or_else(|| {
+                UnpackError::UnpackFailed {
+                    source: io::Error::other("hardlink target resolves outside the layer root"),
+                }
+            })?;
+            layer_root
+                .create(path, &InodeType::Hardlink(target))
+                .map_err(|source| UnpackError::PathRsFailed { source })
+        }
+        // GNU headers with a trailing '/' are directories too.
+        _ if is_dir => {
+            layer_root
+                .mkdir_all(path, &Permissions::from_mode(CREATE_DIR_MODE))
+                .map_err(|source| UnpackError::PathRsFailed { source })?;
+            Ok(())
+        }
+        // Regular, contiguous, fifo, char and block members.
+        _ => {
+            remove_existing(layer_root, path)?;
+            let file = layer_root
+                .create_file(
+                    path,
+                    OpenFlags::O_WRONLY | OpenFlags::O_EXCL,
+                    &Permissions::from_mode(CREATE_FILE_MODE),
+                )
+                .map_err(|source| UnpackError::PathRsFailed { source })?;
+            let mut file = fs::File::from_std(file);
+            while payload
+                .next_chunk(chunk, PAYLOAD_CHUNK_BYTES)
+                .await
+                .map_err(|source| UnpackError::ReadTarEntriesFailed {
+                    source: io::Error::other(source),
+                })?
+            {
+                file.write_all(chunk)
+                    .await
+                    .map_err(|source| UnpackError::UnpackFailed { source })?;
+            }
+            file.flush()
+                .await
+                .map_err(|source| UnpackError::UnpackFailed { source })?;
+            let file = file.into_std().await;
+            for (key, value) in &xattrs {
+                file.set_xattr(OsStr::from_bytes(key), value)
+                    .map_err(|source| UnpackError::UnpackFailed { source })?;
+            }
+            Ok(())
+        }
+    }
+}
+
+/// Removes an existing non-directory at `path` so it can be recreated.
+fn remove_existing(layer_root: &Root, path: &Path) -> UnpackResult<()> {
+    match layer_root.resolve_nofollow(path) {
+        Ok(_) => layer_root
+            .remove_file(path)
+            .map_err(|source| UnpackError::PathRsFailed { source }),
+        Err(source)
+            if matches!(
+                source.kind(),
+                pathrs::error::ErrorKind::OsError(Some(libc::ENOENT))
+            ) =>
+        {
+            Ok(())
+        }
+        Err(source) => Err(UnpackError::PathRsFailed { source }),
+    }
+}
+
+/// Sets atime and mtime of `path` inside the layer.
+///
+/// The parent is resolved by pathrs and the final component is not followed,
+/// so symlinks in the layer cannot redirect the update outside of it.
+fn set_times(layer_root: &Root, layer_dir: &Path, path: &Path, mtime: i64) -> UnpackResult<()> {
+    let err_path = || layer_dir.join(path).display().to_string();
+    let name = path
+        .file_name()
+        .ok_or_else(|| UnpackError::IllegalEntryName(err_path()))?;
+    let parent = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .map(|parent| layer_root.resolve(parent))
+        .transpose()
+        .map_err(|source| UnpackError::PathRsFailed { source })?;
+    let dirfd = match &parent {
+        Some(handle) => handle.as_fd(),
+        None => layer_root.as_fd(),
+    };
+
+    let time = TimeSpec::new(mtime, 0);
+    utimensat(dirfd, name, &time, &time, UtimensatFlags::NoFollowSymlink).map_err(|e| {
+        UnpackError::SetMTimeFailed {
+            source: e.into(),
+            path: err_path(),
+        }
+    })
+}
+
+/// A pax record overrides the header field. A missing (all-NUL) header field
+/// without a pax override is an error, as with tokio-tar.
+fn owner_id(
+    header: Option<u64>,
+    extensions: &MemberExtensions<'_>,
+    keyword: PaxKeyword,
+    name: &str,
+    err: impl Fn(anyhow::Error) -> UnpackError,
+) -> UnpackResult<u32> {
+    let id = match pax_numeric(extensions, &keyword) {
+        Some(PaxValue::Value(value)) => *value,
+        Some(PaxValue::Deleted) | None => {
+            header.ok_or_else(|| err(anyhow!("corrupted {name} in header")))?
+        }
+    };
+    id.try_into().map_err(|_| err(anyhow!("{name} too large")))
+}
+
+/// Link names are paths from the archive root.
+///
+/// Absolute names drop the leading `/` and keep `..` for pathrs, which clamps
+/// at the layer root. Relative names are lexical from that same root; a `..`
+/// that walks above the layer returns `None`.
+fn resolve_hardlink_target(target: &Path) -> Option<PathBuf> {
+    if target.is_absolute() {
+        return Some(layer_relative_path(target));
+    }
+
+    let mut parts: Vec<Component<'_>> = Vec::new();
+    for component in target.components() {
+        match component {
+            Component::CurDir | Component::Prefix(_) | Component::RootDir => {}
+            Component::ParentDir => {
+                parts.pop()?;
+            }
+            Component::Normal(_) => parts.push(component),
+        }
+    }
+    Some(parts.iter().collect())
+}
+
+fn layer_relative_path(path: &Path) -> PathBuf {
+    path.components()
+        .filter(|c| {
+            !matches!(
+                c,
+                Component::Prefix(_) | Component::RootDir | Component::CurDir
+            )
+        })
+        .collect()
+}
+
+fn pax_numeric<'a>(
+    extensions: &'a MemberExtensions<'_>,
+    keyword: &PaxKeyword,
+) -> Option<&'a PaxValue<u64>> {
+    let MemberExtensions::Pax(state) = extensions else {
+        return None;
+    };
+    match (keyword, state.effective_record(keyword)?) {
+        (PaxKeyword::Uid, PaxRecord::Uid(v)) | (PaxKeyword::Gid, PaxRecord::Gid(v)) => Some(v),
+        _ => None,
+    }
+}
+
+fn collect_xattrs(extensions: &MemberExtensions<'_>) -> Vec<(Vec<u8>, Vec<u8>)> {
+    let MemberExtensions::Pax(state) = extensions else {
+        return Vec::new();
+    };
+    state
+        .extensions()
+        .flat_map(|ext| ext.records())
+        .filter_map(|record| {
+            let PaxRecord::Vendor {
+                vendor,
+                name,
+                value: PaxValue::Value(bytes),
+            } = record
+            else {
+                return None;
+            };
+            let key = (vendor.as_ref() == "SCHILY")
+                .then(|| name.strip_prefix("xattr."))
+                .flatten()?;
+            Some((key.as_bytes().to_vec(), bytes.as_ref().to_vec()))
+        })
+        .collect()
+}
+
 fn dir_times(mtime: i64) -> [timeval; 2] {
     let atime = timeval {
         tv_sec: mtime,
         tv_usec: 0,
     };
     [atime, atime]
-}
-
-fn path_cstring(path: &Path) -> Result<CString> {
-    CString::new(path.as_os_str().as_bytes())
-        .map_err(|_| anyhow!("path contains null byte: {}", path.display()))
 }
 
 fn fchown_at(fd: BorrowedFd<'_>, uid: u32, gid: u32) -> Result<()> {
@@ -515,58 +735,9 @@ fn fchmodat(fd: BorrowedFd<'_>, mode: u32) -> Result<()> {
     Ok(())
 }
 
-/// Try creating a hardlink with an absolute link name/target.
-/// Returns Ok(True) if the hardlink is created.
-async fn try_hardlink_fallback<R: AsyncRead + Unpin>(
-    kind: &tokio_tar::EntryType,
-    file: &mut tokio_tar::Entry<R>,
-    layer_dir: &Path,
-) -> UnpackResult<bool> {
-    if !kind.is_hard_link() {
-        return Ok(false);
-    }
-
-    // With tar archives, the link name refers to the file that
-    // the hard link is pointing to.
-    // This is the opposite of how the term is used with ln.
-    let link_target = match file
-        .link_name()
-        .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?
-    {
-        Some(cow) => cow.into_owned(),
-        None => return Ok(false),
-    };
-    if !link_target.is_absolute() {
-        return Ok(false);
-    }
-
-    // Hardlinks may not exit the layer dir.
-    let layer_dir =
-        pathrs::Root::open(layer_dir).map_err(|source| UnpackError::PathRsFailed { source })?;
-
-    let link_path = file
-        .path()
-        .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?;
-
-    // Create parent directories for the link path (link target must already exist)
-    if let Some(parent) = link_path.parent() {
-        layer_dir
-            .mkdir_all(parent, &Permissions::from_mode(0o755))
-            .map_err(|source| UnpackError::PathRsFailed { source })?;
-    }
-
-    layer_dir
-        .create(&link_path, &InodeType::Hardlink(link_target.to_path_buf()))
-        .map_err(|source| UnpackError::PathRsFailed { source })?;
-
-    Ok(true)
-}
-
 #[cfg(test)]
 mod tests {
-    use std::os::unix::fs::{MetadataExt, chown, lchown};
-
-    use std::os::unix::fs::FileTypeExt;
+    use std::os::unix::fs::{FileTypeExt, MetadataExt, chown, lchown};
     use tokio::{
         fs::{self, File},
         io::{AsyncWriteExt, empty},
