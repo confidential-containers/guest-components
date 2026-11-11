@@ -3,23 +3,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{Context, Result, anyhow, bail};
-use filetime::FileTime;
 use futures_util::StreamExt;
-use nix::libc;
-use nix::libc::timeval;
-use pathrs::{InodeType, Root, flags::OpenFlags};
+use nix::libc::{self, timespec};
+use pathrs::{Handle, InodeType, Root, flags::OpenFlags};
 use thiserror::Error;
 use tracing::{debug, warn};
 
 use std::{
-    collections::HashMap,
     convert::TryInto,
     ffi::CString,
     fs::Permissions,
     io,
     os::{
         fd::{AsFd, AsRawFd, BorrowedFd},
-        unix::{ffi::OsStrExt, fs::PermissionsExt},
+        unix::fs::PermissionsExt,
     },
     path::Path,
 };
@@ -246,6 +243,10 @@ async fn convert_whiteout(
 /// | hard link                          | us      | -           | us          |
 /// | regular file / fifo / char / block | us      | astral + us | astral + us |
 ///
+/// Timestamps are applied with `utimensat(AT_EMPTY_PATH)` on the `pathrs` handle.
+/// `layer_dir.join(entry_path)` is not used: `Path::join` drops the left side when
+/// the tar name is absolute, which would set atime and mtime outside the layer.
+///
 /// See issue https://github.com/astral-sh/tokio-tar/issues/81
 pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackResult<()> {
     if layer_dir.exists() {
@@ -273,8 +274,10 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
         .entries()
         .map_err(|source| UnpackError::ReadTarEntriesFailed { source })?;
 
-    let mut dirs: HashMap<CString, [timeval; 2]> = HashMap::default();
-    let mut root_times: Option<[timeval; 2]> = None;
+    // Directory mtimes are applied after every entry exists. Creating a child
+    // updates the parent directory's mtime, so the tar value has to be restored last.
+    let mut dirs: Vec<(Handle, i64, String)> = Vec::new();
+    let mut root_mtime: Option<i64> = None;
     while let Some(file) = entries.next().await {
         let mut file = file.map_err(|source| UnpackError::ReadTarEntriesFailed { source })?;
 
@@ -341,7 +344,7 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
                         }
                     })?;
                 }
-                root_times = Some(dir_times(mtime));
+                root_mtime = Some(mtime);
             } else {
                 warn!(
                     "skipping layer root tar entry {:?}: not a directory (type {:?})",
@@ -368,8 +371,7 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
         }
 
         // 5. apply ownership / mode / mtime (see `unpack` doc comment for per-type details).
-        let abs_path = layer_dir.join(&entry_path);
-        let err_path = abs_path.display().to_string();
+        let err_path = entry_path.display().to_string();
 
         if is_dir {
             let handle = layer_root
@@ -378,12 +380,10 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
             fchown_at(handle.as_fd(), uid, gid).map_err(|source| {
                 UnpackError::SetOwnershipsFailed {
                     source,
-                    path: err_path.to_string(),
+                    path: err_path.clone(),
                 }
             })?;
-            let path_cstring = path_cstring(&abs_path)
-                .map_err(|_| UnpackError::IllegalEntryName(err_path.clone()))?;
-            dirs.insert(path_cstring, dir_times(mtime));
+            dirs.push((handle, mtime, err_path));
         } else if kind.is_symlink() {
             let handle = layer_root
                 .resolve_nofollow(&entry_path)
@@ -394,13 +394,12 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
                     path: err_path.to_string(),
                 }
             })?;
-            let ft = FileTime::from_unix_time(mtime, 0);
-            filetime::set_symlink_file_times(layer_dir.join(entry_path), ft, ft).map_err(
-                |source| UnpackError::SetMTimeFailed {
-                    source: source.into(),
-                    path: err_path.to_string(),
-                },
-            )?;
+            set_times_at(handle.as_fd(), mtime, true).map_err(|source| {
+                UnpackError::SetMTimeFailed {
+                    source,
+                    path: err_path.clone(),
+                }
+            })?;
         } else if kind.is_hard_link() {
             let handle = layer_root
                 .resolve(&entry_path)
@@ -408,14 +407,13 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
             fchown_at(handle.as_fd(), uid, gid).map_err(|source| {
                 UnpackError::SetOwnershipsFailed {
                     source,
-                    path: err_path.to_string(),
+                    path: err_path.clone(),
                 }
             })?;
-            let ft = FileTime::from_unix_time(mtime, 0);
-            filetime::set_file_times(layer_dir.join(entry_path), ft, ft).map_err(|source| {
+            set_times_at(handle.as_fd(), mtime, false).map_err(|source| {
                 UnpackError::SetMTimeFailed {
-                    source: source.into(),
-                    path: err_path.to_string(),
+                    source,
+                    path: err_path.clone(),
                 }
             })?;
         } else {
@@ -425,66 +423,41 @@ pub async fn unpack<R: AsyncRead + Unpin>(input: R, layer_dir: &Path) -> UnpackR
             fchown_at(handle.as_fd(), uid, gid).map_err(|source| {
                 UnpackError::SetOwnershipsFailed {
                     source,
-                    path: err_path.to_string(),
+                    path: err_path.clone(),
                 }
             })?;
             if let Some(mode) = mode {
                 fchmodat(handle.as_fd(), mode).map_err(|source| {
                     UnpackError::SetPermissionsFailed {
                         source,
-                        path: err_path.to_string(),
+                        path: err_path.clone(),
                     }
                 })?;
             }
-            let ft = FileTime::from_unix_time(mtime, 0);
-            filetime::set_file_times(layer_dir.join(entry_path), ft, ft).map_err(|source| {
+            set_times_at(handle.as_fd(), mtime, false).map_err(|source| {
                 UnpackError::SetMTimeFailed {
-                    source: source.into(),
-                    path: err_path.to_string(),
+                    source,
+                    path: err_path.clone(),
                 }
             })?;
         }
     }
 
     // Directory timestamps need update after all files are extracted.
-    for (k, v) in dirs.iter() {
-        let ret = unsafe { nix::libc::utimes(k.as_ptr(), v.as_ptr()) };
-        if ret != 0 {
-            return Err(UnpackError::SetMTimeFailed {
-                source: anyhow!(
-                    "change directory utime error: {:?}",
-                    io::Error::last_os_error(),
-                ),
-                path: k.to_string_lossy().to_string(),
-            });
-        }
+    for (handle, mtime, path) in dirs {
+        set_times_at(handle.as_fd(), mtime, false)
+            .map_err(|source| UnpackError::SetMTimeFailed { source, path })?;
     }
 
     // The layer root directory is created before unpacking and is modified while
     // entries are extracted; apply the root entry timestamps last.
-    if let Some(times) = root_times {
+    if let Some(mtime) = root_mtime {
         let path = layer_dir.display().to_string();
-        let ft = FileTime::from_unix_time(times[1].tv_sec, 0);
-        filetime::set_file_times(layer_dir, ft, ft).map_err(|e| UnpackError::SetMTimeFailed {
-            source: e.into(),
-            path,
-        })?;
+        set_times_at(layer_root.as_fd(), mtime, false)
+            .map_err(|source| UnpackError::SetMTimeFailed { source, path })?;
     }
 
     Ok(())
-}
-
-fn dir_times(mtime: i64) -> [timeval; 2] {
-    let atime = timeval {
-        tv_sec: mtime,
-        tv_usec: 0,
-    };
-    [atime, atime]
-}
-
-fn path_cstring(path: &Path) -> Result<CString> {
-    CString::new(path.as_os_str().as_bytes())
-        .map_err(|_| anyhow!("path contains null byte: {}", path.display()))
 }
 
 fn fchown_at(fd: BorrowedFd<'_>, uid: u32, gid: u32) -> Result<()> {
@@ -492,6 +465,34 @@ fn fchown_at(fd: BorrowedFd<'_>, uid: u32, gid: u32) -> Result<()> {
         unsafe { libc::fchownat(fd.as_raw_fd(), c"".as_ptr(), uid, gid, libc::AT_EMPTY_PATH) };
     if ret != 0 {
         bail!("failed to fchownat: {:?}", io::Error::last_os_error());
+    }
+    Ok(())
+}
+
+/// Set atime and mtime on an `O_PATH` fd from pathrs.
+///
+/// `futimens(2)` returns `EBADF` for `O_PATH`. `utimensat(2)` with an empty path
+/// and `AT_EMPTY_PATH` updates the inode the fd already refers to, so the tar
+/// entry name is not looked up again. `nofollow` sets `AT_SYMLINK_NOFOLLOW`,
+/// which is required when the fd is the symlink itself.
+fn set_times_at(fd: BorrowedFd<'_>, mtime: i64, nofollow: bool) -> Result<()> {
+    let times = [
+        timespec {
+            tv_sec: mtime,
+            tv_nsec: 0,
+        },
+        timespec {
+            tv_sec: mtime,
+            tv_nsec: 0,
+        },
+    ];
+    let mut flags = libc::AT_EMPTY_PATH;
+    if nofollow {
+        flags |= libc::AT_SYMLINK_NOFOLLOW;
+    }
+    let ret = unsafe { libc::utimensat(fd.as_raw_fd(), c"".as_ptr(), times.as_ptr(), flags) };
+    if ret != 0 {
+        bail!("failed to utimensat: {:?}", io::Error::last_os_error());
     }
     Ok(())
 }
@@ -808,5 +809,145 @@ mod tests {
                 "hardlink entry must not be created under destination"
             );
         }
+    }
+
+    /// `Header::set_path` rejects absolute names, so write the ustar name field directly.
+    fn push_raw_entry(
+        buf: &mut Vec<u8>,
+        name: &str,
+        kind: EntryType,
+        mtime: u64,
+        link: Option<&str>,
+        data: &[u8],
+    ) {
+        assert!(
+            name.len() < 100,
+            "ustar name field is 100 bytes, got {name}"
+        );
+        let mut hdr = Header::new_gnu();
+        hdr.set_entry_type(kind);
+        hdr.set_size(data.len() as u64);
+        hdr.set_mode(0o644);
+        hdr.set_uid(0);
+        hdr.set_gid(0);
+        hdr.set_mtime(mtime);
+        if let Some(link) = link {
+            hdr.set_link_name(link).unwrap();
+        }
+        hdr.as_mut_bytes()[..name.len()].copy_from_slice(name.as_bytes());
+        hdr.set_cksum();
+        buf.extend_from_slice(hdr.as_bytes());
+        buf.extend_from_slice(data);
+        let pad = (512 - (data.len() % 512)) % 512;
+        buf.extend(std::iter::repeat_n(0u8, pad));
+    }
+
+    async fn assert_times(path: &Path, secs: i64, follow: bool) {
+        let meta = if follow {
+            fs::metadata(path).await.unwrap()
+        } else {
+            fs::symlink_metadata(path).await.unwrap()
+        };
+        assert_eq!(meta.atime(), secs, "atime of {}", path.display());
+        assert_eq!(meta.mtime(), secs, "mtime of {}", path.display());
+    }
+
+    #[tokio::test]
+    async fn test_unpack_absolute_entry_timestamps_stay_inside() {
+        const ORIGINAL: i64 = 1_577_836_800;
+        const ATTACKER: i64 = 1_234_567_890;
+
+        let sandbox = tempfile::tempdir().unwrap();
+        let outside = sandbox.path().join("outside");
+        fs::create_dir(&outside).await.unwrap();
+
+        let victim_file = outside.join("victim.txt");
+        let victim_dir = outside.join("victim.dir");
+        let victim_link = outside.join("victim.link");
+        let victim_hard = outside.join("victim.hard");
+        let original = filetime::FileTime::from_unix_time(ORIGINAL, 0);
+
+        let mut host_file = File::create(&victim_file).await.unwrap();
+        host_file.write_all(b"host-file").await.unwrap();
+        host_file.flush().await.unwrap();
+        drop(host_file);
+        filetime::set_file_times(&victim_file, original, original).unwrap();
+
+        fs::create_dir(&victim_dir).await.unwrap();
+        filetime::set_file_times(&victim_dir, original, original).unwrap();
+
+        fs::symlink("host-target", &victim_link).await.unwrap();
+        filetime::set_symlink_file_times(&victim_link, original, original).unwrap();
+
+        File::create(&victim_hard).await.unwrap();
+        filetime::set_file_times(&victim_hard, original, original).unwrap();
+
+        let mut archive = Vec::new();
+        push_raw_entry(
+            &mut archive,
+            "inside.txt",
+            EntryType::Regular,
+            ATTACKER as u64,
+            None,
+            b"inside",
+        );
+        push_raw_entry(
+            &mut archive,
+            "payload",
+            EntryType::Regular,
+            ATTACKER as u64,
+            None,
+            b"payload",
+        );
+        push_raw_entry(
+            &mut archive,
+            &victim_file.display().to_string(),
+            EntryType::Regular,
+            ATTACKER as u64,
+            None,
+            b"layer-file",
+        );
+        push_raw_entry(
+            &mut archive,
+            &victim_dir.display().to_string(),
+            EntryType::Directory,
+            ATTACKER as u64,
+            None,
+            b"",
+        );
+        push_raw_entry(
+            &mut archive,
+            &victim_link.display().to_string(),
+            EntryType::Symlink,
+            ATTACKER as u64,
+            Some("payload"),
+            b"",
+        );
+        push_raw_entry(
+            &mut archive,
+            &victim_hard.display().to_string(),
+            EntryType::Link,
+            ATTACKER as u64,
+            Some("payload"),
+            b"",
+        );
+
+        let layer = sandbox.path().join("layer");
+        unpack(archive.as_slice(), &layer).await.unwrap();
+
+        assert_times(&victim_file, ORIGINAL, true).await;
+        assert_times(&victim_dir, ORIGINAL, true).await;
+        assert_times(&victim_link, ORIGINAL, false).await;
+        assert_times(&victim_hard, ORIGINAL, true).await;
+
+        let inside = |absolute: &Path| layer.join(absolute.strip_prefix("/").unwrap());
+        assert_times(&layer.join("inside.txt"), ATTACKER, true).await;
+        assert_times(&inside(&victim_file), ATTACKER, true).await;
+        assert_times(&inside(&victim_dir), ATTACKER, true).await;
+        assert_times(&inside(&victim_link), ATTACKER, false).await;
+        assert_times(&inside(&victim_hard), ATTACKER, true).await;
+
+        let host_bytes = fs::read(&victim_file).await.unwrap();
+        assert_eq!(host_bytes, b"host-file");
     }
 }
