@@ -10,8 +10,12 @@
 # guest rootfs they are mounted into. UBUNTU_VERSION selects that release, so
 # one recipe covers every variant we publish. Mirrors kata-containers'
 # coco-guest-components static-build Dockerfile.
+#
+# UBUNTU_DIGEST is the multi-arch index digest of ubuntu:${UBUNTU_VERSION} and
+# must be overridden together with UBUNTU_VERSION.
 ARG UBUNTU_VERSION=26.04
-FROM ubuntu:${UBUNTU_VERSION}
+ARG UBUNTU_DIGEST=6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c
+FROM ubuntu:${UBUNTU_VERSION}@sha256:${UBUNTU_DIGEST}
 
 ARG UBUNTU_VERSION
 ARG RUST_TOOLCHAIN

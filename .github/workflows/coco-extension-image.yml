@@ -84,6 +84,11 @@ jobs:
         - aarch64
         - s390x
         include:
+        # Multi-arch index digests of the ubuntu:<release> base images.
+        - ubuntu: "24.04"
+          ubuntu_digest: fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+        - ubuntu: "26.04"
+          ubuntu_digest: 6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c
         - arch: x86_64
           oci_arch: amd64
           libc: gnu
@@ -105,6 +110,7 @@ jobs:
       LIBC: ${{ matrix.libc }}
       ATTESTER: ${{ matrix.attester }}
       UBUNTU_VERSION: ${{ matrix.ubuntu }}
+      UBUNTU_DIGEST: ${{ matrix.ubuntu_digest }}
       VARIANT: ubuntu${{ matrix.ubuntu }}
     steps:
     - name: Harden the runner (Audit all outbound calls)
@@ -156,7 +162,7 @@ jobs:
         # building the payload itself, so reuse a published one whenever the
         # recipe and its pinned versions are unchanged.
         cache_key="$( { cat tools/coco-extension/Dockerfile.builder; \
-                        echo "${UBUNTU_VERSION} ${rust_toolchain} ${UMOCI_VERSION} ${nvat_version}"; \
+                        echo "${UBUNTU_VERSION} ${UBUNTU_DIGEST} ${rust_toolchain} ${UMOCI_VERSION} ${nvat_version}"; \
                       } | sha256sum | cut -c1-12)"
         builder="${BUILDER_IMAGE}:${VARIANT}-${OCI_ARCH}-${cache_key}"
         echo "BUILDER=${builder}" >> "${GITHUB_ENV}"
@@ -169,6 +175,7 @@ jobs:
         docker build \
           -f tools/coco-extension/Dockerfile.builder \
           --build-arg "UBUNTU_VERSION=${UBUNTU_VERSION}" \
+          --build-arg "UBUNTU_DIGEST=${UBUNTU_DIGEST}" \
           --build-arg "RUST_TOOLCHAIN=${rust_toolchain}" \
           --build-arg "UMOCI_VERSION=${UMOCI_VERSION}" \
           --build-arg "TARGETARCH=${OCI_ARCH}" \
