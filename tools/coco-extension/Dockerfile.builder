@@ -19,6 +19,8 @@ FROM ubuntu:${UBUNTU_VERSION}@sha256:${UBUNTU_DIGEST}
 
 ARG UBUNTU_VERSION
 ARG RUST_TOOLCHAIN
+# Bumping UMOCI_VERSION requires updating the per-arch hashes below, taken
+# from the release's signed umoci.sha256sum.
 ARG UMOCI_VERSION=v0.6.0
 ARG TARGETARCH
 ARG CUDA_KEYRING_VERSION=1.1-1
@@ -60,10 +62,20 @@ RUN apt-get update && \
 	apt-get clean && rm -rf /var/lib/apt/lists/* && \
 	ln -s /usr/bin/rustup "${CARGO_HOME}/bin/rustup" && \
 	rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal --no-self-update && \
-	rustup default "${RUST_TOOLCHAIN}" && \
-	curl -fsSL -o /usr/local/bin/umoci \
+	rustup default "${RUST_TOOLCHAIN}"
+
+RUN case "${TARGETARCH}" in \
+		amd64) umoci_sha256=b51c267ec394499e42c6fde47f240b7b7dba57ea49df0b5acd304378b82a3b71 ;; \
+		arm64) umoci_sha256=5cfd17f2e7a4bcf9ed67ea1b955ca893d200349b9ce6a3d3707dba415f458a1f ;; \
+		s390x) umoci_sha256=abe2282c6d49a7289f381b9572a01f4d4079919a41fadaca67047a5015cc0e0a ;; \
+		*) echo "no pinned umoci hash for TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
+	esac && \
+	tmpdir="$(mktemp -d)" && \
+	curl -fsSL -o "${tmpdir}/umoci" \
 		"https://github.com/opencontainers/umoci/releases/download/${UMOCI_VERSION}/umoci.linux.${TARGETARCH}" && \
-	chmod +x /usr/local/bin/umoci
+	echo "${umoci_sha256}  ${tmpdir}/umoci" | sha256sum -c - && \
+	install -m 0755 "${tmpdir}/umoci" /usr/local/bin/umoci && \
+	rm -rf "${tmpdir}"
 
 # NVAT_VERSION: libnvat/libnvat-dev version; keep in sync with install-nvat-sdk/action.yml.
 ARG NVAT_VERSION

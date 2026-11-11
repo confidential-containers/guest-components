@@ -53,7 +53,6 @@ env:
   # stops baking pause into the coco extension.
   PAUSE_IMAGE_REPO: docker://registry.k8s.io/pause
   PAUSE_IMAGE_VERSION: "3.10"
-  UMOCI_VERSION: v0.6.0
   # Version of the libnvat package. This should match the version specified in
   # install-nvat-sdk/action.yml to keep the CI other CI workflows in sync with
   # the extension image.
@@ -133,19 +132,12 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Install build tooling
-      env:
-        OCI_ARCH: ${{ matrix.oci_arch }}
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
           build-essential clang cmake pkg-config protobuf-compiler \
           libssl-dev libtss2-dev libdevmapper-dev musl-tools \
           cryptsetup-bin erofs-utils libclang-dev libxml2-dev parted skopeo zlib1g-dev
-        # umoci is used to unpack the pause image into an OCI runtime bundle.
-        # Prebuilt binaries exist for every architecture in the matrix.
-        sudo curl -fsSL -o /usr/local/bin/umoci \
-          "https://github.com/opencontainers/umoci/releases/download/${UMOCI_VERSION}/umoci.linux.${OCI_ARCH}"
-        sudo chmod +x /usr/local/bin/umoci
 
     - name: Build or reuse the Ubuntu ${{ matrix.ubuntu }} builder image
       env:
@@ -162,7 +154,7 @@ jobs:
         # building the payload itself, so reuse a published one whenever the
         # recipe and its pinned versions are unchanged.
         cache_key="$( { cat tools/coco-extension/Dockerfile.builder; \
-                        echo "${UBUNTU_VERSION} ${UBUNTU_DIGEST} ${rust_toolchain} ${UMOCI_VERSION} ${nvat_version}"; \
+                        echo "${UBUNTU_VERSION} ${UBUNTU_DIGEST} ${rust_toolchain} ${nvat_version}"; \
                       } | sha256sum | cut -c1-12)"
         builder="${BUILDER_IMAGE}:${VARIANT}-${OCI_ARCH}-${cache_key}"
         echo "BUILDER=${builder}" >> "${GITHUB_ENV}"
@@ -177,7 +169,6 @@ jobs:
           --build-arg "UBUNTU_VERSION=${UBUNTU_VERSION}" \
           --build-arg "UBUNTU_DIGEST=${UBUNTU_DIGEST}" \
           --build-arg "RUST_TOOLCHAIN=${rust_toolchain}" \
-          --build-arg "UMOCI_VERSION=${UMOCI_VERSION}" \
           --build-arg "TARGETARCH=${OCI_ARCH}" \
           --build-arg "NVAT_VERSION=${nvat_version}" \
           -t "${builder}" \
