@@ -27,8 +27,10 @@ ENV LIBC=gnu
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN mkdir -p "${RUSTUP_HOME}" "${CARGO_HOME}"
+RUN mkdir -p "${RUSTUP_HOME}" "${CARGO_HOME}/bin"
 
+# Ubuntu 24.04's rustup (1.26) expects ${CARGO_HOME}/bin/rustup to exist when
+# updating proxies, even though the archive package installs into /usr/bin.
 RUN apt-get update && \
 	apt-get install -y --no-install-recommends \
 		binutils \
@@ -49,10 +51,12 @@ RUN apt-get update && \
 		perl \
 		pkg-config \
 		protobuf-compiler \
+		rustup \
 		skopeo && \
 	apt-get clean && rm -rf /var/lib/apt/lists/* && \
-	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
-		sh -s -- -y --default-toolchain "${RUST_TOOLCHAIN}" && \
+	ln -s /usr/bin/rustup "${CARGO_HOME}/bin/rustup" && \
+	rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal --no-self-update && \
+	rustup default "${RUST_TOOLCHAIN}" && \
 	curl -fsSL -o /usr/local/bin/umoci \
 		"https://github.com/opencontainers/umoci/releases/download/${UMOCI_VERSION}/umoci.linux.${TARGETARCH}" && \
 	chmod +x /usr/local/bin/umoci
@@ -88,4 +92,4 @@ RUN ARCH="$(uname -m)"; \
 
 # assemble-rootfs.sh runs as the invoking uid so the build artefacts stay
 # writable on the host bind mount; that uid still needs the toolchain.
-RUN chmod -R a+rwX "${RUSTUP_HOME}" "${CARGO_HOME}"
+RUN find "${RUSTUP_HOME}" "${CARGO_HOME}" -not -type l -exec chmod a+rwX {} +
