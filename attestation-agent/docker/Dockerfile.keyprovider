@@ -1,7 +1,7 @@
 # Copyright (c) 2023 by Alibaba.
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
-FROM rust:1.95-slim-bookworm as builder
+FROM rust:1.95-slim-bookworm@sha256:d7482085ff5b415f84dba5647ae71606650bdef00db7aeb69f4b3d170c3e4082 as builder
 
 LABEL org.opencontainers.image.source="https://github.com/confidential-containers/guest-components/blob/main/attestation-agent/docker/Dockerfile.keyprovider"
 
@@ -16,7 +16,7 @@ COPY . .
 RUN cargo build --release -p coco_keyprovider
 RUN mv target/release/coco_keyprovider .
 
-FROM golang:1.21.6-bookworm as skopeo
+FROM golang:1.21.6-bookworm@sha256:3efef61ff1d99c8a90845100e2a7e934b4a5d11b639075dc605ff53c141044fc as skopeo
 RUN apt-get update && apt-get install -y \
 	make\
 	libgpgme-dev \
@@ -37,7 +37,7 @@ ENV DISABLE_DOCS=1
 RUN make bin/skopeo
 RUN make install
 
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
 RUN apt-get update && apt-get install -y \
 	ca-certificates \
 	libdevmapper1.02.1 \
