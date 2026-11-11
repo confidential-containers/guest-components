@@ -40,7 +40,9 @@ pub struct CosignParameters {
     pub key_data: Option<String>,
 
     // SignedIdentity specifies what image identity the signature must be claiming about the image.
-    // Defaults to "match-exact" if not specified.
+    // When omitted, image-rs defaults to "matchRepository" during cosign verification, rather than
+    // upstream containers/image's "matchRepoDigestOrExact", because cosign-produced signatures
+    // consumed here bind only a repository (no tag), not a full reference.
     //
     // This field is optional.
     #[serde(default, rename = "signedIdentity")]
@@ -67,7 +69,8 @@ pub struct SimpleParameters {
     pub key_data: Option<String>,
 
     // SignedIdentity specifies what image identity the signature must be claiming about the image.
-    // Defaults to "match-exact" if not specified.
+    // Defaults to "matchRepoDigestOrExact" if not specified (see simple::judge_single_signature),
+    // matching upstream containers/image.
     //
     // This field is optional.
     #[serde(default, rename = "signedIdentity")]
