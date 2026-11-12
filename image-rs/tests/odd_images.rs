@@ -24,7 +24,7 @@ enum Expectation {
     /// Pull must succeed and this path under rootfs must be absent
     /// (deletion whiteout applied correctly).
     OkPathAbsent(&'static str),
-    /// Pull must fail (e.g. empty local PAX rejected by astral-tokio-tar, #1737).
+    /// Pull must fail (e.g. empty local PAX rejected by the tar decoder, #1737).
     Err,
 }
 
