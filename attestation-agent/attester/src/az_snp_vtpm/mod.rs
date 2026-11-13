@@ -11,12 +11,30 @@ use azure_tpm::{Tpm, TpmCommandExt};
 use kbs_types::HashAlgorithm;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, hex::Hex, serde_as};
+use std::sync::{Mutex, MutexGuard};
 use tokio::task::spawn_blocking;
 use tracing::{debug, info};
 
 type UrlSafeBase64 = Base64<serde_with::base64::UrlSafe>;
 
+/// Serializes access to the vTPM within this process.
+///
+/// The vTPM calls open /dev/tpm0, which the kernel allows only one open file
+/// at a time, and vtpm::get_report_with_report_data holds it for about three
+/// seconds. Without this lock, a call that overlaps another one fails with
+/// EBUSY: detect_platform then returns false and the caller falls back to the
+/// sample attester, while evidence collection fails outright.
+static VTPM_LOCK: Mutex<()> = Mutex::new(());
+
+fn lock_vtpm() -> MutexGuard<'static, ()> {
+    // The guarded state is (), so a poisoned lock carries nothing to repair.
+    VTPM_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 pub fn detect_platform() -> bool {
+    let _vtpm = lock_vtpm();
     match is_snp_cvm() {
         Ok(is_snp) => is_snp,
         Err(err) => {
@@ -101,6 +119,7 @@ fn get_evidence_sync(
     report_data: &[u8],
     cc_eventlog: Option<String>,
 ) -> anyhow::Result<TeeEvidence> {
+    let _vtpm = lock_vtpm();
     let hcl_report = vtpm::get_report_with_report_data(report_data)?;
     let tpm_quote = vtpm::get_quote(report_data)?.into();
     let certs = imds::get_certs()?;
@@ -171,6 +190,7 @@ pub(crate) mod utils {
             bail!("Invalid PCR index: {pcr}");
         }
         info!("Extending PCR {} with {}", pcr, hex::encode(digest));
+        let _vtpm = lock_vtpm();
         vtpm::extend_pcr(pcr, digest)?;
 
         Ok(())
@@ -182,6 +202,7 @@ pub(crate) mod utils {
         if pcr_index > 23 {
             bail!("Invalid PCR index: {pcr_index}");
         }
+        let _vtpm = lock_vtpm();
         let tpm = Tpm::open().context("open TPM device")?;
         let (_, digest) = tpm
             .read_pcrs_sha256(&[pcr_index as u32])
@@ -201,6 +222,42 @@ mod tests {
     const TEST_PEM: &str = "-----BEGIN CERTIFICATE-----
 MIIB0zCCAXqgAwIBAgIJALg0
 -----END CERTIFICATE-----";
+
+    #[test]
+    fn test_vtpm_lock_serializes_callers() {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::time::Duration;
+
+        let inside = Arc::new(AtomicUsize::new(0));
+        let max_inside = Arc::new(AtomicUsize::new(0));
+        let threads: Vec<_> = (0..4)
+            .map(|_| {
+                let (inside, max_inside) = (inside.clone(), max_inside.clone());
+                std::thread::spawn(move || {
+                    let _vtpm = lock_vtpm();
+                    let now = inside.fetch_add(1, Ordering::SeqCst) + 1;
+                    max_inside.fetch_max(now, Ordering::SeqCst);
+                    std::thread::sleep(Duration::from_millis(20));
+                    inside.fetch_sub(1, Ordering::SeqCst);
+                })
+            })
+            .collect();
+        for t in threads {
+            t.join().unwrap();
+        }
+        assert_eq!(max_inside.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn test_vtpm_lock_survives_poisoning() {
+        let _ = std::thread::spawn(|| {
+            let _vtpm = lock_vtpm();
+            panic!("poison the vTPM lock");
+        })
+        .join();
+        drop(lock_vtpm());
+    }
 
     #[test]
     fn test_pem_to_der() {
