@@ -37,7 +37,6 @@ aws-sdk-secretsmanager = { version = "1.109", default-features = false, features
 ] }
 base64 = "0.23.1"
 base64-serde = "0.8"
-bincode = "2.0.1"
 cfg-if = "1.0.4"
 chrono = "0.4.44"
 clap = "~4.6.1"
@@ -56,7 +55,6 @@ rand = "0.10.1"
 reqwest = { version = "0.13", default-features = false, features = [
     "native-tls",
 ] }
-resource_uri = { path = "attestation-agent/deps/resource_uri" }
 ring = "0.17"
 rstest = "0.28"
 serde = { version = "1.0", features = ["derive"] }
@@ -72,7 +70,6 @@ thiserror = "2.0"
 tokio = "1.52"
 toml = "1.0.3"
 tonic = "0.14"
-tonic-build = "0.14"
 tonic-prost = "0.14"
 tonic-prost-build = "0.14"
 tracing = "0.1.44"

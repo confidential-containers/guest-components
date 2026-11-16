@@ -23,9 +23,8 @@ required-features = ["bin", "ttrpc"]
 anyhow.workspace = true
 async-trait.workspace = true
 attester = { path = "../attester", default-features = false }
-crypto = { path = "../deps/crypto" }
+crypto = { path = "../deps/crypto", optional = true }
 base64.workspace = true
-byteorder = "1.5.0"
 clap = { workspace = true, features = ["derive"], optional = true }
 config.workspace = true
 const_format.workspace = true
@@ -38,10 +37,8 @@ protos = { path = "../../protos", default-features = false, optional = true }
 reqwest = { workspace = true, features = ["json"], optional = true }
 serde.workspace = true
 serde_json.workspace = true
-sha2.workspace = true
 shadow-rs = { workspace = true, optional = true }
 strum.workspace = true
-tempfile.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["fs", "sync"] }
 toml.workspace = true
@@ -54,6 +51,7 @@ attester = { path = "../attester", default-features = false, features = [
 ] }
 rstest.workspace = true
 serial_test.workspace = true
+tempfile.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
