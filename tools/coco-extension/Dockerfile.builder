@@ -17,13 +17,11 @@ ARG UBUNTU_VERSION=26.04
 ARG UBUNTU_DIGEST=6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c
 FROM ubuntu:${UBUNTU_VERSION}@sha256:${UBUNTU_DIGEST}
 
-ARG UBUNTU_VERSION
 ARG RUST_TOOLCHAIN
 # Bumping UMOCI_VERSION requires updating the per-arch hashes below, taken
 # from the release's signed umoci.sha256sum.
 ARG UMOCI_VERSION=v0.6.0
 ARG TARGETARCH
-ARG CUDA_KEYRING_VERSION=1.1-1
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV RUSTUP_HOME=/opt/rustup
@@ -42,6 +40,7 @@ RUN apt-get update && \
 		binutils \
 		ca-certificates \
 		clang \
+		cmake \
 		cryptsetup-bin \
 		curl \
 		g++ \
@@ -77,23 +76,33 @@ RUN case "${TARGETARCH}" in \
 	install -m 0755 "${tmpdir}/umoci" /usr/local/bin/umoci && \
 	rm -rf "${tmpdir}"
 
-# NVAT_VERSION: libnvat/libnvat-dev version; keep in sync with install-nvat-sdk/action.yml.
+# nv-attestation-sdk-sys looks for the C header at /usr/include/nvat.h, but
+# cmake installs it under /usr/local/include, hence the symlink below.
 ARG NVAT_VERSION
 RUN if [ "$(uname -m)" = "x86_64" ] && [ -n "${NVAT_VERSION}" ]; then \
-	case "${UBUNTU_VERSION}" in \
-		24.04) nv_repo=ubuntu2404 ;; \
-		26.04) nv_repo=ubuntu2604 ;; \
-		*) echo "no NVIDIA apt repository known for Ubuntu ${UBUNTU_VERSION}" >&2; exit 1 ;; \
-	esac && \
-	tmpdir="$(mktemp -d)" && \
-	curl -fsSL -o "${tmpdir}/cuda-keyring.deb" \
-		"https://developer.download.nvidia.com/compute/cuda/repos/${nv_repo}/x86_64/cuda-keyring_${CUDA_KEYRING_VERSION}_all.deb" && \
-	dpkg -i "${tmpdir}/cuda-keyring.deb" && \
-	rm -rf "${tmpdir}" && \
 	apt-get update && \
 	apt-get install -y --no-install-recommends \
-		"libnvat=${NVAT_VERSION}*" \
-		"libnvat-dev=${NVAT_VERSION}*" && \
+		autoconf \
+		automake \
+		build-essential \
+		libcurl4-openssl-dev \
+		libtool \
+		libxml2-dev \
+		libxmlsec1-dev \
+		zlib1g-dev && \
+	tmpdir="$(mktemp -d)" && \
+	git clone https://github.com/NVIDIA/attestation-sdk "${tmpdir}/attestation-sdk" && \
+	git -C "${tmpdir}/attestation-sdk" fetch --depth=1 origin "${NVAT_VERSION}" && \
+	git -C "${tmpdir}/attestation-sdk" checkout FETCH_HEAD && \
+	cmake -S "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp" \
+		-B "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp/build" \
+		-DCMAKE_BUILD_TYPE=Release && \
+	cmake --build "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp/build" --parallel "$(nproc)" && \
+	cmake --install "${tmpdir}/attestation-sdk/nv-attestation-sdk-cpp/build" && \
+	mkdir -p /usr/include && \
+	ln -sf /usr/local/include/nvat.h /usr/include/nvat.h && \
+	ldconfig && \
+	rm -rf "${tmpdir}" && \
 	apt-get clean && rm -rf /var/lib/apt/lists/*; \
 	fi
 
