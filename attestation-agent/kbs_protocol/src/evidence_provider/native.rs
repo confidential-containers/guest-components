@@ -20,12 +20,17 @@ pub struct NativeEvidenceProvider {
 }
 
 impl NativeEvidenceProvider {
+    /// Detect the primary TEE and the attestable devices, then build their attesters.
     pub fn new() -> Result<Self> {
-        let primary_tee = detect_tee_type();
+        Self::new_with_tees(detect_tee_type(), detect_attestable_devices())
+    }
+
+    /// Build the attesters for TEEs that were already detected, instead of detecting here.
+    pub fn new_with_tees(primary_tee: Tee, additional_tees: Vec<Tee>) -> Result<Self> {
         let primary_attester = BoxedAttester::try_from(primary_tee).map_err(|e| {
             Error::NativeEvidenceProvider(format!("failed to initialize primary attester: {e}"))
         })?;
-        let additional_attesters = detect_attestable_devices()
+        let additional_attesters = additional_tees
             .into_iter()
             .map(|tee| -> Result<_> {
                 let boxed_attester = TryInto::<BoxedAttester>::try_into(tee).map_err(|e| {
@@ -76,5 +81,46 @@ impl EvidenceProvider for NativeEvidenceProvider {
 
     async fn get_tee_type(&self) -> Result<Tee> {
         Ok(self.primary_tee)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case::with_additional_tee(Tee::Sample, vec![Tee::SampleDevice], Some(Tee::SampleDevice))]
+    #[case::without_additional_tees(Tee::Sample, vec![], None)]
+    #[case::explicit_primary_tee(Tee::SampleDevice, vec![], None)]
+    #[tokio::test]
+    async fn new_with_tees_builds_the_given_attesters(
+        #[case] primary_tee: Tee,
+        #[case] additional_tees: Vec<Tee>,
+        #[case] expected_additional: Option<Tee>,
+    ) {
+        let provider = NativeEvidenceProvider::new_with_tees(primary_tee, additional_tees)
+            .expect("build provider");
+        assert_eq!(
+            provider.get_tee_type().await.expect("tee type"),
+            primary_tee
+        );
+        provider
+            .primary_evidence(vec![1, 2, 3])
+            .await
+            .expect("primary evidence");
+        let additional = provider
+            .get_additional_evidence(vec![])
+            .await
+            .expect("additional evidence");
+        match expected_additional {
+            None => assert_eq!(additional, ""),
+            Some(tee) => {
+                let additional: HashMap<Tee, TeeEvidence> =
+                    serde_json::from_str(&additional).expect("json");
+                assert_eq!(additional.len(), 1);
+                assert!(additional.contains_key(&tee));
+            }
+        }
     }
 }
