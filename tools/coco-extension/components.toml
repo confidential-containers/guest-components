@@ -22,6 +22,7 @@ optional_args = [{ when = "initdata_toml_path", args = ["--initdata-toml", "${in
 config        = "${aa_config_path}"
 wait_socket   = "${aa_attestation_socket}"
 timeout_secs  = "${launch_process_timeout}"
+env           = { LD_LIBRARY_PATH = "${extension_root}/usr/local/lib" }
 # The extension ships both the stock attestation-agent and the NVIDIA-attester
 # build; the consumer selects one via the "attester_variant" context value
 # (kata-agent uses "default", NVRC uses "nvidia").
@@ -34,7 +35,7 @@ select        = "${attester_variant}"
   path = "usr/local/bin/attestation-agent-nv"
   # attestation-agent-nv links libnvat.so (bundled in this CoCo extension under
   # usr/local/lib), which dlopens libnvidia-ml.so.1 for GPU attestation evidence.
-  # Only NVAT's own libs need LD_LIBRARY_PATH: NVML lives in the GPU extension,
+  # NVAT and its dependencies use this directory. NVML lives in the GPU extension,
   # which NVRC folds into the guest loader cache before starting kata-agent, so it
   # resolves without a path here (see NVRC gpu::setup).
   env  = { LD_LIBRARY_PATH = "${extension_root}/usr/local/lib" }
@@ -46,13 +47,12 @@ path         = "usr/local/bin/confidential-data-hub"
 config       = "${cdh_config_path}"
 # CDH's secure_mount shells out (by PATH lookup) to cryptsetup for encrypted
 # storage and to mke2fs/mkfs.ext4/dd for the filesystem. cryptsetup is CoCo-only
-# and ships in this extension under usr/sbin; its shared libraries are resolved
-# against the base image, which already carries veritysetup's identical library
-# closure. The plain mkfs/dd tooling also lives in the base image's /sbin and
+# and ships in this extension under usr/sbin, with its shared libraries under
+# usr/local/lib. The plain mkfs/dd tooling lives in the base image's /sbin and
 # /bin. The agent launches CDH with PATH=/bin:/sbin:/usr/bin:/usr/sbin, but
 # setting any env here overrides it wholesale, so prepend the extension's
 # usr/sbin and restore the base dirs.
-env          = { PATH = "${extension_root}/usr/sbin:/bin:/sbin:/usr/bin:/usr/sbin" }
+env          = { PATH = "${extension_root}/usr/sbin:/bin:/sbin:/usr/bin:/usr/sbin", LD_LIBRARY_PATH = "${extension_root}/usr/local/lib" }
 wait_socket  = "${cdh_socket}"
 timeout_secs = "${launch_process_timeout}"
 
@@ -60,5 +60,6 @@ timeout_secs = "${launch_process_timeout}"
 id           = "api-server-rest"
 level        = 3
 path         = "usr/local/bin/api-server-rest"
+env          = { LD_LIBRARY_PATH = "${extension_root}/usr/local/lib" }
 args         = ["--features", "${rest_api_features}"]
 timeout_secs = "0"
