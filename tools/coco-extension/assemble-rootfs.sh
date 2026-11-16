@@ -98,6 +98,10 @@ copy_non_glibc_library_closure() {
 	local dep
 	local dep_path
 	local dep_name
+	local dependencies
+
+	dependencies="$(ldd "${lib}")" || die "Cannot inspect shared libraries for ${lib}"
+	[[ "${dependencies}" != *"not found"* ]] || die "Unresolved shared libraries for ${lib}: ${dependencies}"
 
 	mkdir -p "${dest_dir}"
 
@@ -120,7 +124,7 @@ copy_non_glibc_library_closure() {
 		esac
 
 		install -D -m0755 "${dep_path}" "${dest_dir}/${dep_name}"
-	done < <(ldd "${lib}")
+	done <<< "${dependencies}"
 }
 
 build_nvidia_attestation_agent() {
@@ -185,6 +189,13 @@ install_guest_components() {
 
 	build_nvidia_attestation_agent
 	install_cryptsetup
+
+	# Include dependencies linked directly by the Rust binaries as well as SDKs.
+	local binary
+	for binary in "${ROOTFS_DIR}"/usr/local/bin/* "${ROOTFS_DIR}"/usr/sbin/*; do
+		[[ -f "${binary}" ]] || continue
+		copy_non_glibc_library_closure "${binary}"
+	done
 }
 
 install_pause_bundle() {
