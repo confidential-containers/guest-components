@@ -6,13 +6,12 @@
 
 use std::collections::HashMap;
 
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
-use base64::{Engine, engine::general_purpose::STANDARD};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use resource_uri::ResourceUri;
 use tokio::fs;
 use tracing::warn;
-
-use crate::{Error, Result};
 
 use super::Kbc;
 
@@ -34,9 +33,9 @@ impl Kbc for OfflineFsKbc {
         let resource_path = rid.resource_path();
         self.resources
             .get(&resource_path)
-            .ok_or(Error::KbsClientError(format!(
+            .ok_or(anyhow!(
                 "offline-fs-kbc: resource not found {resource_path}"
-            )))
+            ))
             .cloned()
     }
 }
@@ -63,25 +62,21 @@ impl OfflineFsKbc {
         let file = match fs::read(path).await {
             Ok(f) => f,
             Err(e) => {
-                warn!("Failed to read file {path} to init offline-fs-kbc: {e:?}");
+                warn!("Failed to read file {path} to init: {e:?}");
                 return Ok(());
             }
         };
 
-        let map: HashMap<String, String> = serde_json::from_slice(&file).map_err(|e| {
-            Error::KbsClientError(format!(
-                "offline-fs-kbc: illegal resource file {path}: {e:?}"
-            ))
-        })?;
+        let map: HashMap<String, String> =
+            serde_json::from_slice(&file).context("illegal resource file {path}")?;
         for (k, v) in &map {
-            let value = STANDARD.decode(v).map_err(|e| {
-                Error::KbsClientError(format!(
-                    "offline-fs-kbc: decode value from file {path} failed: {e:?}"
-                ))
-            })?;
+            let value = STANDARD
+                .decode(v)
+                .context("decode value from file {path} failed")?;
+
             if self.resources.insert(k.to_owned(), value).is_some() {
                 warn!(
-                    "detected duplicated resource definition {k} in file {path} when initializing offline-fs-kbc"
+                    "detected duplicated resource definition {k} in file {path} when initializing"
                 );
             }
         }
@@ -91,16 +86,18 @@ impl OfflineFsKbc {
 
 #[cfg(test)]
 mod tests {
-    use base64::{Engine, engine::general_purpose::STANDARD};
+    use base64::{engine::general_purpose::STANDARD, Engine};
     use resource_uri::ResourceUri;
     use rstest::rstest;
 
-    use crate::plugins::kbs::{Kbc, offline_fs::OfflineFsKbc};
+    use crate::kbc::offline_fs::OfflineFsKbc;
 
     #[rstest]
     #[tokio::test]
     #[case("default/key/1", b"key1")]
     async fn test_get_key(#[case] key: &str, #[case] value: &[u8]) {
+        use crate::kbc::Kbc;
+
         let mut kbc = OfflineFsKbc {
             resources: [(key.to_string(), value.to_vec())]
                 .iter()
@@ -135,11 +132,10 @@ mod tests {
         let mut kbc = OfflineFsKbc {
             resources: Default::default(),
         };
-        assert!(
-            kbc.init_with_file(f.path().to_str().unwrap())
-                .await
-                .is_err()
-        );
+        assert!(kbc
+            .init_with_file(f.path().to_str().unwrap())
+            .await
+            .is_err());
     }
 
     #[tokio::test]

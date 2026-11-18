@@ -17,8 +17,6 @@ pub mod aliyun;
 #[cfg(feature = "aws")]
 pub mod aws;
 
-pub mod kbs;
-
 #[derive(AsRefStr, EnumString)]
 pub enum DecryptorProvider {
     #[cfg(feature = "aliyun")]
@@ -52,9 +50,6 @@ pub async fn new_decryptor(
 
 #[derive(AsRefStr, EnumString)]
 pub enum VaultProvider {
-    #[strum(ascii_case_insensitive)]
-    Kbs,
-
     #[cfg(feature = "aliyun")]
     #[strum(ascii_case_insensitive)]
     Aliyun,
@@ -72,8 +67,6 @@ pub async fn new_getter(
     let provider = VaultProvider::from_str(provider_name)
         .map_err(|_| Error::UnsupportedProvider(provider_name.to_string()))?;
     match provider {
-        VaultProvider::Kbs => Ok(Box::new(kbs::KbcClient::new().await?) as Box<dyn Getter>),
-
         #[cfg(feature = "aliyun")]
         VaultProvider::Aliyun => Ok(Box::new(
             aliyun::AliyunKmsClient::from_provider_settings(&_provider_settings).await?,

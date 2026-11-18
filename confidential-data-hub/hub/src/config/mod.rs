@@ -30,24 +30,31 @@ pub const DEFAULT_AA_SOCKET_ADDR: &str =
 pub const DEFAULT_LOG_LEVEL: &str = "info";
 
 #[derive(Clone, Deserialize, Debug, PartialEq)]
-pub struct KbsConfig {
-    pub name: String,
-
-    pub url: String,
-
-    pub kbs_cert: Option<String>,
+#[serde(tag = "name")]
+pub enum KbcConfig {
+    #[serde(rename = "cc_kbc")]
+    Kbs {
+        url: String,
+        kbs_cert: Option<String>,
+    },
+    #[serde(rename = "offline_fs_kbc")]
+    OfflineFs {},
 }
 
-impl KbsConfig {
+impl KbcConfig {
     fn new() -> Result<Self> {
         debug!("Try to get kbc and url from env and kernel commandline.");
         let aa_kbc_params =
-            AaKbcParams::new().context("failed to read aa_kbc_params to initialize KbsConfig")?;
-        Ok(KbsConfig {
-            name: aa_kbc_params.kbc,
-            url: aa_kbc_params.uri,
-            kbs_cert: None,
-        })
+            AaKbcParams::new().context("failed to read aa_kbc_params to initialize KbcConfig")?;
+        let config = match &aa_kbc_params.kbc[..] {
+            "cc_kbc" => Self::Kbs {
+                url: aa_kbc_params.uri,
+                kbs_cert: None,
+            },
+            "offline_fs_kbc" => Self::OfflineFs {},
+            _ => return Err(anyhow::anyhow!("unknown kbc name {}", aa_kbc_params.kbc)),
+        };
+        Ok(config)
     }
 }
 
@@ -100,7 +107,7 @@ fn default_socket_addr() -> String {
 
 #[derive(Clone, Deserialize, Debug, PartialEq)]
 pub struct CdhConfig {
-    pub kbc: KbsConfig,
+    pub kbc: KbcConfig,
 
     #[serde(default)]
     pub aa: AaConfig,
@@ -135,7 +142,7 @@ pub struct CdhConfig {
 impl CdhConfig {
     pub fn default_with_kernel_cmdline() -> Result<Self> {
         Ok(Self {
-            kbc: KbsConfig::new()?,
+            kbc: KbcConfig::new()?,
             aa: AaConfig::default(),
             credentials: Vec::new(),
             socket: default_socket_addr(),
@@ -197,24 +204,9 @@ impl CdhConfig {
 
 impl CdhConfig {
     pub fn set_configuration_envs(&self) -> Result<()> {
-        if env::var("AA_KBC_PARAMS").is_err() {
-            env::set_var(
-                "AA_KBC_PARAMS",
-                format!("{}::{}", self.kbc.name, self.kbc.url),
-            );
-        }
-        if env::var("AA_SOCKET").is_err() {
-            env::set_var("AA_SOCKET", &self.aa.aa_socket);
-        }
-        // KBS configurations
-        if let Some(kbs_cert) = &self.kbc.kbs_cert {
-            env::set_var("KBS_CERT", kbs_cert);
-        }
-
         if self.skip_sealed_secret_verification {
             env::set_var("SKIP_SEALED_SECRET_VERIFICATION", "true");
         }
-
         // Only meaningful when an RPC server exposing the KeyProvider service
         // is compiled in. Library-only builds (e.g. cdh-oneshot) have no
         // UnwrapKey RPC listener, so a generated config would point ocicrypt-rs
@@ -238,7 +230,7 @@ mod tests {
 
     use crate::{
         config::DEFAULT_AA_SOCKET_ADDR, config::DEFAULT_CDH_SOCKET_ADDR, AaConfig, CdhConfig,
-        KbsConfig, LogConfig,
+        KbcConfig, LogConfig,
     };
 
     #[rstest]
@@ -279,11 +271,7 @@ https_proxy = "http://127.0.0.1:8080"
         Some(CdhConfig {
             log: LogConfig::default(),
             aa: AaConfig::default(),
-            kbc: KbsConfig {
-                name: "offline_fs_kbc".to_string(),
-                url: "".to_string(),
-                kbs_cert: Some("".to_string()),
-            },
+            kbc: KbcConfig::OfflineFs {},
             credentials: vec![],
             image: ImageConfig {
                 max_concurrent_layer_downloads_per_image: 3,
@@ -340,11 +328,7 @@ name = "offline_fs_kbc"
     Some(CdhConfig {
         log: LogConfig::default(),
         aa: AaConfig::default(),
-        kbc: KbsConfig {
-            name: "offline_fs_kbc".to_string(),
-            url: "".to_string(),
-            kbs_cert: None,
-        },
+        kbc: KbcConfig::OfflineFs {},
         credentials: vec![],
         image: ImageConfig {
                 sigstore_config_uri: None,
@@ -375,11 +359,7 @@ some_undefined_field = "unknown value"
         aa: AaConfig {
             aa_socket: DEFAULT_AA_SOCKET_ADDR.to_string(),
         },
-        kbc: KbsConfig {
-            name: "offline_fs_kbc".to_string(),
-            url: "".to_string(),
-            kbs_cert: None,
-        },
+        kbc: KbcConfig::OfflineFs {},
         credentials: vec![],
         image: ImageConfig {
                 sigstore_config_uri: None,
@@ -396,6 +376,8 @@ some_undefined_field = "unknown value"
         r#"
 [kbc]
 name = "offline_fs_kbc"
+url = "null"
+kbs_cert = "null"
 
 [image]
 image_security_policy = """
@@ -410,11 +392,7 @@ image_security_policy = """
 "#,
     Some(CdhConfig {
         log: LogConfig::default(),
-        kbc: KbsConfig {
-            name: "offline_fs_kbc".to_string(),
-            url: "".to_string(),
-            kbs_cert: None,
-        },
+        kbc: KbcConfig::OfflineFs {},
         credentials: vec![],
         image: ImageConfig {
                 image_security_policy: Some(
@@ -423,6 +401,26 @@ image_security_policy = """
                 ),
                 ..Default::default()
         },
+        socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
+        skip_sealed_secret_verification: false,
+        aa: AaConfig::default(),
+    })
+    )]
+    #[case(
+        r#"
+[kbc]
+name = "cc_kbc"
+url = "http://127.0.0.1:8080"
+kbs_cert = "test-cert"
+"#,
+    Some(CdhConfig {
+        log: LogConfig::default(),
+        kbc: KbcConfig::Kbs {
+            url: "http://127.0.0.1:8080".to_string(),
+            kbs_cert: Some("test-cert".to_string()),
+        },
+        credentials: vec![],
+        image: ImageConfig::default(),
         socket: DEFAULT_CDH_SOCKET_ADDR.to_string(),
         skip_sealed_secret_verification: false,
         aa: AaConfig::default(),
