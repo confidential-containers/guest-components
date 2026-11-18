@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{env, fs};
+use std::fs;
 
 use anyhow::*;
 use attestation_agent::config::aa_kbc_params::AaKbcParams;
@@ -204,9 +204,6 @@ impl CdhConfig {
 
 impl CdhConfig {
     pub fn set_configuration_envs(&self) -> Result<()> {
-        if self.skip_sealed_secret_verification {
-            env::set_var("SKIP_SEALED_SECRET_VERIFICATION", "true");
-        }
         // Only meaningful when an RPC server exposing the KeyProvider service
         // is compiled in. Library-only builds (e.g. cdh-oneshot) have no
         // UnwrapKey RPC listener, so a generated config would point ocicrypt-rs

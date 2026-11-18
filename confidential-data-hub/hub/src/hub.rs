@@ -68,7 +68,12 @@ impl DataHub for Hub {
     async fn unseal_secret(&self, secret: Vec<u8>) -> Result<Vec<u8>> {
         info!("unseal secret called");
 
-        let res = secret::unseal_secret(&secret).await?;
+        let res = secret::unseal_secret(
+            &secret,
+            self.config.skip_sealed_secret_verification,
+            self.kbc_client.clone(),
+        )
+        .await?;
 
         Ok(res)
     }

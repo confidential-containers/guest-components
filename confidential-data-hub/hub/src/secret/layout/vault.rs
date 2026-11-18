@@ -3,9 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::kbc::{KbcClient, KbcError};
 pub use kms::Annotations;
 pub use kms::ProviderSettings;
 
@@ -18,6 +21,12 @@ pub enum VaultError {
         #[source]
         source: kms::Error,
         context: &'static str,
+    },
+
+    #[error("kbc error when getting vault secret: {source}")]
+    KbcError {
+        #[source]
+        source: KbcError,
     },
 }
 
@@ -37,7 +46,14 @@ pub struct VaultSecret {
 }
 
 impl VaultSecret {
-    pub(crate) async fn unseal(&self) -> Result<Vec<u8>> {
+    pub(crate) async fn unseal(&self, kbc_client: Arc<KbcClient>) -> Result<Vec<u8>> {
+        if self.provider.eq_ignore_ascii_case("kbs") {
+            return kbc_client
+                .get_resource(&self.name)
+                .await
+                .map_err(|source| VaultError::KbcError { source });
+        }
+
         let provider = kms::new_getter(&self.provider, self.provider_settings.clone())
             .await
             .map_err(|e| VaultError::KmsError {
