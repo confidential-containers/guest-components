@@ -46,7 +46,11 @@ impl KbcConfig {
         debug!("Try to get kbc and url from env and kernel commandline.");
         let aa_kbc_params =
             AaKbcParams::new().context("failed to read aa_kbc_params to initialize KbcConfig")?;
-        let config = match &aa_kbc_params.kbc[..] {
+        Self::from_aa_kbc_params(aa_kbc_params)
+    }
+
+    pub fn from_aa_kbc_params(aa_kbc_params: AaKbcParams) -> Result<Self> {
+        let kbc_config = match &aa_kbc_params.kbc[..] {
             "cc_kbc" => Self::Kbs {
                 url: aa_kbc_params.uri,
                 kbs_cert: None,
@@ -54,7 +58,8 @@ impl KbcConfig {
             "offline_fs_kbc" => Self::OfflineFs {},
             _ => return Err(anyhow::anyhow!("unknown kbc name {}", aa_kbc_params.kbc)),
         };
-        Ok(config)
+
+        Ok(kbc_config)
     }
 }
 

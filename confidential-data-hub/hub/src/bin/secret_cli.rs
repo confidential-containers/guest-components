@@ -3,18 +3,24 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use attestation_agent::config::aa_kbc_params::AaKbcParams;
 use jose_jwk::Jwk;
 use p256::elliptic_curve::sec1::ToEncodedPoint;
-use std::{env, path::Path};
+use std::{env, path::Path, sync::Arc};
+use tracing::warn;
 
 use base64::{
     engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
     Engine,
 };
 use clap::{Args, Parser, Subcommand};
-use confidential_data_hub::secret::{
-    layout::{envelope::EnvelopeSecret, vault::VaultSecret},
-    Secret, SecretContent, VERSION,
+use confidential_data_hub::{
+    kbc::KbcClient,
+    secret::{
+        layout::{envelope::EnvelopeSecret, vault::VaultSecret},
+        Secret, SecretContent, VERSION,
+    },
+    KbcConfig, DEFAULT_AA_SOCKET_ADDR,
 };
 use crypto::WrapType;
 #[cfg(feature = "aliyun")]
@@ -205,9 +211,29 @@ async fn unseal_secret(unseal_args: &UnsealArgs) {
         .trim()
         .to_string();
 
-    let secret = Secret::from_signed_base64_string(secret_string, unseal_args.skip_verification)
-        .await
-        .expect("Failed to parse secret.");
+    let kbc_config = match &unseal_args.aa_kbc_params {
+        Some(aa_kbc_params) => {
+            let params = AaKbcParams::try_from(aa_kbc_params.clone())
+                .expect("Failed to parse AA_KBC_PARAMS.");
+            KbcConfig::from_aa_kbc_params(params).expect("Failed to parse AA_KBC_PARAMS.")
+        }
+        None => {
+            warn!("No AA_KBC_PARAMS provided, using default offline_fs_kbc.");
+            KbcConfig::OfflineFs {}
+        }
+    };
+    let kbc_client = Arc::new(
+        KbcClient::new(&kbc_config, DEFAULT_AA_SOCKET_ADDR)
+            .await
+            .expect("Failed to create KbcClient."),
+    );
+    let secret = Secret::from_signed_base64_string(
+        secret_string,
+        unseal_args.skip_verification,
+        kbc_client.clone(),
+    )
+    .await
+    .expect("Failed to parse secret.");
 
     // Setup secret provider
     let secret_provider = match secret.r#type {
@@ -224,18 +250,11 @@ async fn unseal_secret(unseal_args: &UnsealArgs) {
             "AWS_IN_GUEST_KEY_PATH",
             unseal_args.key_path.as_ref().expect("Key Path Required"),
         ),
-        "kbs" => env::set_var(
-            "AA_KBC_PARAMS",
-            unseal_args
-                .aa_kbc_params
-                .as_ref()
-                .expect("aa_kbc_params Required"),
-        ),
         _ => {}
     }
 
     // Unseal the secret
-    let blob = secret.unseal().await.expect("unseal failed");
+    let blob = secret.unseal(kbc_client).await.expect("unseal failed");
 
     // Write the unsealed secret to the filesystem
     let output_file_name = Path::new(&format!("{}.unsealed", unseal_args.file_path)).to_owned();
