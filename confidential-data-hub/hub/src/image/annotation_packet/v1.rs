@@ -3,10 +3,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::sync::Arc;
+
 use resource_uri::ResourceUri;
 use serde::{Deserialize, Serialize};
 
-use crate::image::{Error, Result};
+use crate::{
+    image::{Error, Result},
+    kbc::KbcClient,
+};
 
 /// `AnnotationPacket` is what a encrypted image layer's
 /// `org.opencontainers.image.enc.keys.provider.attestation-agent`
@@ -26,24 +31,17 @@ pub struct AnnotationPacket {
 }
 
 impl AnnotationPacket {
-    pub(crate) async fn unwrap_key(&self) -> Result<Vec<u8>> {
+    pub(crate) async fn unwrap_key(&self, kbc_client: Arc<KbcClient>) -> Result<Vec<u8>> {
         use base64::{engine::general_purpose::STANDARD, Engine};
         use crypto::WrapType;
-        use kms::{plugins::VaultProvider, Annotations, ProviderSettings};
 
         let wrap_type = WrapType::try_from(&self.wrap_type[..])
             .map_err(|_| Error::UnknownWrapType(self.wrap_type.to_string()))?;
-        let kbs_client = kms::new_getter(VaultProvider::Kbs.as_ref(), ProviderSettings::default())
-            .await
-            .map_err(|e| Error::KmsError {
-                context: "create KBC failed",
-                source: e,
-            })?;
         let name = self.kid.whole_uri();
-        let kek = kbs_client
-            .get_secret(&name, &Annotations::default())
+        let kek = kbc_client
+            .get_resource(&name)
             .await
-            .map_err(|e| Error::KmsError {
+            .map_err(|e| Error::KbcClientError {
                 context: "get KEK failed",
                 source: e,
             })?;

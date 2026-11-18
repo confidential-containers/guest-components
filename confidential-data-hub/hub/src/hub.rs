@@ -76,7 +76,7 @@ impl DataHub for Hub {
     async fn unwrap_key(&self, annotation_packet: &[u8]) -> Result<Vec<u8>> {
         info!("unwrap key called");
 
-        let lek = image::unwrap_key(annotation_packet).await?;
+        let lek = image::unwrap_key(annotation_packet, self.kbc_client.clone()).await?;
         Ok(lek)
     }
 
