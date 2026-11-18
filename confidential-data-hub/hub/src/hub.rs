@@ -87,16 +87,11 @@ impl DataHub for Hub {
 
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>> {
         info!("get resource called: {uri}");
-        // to initialize a get_resource_provider client we do not need the ProviderSettings.
-        let client = kms::new_getter("kbs", ProviderSettings::default())
+        let res = self
+            .kbc_client
+            .get_resource(&uri)
             .await
-            .map_err(|e| Error::KbsClient { source: e })?;
-
-        // to get resource using a get_resource_provider client we do not need the Annotations.
-        let res = client
-            .get_secret(&uri, &Annotations::default())
-            .await
-            .map_err(|e| Error::GetResource { source: e })?;
+            .map_err(|e| Error::GetResource { source: e.into() })?;
         Ok(res)
     }
 
