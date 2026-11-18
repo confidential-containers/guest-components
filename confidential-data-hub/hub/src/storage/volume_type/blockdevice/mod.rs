@@ -17,7 +17,6 @@ use crate::{
 use async_trait::async_trait;
 use crypto::rand::random_bytes;
 use error::{BlockDeviceError, Result};
-use kms::{Annotations, ProviderSettings};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use strum::Display;
@@ -27,8 +26,6 @@ use tokio::{
 };
 use tracing::{debug, info};
 use zeroize::Zeroizing;
-
-use resource_uri::ResourceUri;
 
 #[derive(Serialize, Deserialize, Display, Debug, PartialEq, Eq)]
 #[serde(tag = "encryptionType")]
@@ -40,37 +37,6 @@ pub enum BlockDeviceEncryptType {
     #[strum(serialize = "zfs")]
     #[serde(rename = "zfs")]
     Zfs(ZfsParameters),
-}
-
-async fn get_plaintext_key(key_uri: &str) -> Result<Zeroizing<Vec<u8>>> {
-    let key = if key_uri.starts_with("sealed.") {
-        debug!("get key with sealed secret");
-        secret::unseal_secret(key_uri.as_bytes())
-            .await
-            .map_err(|source| BlockDeviceError::GetKeyFailed {
-                source: source.into(),
-            })?
-    } else if ResourceUri::try_from(key_uri).is_ok() {
-        debug!("get key from kbs");
-        kms::new_getter("kbs", ProviderSettings::default())
-            .await
-            .map_err(|source| BlockDeviceError::GetKeyFailed {
-                source: source.into(),
-            })?
-            .get_secret(key_uri, &Annotations::default())
-            .await
-            .map_err(|source| BlockDeviceError::GetKeyFailed {
-                source: source.into(),
-            })?
-    } else if key_uri.starts_with("file://") {
-        debug!("get key from local path");
-        let path = key_uri.trim_start_matches("file://");
-        tokio::fs::read(path).await?
-    } else {
-        return Err(BlockDeviceError::IllegalKeyScheme);
-    };
-
-    Ok(Zeroizing::new(key))
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
