@@ -17,12 +17,13 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     process::Command,
 };
-use tracing::{debug, error};
+use tracing::error;
 
-use crate::secret;
 use error::{AliyunError, Result};
 
-use super::SecureMount;
+use crate::keyprovider::get_plaintext_key;
+
+use super::{KeyProvider, SecureMount};
 
 /// Name of the file that contains ossfs password
 const OSSFS_PASSWD_FILE: &str = "ossfs_passwd";
@@ -62,16 +63,13 @@ struct OssParameters {
     pub volume_id: String,
 }
 
-pub(crate) struct Oss;
+pub(crate) struct Oss<'a> {
+    key_provider: Option<&'a dyn KeyProvider>,
+}
 
-async fn get_plaintext_secret(secret: &str) -> anyhow::Result<String> {
-    if secret.starts_with("sealed.") {
-        debug!("detected sealed secret");
-        let unsealed = secret::unseal_secret(secret.as_bytes()).await?;
-
-        String::from_utf8(unsealed).context("convert to String failed")
-    } else {
-        Ok(secret.into())
+impl<'a> Oss<'a> {
+    pub(crate) fn new(key_provider: Option<&'a dyn KeyProvider>) -> Self {
+        Self { key_provider }
     }
 }
 
@@ -91,7 +89,7 @@ async fn create_random_dir() -> anyhow::Result<String> {
     Ok(path_name)
 }
 
-impl Oss {
+impl Oss<'_> {
     async fn real_mount(
         &self,
         options: &HashMap<String, String>,
@@ -104,9 +102,16 @@ impl Oss {
         let oss_parameter: OssParameters = serde_json::from_str(&parameters)?;
 
         // unseal secret
-        let plain_ak_id = get_plaintext_secret(&oss_parameter.ak_id).await?;
-        let plain_ak_secret = get_plaintext_secret(&oss_parameter.ak_secret).await?;
-
+        let plain_ak_id = get_plaintext_key(&oss_parameter.ak_id, self.key_provider)
+            .await
+            .map_err(|e| AliyunError::KeyProviderError(e))?;
+        let plain_ak_id =
+            String::from_utf8(plain_ak_id.to_vec()).map_err(|e| AliyunError::Utf8Error(e))?;
+        let plain_ak_secret = get_plaintext_key(&oss_parameter.ak_secret, self.key_provider)
+            .await
+            .map_err(|e| AliyunError::KeyProviderError(e))?;
+        let plain_ak_secret =
+            String::from_utf8(plain_ak_secret.to_vec()).map_err(|e| AliyunError::Utf8Error(e))?;
         // create temp directory to store metadata for this mount operation
         let tempdir = tempfile::tempdir()?;
 
@@ -171,7 +176,9 @@ impl Oss {
             }
 
             // get the gocryptfs password
-            let plain_passwd = get_plaintext_secret(&oss_parameter.enc_passwd).await?;
+            let plain_passwd = get_plaintext_key(&oss_parameter.enc_passwd, self.key_provider)
+                .await
+                .map_err(|e| AliyunError::KeyProviderError(e))?;
 
             // create gocryptfs passwd file
             let mut gocryptfs_passwd_path = tempdir.path().to_owned();
@@ -179,7 +186,7 @@ impl Oss {
             let gocryptfs_passwd_path = gocryptfs_passwd_path.to_string_lossy().to_string();
             let mut gocryptfs_passwd = fs::File::create(&gocryptfs_passwd_path).await?;
 
-            gocryptfs_passwd.write_all(plain_passwd.as_bytes()).await?;
+            gocryptfs_passwd.write_all(&plain_passwd).await?;
             gocryptfs_passwd.sync_all().await?;
             drop(gocryptfs_passwd);
 
@@ -246,7 +253,7 @@ impl Oss {
 }
 
 #[async_trait]
-impl SecureMount for Oss {
+impl SecureMount for Oss<'_> {
     /// Mount the Aliyun OSS storage to the given `mount_point``.
     ///
     /// If `oss.encrypted` is set to `gocryptfs`, the OSS storage is a gocryptofs FUSE.

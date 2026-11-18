@@ -97,7 +97,7 @@ impl DataHub for Hub {
 
     async fn secure_mount(&self, storage: Storage) -> Result<String> {
         info!("secure mount called");
-        let res = storage.mount().await?;
+        let res = storage.mount(self).await?;
         Ok(res)
     }
 

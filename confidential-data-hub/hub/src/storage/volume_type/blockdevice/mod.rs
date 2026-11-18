@@ -8,9 +8,9 @@
 
 pub mod error;
 
-use super::SecureMount;
+use super::{KeyProvider, SecureMount};
 use crate::{
-    secret,
+    keyprovider::get_plaintext_key,
     storage::drivers::zfs::{export_zpool, ZfsParameters},
 };
 
@@ -88,7 +88,9 @@ pub struct BlockDeviceParameters {
 }
 
 #[derive(Default)]
-pub struct BlockDevice {
+pub struct BlockDevice<'a> {
+    key_provider: Option<&'a dyn KeyProvider>,
+
     /// Paths to remove on umount (e.g. symlinks created for device target, LUKS header files).
     temp_paths: Vec<String>,
 
@@ -107,7 +109,14 @@ pub struct BlockDevice {
     zfs_pools: Vec<String>,
 }
 
-impl BlockDevice {
+impl<'a> BlockDevice<'a> {
+    pub fn with_key_provider(key_provider: &'a dyn KeyProvider) -> Self {
+        Self {
+            key_provider: Some(key_provider),
+            ..Default::default()
+        }
+    }
+
     /// The BlockDevice mount operation will be performed according to the parameters in the options.
     async fn real_mount(
         &mut self,
@@ -133,7 +142,7 @@ impl BlockDevice {
 
         // 2. get key if the parameter is set
         let key = match &parameters.key {
-            Some(key) => get_plaintext_key(key).await?,
+            Some(key) => get_plaintext_key(key, self.key_provider).await?,
             None => {
                 debug!("generate a random key. All data on the device will be overwritten.");
                 Zeroizing::new(random_bytes::<4096>())
@@ -202,7 +211,7 @@ impl BlockDevice {
 }
 
 #[async_trait]
-impl SecureMount for BlockDevice {
+impl SecureMount for BlockDevice<'_> {
     /// Mount the block device to the given `mount_point``.
     ///
     /// If `options.encrypt_type` is set to `LUKS2`, the device will be formated as a LUKS-encrypted device.
