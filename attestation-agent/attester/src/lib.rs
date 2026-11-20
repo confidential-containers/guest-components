@@ -51,6 +51,9 @@ pub mod nvidia;
 #[cfg(feature = "nvidia-dpu-attester")]
 pub mod nvidia_dpu;
 
+#[cfg(feature = "nitro-enclave-attester")]
+pub mod nitro_enclave;
+
 pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
 
 impl TryFrom<Tee> for BoxedAttester {
@@ -192,6 +195,17 @@ impl TryFrom<Tee> for BoxedAttester {
                     bail!("`nvidia-dpu-attester` feature is not enabled!");
                 }
             }
+            Tee::AwsNitroEnclave => {
+                #[cfg(feature = "nitro-enclave-attester")]
+                {
+                    Box::<nitro_enclave::NitroEnclaveAttester>::default()
+                }
+
+                #[cfg(not(feature = "nitro-enclave-attester"))]
+                {
+                    bail!("`nitro-enclave-attester` feature is not enabled!");
+                }
+            }
         };
 
         Ok(attester)
@@ -303,6 +317,11 @@ pub fn detect_tee_type() -> Tee {
     #[cfg(feature = "se-attester")]
     if se::detect_platform() {
         return Tee::Se;
+    }
+
+    #[cfg(feature = "nitro-enclave-attester")]
+    if nitro_enclave::detect_platform() {
+        return Tee::AwsNitroEnclave;
     }
 
     // Kept as the last entry after all vTPM TEE attesters (i.e., az-*-vtpm-attester).

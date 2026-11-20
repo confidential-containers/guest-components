@@ -80,6 +80,7 @@ se-attester = ["attester/se-attester"]
 tpm-attester = ["attester/tpm-attester"]
 nvidia-attester = ["attester/nvidia-attester"]
 nvidia-dpu-attester = ["attester/nvidia-dpu-attester"]
+nitro-enclave-attester = ["attester/nitro-enclave-attester"]
 
 # Experimental Post-Quantum KEM support (ML-KEM-768+A192KW per
 # [draft-ietf-jose-pqc-kem-05](https://datatracker.ietf.org/doc/html/draft-ietf-jose-pqc-kem-05)). 

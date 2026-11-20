@@ -84,6 +84,7 @@ all-attesters = [
     "tpm-attester",
     "nvidia-attester",
     "nvidia-dpu-attester",
+    "nitro-enclave-attester",
 ]
 tdx-attester = ["kbs_protocol?/tdx-attester", "attester/tdx-attester"]
 tdx-attester-libtdx = [
@@ -113,6 +114,10 @@ nvidia-attester = ["kbs_protocol?/nvidia-attester", "attester/nvidia-attester"]
 nvidia-dpu-attester = [
     "kbs_protocol?/nvidia-dpu-attester",
     "attester/nvidia-dpu-attester",
+]
+nitro-enclave-attester = [
+    "kbs_protocol?/nitro-enclave-attester",
+    "attester/nitro-enclave-attester",
 ]
 
 # Statically compile OpenSSL. Used for musl builds only.

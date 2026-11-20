@@ -43,6 +43,7 @@ fn main() -> std::io::Result<()> {
                 "HYGON_DCU_ATTESTER",
                 "TPM_ATTESTER",
                 "NVIDIA_ATTESTER",
+                "NITRO_ENCLAVE_ATTESTER",
             ],
         );
 

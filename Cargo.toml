@@ -47,7 +47,7 @@ ctr = "0.10.0"
 hex = "0.4.3"
 hmac = "0.13.0"
 josekit = "0.10.3"
-kbs-types = { git = "https://github.com/confidential-containers/kbs-types.git", rev = "1de87bd35bdd8b58a798b4d80fdc20d9830ac52d" }
+kbs-types = { git = "https://github.com/XHawkCorp/kbs-types.git", rev = "09b21c2bc3dddf03e626df1e8b43340b68610eed" } # TODO: confidential-containers/kbs-types once #96 merges
 nix = "0.31"
 openssl = "0.10"
 prost = "0.14"
