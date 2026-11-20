@@ -57,6 +57,7 @@ The `TEE_PLATFORM` parameter can be
 - `snp`/`amd`: for AMD SEV-SNP
 - `az-snp-vtpm`: for AMD SEV-SNP with Azure vTPM
 - `se`: for IBM Secure Execution (SE)
+- `nitro-enclave`: for AWS Nitro Enclaves
 
 By default, the `kbs` feature (`cc_kbc` / CoCo KBS) is enabled in Confidential
 Data Hub. `offline_fs_kbc` is always built. To build without `cc_kbc`, set

@@ -10,6 +10,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
+aws-nitro-enclaves-nsm-api = { version = "0.5.2", optional = true }
 az-snp-vtpm = { version = "0.8.2", default-features = false, features = [
     "attester",
 ], optional = true }
@@ -30,6 +31,7 @@ pem-rfc7468 = { version = "1", optional = true, features = ["alloc"] }
 pv = { version = "0.12.0", package = "s390_pv", optional = true }
 serde.workspace = true
 serde_json.workspace = true
+serde_bytes = { version = "0.11.19", optional = true }
 serde_with.workspace = true
 sev = { version = "7.1.0", default-features = false, features = [
     "snp",
@@ -83,6 +85,7 @@ all-attesters = [
     "tpm-attester",
     "nvidia-attester",
     "nvidia-dpu-attester",
+    "nitro-enclave-attester",
 ]
 
 # tsm-report enables a module that helps attesters to use Linux TSM_REPORTS for generating
@@ -94,6 +97,7 @@ tdx-attest-dcap-ioctls = []
 sgx-attester = ["occlum_dcap"]
 nvidia-attester = ["nv-attestation-sdk"]
 nvidia-dpu-attester = ["p384"]
+nitro-enclave-attester = ["aws-nitro-enclaves-nsm-api", "serde_bytes"]
 az-snp-vtpm-attester = ["az-snp-vtpm", "pem-rfc7468", "azure-tpm"]
 az-tdx-vtpm-attester = [
     "az-snp-vtpm-attester",

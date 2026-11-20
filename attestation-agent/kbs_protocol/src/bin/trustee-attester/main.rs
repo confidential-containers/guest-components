@@ -19,7 +19,8 @@ use tracing_subscriber::{EnvFilter, fmt::Subscriber};
 use kbs_protocol::KbsClientBuilder;
 use kbs_protocol::KbsClientCapabilities;
 use kbs_protocol::ResourceUri;
-use kbs_protocol::evidence_provider::NativeEvidenceProvider;
+use kbs_protocol::evidence_provider::{EvidenceProvider, NativeEvidenceProvider};
+use kbs_types::Tee;
 
 shadow!(build);
 
@@ -56,6 +57,25 @@ enum Commands {
     },
 }
 
+/// The InitData to send with the attestation request.
+///
+/// On AWS Nitro Enclaves the InitData digest is carried in each attestation
+/// document's `user_data`, bound inside the attestation-agent process that was
+/// started with `--initdata-toml`. This separate process never binds it, so the
+/// KBS would receive InitData its evidence does not carry and refuse it: say so
+/// before attesting. Other TEEs keep InitData in a register set at launch,
+/// which every process reports.
+fn initdata_to_send(tee: Tee, initdata: Option<String>) -> Result<Option<String>> {
+    if tee == Tee::AwsNitroEnclave && initdata.is_some() {
+        anyhow::bail!(
+            "--initdata is not supported on AWS Nitro Enclaves: InitData is bound by the \
+             attestation-agent started with --initdata-toml; fetch resources through the \
+             confidential-data-hub, which attests with that attestation-agent"
+        );
+    }
+    Ok(initdata)
+}
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let env_filter = match std::env::var_os("RUST_LOG") {
@@ -77,7 +97,9 @@ async fn main() -> Result<()> {
     debug!("cert_file {cert_file:?}");
 
     // Native evidence provider
-    let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
+    let evidence_provider = NativeEvidenceProvider::new()?;
+    let tee = evidence_provider.get_tee_type().await?;
+    let evidence_provider = Box::new(evidence_provider);
 
     // a kbs_protocol client with evidence_provider
     let mut client_builder = KbsClientBuilder::with_evidence_provider(evidence_provider, &url);
@@ -98,7 +120,7 @@ async fn main() -> Result<()> {
 
     match cli.command {
         Commands::GetResource { path, initdata } => {
-            if let Some(init) = initdata {
+            if let Some(init) = initdata_to_send(tee, initdata)? {
                 client_builder = client_builder.add_initdata(init);
             }
             let mut client = client_builder.build()?;
@@ -122,4 +144,36 @@ async fn main() -> Result<()> {
     };
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const INITDATA: &str = "version = \"0.1.0\"\nalgorithm = \"sha256\"\n";
+
+    #[test]
+    fn initdata_is_refused_up_front_on_aws_nitro_enclaves() {
+        let err = initdata_to_send(Tee::AwsNitroEnclave, Some(INITDATA.into())).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("--initdata-toml"), "{msg}");
+        assert!(msg.contains("confidential-data-hub"), "{msg}");
+    }
+
+    #[test]
+    fn nitro_without_initdata_is_allowed() {
+        assert_eq!(initdata_to_send(Tee::AwsNitroEnclave, None).unwrap(), None);
+    }
+
+    #[test]
+    fn initdata_is_sent_unchanged_on_other_tees() {
+        for tee in [Tee::Tdx, Tee::Snp, Tee::Sample] {
+            assert_eq!(
+                initdata_to_send(tee, Some(INITDATA.into()))
+                    .unwrap()
+                    .as_deref(),
+                Some(INITDATA)
+            );
+        }
+    }
 }
