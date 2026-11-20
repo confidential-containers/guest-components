@@ -20,6 +20,7 @@ pub enum TransportName {
 }
 
 // Image contains information about the image which may be used in signature verification.
+#[derive(Clone)]
 pub struct Image {
     pub reference: Reference,
     // digest format: "digest-algorithm:digest-value"

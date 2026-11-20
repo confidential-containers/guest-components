@@ -11,7 +11,7 @@ use crate::signature::{image, policy::ErrorInfo};
 
 /// The `signedIdentity` field in simple signing. It is a JSON object, specifying what image
 /// identity the signature claims about the image.
-#[derive(Deserialize, Debug, PartialEq, Eq, Serialize)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum PolicyReqMatchType {
     /// `matchExact` match type : the two references must match exactly.
