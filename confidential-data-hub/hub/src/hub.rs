@@ -3,14 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::{collections::HashMap, path::Path};
+use std::{path::Path, sync::Arc};
 
 /// Base directory for CDH runtime data.
 pub(crate) const CDH_BASE_DIR: &str = "/run/confidential-containers/cdh";
 
 use async_trait::async_trait;
 use image_rs::{builder::ClientBuilder, config::ImageConfig, image::ImageClient};
-use kms::{Annotations, ProviderSettings};
 use tokio::sync::{Mutex, OnceCell};
 use tracing::{debug, info, warn};
 
@@ -21,12 +20,12 @@ use protos::ttrpc::aa::attestation_agent::{
 #[cfg(feature = "ttrpc")]
 use protos::ttrpc::aa::attestation_agent_ttrpc::AttestationAgentServiceClient;
 
+use crate::kbc::KbcClient;
 use crate::storage::volume_type::Storage;
 use crate::{image, secret, CdhConfig, DataHub, Error, Result};
 
 pub struct Hub {
-    #[allow(dead_code)]
-    pub(crate) credentials: HashMap<String, String>,
+    kbc_client: Arc<KbcClient>,
     image_client: OnceCell<Mutex<ImageClient>>,
     #[cfg(feature = "ttrpc")]
     aa_client: OnceCell<Option<AttestationAgentServiceClient>>,
@@ -44,15 +43,22 @@ impl Hub {
             .map(|it| (it.path.clone(), it.resource_uri.clone()))
             .collect();
 
-        let mut hub = Self {
-            credentials,
+        let kbc_client = Arc::new(
+            KbcClient::new(&config.kbc, &config.aa.aa_socket)
+                .await
+                .map_err(|e| Error::KbcClientInitialization { source: e.into() })?,
+        );
+
+        Hub::init_kbs_resources(&credentials, kbc_client.clone()).await?;
+
+        let hub = Self {
+            kbc_client,
             config,
             image_client: OnceCell::const_new(),
             #[cfg(feature = "ttrpc")]
             aa_client: OnceCell::const_new(),
         };
 
-        hub.init().await?;
         Ok(hub)
     }
 }
@@ -62,7 +68,12 @@ impl DataHub for Hub {
     async fn unseal_secret(&self, secret: Vec<u8>) -> Result<Vec<u8>> {
         info!("unseal secret called");
 
-        let res = secret::unseal_secret(&secret).await?;
+        let res = secret::unseal_secret(
+            &secret,
+            self.config.skip_sealed_secret_verification,
+            self.kbc_client.clone(),
+        )
+        .await?;
 
         Ok(res)
     }
@@ -70,28 +81,23 @@ impl DataHub for Hub {
     async fn unwrap_key(&self, annotation_packet: &[u8]) -> Result<Vec<u8>> {
         info!("unwrap key called");
 
-        let lek = image::unwrap_key(annotation_packet).await?;
+        let lek = image::unwrap_key(annotation_packet, self.kbc_client.clone()).await?;
         Ok(lek)
     }
 
     async fn get_resource(&self, uri: String) -> Result<Vec<u8>> {
         info!("get resource called: {uri}");
-        // to initialize a get_resource_provider client we do not need the ProviderSettings.
-        let client = kms::new_getter("kbs", ProviderSettings::default())
+        let res = self
+            .kbc_client
+            .get_resource(&uri)
             .await
-            .map_err(|e| Error::KbsClient { source: e })?;
-
-        // to get resource using a get_resource_provider client we do not need the Annotations.
-        let res = client
-            .get_secret(&uri, &Annotations::default())
-            .await
-            .map_err(|e| Error::GetResource { source: e })?;
+            .map_err(|e| Error::GetResource { source: e.into() })?;
         Ok(res)
     }
 
     async fn secure_mount(&self, storage: Storage) -> Result<String> {
         info!("secure mount called");
-        let res = storage.mount().await?;
+        let res = storage.mount(self).await?;
         Ok(res)
     }
 

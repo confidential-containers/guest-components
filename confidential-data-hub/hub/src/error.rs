@@ -10,16 +10,16 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("kbs client initialization failed")]
-    KbsClient {
+    #[error("kbc client initialization failed: {source}")]
+    KbcClientInitialization {
         #[source]
-        source: kms::Error,
+        source: anyhow::Error,
     },
 
     #[error("Get Resource failed: {source}")]
     GetResource {
         #[source]
-        source: kms::Error,
+        source: anyhow::Error,
     },
 
     #[error("Decrypt Image (UnwrapKey) failed")]
@@ -54,8 +54,8 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case(Error::KbsClient { source: kms::Error::KbsClientError("details".into()) }, "kbs client initialization failed")]
-    #[case(Error::GetResource { source: kms::Error::KbsClientError("details".into()) }, "Get Resource failed: Kbs client error: details")]
+    #[case(Error::KbcClientInitialization { source: anyhow!("details") }, "kbc client initialization failed: details")]
+    #[case(Error::GetResource { source: anyhow!("details") }, "Get Resource failed: details")]
     #[case(
         Error::UnsealSecret(secret::SecretError::VersionError),
         "Unseal Secret failed"

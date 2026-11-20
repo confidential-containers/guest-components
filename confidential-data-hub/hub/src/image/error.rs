@@ -5,6 +5,8 @@
 
 use thiserror::Error;
 
+use crate::kbc::KbcError;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
@@ -36,5 +38,12 @@ pub enum Error {
     ParseAnnotationPacket {
         #[source]
         source: anyhow::Error,
+    },
+
+    #[error("KBC Client Error: {source}")]
+    KbcClientError {
+        context: &'static str,
+        #[source]
+        source: KbcError,
     },
 }

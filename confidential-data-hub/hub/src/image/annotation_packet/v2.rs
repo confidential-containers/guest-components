@@ -8,11 +8,13 @@
 
 use anyhow::anyhow;
 use base64::{engine::general_purpose::STANDARD, Engine};
-use kms::{plugins::VaultProvider, Annotations, ProviderSettings};
+use kms::{Annotations, ProviderSettings};
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
 use crate::image::{Error, Result};
+
+pub const DEFAULT_PROVIDER: &str = "kbs";
 
 pub const DEFAULT_VERSION: &str = "0.1.0";
 
@@ -53,12 +55,12 @@ pub struct AnnotationPacketV2 {
     pub annotations: Annotations,
 }
 
-fn default_version() -> String {
-    DEFAULT_VERSION.to_string()
+fn default_provider() -> String {
+    DEFAULT_PROVIDER.to_string()
 }
 
-fn default_provider() -> String {
-    VaultProvider::Kbs.as_ref().to_lowercase().to_string()
+fn default_version() -> String {
+    DEFAULT_VERSION.to_string()
 }
 
 impl TryInto<super::v1::AnnotationPacket> for AnnotationPacketV2 {
@@ -71,9 +73,9 @@ impl TryInto<super::v1::AnnotationPacket> for AnnotationPacketV2 {
             });
         }
 
-        if self.provider != VaultProvider::Kbs.as_ref().to_lowercase() {
+        if self.provider != DEFAULT_PROVIDER {
             return Err(Error::ParseAnnotationPacket {
-                source: anyhow!("Provider must be `kbs`."),
+                source: anyhow!("Provider must be `{DEFAULT_PROVIDER}`."),
             });
         }
 
@@ -107,38 +109,23 @@ impl TryInto<super::v1::AnnotationPacket> for AnnotationPacketV2 {
 }
 
 impl AnnotationPacketV2 {
-    pub async fn unwrap_key(&self) -> Result<Vec<u8>> {
-        let lek = match &self.provider[..] {
-            "kbs" => {
-                let anno_v1: super::v1::AnnotationPacket = self.clone().try_into()?;
-                anno_v1.unwrap_key().await?
-            }
-            kms => {
-                let mut kms_client = kms::new_decryptor(kms, self.provider_settings.clone())
-                    .await
-                    .map_err(|e| Error::KmsError {
-                        context: "create KMS client",
+    pub async fn unwrap_key(&self, kms_client: &mut Box<dyn kms::Decrypter>) -> Result<Vec<u8>> {
+        let lek = kms_client
+            .decrypt(
+                &STANDARD
+                    .decode(&self.wrapped_data)
+                    .map_err(|e| Error::Base64DecodeFailed {
+                        context: "base64 decode `wrapped_data`",
                         source: e,
-                    })?;
-
-                kms_client
-                    .decrypt(
-                        &STANDARD.decode(&self.wrapped_data).map_err(|e| {
-                            Error::Base64DecodeFailed {
-                                context: "base64 decode `wrapped_data`",
-                                source: e,
-                            }
-                        })?,
-                        &self.kid,
-                        &self.annotations,
-                    )
-                    .await
-                    .map_err(|e| Error::KmsError {
-                        context: "decrypt LEK with KEK",
-                        source: e,
-                    })?
-            }
-        };
+                    })?,
+                &self.kid,
+                &self.annotations,
+            )
+            .await
+            .map_err(|e| Error::KmsError {
+                context: "decrypt LEK with KEK",
+                source: e,
+            })?;
         Ok(lek)
     }
 }

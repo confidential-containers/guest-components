@@ -18,6 +18,12 @@ pub enum AliyunError {
     #[error("I/O error")]
     IOError(#[from] std::io::Error),
 
+    #[error("Key provider error: {0}")]
+    KeyProviderError(#[from] crate::keyprovider::KeyProviderError),
+
+    #[error("Failed to convert to UTF-8: {0}")]
+    Utf8Error(#[from] std::string::FromUtf8Error),
+
     #[error("Failed to mount oss")]
     OssfsMountFailed,
 

@@ -38,6 +38,12 @@ pub enum SecretError {
     #[error("Failed to get key from KMS: {0}")]
     KmsError(#[from] kms::Error),
 
+    #[error("KBC Client Error: {source}")]
+    KbcClientError {
+        #[source]
+        source: anyhow::Error,
+    },
+
     #[error("IO Operation Failed: {0}")]
     IoError(#[from] std::io::Error),
 }

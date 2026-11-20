@@ -7,6 +7,7 @@ use crate::config::kbs::KbsConfig;
 
 use anyhow::*;
 use kbs_protocol::{KbsClientBuilder, TeeKeyAlgorithm, evidence_provider::NativeEvidenceProvider};
+use kbs_types::Tee;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -15,17 +16,21 @@ struct Message {
     tee_keypair: String,
 }
 
-#[derive(Default)]
 pub struct KbsTokenGetter {
     kbs_host_url: String,
     cert: Option<String>,
     tee_key_algorithm: TeeKeyAlgorithm,
     attestation_policy_selector: String,
+    primary_tee: Tee,
+    additional_tees: Vec<Tee>,
 }
 
 impl KbsTokenGetter {
     pub async fn get_token(&self, initdata: Option<&str>) -> Result<Vec<u8>> {
-        let evidence_provider = Box::new(NativeEvidenceProvider::new()?);
+        let evidence_provider = Box::new(NativeEvidenceProvider::new_with_tees(
+            self.primary_tee,
+            self.additional_tees.clone(),
+        )?);
 
         let mut builder =
             KbsClientBuilder::with_evidence_provider(evidence_provider, &self.kbs_host_url);
@@ -57,12 +62,14 @@ impl KbsTokenGetter {
 }
 
 impl KbsTokenGetter {
-    pub fn new(config: &KbsConfig) -> Self {
+    pub fn new(config: &KbsConfig, primary_tee: Tee, additional_tees: Vec<Tee>) -> Self {
         Self {
             kbs_host_url: config.url.clone(),
             cert: config.cert.clone(),
             tee_key_algorithm: config.tee_key_algorithm,
             attestation_policy_selector: config.attestation_policy_selector.clone(),
+            primary_tee,
+            additional_tees,
         }
     }
 }

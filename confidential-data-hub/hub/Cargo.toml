@@ -52,6 +52,10 @@ jose-b64 = "0.1.2"
 jose-jwa = "0.1.2"
 jose-jwk = "0.1.2"
 jose-jws = "0.1.2"
+kbs_protocol = { path = "../../attestation-agent/kbs_protocol", default-features = false, features = [
+    "passport",
+    "aa_ttrpc",
+], optional = true }
 kms = { path = "../kms", default-features = false }
 nix.workspace = true
 p256 = "0.13.2"
@@ -101,8 +105,8 @@ aliyun = ["kms/aliyun"]
 # support aws stacks (KMS, Secrets Manager)
 aws = ["kms/aws"]
 
-# support coco-KBS to provide confidential resources
-kbs = ["kms/kbs"]
+# support coco-KBS (`cc_kbc`) to provide confidential resources
+kbs = ["dep:kbs_protocol"]
 
 # Binary RPC type
 bin = ["clap", "shadow-rs", "tracing-subscriber"]

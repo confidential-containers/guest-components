@@ -15,12 +15,12 @@ use p256::ecdsa::{signature::Signer, SigningKey};
 use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::sync::Arc;
 
 use self::layout::{envelope::EnvelopeSecret, vault::VaultSecret};
 
-use kms::{Annotations, ProviderSettings};
-
 use crate::hub::CDH_BASE_DIR;
+use crate::kbc::KbcClient;
 use resource_uri::ResourceUri;
 
 pub use error::{Result, SecretError};
@@ -45,32 +45,36 @@ pub struct Secret {
 
 pub const VERSION: &str = "0.1.0";
 
-pub async fn unseal_secret(secret: &[u8]) -> Result<Vec<u8>> {
+pub async fn unseal_secret(
+    secret: &[u8],
+    skip_verification: bool,
+    kbc_client: Arc<KbcClient>,
+) -> Result<Vec<u8>> {
     let secret_string = String::from_utf8(secret.to_vec())
         .map_err(|_| SecretError::ParseFailed("Secret string must be UTF-8"))?;
 
-    let skip_verification =
-        std::env::var("SKIP_SEALED_SECRET_VERIFICATION").unwrap_or("".to_string()) == "true";
-
-    let secret = Secret::from_signed_base64_string(secret_string, skip_verification).await?;
-    secret.unseal().await
+    let secret =
+        Secret::from_signed_base64_string(secret_string, skip_verification, kbc_client.clone())
+            .await?;
+    secret.unseal(kbc_client).await
 }
 
 impl Secret {
-    pub async fn unseal(&self) -> Result<Vec<u8>> {
+    pub async fn unseal(&self, kbc_client: Arc<KbcClient>) -> Result<Vec<u8>> {
         if self.version != VERSION {
             return Err(SecretError::VersionError);
         }
 
         match &self.r#type {
             SecretContent::Envelope(env) => env.unseal().await.map_err(Into::into),
-            SecretContent::Vault(v) => v.unseal().await.map_err(Into::into),
+            SecretContent::Vault(v) => v.unseal(kbc_client).await.map_err(Into::into),
         }
     }
 
     pub async fn from_signed_base64_string(
         secret: String,
         skip_verification: bool,
+        kbc_client: Arc<KbcClient>,
     ) -> Result<Self> {
         let payload = match skip_verification {
             false => {
@@ -97,7 +101,7 @@ impl Secret {
 
                 let sig = jws.signature.signature.to_vec();
 
-                let verification_key = Secret::get_kid(kid).await?;
+                let verification_key = Secret::get_kid(kid, kbc_client).await?;
 
                 // Try validating the secret with the key using whatever
                 // algorithm is specified in the JWS header.
@@ -142,12 +146,12 @@ impl Secret {
     /// If the key id is in the form of a resource URI, use the KMS.
     /// Otherwise, look for a local credential (provisioned to the fs
     /// at CDH startup).
-    async fn get_kid(kid: &String) -> Result<Vec<u8>> {
+    async fn get_kid(kid: &String, kbc_client: Arc<KbcClient>) -> Result<Vec<u8>> {
         if ResourceUri::try_from(kid.as_str()).is_ok() {
-            let verification_key = kms::new_getter("kbs", ProviderSettings::default())
-                .await?
-                .get_secret(kid, &Annotations::default())
-                .await?;
+            let verification_key = kbc_client
+                .get_resource(kid)
+                .await
+                .map_err(|e| SecretError::KbcClientError { source: e.into() })?;
 
             return Ok(verification_key);
         }
@@ -231,15 +235,21 @@ impl Secret {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use assert_json_diff::assert_json_eq;
     use crypto::WrapType;
     use jose_jwk::Jwk;
     use rstest::rstest;
     use serial_test::serial;
 
-    use crate::secret::layout::{
-        envelope::EnvelopeSecret,
-        vault::{Annotations, ProviderSettings, VaultSecret},
+    use crate::{
+        kbc::KbcClient,
+        secret::layout::{
+            envelope::EnvelopeSecret,
+            vault::{Annotations, ProviderSettings, VaultSecret},
+        },
+        KbcConfig,
     };
 
     use super::{Secret, SecretContent, SIGNING_CREDENTIALS_PATH};
@@ -298,9 +308,16 @@ mod tests {
             .to_signed_base64_string(jwk, kid)
             .expect("serialization failed");
 
-        let secret_from_string = Secret::from_signed_base64_string(secret_string, false)
-            .await
-            .expect("deserialization failed");
+        let kbc_client_config = KbcConfig::OfflineFs {};
+        let kbc_client = Arc::new(
+            KbcClient::new(&kbc_client_config, "")
+                .await
+                .expect("failed to create kbc client"),
+        );
+        let secret_from_string =
+            Secret::from_signed_base64_string(secret_string, false, kbc_client)
+                .await
+                .expect("deserialization failed");
 
         assert_eq!(secret_from_string, secret_object);
     }
@@ -344,9 +361,17 @@ mod tests {
         }
         let secret_string = chars.into_iter().collect();
 
-        assert!(Secret::from_signed_base64_string(secret_string, false)
-            .await
-            .is_err());
+        let kbc_client_config = KbcConfig::OfflineFs {};
+        let kbc_client = Arc::new(
+            KbcClient::new(&kbc_client_config, "")
+                .await
+                .expect("failed to create kbc client"),
+        );
+        assert!(
+            Secret::from_signed_base64_string(secret_string, false, kbc_client)
+                .await
+                .is_err()
+        );
     }
 
     // Negative test to check a signature with the wrong key.
@@ -379,9 +404,17 @@ mod tests {
             .to_signed_base64_string(jwk2, kid)
             .expect("serialization failed");
 
-        assert!(Secret::from_signed_base64_string(secret_string, false)
-            .await
-            .is_err());
+        let kbc_client_config = KbcConfig::OfflineFs {};
+        let kbc_client = Arc::new(
+            KbcClient::new(&kbc_client_config, "")
+                .await
+                .expect("failed to create kbc client"),
+        );
+        assert!(
+            Secret::from_signed_base64_string(secret_string, false, kbc_client)
+                .await
+                .is_err()
+        );
     }
 
     #[rstest]

@@ -9,6 +9,8 @@ pub mod blockdevice;
 
 use std::{collections::HashMap, str::FromStr};
 
+use crate::keyprovider::KeyProvider;
+
 use super::error::Result;
 
 use async_trait::async_trait;
@@ -55,18 +57,18 @@ pub trait SecureMount {
 }
 
 impl Storage {
-    pub async fn mount(&self) -> Result<String> {
+    pub async fn mount(&self, key_provider: &dyn KeyProvider) -> Result<String> {
         let volume_type = Volume::from_str(&self.volume_type)?;
         match volume_type {
             #[cfg(feature = "aliyun")]
             Volume::AliOss => {
-                let mut oss = aliyun::Oss {};
+                let mut oss = aliyun::Oss::new(Some(key_provider));
                 oss.mount(&self.options, &self.flags, &self.mount_point)
                     .await?;
                 Ok(self.mount_point.clone())
             }
             Volume::BlockDevice => {
-                let mut bd = blockdevice::BlockDevice::default();
+                let mut bd = blockdevice::BlockDevice::with_key_provider(key_provider);
                 bd.mount(&self.options, &self.flags, &self.mount_point)
                     .await?;
                 Ok(self.mount_point.clone())

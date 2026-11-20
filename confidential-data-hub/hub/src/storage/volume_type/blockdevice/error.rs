@@ -5,6 +5,8 @@
 
 use thiserror::Error;
 
+use crate::keyprovider::KeyProviderError;
+
 pub type Result<T> = std::result::Result<T, BlockDeviceError>;
 
 #[derive(Error, Debug)]
@@ -27,11 +29,8 @@ pub enum BlockDeviceError {
     #[error("The scheme of the key uri should be `kbs`, `file` or `sealed`")]
     IllegalKeyScheme,
 
-    #[error("Failed to get key: {source}")]
-    GetKeyFailed {
-        #[source]
-        source: anyhow::Error,
-    },
+    #[error("Failed to get key: {0}")]
+    GetKeyFailed(#[from] KeyProviderError),
 
     #[error("Error when doing luks2 operation: {source}")]
     Luks2Error {

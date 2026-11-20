@@ -20,12 +20,16 @@ pub struct NativeEvidenceProvider {
 }
 
 impl NativeEvidenceProvider {
+    /// Detect the primary TEE and the attestable devices, then build their attesters.
     pub fn new() -> Result<Self> {
-        let primary_tee = detect_tee_type();
+        Self::new_with_tees(detect_tee_type(), detect_attestable_devices())
+    }
+
+    pub fn new_with_tees(primary_tee: Tee, additional_tees: Vec<Tee>) -> Result<Self> {
         let primary_attester = BoxedAttester::try_from(primary_tee).map_err(|e| {
             Error::NativeEvidenceProvider(format!("failed to initialize primary attester: {e}"))
         })?;
-        let additional_attesters = detect_attestable_devices()
+        let additional_attesters = additional_tees
             .into_iter()
             .map(|tee| -> Result<_> {
                 let boxed_attester = TryInto::<BoxedAttester>::try_into(tee).map_err(|e| {
