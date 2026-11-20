@@ -5,6 +5,8 @@ The Purpose of this secure storage feature is:
 1. Mounting external storage from guest instead of host which would then share it to guest, this is due to performance consideration.
 2. The unencrypted data in storage could only be accessed within TEE, that is why we call it secure storage.
 
+For the proposed manifest-driven persistent-volume API, see [Confidential Persistent Volumes](CONFIDENTIAL_PERSISTENT_VOLUMES.md).
+
 ## Architecture
 ![architecture](./images/secure_storage.png)
 
