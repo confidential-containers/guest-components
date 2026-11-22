@@ -260,6 +260,10 @@ impl AttestationAPIs for AttestationAgent {
         content: &str,
         register_index: Option<u64>,
     ) -> Result<RuntimeMeasurement> {
+        // Verifiers trust exactly one InitData event, the one AA records itself.
+        if domain == INITDATA_EVENT_DOMAIN && operation == INITDATA_EVENT_OPERATION {
+            bail!("the {operation} event is recorded by AA itself");
+        }
         let Some(ref eventlog) = self.eventlog else {
             return Ok(RuntimeMeasurement::NotSupported);
         };
@@ -516,5 +520,30 @@ mod tests {
                 .is_err()
         );
         assert_eq!(rtmr3(&registers), None);
+    }
+
+    #[tokio::test]
+    async fn test_extend_runtime_measurement_rejects_the_init_data_event() {
+        let tmp = tempfile::tempdir().unwrap();
+        let registers = Registers::default();
+        let aa = agent(tmp.path(), &registers).await;
+
+        let content = format!(r#"{{"digest":"sha384:{}"}}"#, "01".repeat(48));
+        let result = aa
+            .extend_runtime_measurement(
+                INITDATA_EVENT_DOMAIN,
+                INITDATA_EVENT_OPERATION,
+                &content,
+                None,
+            )
+            .await;
+        assert!(result.is_err());
+        assert_eq!(rtmr3(&registers), None);
+
+        // Other operations in the domain are still recorded.
+        aa.extend_runtime_measurement(INITDATA_EVENT_DOMAIN, "PullImage", "{}", None)
+            .await
+            .unwrap();
+        assert!(rtmr3(&registers).is_some());
     }
 }
