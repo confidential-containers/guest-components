@@ -43,7 +43,7 @@ sha2.workspace = true
 sigstore = { version = "0.15.0", default-features = false, optional = true }
 strum.workspace = true
 strum_macros = "0.28"
-astral-tokio-tar = "0.7.0"
+tar-framing = "0.0.16"
 thiserror.workspace = true
 tokio.workspace = true
 tokio-util = { version = "0.7.18", features = ["io-util"] }
@@ -60,6 +60,8 @@ zstd = "0.14"
 anyhow.workspace = true
 
 [dev-dependencies]
+astral-tokio-tar = "0.7.0" # test Builder only (uid/gid/mtime fixtures)
+tar-codec = "0.0.16" # test encoder only
 cfg-if.workspace = true
 criterion = "0.8.2"
 nix = { workspace = true, features = ["user"] }
