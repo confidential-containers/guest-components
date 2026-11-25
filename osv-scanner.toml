@@ -1,0 +1,92 @@
+# osv-scanner.toml
+#
+# Ignore list for OSV-Scanner.
+# Add [[IgnoredVulns]] entries to suppress specific vulnerability IDs that are
+# known false-positives or have no upstream fix available yet.
+#
+# Format:
+#
+#   [[IgnoredVulns]]
+#   id = "RUSTSEC-YYYY-NNNN"
+#   reason = "Why this is suppressed"
+#   ignoreUntil = 2027-01-01
+#
+# ignoreUntil is a TOML local date. Once it has passed, the entry no longer
+# suppresses the finding and the scan fails, which forces a review. The CI
+# workflows pin OSV-Scanner v2.7.0, which only reads ignoreUntil for
+# IgnoredVulns; newer releases deprecate it in favour of effectiveUntil.
+#
+# Every entry below was taken from the scan of Cargo.lock at the time
+# OSV-Scanner was introduced. Remove an entry as soon as the dependency
+# is updated or replaced.
+
+# --- Fix available, to be applied by a lockfile update ---------------------
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0486"
+reason = "rustix 1.1.4, xattr functions mark unwritten bytes as initialized. Fixed in 1.1.6; lockfile bump pending."
+ignoreUntil = 2027-01-05
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0538"
+reason = "quinn-udp 0.5.14, receive loop can spin after a truncated datagram. Fixed in 0.5.16; lockfile bump pending."
+ignoreUntil = 2027-01-05
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0594"
+reason = "cookie 0.18.1 (via reqwest cookie_store), private cookie nonces can repeat after fork. Fixed in 0.18.3; lockfile bump pending."
+ignoreUntil = 2027-01-05
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0592"
+reason = "url 2.5.8, stack overflow in Url::origin() on nested blob: URLs. Fixed in 2.5.9; lockfile bump pending."
+ignoreUntil = 2027-01-05
+
+# --- Pulled in by a dependency we do not control ---------------------------
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2023-0071"
+reason = "rsa 0.9.10 (Marvin attack), required via jose-jwk and openidconnect/sigstore. Fix is in rsa 0.10, which those crates do not use yet."
+ignoreUntil = 2027-05-31
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0387"
+reason = "crypto-bigint 0.5.5, required via pgp (cx448) and elliptic-curve 0.13. Fix is in 0.7.x, which those crates do not use yet."
+ignoreUntil = 2027-05-31
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0441"
+reason = "pin-utils 0.1.0 is unmaintained. Required via nix 0.26 from ttrpc 0.10."
+ignoreUntil = 2027-05-31
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0141"
+reason = "bincode 1.3.3 is unmaintained. Required only via csv-rs (attester)."
+ignoreUntil = 2027-05-31
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0258"
+reason = "h2 0.3.27 (unbounded empty DATA frames), required via hyper 0.14 used by api-server-rest, attester and csv-rs. Fix is in h2 0.4.16, which needs a hyper 1.x migration."
+ignoreUntil = 2027-05-31
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0440"
+reason = "astral-tokio-tar is unmaintained (0.7.1 via image-rs layer unpacking, 0.6.4 via testcontainers in tests). No replacement is selected yet."
+ignoreUntil = 2027-05-31
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0543"
+reason = "chrono 0.4.45 is flagged unmaintained. Required via oci-client, oauth2 and others; widely used with no alternative."
+ignoreUntil = 2027-05-31
+
+# --- Direct dependency, replacement planned --------------------------------
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0449"
+reason = "unsafe-libyaml 0.2.11 is unmaintained, via the deprecated serde_yaml 0.9 in image-rs. To be removed by replacing serde_yaml."
+ignoreUntil = 2027-05-31
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0069"
+reason = "daemonize 0.5.0 is unmaintained. Used only by coco_keyprovider for its --daemon mode; replacement needs separate testing."
+ignoreUntil = 2027-05-31
