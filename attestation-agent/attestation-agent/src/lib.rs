@@ -194,6 +194,8 @@ impl AttestationAPIs for AttestationAgent {
                         .ok_or(anyhow::anyhow!(
                             "kbs token config not configured in config file"
                         ))?,
+                    self.primary_tee,
+                    self.get_additional_tees(),
                 )
                 .get_token(self.initdata.as_deref())
                 .await
@@ -211,6 +213,7 @@ impl AttestationAPIs for AttestationAgent {
                         .ok_or(anyhow::anyhow!(
                             "coco_as token config not configured in config file"
                         ))?,
+                    self.primary_tee,
                 )
                 .get_token()
                 .await

@@ -3,17 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::env;
-
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use kbs_protocol::{
-    KbsClientCapabilities, ResourceUri,
     client::KbsClient as KbsProtocolClient,
     token_provider::{AATokenProvider, TokenProvider},
+    KbsClientCapabilities, ResourceUri,
 };
 use tracing::{info, warn};
-
-use crate::{Error, Result};
 
 use super::Kbc;
 
@@ -22,32 +19,31 @@ pub struct CcKbc {
 }
 
 impl CcKbc {
-    pub async fn new(kbs_host_url: &str, aa_socket: &str) -> Result<Self> {
+    pub async fn new(
+        kbs_host_url: &str,
+        kbs_cert: Option<&String>,
+        aa_socket: &str,
+    ) -> Result<Self> {
         let token_provider = AATokenProvider::new_with_socket(aa_socket)
             .await
-            .map_err(|e| {
-                Error::KbsClientError(format!("create AA token provider failed: {e:?}"))
-            })?;
+            .context("create AA token provider failed")?;
         let client = kbs_protocol::KbsClientBuilder::with_token_provider(
             Box::new(token_provider),
             kbs_host_url,
         );
 
-        let client = match env::var("KBS_CERT") {
-            Ok(cert_pem) => {
+        let client = match kbs_cert {
+            Some(cert_pem) => {
                 info!("Use KBS public key cert");
-                client.add_kbs_cert(&cert_pem)
+                client.add_kbs_cert(cert_pem)
             }
-            Err(e) => {
-                warn!("KBS_CERT get failed: {e:?}. Use no KBS public key certs.");
+            None => {
+                warn!("Use no KBS public key certs.");
                 client
             }
         };
 
-        let client = client
-            .build()
-            .map_err(|e| Error::KbsClientError(format!("create kbs client failed: {e:?}")))?;
-
+        let client = client.build().context("cc-kbc create kbc client failed")?;
         Ok(Self { client })
     }
 }
@@ -59,7 +55,7 @@ impl Kbc for CcKbc {
             .client
             .get_resource(rid)
             .await
-            .map_err(|e| Error::KbsClientError(format!("get resource failed: {e:?}")))?;
+            .context("get resource failed")?;
         Ok(secret)
     }
 }

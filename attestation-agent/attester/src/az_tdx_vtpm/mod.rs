@@ -4,7 +4,7 @@
 //
 
 use super::{Attester, InitDataResult, TeeEvidence};
-use crate::az_snp_vtpm::{TpmQuote, utils};
+use crate::az_snp_vtpm::{TpmQuote, utils, utils::vtpm_lock};
 use crate::utils::{read_eventlog, truncate_digest};
 use anyhow::*;
 use az_tdx_vtpm::{hcl, is_tdx_cvm, tdx::TdReport, vtpm};
@@ -20,6 +20,7 @@ use zerocopy::IntoBytes;
 type UrlSafeBase64 = Base64<serde_with::base64::UrlSafe>;
 
 pub fn detect_platform() -> bool {
+    let _lock = vtpm_lock();
     match is_tdx_cvm() {
         Ok(tdx) => tdx,
         Err(err) => {
@@ -63,10 +64,15 @@ fn get_evidence_sync(
     report_data: &[u8],
     cc_eventlog: Option<String>,
 ) -> anyhow::Result<TeeEvidence> {
-    let hcl_report = vtpm::get_report_with_report_data(report_data)?;
+    let (hcl_report, tpm_quote) = {
+        let _lock = vtpm_lock();
+        let hcl_report = vtpm::get_report_with_report_data(report_data)?;
+        let tpm_quote = vtpm::get_quote(report_data)?.into();
+        (hcl_report, tpm_quote)
+    };
+
     let td_report: TdReport = hcl::HclReport::new(hcl_report.clone())?.try_into()?;
     let td_quote = ImdsClient::new().get_td_quote(td_report.as_bytes())?;
-    let tpm_quote = vtpm::get_quote(report_data)?.into();
 
     let evidence = Evidence {
         version: EVIDENCE_VERSION,

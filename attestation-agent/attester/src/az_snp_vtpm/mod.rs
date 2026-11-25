@@ -4,7 +4,10 @@
 //
 
 use super::{Attester, InitDataResult, TeeEvidence};
-use crate::utils::{read_eventlog, truncate_digest};
+use crate::{
+    az_snp_vtpm::utils::vtpm_lock,
+    utils::{read_eventlog, truncate_digest},
+};
 use anyhow::{Context, Result, bail};
 use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
 use azure_tpm::{Tpm, TpmCommandExt};
@@ -17,6 +20,7 @@ use tracing::{debug, info};
 type UrlSafeBase64 = Base64<serde_with::base64::UrlSafe>;
 
 pub fn detect_platform() -> bool {
+    let _lock = vtpm_lock();
     match is_snp_cvm() {
         Ok(is_snp) => is_snp,
         Err(err) => {
@@ -101,8 +105,13 @@ fn get_evidence_sync(
     report_data: &[u8],
     cc_eventlog: Option<String>,
 ) -> anyhow::Result<TeeEvidence> {
-    let hcl_report = vtpm::get_report_with_report_data(report_data)?;
-    let tpm_quote = vtpm::get_quote(report_data)?.into();
+    let (hcl_report, tpm_quote) = {
+        let _lock = vtpm_lock();
+        let hcl_report = vtpm::get_report_with_report_data(report_data)?;
+        let tpm_quote = vtpm::get_quote(report_data)?.into();
+        (hcl_report, tpm_quote)
+    };
+
     let certs = imds::get_certs()?;
     let vcek = pem_to_der(&certs.vcek)?;
 
@@ -162,6 +171,8 @@ impl Attester for AzSnpVtpmAttester {
 }
 
 pub(crate) mod utils {
+    use std::sync::{Mutex, MutexGuard};
+
     use super::*;
 
     pub const INIT_DATA_PCR: u8 = 8;
@@ -171,6 +182,7 @@ pub(crate) mod utils {
             bail!("Invalid PCR index: {pcr}");
         }
         info!("Extending PCR {} with {}", pcr, hex::encode(digest));
+        let _lock = vtpm_lock();
         vtpm::extend_pcr(pcr, digest)?;
 
         Ok(())
@@ -182,6 +194,7 @@ pub(crate) mod utils {
         if pcr_index > 23 {
             bail!("Invalid PCR index: {pcr_index}");
         }
+        let _lock = vtpm_lock();
         let tpm = Tpm::open().context("open TPM device")?;
         let (_, digest) = tpm
             .read_pcrs_sha256(&[pcr_index as u32])
@@ -190,6 +203,16 @@ pub(crate) mod utils {
             .next()
             .context("TPM returned no value for the requested PCR")?;
         Ok(digest)
+    }
+
+    static TPM_LOCK: Mutex<()> = Mutex::new(());
+
+    pub(crate) fn vtpm_lock() -> MutexGuard<'static, ()> {
+        TPM_LOCK.lock().unwrap_or_else(|poisoned| {
+            // The lock is `()` thus no inner status needed to be protected.
+            TPM_LOCK.clear_poison();
+            poisoned.into_inner()
+        })
     }
 }
 

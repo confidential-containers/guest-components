@@ -6,22 +6,22 @@
 use crate::config::coco_as::CoCoASConfig;
 
 use anyhow::*;
-use attester::{BoxedAttester, detect_tee_type};
+use attester::BoxedAttester;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use kbs_types::Tee;
 
-#[derive(Default)]
 pub struct CoCoASTokenGetter {
     as_uri: String,
+    primary_tee: Tee,
 }
 
 impl CoCoASTokenGetter {
     pub async fn get_token(&self) -> Result<Vec<u8>> {
-        let primary_tee = detect_tee_type();
-        let attester = BoxedAttester::try_from(primary_tee)?;
+        let attester = BoxedAttester::try_from(self.primary_tee)?;
         let evidence = attester.get_evidence(vec![]).await?;
 
-        let tee_string = serde_json::to_string(&primary_tee)?
+        let tee_string = serde_json::to_string(&self.primary_tee)?
             .trim_end_matches('"')
             .trim_start_matches('"')
             .to_string();
@@ -59,9 +59,10 @@ impl CoCoASTokenGetter {
 }
 
 impl CoCoASTokenGetter {
-    pub fn new(config: &CoCoASConfig) -> Self {
+    pub fn new(config: &CoCoASConfig, primary_tee: Tee) -> Self {
         Self {
             as_uri: config.url.clone(),
+            primary_tee,
         }
     }
 }

@@ -17,5 +17,7 @@ pub mod config;
 pub use config::*;
 
 pub mod image;
+pub mod kbc;
+pub mod keyprovider;
 pub mod secret;
 pub mod storage;
