@@ -606,6 +606,7 @@ mod test {
             Tee::Sgx,
             Tee::Snp,
             Tee::Tdx,
+            Tee::AwsNitroEnclave,
         ];
 
         let expected_version = String::from(KBS_PROTOCOL_VERSION);

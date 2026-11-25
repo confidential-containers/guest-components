@@ -33,6 +33,8 @@ else ifeq ($(TEE_PLATFORM), amd)
   ATTESTER = snp-attester
 else ifeq ($(TEE_PLATFORM), cca)
   ATTESTER = cca-attester
+else ifeq ($(TEE_PLATFORM), nitro-enclave)
+  ATTESTER = nitro-enclave-attester
 endif
 # TODO: Add support for CSV
 
