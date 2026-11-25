@@ -3,11 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use strum::EnumString;
 use tempfile::tempdir_in;
 use thiserror::Error;
+use tracing::{error, trace};
 const TSM_REPORT_PATH: &str = "/sys/kernel/config/tsm/report";
 
 #[derive(Error, Debug)]
@@ -28,6 +30,12 @@ pub enum TsmReportError {
     InblobConflict(u32),
     #[error("Failed to generate TSM Report: missing inblob (len=0)")]
     InblobLen,
+    #[error(
+        "Failed to set TSM Report Privlevel: supplied privlevel {0} is not in range [privlevel_floor ({1}), TSM_PRIVLEVEL_MAX (3)]: ({2})"
+    )]
+    PrivlevelInvalid(u8, u8, #[source] std::io::Error),
+    #[error("Failed to generate TSM Report: generation mismatch (generation={0}, expected {1})")]
+    GenerationMismatch(u32, u32),
 }
 
 #[derive(PartialEq, Debug, EnumString)]
@@ -52,6 +60,7 @@ pub enum TsmReportData {
 /// automatically removed when the instance goes out of scope.
 pub struct TsmReportPath {
     path: PathBuf,
+    expected_generation: RefCell<u32>,
 }
 
 impl Drop for TsmReportPath {
@@ -78,7 +87,12 @@ impl TsmReportPath {
             let _ = std::fs::remove_dir(path.as_path());
         })?;
 
-        Ok(Self { path })
+        let expected_generation = RefCell::new(Self::get_tsm_report_generation(&path)?);
+
+        Ok(Self {
+            path,
+            expected_generation,
+        })
     }
 
     pub fn attestation_report(
@@ -97,13 +111,21 @@ impl TsmReportPath {
             return Err(TsmReportError::InblobLen);
         }
 
-        std::fs::write(report_path.join("inblob"), report_data)
-            .map_err(|e| TsmReportError::Access("inblob", e))?;
+        self.write_inblob(&report_data)?;
 
-        let q = std::fs::read(report_path.join("outblob"))
-            .map_err(|e| TsmReportError::Access("outblob", e))?;
+        let q = std::fs::read(report_path.join("outblob")).map_err(|e| {
+            tracing::error!(
+                "Failed to read outblob from report path: {:?}, error: {:?}",
+                report_path,
+                e
+            );
+            TsmReportError::Access("outblob", e)
+        })?;
 
-        check_inblob_write_race(report_path)?;
+        // Check that the expected generation matches the current generation maintained by the kernel before returning the report data.
+        //  If it doesn't match we should assume another process has modified the report,
+        //  invalidating our view of the report.
+        self.check_tsm_report_generation()?;
 
         Ok(q)
     }
@@ -111,35 +133,102 @@ impl TsmReportPath {
     pub fn supplemental_data(&self) -> Result<Vec<u8>, TsmReportError> {
         let report_path = self.path.as_path();
 
-        let aux = std::fs::read(report_path.join("auxblob"))
-            .map_err(|e| TsmReportError::Access("auxblob", e))?;
+        let aux = std::fs::read(report_path.join("auxblob")).map_err(|e| {
+            tracing::error!(
+                "Failed to read auxblob from report path: {:?}, error: {:?}",
+                report_path,
+                e
+            );
+            TsmReportError::Access("auxblob", e)
+        })?;
 
-        check_inblob_write_race(report_path)?;
+        // Check that the expected generation matches the current generation in the kernel before returning the supplemental data.
+        //  If it doesn't match, we should assume another process has modified the report,
+        //  invalidating our view of the report.
+        self.check_tsm_report_generation()?;
 
         Ok(aux)
     }
-}
 
-/// check_inblob_write_race checks that the returned outblob/auxblob
-/// matches the quote generation request originally triggered when
-/// inblob was written by the TsmReportPath instance. It prevents
-/// the race condition that someone else could use the same temporary
-/// directory to generate a quote.
-fn check_inblob_write_race(report_path: &Path) -> Result<(), TsmReportError> {
-    let g = std::fs::read_to_string(report_path.join("generation"))
-        .map_err(|e| TsmReportError::Access("generation", e))?;
+    /// get_tsm_report_generation returns the generation of a configfs-tsm report according to the kernel.
+    ///
+    /// Each write to any attribute of the report increments the generation of that report.
+    pub fn get_tsm_report_generation(report_path: &Path) -> Result<u32, TsmReportError> {
+        let g = std::fs::read_to_string(report_path.join("generation"))
+            .map_err(|e| TsmReportError::Access("generation", e))?;
 
-    let generation = g
-        .trim_matches('\n')
-        .to_string()
-        .parse::<u32>()
-        .map_err(TsmReportError::Parse)?;
+        let generation = g
+            .trim_matches('\n')
+            .to_string()
+            .parse::<u32>()
+            .map_err(TsmReportError::Parse);
 
-    if generation > 1 {
-        return Err(TsmReportError::InblobConflict(generation));
+        generation
     }
 
-    Ok(())
+    /// check_tsm_report_generation checks if the expected generation of this TsmReportPath instance matches the generation of the Configfs-TSM report maintained by the kernel.
+    /// Returns an error if the expected generation does not match the current generation in the kernel.
+    ///
+    /// This is meant to detect concurrent modifications to the Tsm Report by other processes, preventing
+    /// the race condition that someone else could use the same temporary
+    /// directory to generate a quote.
+    pub fn check_tsm_report_generation(&self) -> Result<&Self, TsmReportError> {
+        let expected = self.expected_generation.borrow().clone();
+        let real = Self::get_tsm_report_generation(&self.path)?;
+        if expected != real {
+            error!(
+                "Generation Mismatch for TSM Report at {:?}. \
+                The report might have been modified by another process and therefore cannot be trusted. \
+                (Expected: {}, Real: {})",
+                &self.path, expected, real
+            );
+            return Err(TsmReportError::GenerationMismatch(real, expected));
+        }
+        Ok(self)
+    }
+
+    /// write_inblob writes the given report data to the inblob attribute of the Configfs-TSM report, updating the generation of report in the kernel.
+    ///
+    /// If successful, this operation also increments the expected generation of the TsmReportPath instance.
+    fn write_inblob(&self, report_data: &[u8]) -> Result<&Self, TsmReportError> {
+        self.check_tsm_report_generation()?;
+
+        let report_path = self.path.as_path();
+        std::fs::write(report_path.join("inblob"), report_data)
+            .map_err(|e| TsmReportError::Access("inblob", e))?;
+        trace!(
+            "Successfully wrote Report Data to inblob for TSM report {:?}: {:?}",
+            &self.path, report_data
+        );
+        self.increment_expected_generation();
+        Ok(self)
+    }
+
+    /// increment_expected_generation increments the expected generation of the TsmReportPath instance.
+    ///
+    /// This should be called after successfully writing to any attribute of the Configfs-TSM report
+    ///  and has been made public to allow functions outside of this module to increment the expected generation when necessary
+    /// (e.g., increasing the expected generation of the report after setting the SNP VMPL).
+    pub fn increment_expected_generation(&self) {
+        let curr_gen = self.expected_generation.borrow().clone();
+        let next_gen = curr_gen + 1;
+        trace!(
+            "Incrementing expected generation for TSM Report {:?}: {} => {}...",
+            &self.path, curr_gen, next_gen
+        );
+        *self.expected_generation.borrow_mut() = next_gen;
+    }
+
+    /// report_path returns the file system path of the Configfs-TSM report associated with this TsmReportPath instance.
+    ///
+    /// Use this to hook into the TSM report through the file system.
+    ///
+    /// This has been made public to allow functions outside of this module to access the report path
+    /// in case they need to directly retrieve or modify attributes of the report.
+    /// (e.g., when setting the SNP VMPL of the report or when reading the report's @privlevel_floor attribute).
+    pub fn report_path(&self) -> &Path {
+        &self.path
+    }
 }
 
 /// check_tsm_report_provider checks that the TEE is
@@ -176,18 +265,33 @@ mod tests {
     #[case("generation", "2\n", true)]
     #[case("generation", "parseerror\n", true)]
     fn test_tsm_report(#[case] file: &str, #[case] file_data: &str, #[case] expect_error: bool) {
-        let tsm_dir = tempfile::tempdir().unwrap();
+        // Manually create TsmReportPath instance
+        // to bypass using the real TSM_REPORT_PATH
 
-        std::fs::write(tsm_dir.path().join(file), file_data).unwrap();
+        // Persist the tempDir on the disk past when the `p` variable goes out of scope
+        let p = tempfile::tempdir().unwrap();
+        let path = p.keep();
+
+        // Pass the location of the persisted tempDir into the TsmReportPath instance,
+        //  allowing TsmReportPath's Drop trait to remove the persisted tmpDir from disk when
+        //  the instance goes out of scope.
+        let tmp_report = TsmReportPath {
+            path,
+            expected_generation: RefCell::new(1),
+        };
+
+        // Write the test data to the appropriate file within the temporary report path.
+        std::fs::write(tmp_report.path.as_path().join(file), file_data).unwrap();
 
         match file {
             "provider" => assert_eq!(
                 expect_error,
-                check_tsm_report_provider(tsm_dir.path(), TsmReportProvider::Tdx).is_err()
+                check_tsm_report_provider(tmp_report.path.as_path(), TsmReportProvider::Tdx)
+                    .is_err()
             ),
             "generation" => assert_eq!(
                 expect_error,
-                check_inblob_write_race(tsm_dir.path()).is_err(),
+                tmp_report.check_tsm_report_generation().is_err(),
             ),
             _ => unimplemented!(),
         }
