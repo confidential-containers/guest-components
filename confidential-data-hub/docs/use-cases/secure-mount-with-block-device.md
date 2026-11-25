@@ -33,9 +33,10 @@ Common fields used by **both** LUKS2 and ZFS modes:
 | `volume_type`     | top-level   | `"block-device"`                                  | Yes      | Selects the block-device plugin. Must be `"block-device"` for this guide. |
 | `options.devicePath`      | `options`   | String path (e.g. `/dev/loop0`)                   | One of `devicePath` or `deviceId` | Path to the backing block device. If both `devicePath` and `deviceId` are set, `deviceId` wins. |
 | `options.deviceId`        | `options`   | String `"MAJ:MIN"` (e.g. `"7:0"`)                 | One of `devicePath` or `deviceId` | Kernel major/minor device ID. CDH resolves it to a device path internally. |
-| `options.sourceType`      | `options`   | `"empty"` \| `"encrypted"`                        | Yes      | `"empty"` means the device will be initialized and encrypted; `"encrypted"` means the device is already encrypted and should be opened. |
+| `options.sourceType`      | `options`   | `"empty"` \| `"encrypted"` \| `"persistent"`     | Yes      | `"empty"` creates ephemeral detached-header storage, `"encrypted"` opens a caller-prepared device, and `"persistent"` initializes or reopens a CDH-managed authenticated detached-header filesystem. |
 | `options.encryptionType`  | `options`   | `"luks2"` \| `"zfs"`                              | Yes      | Selects the encryption mode. LUKS2 uses dm-crypt; ZFS uses ZFS native encryption. |
-| `options.key`             | `options`   | URI: `sealed.*`, `kbs://…`, or `file://…`         | No       | Where to fetch the encryption key. If omitted, CDH generates a random key (ephemeral storage). |
+| `options.key`             | `options`   | URI: `sealed.*`, `kbs://…`, or `file://…`         | With `sourceType: "persistent"` | Where to fetch the encryption key. If omitted in legacy modes, CDH generates a random key. Persistent mode requires an explicit key reference. |
+| `options.volumeId`        | `options`   | Canonical ASCII identifier                         | With `sourceType: "persistent"` | Stable caller-provided identity for a persistent volume. CDH binds the mapper name and authenticated metadata to its hash. |
 | `mount_point`     | top-level   | String path (e.g. `/mnt/my-path`)                 | Yes      | Path inside the guest where the cleartext device or filesystem becomes visible. |
 
 ### LUKS2-specific options
@@ -55,6 +56,77 @@ When `encryptionType` is `"luks2"`, `targetType` is `"fileSystem"`,
 with `lazy_itable_init=0` unless the caller explicitly provides a
 `lazy_itable_init` setting in `mkfsOpts`. This avoids later I/O errors from
 lazy inode table initialization on no-wipe dm-integrity devices.
+
+#### CDH-managed persistent LUKS2
+
+`sourceType: "persistent"` is the restart-safe provisioning path. It supports
+an authenticated detached LUKS2 header and an ext4 filesystem. On first use,
+CDH formats only after reading the complete block device and confirming every
+byte is zero. It stores the detached header in a reserved prefix and protects
+the complete header with an HMAC derived from the volume key. On every reopen,
+CDH copies the header into guest `/run`, verifies the HMAC, and only then gives
+that protected copy to cryptsetup. Missing, foreign, or invalid metadata fails
+closed.
+
+The reserved prefix contains the 16 MiB LUKS2 header followed by two 4 KiB CDH
+state records. Encrypted filesystem data starts after that prefix.
+
+The detached copy prevents a host from changing the header between verification
+and use. Authenticating the full header also prevents the host from selecting a
+null data cipher, as described in Trail of Bits' [LUKS2 analysis][luks2-cvm].
+
+Two authenticated state slots distinguish prepared, initializing, and ready
+volumes. CDH can recover the last complete slot when a metadata write is
+interrupted. It formats ext4 only in the initializing state after `blkid`
+conclusively reports no filesystem. A ready device without the expected ext4
+filesystem fails closed.
+
+The complete-device scan is paid only on first initialization. Its duration is
+bounded by the backing volume's sequential-read throughput: for example, 1 TB
+at 1 GB/s takes about 16 minutes 40 seconds. CDH logs scan progress every 64 GiB
+so operators can distinguish a large-volume initialization from a stalled
+mount. Initialization requests for different block devices run concurrently;
+requests that resolve to the same device are serialized, including requests
+through different path aliases.
+
+Persistent mode requires all of the following:
+
+- a stable `volumeId`;
+- `targetType: "fileSystem"` and `filesystemType: "ext4"`;
+- no caller-provided `mapperName` or `mkfsOpts`;
+- `dataIntegrity` omitted or `false`;
+- an explicit `sealed.*`, `kbs://`, or `file://` reference to 32 through 4096
+  bytes of randomly generated key material.
+
+```json
+{
+    "volume_type": "block-device",
+    "options": {
+        "devicePath": "/dev/vdb",
+        "sourceType": "persistent",
+        "targetType": "fileSystem",
+        "encryptionType": "luks2",
+        "filesystemType": "ext4",
+        "volumeId": "tenant/workload/volume-name",
+        "key": "kbs:///tenant/storage/volume-key"
+    },
+    "flags": [],
+    "mount_point": "/mnt/tenant-volume"
+}
+```
+
+The authenticated state slots do not provide anti-rollback protection. A
+storage provider can replay an older valid disk image. Preventing rollback
+requires an external monotonic authority.
+
+Persistent mode authenticates the LUKS2 header and CDH state, not the encrypted
+filesystem payload. Because persistent mode does not yet support
+`dataIntegrity: true`, callers that need tamper detection must add integrity at
+the application layer. The storage provider can still corrupt or replay
+ciphertext, although it cannot replace the authenticated header with a null
+cipher to expose later writes.
+
+[luks2-cvm]: https://blog.trailofbits.com/2025/10/30/vulnerabilities-in-luks2-disk-encryption-for-confidential-vms/
 
 ### ZFS-specific options
 
@@ -157,7 +229,7 @@ Ephemeral storage is a storage that is not persistent.
 }
 ```
 
-#### Case 2: Persistent Storage with LUKS2
+#### Case 2: Caller-preformatted Storage with LUKS2
 
 1. Mount a `luks2` encrypted block device file and return the plaintext device path, mounting the plaintext to `/mnt/dev-path` as a device file. The decryption key can either be obtained from KBS, or from local filesystem.
 
