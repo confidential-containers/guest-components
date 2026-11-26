@@ -48,14 +48,12 @@ tracing-subscriber = { workspace = true, optional = true }
 image-rs = { path = "../../image-rs", default-features = false, features = [
     "kata-cc",
 ] }
-jose-b64 = "0.1.2"
 jose-jwa = "0.1.2"
 jose-jwk = "0.1.2"
 jose-jws = "0.1.2"
 kms = { path = "../kms", default-features = false }
 nix.workspace = true
 p256 = "0.13.2"
-prost = { workspace = true, optional = true }
 protos = { path = "../../protos", default-features = false, optional = true }
 rand.workspace = true
 resource_uri.path = "../../attestation-agent/deps/resource_uri"
@@ -80,7 +78,6 @@ which = "8.0.2"
 zeroize.workspace = true
 
 [build-dependencies]
-anyhow.workspace = true
 shadow-rs.workspace = true
 
 [dev-dependencies]
@@ -107,7 +104,7 @@ kbs = ["kms/kbs"]
 # Binary RPC type
 bin = ["clap", "shadow-rs", "tracing-subscriber"]
 ttrpc = ["dep:ttrpc", "tokio/signal", "protos/ttrpc"]
-grpc = ["prost", "tonic", "tokio/signal", "protos/grpc"]
+grpc = ["tonic", "tokio/signal", "protos/grpc"]
 
 # for the `secret` CLI
 cli = ["clap/derive", "tokio/rt-multi-thread", "tokio/sync", "tokio/macros"]

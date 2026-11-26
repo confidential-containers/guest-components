@@ -17,7 +17,6 @@ serde_json_canonicalizer = { version = "0.4", optional = true }
 clap = { workspace = true, features = ["derive"], optional = true }
 crypto.path = "../deps/crypto"
 kbs-types.workspace = true
-protobuf = { workspace = true, optional = true }
 protos = { path = "../../protos", default-features = false, optional = true }
 reqwest = { workspace = true, default-features = false, features = [
     "cookies",
@@ -37,7 +36,6 @@ tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber = { workspace = true, optional = true }
 ttrpc = { workspace = true, optional = true }
-url.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]

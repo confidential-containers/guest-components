@@ -9,11 +9,8 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow.workspace = true
-base64.workspace = true
-kbs-types.workspace = true
 openssl.workspace = true
 serde.workspace = true
-serde_json.workspace = true
 strum.workspace = true
 zeroize.workspace = true
 
