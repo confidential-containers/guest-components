@@ -9,7 +9,7 @@ use crate::utils::{read_eventlog, truncate_digest};
 use anyhow::*;
 use az_tdx_vtpm::{hcl, is_tdx_cvm, tdx::TdReport, vtpm};
 use azure_guest_attestation_sdk::guest_attest::ImdsClient;
-use kbs_types::HashAlgorithm;
+use kbs_types::{HashAlgorithm, Tee};
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use std::result::Result::Ok;
@@ -18,16 +18,6 @@ use tracing::debug;
 use zerocopy::IntoBytes;
 
 type UrlSafeBase64 = Base64<serde_with::base64::UrlSafe>;
-
-pub fn detect_platform() -> bool {
-    match is_tdx_cvm() {
-        Ok(tdx) => tdx,
-        Err(err) => {
-            debug!("Couldn't perform Azure TDX platform detection: {err}");
-            false
-        }
-    }
-}
 
 #[derive(Debug, Default)]
 pub struct AzTdxVtpmAttester;
@@ -78,8 +68,24 @@ fn get_evidence_sync(
     Ok(serde_json::to_value(&evidence)?)
 }
 
+impl std::fmt::Display for AzTdxVtpmAttester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("az-tdx-vtpm-attester")
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for AzTdxVtpmAttester {
+    fn detect_tee(&self) -> Option<Tee> {
+        match is_tdx_cvm() {
+            Ok(tdx) => tdx.then_some(Tee::AzTdxVtpm),
+            Err(err) => {
+                debug!("Couldn't perform Azure TDX platform detection: {err}");
+                None
+            }
+        }
+    }
+
     async fn get_evidence(&self, report_data: Vec<u8>) -> Result<TeeEvidence> {
         // Read the runtime eventlog (AAEL) before entering the blocking section:
         // `read_eventlog` is async, whereas the vTPM calls below are blocking.

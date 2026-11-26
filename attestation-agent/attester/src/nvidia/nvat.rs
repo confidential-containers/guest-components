@@ -5,6 +5,7 @@
 
 use crate::{Attester, TeeEvidence};
 use anyhow::{Context, Result, anyhow};
+use kbs_types::Tee;
 use nv_attestation_sdk::{GpuEvidenceSource, Nonce, NvatSdk, SdkOptions, SwitchEvidenceSource};
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
@@ -45,21 +46,6 @@ enum Architecture {
     LS10,
 }
 
-pub fn detect_platform() -> bool {
-    if ensure_sdk_init().is_err() {
-        warn!("NVIDIA Attestation SDK could not be initialized.");
-        return false;
-    };
-
-    match get_device_evidence(None) {
-        Ok(ev) => !ev.is_empty(),
-        Err(e) => {
-            warn!("NVIDIA device detection failed due to: {}", e.to_string());
-            false
-        }
-    }
-}
-
 /// NRAS knows about "switch" and "gpu" but the expected evidence
 /// content is the same. nvidia-attester can compose a list of
 /// all CC enabled nvml/nscq devices using this evidence struct.
@@ -87,8 +73,29 @@ struct NvDeviceEvidence {
 #[derive(Debug, Default)]
 pub struct NvAttester {}
 
+impl std::fmt::Display for NvAttester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("nvidia-attester")
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for NvAttester {
+    fn detect_tee(&self) -> Option<Tee> {
+        if ensure_sdk_init().is_err() {
+            warn!("NVIDIA Attestation SDK could not be initialized.");
+            return None;
+        };
+
+        match get_device_evidence(None) {
+            Ok(ev) => (!ev.is_empty()).then_some(Tee::Nvidia),
+            Err(e) => {
+                warn!("NVIDIA device detection failed due to: {}", e.to_string());
+                None
+            }
+        }
+    }
+
     /// Generate evidence for the NVIDIA devices. A 32 byte nonce is taken from the first 32
     /// report_data bytes. report_data shorter than 32 bytes is zero padded.
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {

@@ -4,10 +4,10 @@
 //
 
 use anyhow::*;
+use attestation_agent::version::{BUILD_TIME, get_version};
 use attestation_agent::{AttestationAPIs, AttestationAgent, config::Config, initdata::Initdata};
 use clap::Parser;
 use const_format::concatcp;
-use shadow_rs::shadow;
 use std::{collections::HashMap, path::Path, sync::Arc};
 use tokio::signal::unix::{SignalKind, signal};
 use tracing::{debug, info};
@@ -17,8 +17,6 @@ use ttrpc_dep::server::AA;
 
 use protos::ttrpc::aa::attestation_agent_ttrpc::create_attestation_agent_service;
 
-shadow!(build);
-
 mod ttrpc_dep;
 
 const UNIX_SOCKET_PREFIX: &str = "unix://";
@@ -27,19 +25,8 @@ const DEFAULT_ATTESTATION_SOCKET_ADDR: &str = concatcp!(
     "/run/confidential-containers/attestation-agent/attestation-agent.sock"
 );
 
-const FEATURE_INFO: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
-const DIRTY_SUFFIX: &str = if build::GIT_CLEAN { "" } else { " (dirty)" };
-const VERSION: &str = concatcp!(
-    build::LAST_TAG,
-    "-",
-    build::SHORT_COMMIT,
-    DIRTY_SUFFIX,
-    "\n",
-    FEATURE_INFO
-);
-
 #[derive(Debug, Parser)]
-#[command(author, version = VERSION)]
+#[command(author, version = get_version())]
 struct Cli {
     /// Attestation ttRPC Unix socket addr.
     ///
@@ -94,12 +81,13 @@ pub async fn main() -> Result<()> {
 \_| |_/ \__| \__|\___||___/ \__|\__,_| \__||_| \___/ |_| |_|    \_| |_/ \__, | \___||_| |_| \__|
                                                                          __/ |                  
                                                                         |___/                                                                  
-version: {VERSION}
+version: {}
 buildtime: {}
 loglevel: {env_filter}
 rpc: ttrpc
 ",
-        build::BUILD_TIME,
+        get_version(),
+        BUILD_TIME,
     );
 
     Subscriber::builder().with_env_filter(env_filter).init();

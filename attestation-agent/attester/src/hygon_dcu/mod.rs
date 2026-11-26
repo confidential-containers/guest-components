@@ -6,38 +6,12 @@
 use super::{Attester, TeeEvidence};
 use anyhow::{Context, Result};
 use csv_rs::api::dcu::{AttestationReport, DcuDevice};
+use kbs_types::Tee;
 use serde::{Deserialize, Serialize};
 use std::{cmp::min, fs, path::Path};
 use tracing::warn;
 
 const DCU_NODES_DIR: &str = "/sys/devices/virtual/kfd/kfd/topology/nodes";
-
-pub fn detect_platform() -> bool {
-    if !Path::new("/dev/mkfd").exists() {
-        return false;
-    }
-
-    let std::result::Result::Ok(entries) = fs::read_dir(DCU_NODES_DIR) else {
-        warn!("Cannot read DCU nodes directory: {DCU_NODES_DIR}");
-        return false;
-    };
-
-    for entry in entries {
-        let std::result::Result::Ok(entry) = entry else {
-            warn!("Cannot read DCU node entry");
-            continue;
-        };
-
-        let file_name = entry.file_name();
-        let file_name_str = file_name.to_string_lossy();
-
-        if file_name_str != "." && file_name_str != ".." {
-            return true;
-        }
-    }
-
-    false
-}
 
 #[derive(Serialize, Deserialize)]
 struct DcuEvidence {
@@ -47,8 +21,41 @@ struct DcuEvidence {
 #[derive(Debug, Default)]
 pub struct DcuAttester {}
 
+impl std::fmt::Display for DcuAttester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("hygon-dcu-attester")
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for DcuAttester {
+    fn detect_tee(&self) -> Option<Tee> {
+        if !Path::new("/dev/mkfd").exists() {
+            return None;
+        }
+
+        let std::result::Result::Ok(entries) = fs::read_dir(DCU_NODES_DIR) else {
+            warn!("Cannot read DCU nodes directory: {DCU_NODES_DIR}");
+            return None;
+        };
+
+        for entry in entries {
+            let std::result::Result::Ok(entry) = entry else {
+                warn!("Cannot read DCU node entry");
+                continue;
+            };
+
+            let file_name = entry.file_name();
+            let file_name_str = file_name.to_string_lossy();
+
+            if file_name_str != "." && file_name_str != ".." {
+                return Some(Tee::HygonDcu);
+            }
+        }
+
+        None
+    }
+
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
         let mut mnonce = [0u8; 64];
         if report_data.len() > 64 {

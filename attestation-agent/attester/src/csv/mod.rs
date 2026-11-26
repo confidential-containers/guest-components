@@ -23,14 +23,10 @@ use csv_rs::{
 };
 use hyper::{Client, body::HttpBody};
 use hyper_tls::HttpsConnector;
-use kbs_types::HashAlgorithm;
+use kbs_types::{HashAlgorithm, Tee};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::debug;
-pub fn detect_platform() -> bool {
-    Path::new("/dev/csv-guest").exists()
-}
-
 #[derive(Serialize, Deserialize)]
 struct HskCek {
     hsk: ca::Certificate,
@@ -91,8 +87,18 @@ async fn download_hskcek_from_kds(sn: &[u8]) -> Result<Vec<u8>> {
     Ok(response_body)
 }
 
+impl std::fmt::Display for CsvAttester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("csv-attester")
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for CsvAttester {
+    fn detect_tee(&self) -> Option<Tee> {
+        Path::new("/dev/csv-guest").exists().then_some(Tee::Csv)
+    }
+
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
         if report_data.len() > 64 {
             bail!("CSV Attester: Report data must be no more than 64 bytes");

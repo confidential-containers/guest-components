@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use anyhow::*;
-use kbs_types::HashAlgorithm;
+use kbs_types::{HashAlgorithm, Tee};
 
 use crate::{Attester, TeeEvidence};
 
@@ -25,8 +25,18 @@ impl FakeTdx {
     }
 }
 
+impl std::fmt::Display for FakeTdx {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("fake-tdx-attester")
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for FakeTdx {
+    fn detect_tee(&self) -> Option<Tee> {
+        None
+    }
+
     async fn get_evidence(&self, _: Vec<u8>) -> Result<TeeEvidence> {
         Ok(TeeEvidence::Null)
     }

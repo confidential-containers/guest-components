@@ -5,6 +5,7 @@
 
 use super::{Attester, TeeEvidence, utils::validate_and_pad_data};
 use anyhow::*;
+use kbs_types::Tee;
 use pv::{
     misc,
     request::BootHdrTags,
@@ -34,10 +35,6 @@ impl UserData {
     pub fn to_bytes(&self) -> Vec<u8> {
         self.runtime_data_digest.clone()
     }
-}
-
-pub fn detect_platform() -> bool {
-    misc::pv_guest_bit_set()
 }
 
 #[repr(C)]
@@ -84,8 +81,18 @@ pub struct SeAttestationResponse {
 #[derive(Debug, Default)]
 pub struct SeAttester {}
 
+impl std::fmt::Display for SeAttester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("se-attester")
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for SeAttester {
+    fn detect_tee(&self) -> Option<Tee> {
+        misc::pv_guest_bit_set().then_some(Tee::Se)
+    }
+
     async fn get_evidence(&self, req: Vec<u8>) -> Result<TeeEvidence> {
         let request: SeAttestationRequest = serde_json::from_slice(&req)?;
         let SeAttestationRequest {
