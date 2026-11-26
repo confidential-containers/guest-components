@@ -53,6 +53,11 @@ pub mod nvidia_dpu;
 
 pub type BoxedAttester = Box<dyn Attester + Send + Sync>;
 
+/// Lists compiled attesters (including samples) as uppercase names.
+pub fn get_supported_attesters() -> &'static [&'static str] {
+    include!(concat!(env!("OUT_DIR"), "/supported_attesters.rs"))
+}
+
 impl TryFrom<Tee> for BoxedAttester {
     type Error = anyhow::Error;
 
