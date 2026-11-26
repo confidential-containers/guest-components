@@ -4,7 +4,7 @@
 //
 
 use super::{Attester, InitDataResult, TeeEvidence};
-use crate::az_snp_vtpm::{TpmQuote, utils};
+use crate::az_snp_vtpm::{DEFAULT_EVENTLOG_PCR, TpmQuote, utils};
 use crate::utils::{read_eventlog, truncate_digest};
 use anyhow::*;
 use az_tdx_vtpm::{hcl, is_tdx_cvm, tdx::TdReport, vtpm};
@@ -91,6 +91,10 @@ impl Attester for AzTdxVtpmAttester {
         let sha256 = truncate_digest::<32>(init_data_digest)?;
         spawn_blocking(move || utils::extend_pcr_sync(&sha256, utils::INIT_DATA_PCR)).await??;
         Ok(InitDataResult::Ok)
+    }
+
+    fn default_eventlog_register(&self) -> Option<u64> {
+        Some(DEFAULT_EVENTLOG_PCR)
     }
 
     fn supports_runtime_measurement(&self) -> bool {

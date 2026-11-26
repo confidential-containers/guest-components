@@ -9,7 +9,7 @@ use serde::Deserialize;
 /// Default PCR index used by AA. `17` is selected for its usage of dynamic root of trust for measurement.
 /// - [Linux TPM PCR Registry](https://uapi-group.org/specifications/specs/linux_tpm_pcr_registry/)
 /// - [TCG TRUSTED BOOT CHAIN IN EDK II](https://tianocore-docs.github.io/edk2-TrustedBootChain/release-1.00/3_TCG_Trusted_Boot_Chain_in_EDKII.html)
-const DEFAULT_PCR_INDEX: u64 = 17;
+pub const DEFAULT_PCR_INDEX: u64 = 17;
 
 pub mod aa_kbc_params;
 
@@ -51,6 +51,7 @@ pub struct Config {
     pub token_configs: TokenConfigs,
 
     /// configs about eventlog
+    #[serde(default)]
     pub eventlog_config: EventlogConfig,
 
     /// log configuration
@@ -84,18 +85,10 @@ impl Config {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Deserialize, PartialEq)]
 pub struct EventlogConfig {
     /// PCR Register to extend INIT entry
-    pub init_pcr: u64,
-}
-
-impl Default for EventlogConfig {
-    fn default() -> Self {
-        Self {
-            init_pcr: DEFAULT_PCR_INDEX,
-        }
-    }
+    pub init_pcr: Option<u64>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Default)]
@@ -128,7 +121,6 @@ impl TryFrom<&str> for Config {
     fn try_from(config_path: &str) -> Result<Self, Self::Error> {
         let c = config::Config::builder()
             .add_source(config::File::with_name(config_path))
-            .set_default("eventlog_config.init_pcr", DEFAULT_PCR_INDEX)?
             .build()?;
 
         let cfg = c.try_deserialize()?;
@@ -181,7 +173,7 @@ M9QaC1mzQ/OStg==
             })
         },
         eventlog_config: EventlogConfig {
-            init_pcr: 17,
+            init_pcr: Some(17),
         },
         log: LogConfig::default(),
     })]
@@ -223,7 +215,7 @@ M9QaC1mzQ/OStg==
             })
         },
         eventlog_config: EventlogConfig {
-            init_pcr: 17,
+            init_pcr: Some(17),
         },
         log: LogConfig::default(),
     })]
@@ -244,7 +236,7 @@ M9QaC1mzQ/OStg==
             })
         },
         eventlog_config: EventlogConfig {
-            init_pcr: 17,
+            init_pcr: Some(23),
         },
         log: LogConfig { level: "warn".to_string() },
     })]
@@ -263,7 +255,7 @@ M9QaC1mzQ/OStg==
             })
         },
         eventlog_config: EventlogConfig {
-            init_pcr: 17,
+            init_pcr: Some(17),
         },
         log: LogConfig { level: "warn".to_string() },
     })]
@@ -282,12 +274,12 @@ M9QaC1mzQ/OStg==
             })
         },
         eventlog_config: EventlogConfig {
-            init_pcr: 17,
+            init_pcr: Some(17),
         },
         log: LogConfig { level: "warn".to_string() },
     })]
     #[case(
-    "test/config4.toml", 
+    "test/config4.toml",
     Config {
         token_configs: TokenConfigs {
             #[cfg(feature = "coco_as")]
@@ -296,12 +288,12 @@ M9QaC1mzQ/OStg==
             kbs: None,
         },
         eventlog_config: EventlogConfig {
-            init_pcr: 17,
+            init_pcr: None,
         },
         log: LogConfig { level: "warn".to_string() },
     })]
     #[case(
-    "test/config5.toml", 
+    "test/config5.toml",
     Config {
         token_configs: TokenConfigs {
             #[cfg(feature = "coco_as")]
@@ -310,12 +302,12 @@ M9QaC1mzQ/OStg==
             kbs: None,
         },
         eventlog_config: EventlogConfig {
-            init_pcr: 17,
+            init_pcr: None,
         },
         log: LogConfig::default(),
     })]
     #[case(
-        "test/config6.toml", 
+        "test/config6.toml",
         Config {
             token_configs: TokenConfigs {
                 #[cfg(feature = "coco_as")]
@@ -324,7 +316,7 @@ M9QaC1mzQ/OStg==
                 kbs: None,
             },
             eventlog_config: EventlogConfig {
-                init_pcr: 17,
+                init_pcr: None,
             },
             log: LogConfig::default(),
         })]

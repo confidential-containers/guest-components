@@ -10,4 +10,4 @@ url = "https://127.0.0.1:8080"
 cert = "cert"
 
 [eventlog_config]
-init_pcr = 17
+init_pcr = 23
