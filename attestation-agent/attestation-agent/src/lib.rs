@@ -104,6 +104,24 @@ pub struct AttestationAgent {
     additional_attesters: HashMap<Tee, BoxedAttester>,
 }
 
+async fn determine_default_pcr(eventlog: &EventLog, config: &Config) -> u64 {
+    let configured_pcr = config.eventlog_config.init_pcr;
+    if let Some(pcr) = configured_pcr {
+        debug!("Using configured PCR index {pcr}");
+        return pcr;
+    }
+
+    let attester_default_pcr = eventlog.default_pcr();
+    if let Some(pcr) = attester_default_pcr {
+        debug!("Using attester default PCR index {pcr}");
+        return pcr;
+    }
+
+    let global_default_pcr = config::DEFAULT_PCR_INDEX;
+    debug!("Using global default PCR index {global_default_pcr}");
+    global_default_pcr
+}
+
 impl AttestationAgent {
     pub async fn init(&mut self) -> Result<()> {
         if self.primary_attester.supports_runtime_measurement() {
@@ -142,8 +160,10 @@ impl AttestationAgent {
                 digest.len()
             );
         }
-        let pcr = self.config.read().await.eventlog_config.init_pcr;
-        let extended = extend_init_data_once(&mut *eventlog.lock().await, pcr, alg, digest).await?;
+        let mut eventlog = eventlog.lock().await;
+        let config = self.config.read().await;
+        let pcr = determine_default_pcr(&eventlog, &config).await;
+        let extended = extend_init_data_once(&mut eventlog, alg, digest, pcr).await?;
         info!("Initdata measured into the eventlog (extended: {extended}).");
         Ok(())
     }
@@ -268,21 +288,21 @@ impl AttestationAPIs for AttestationAgent {
             return Ok(RuntimeMeasurement::NotSupported);
         };
 
-        let (pcr, log_entry) = {
-            let config = self.config.read().await;
+        let mut eventlog = eventlog.lock().await;
 
-            let pcr = register_index.unwrap_or_else(|| {
-                let pcr = config.eventlog_config.init_pcr;
-                debug!("No PCR index provided, use default {pcr}");
+        let pcr = match register_index {
+            Some(pcr) => {
+                debug!("Using requested PCR index {pcr}");
                 pcr
-            });
-
-            let log_entry = Event::new(domain, operation, content)?;
-
-            (pcr, log_entry)
+            }
+            None => {
+                let config = self.config.read().await;
+                determine_default_pcr(&eventlog, &config).await
+            }
         };
 
-        eventlog.lock().await.extend_entry(log_entry, pcr).await?;
+        let log_entry = Event::new(domain, operation, content)?;
+        eventlog.extend_entry(log_entry, pcr).await?;
 
         Ok(RuntimeMeasurement::Ok)
     }
@@ -327,9 +347,9 @@ pub fn parse_init_data_algorithm(name: &str, digest: &[u8]) -> Result<Option<Has
 /// already recorded the same digest; a different recorded digest is an error.
 async fn extend_init_data_once(
     eventlog: &mut EventLog,
-    pcr: u64,
     alg: HashAlgorithm,
     digest: &[u8],
+    pcr: u64,
 ) -> Result<bool> {
     // Canonical JSON (RFC 8785), as the CoCo eventlog spec requires for event content.
     let content = format!(r#"{{"digest":"{alg}:{}"}}"#, hex::encode(digest));
@@ -379,7 +399,8 @@ mod tests {
 
     async fn record(dir: &Path, registers: &Registers, digest: &[u8]) -> Result<bool> {
         let mut eventlog = open(dir, registers, false).await?;
-        extend_init_data_once(&mut eventlog, PCR, HashAlgorithm::Sha384, digest).await
+        let pcr = determine_default_pcr(&eventlog, &Config::default()).await;
+        extend_init_data_once(&mut eventlog, HashAlgorithm::Sha384, digest, pcr).await
     }
 
     fn rtmr3(registers: &Registers) -> Option<Vec<u8>> {
@@ -472,7 +493,7 @@ mod tests {
         // Crash after the extend lands but before the entry is written.
         let mut eventlog = open(tmp.path(), &registers, true).await.unwrap();
         let crashed =
-            extend_init_data_once(&mut eventlog, PCR, HashAlgorithm::Sha384, &[1; 48]).await;
+            extend_init_data_once(&mut eventlog, HashAlgorithm::Sha384, &[1; 48], PCR).await;
         assert!(crashed.is_err());
         drop(eventlog);
         let after_crash = rtmr3(&registers).expect("RTMR3 extended before the crash");

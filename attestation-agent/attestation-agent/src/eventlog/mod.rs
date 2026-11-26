@@ -237,6 +237,10 @@ impl EventLog {
         }))
     }
 
+    pub fn default_pcr(&self) -> Option<u64> {
+        self.rtmr_extender.default_eventlog_register()
+    }
+
     /// This an atomic operation, which will both extend the PCR and write the eventlog to disk.
     /// We should bring in a little transection mechanism (WAL, Write Ahead Log) to make sure the atomicity.
     ///

@@ -221,6 +221,10 @@ pub trait Attester {
         false
     }
 
+    fn default_eventlog_register(&self) -> Option<u64> {
+        None
+    }
+
     /// Extend TEE specific dynamic measurement register
     /// to enable dynamic measurement capabilities for input data at runtime.
     /// The input event_digest would be truncated or padded to the size of

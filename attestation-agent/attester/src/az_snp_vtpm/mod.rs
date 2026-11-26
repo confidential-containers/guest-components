@@ -31,6 +31,8 @@ pub struct AzSnpVtpmAttester;
 
 const EVIDENCE_VERSION: u32 = 2;
 
+pub(crate) const DEFAULT_EVENTLOG_PCR: u64 = 23;
+
 /// TPM quote containing PCR values and attestation data.
 ///
 /// # Fields (in hex representation)
@@ -128,6 +130,10 @@ impl Attester for AzSnpVtpmAttester {
 
     fn supports_runtime_measurement(&self) -> bool {
         true
+    }
+
+    fn default_eventlog_register(&self) -> Option<u64> {
+        Some(DEFAULT_EVENTLOG_PCR)
     }
 
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> anyhow::Result<InitDataResult> {
