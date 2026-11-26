@@ -9,6 +9,7 @@ use crate::utils::pad;
 use super::tsm_report::*;
 use super::{Attester, TeeEvidence};
 use anyhow::*;
+use kbs_types::Tee;
 use serde::{Deserialize, Serialize};
 use sev::firmware::guest::AttestationReport;
 use sev::firmware::guest::Firmware;
@@ -24,11 +25,6 @@ const SEV_GUEST_FALLBACK_DEVICE: &str = "/sys/devices/platform/sev-guest";
 // The VMPL value is set to 0, which means the report is generated at the highest privilege level.
 pub const VMPL: u8 = 0;
 
-pub fn detect_platform() -> bool {
-    TsmReportPath::new(TsmReportProvider::Sev).is_ok()
-        || Path::new(SEV_GUEST_FALLBACK_DEVICE).exists()
-}
-
 #[derive(Serialize, Deserialize)]
 struct SnpEvidence {
     attestation_report: AttestationReport,
@@ -38,8 +34,20 @@ struct SnpEvidence {
 #[derive(Debug, Default)]
 pub struct SnpAttester {}
 
+impl std::fmt::Display for SnpAttester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("snp-attester")
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for SnpAttester {
+    fn detect_tee(&self) -> Option<Tee> {
+        (TsmReportPath::new(TsmReportProvider::Sev).is_ok()
+            || Path::new(SEV_GUEST_FALLBACK_DEVICE).exists())
+        .then_some(Tee::Snp)
+    }
+
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
         if report_data.len() > 64 {
             bail!("SNP Attester: Report data must be no more than 64 bytes");

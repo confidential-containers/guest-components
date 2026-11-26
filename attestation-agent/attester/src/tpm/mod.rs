@@ -13,7 +13,9 @@ use self::utils::{
 };
 use anyhow::{Result, anyhow};
 use base64::Engine;
+use kbs_types::Tee;
 use serde::{Deserialize, Serialize};
+use tokio::sync::OnceCell;
 use tracing::info;
 
 const PCR_SLOT_8: u64 = 8;
@@ -30,6 +32,11 @@ pub struct Evidence {
 /// TpmAttester struct holds the path to the detected TPM device.
 #[derive(Debug, Default)]
 pub struct TpmAttester {
+    configuration: OnceCell<TpmConfiguration>,
+}
+
+#[derive(Debug)]
+struct TpmConfiguration {
     tpm_device: String,
     ak_handle_raw: u32,
 }
@@ -41,35 +48,55 @@ impl TpmAttester {
     /// And also retrieve the AK handle.
     /// It returns an error if no suitable TPM device or AK handle is found.
     pub fn new() -> Result<Self> {
+        Ok(Self {
+            configuration: OnceCell::new_with(Some(Self::detect_configuration()?)),
+        })
+    }
+
+    fn detect_configuration() -> Result<TpmConfiguration> {
         let tpm_device = detect_tpm_device().ok_or_else(|| anyhow!("No TPM device found"))?;
         let ak_handle_raw = get_ak_handle().ok_or_else(|| anyhow!("Failed to get AK handle"))?;
         info!(
             "[TPM Attester] Initialized using TPM device: {} and AK handle: {}",
             &tpm_device, &ak_handle_raw,
         );
-        Ok(Self {
+        Ok(TpmConfiguration {
             tpm_device,
             ak_handle_raw,
         })
     }
+
+    async fn configuration(&self) -> Result<&TpmConfiguration> {
+        self.configuration
+            .get_or_try_init(|| async { Self::detect_configuration() })
+            .await
+    }
 }
 
-/// Detects if the platform is supported by checking if a TpmAttester can be created.
-pub fn detect_platform() -> bool {
-    TpmAttester::new().is_ok()
+impl std::fmt::Display for TpmAttester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("tpm-attester")
+    }
 }
 
 #[async_trait::async_trait]
 impl Attester for TpmAttester {
+    /// Detects support by checking if a TpmAttester can be created.
+    fn detect_tee(&self) -> Option<Tee> {
+        TpmAttester::new().is_ok().then_some(Tee::Tpm)
+    }
+
     /// Get evidence for the TPM attester.
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
         // Ensure report_data is exactly 64 bytes,
         // truncating if longer or padding with zeros if shorter
         report_data.resize(TPM_REPORT_DATA_SIZE, 0);
-        let ak_public_bytes = read_ak_public_key(&self.tpm_device, self.ak_handle_raw)?;
+        let configuration = self.configuration().await?;
+        let ak_public_bytes =
+            read_ak_public_key(&configuration.tpm_device, configuration.ak_handle_raw)?;
         let tpm_quote = get_quote(
-            &self.tpm_device,
-            self.ak_handle_raw,
+            &configuration.tpm_device,
+            configuration.ak_handle_raw,
             &report_data,
             TPM_HASH_ALGORITHM,
         )?;
@@ -91,8 +118,9 @@ impl Attester for TpmAttester {
         event_digest: Vec<u8>,
         register_index: u64,
     ) -> Result<()> {
+        let configuration = self.configuration().await?;
         // Use the stored tpm_device path.
-        extend_pcr(&self.tpm_device, event_digest, register_index)
+        extend_pcr(&configuration.tpm_device, event_digest, register_index)
             .map_err(|e| anyhow!("Failed to extend PCR: {e}"))?;
         Ok(())
     }
@@ -100,21 +128,36 @@ impl Attester for TpmAttester {
     /// Bind init data for the TPM attester (extends PCR 8).
     async fn bind_init_data(&self, init_data_digest: &[u8]) -> Result<InitDataResult> {
         let digest = truncate_digest::<32>(init_data_digest)?;
+        let configuration = self.configuration().await?;
         // Use the stored tpm_device path.
-        extend_pcr(&self.tpm_device, digest.to_vec(), PCR_SLOT_8)
+        extend_pcr(&configuration.tpm_device, digest.to_vec(), PCR_SLOT_8)
             .map_err(|e| anyhow!("Failed to extend PCR for init data: {e}"))?;
         Ok(InitDataResult::Ok)
     }
 
     /// Get runtime measurement (PCR value) for the given index.
     async fn get_runtime_measurement(&self, index: u64) -> Result<Vec<u8>> {
+        let configuration = self.configuration().await?;
         // Use the stored tpm_device path.
-        let pcrs = read_all_pcrs(&self.tpm_device, TPM_HASH_ALGORITHM)?;
+        let pcrs = read_all_pcrs(&configuration.tpm_device, TPM_HASH_ALGORITHM)?;
         let idx = index as usize;
         let target_pcr = pcrs
             .get(idx)
             .ok_or_else(|| anyhow!("Register index out of bounds"))?;
         let pcr_value = hex::decode(target_pcr)?;
         Ok(pcr_value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_does_not_initialize_tpm_configuration() {
+        let attester = TpmAttester::default();
+        assert!(attester.configuration.get().is_none());
+        assert!(attester.supports_runtime_measurement());
+        assert!(attester.configuration.get().is_none());
     }
 }

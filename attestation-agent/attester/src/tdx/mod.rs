@@ -12,7 +12,7 @@ use base64::Engine;
 #[cfg(feature = "tdx-attest-dcap-ioctls")]
 use iocuddle::Write;
 use iocuddle::{Group, Ioctl, Size, WriteRead};
-use kbs_types::HashAlgorithm;
+use kbs_types::{HashAlgorithm, Tee};
 use report::TdReport;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -31,10 +31,6 @@ const TDX_GUEST_IOCTL: &str = "/dev/tdx_guest";
 
 const LIBTDX_ENABLED: bool = cfg!(feature = "tdx-attest-dcap-ioctls");
 
-pub fn detect_platform() -> bool {
-    TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || Path::new(TDX_GUEST_IOCTL).exists()
-}
-
 #[derive(Serialize, Deserialize)]
 struct TdxEvidence {
     /// Base64 encoded Eventlog
@@ -46,7 +42,7 @@ struct TdxEvidence {
     quote: String,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct TdxAttester {
     /// Linux TSM sysfs is used to read and write runtime measurement registers,
     /// and also read the registers like MRCONFIGID. This ability starts with kernel version 6.16.
@@ -65,6 +61,12 @@ impl TdxAttester {
         Self {
             supports_tsm_measurements,
         }
+    }
+}
+
+impl Default for TdxAttester {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -129,8 +131,19 @@ impl TdxAttester {
     }
 }
 
+impl std::fmt::Display for TdxAttester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("tdx-attester")
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for TdxAttester {
+    fn detect_tee(&self) -> Option<Tee> {
+        (TsmReportPath::new(TsmReportProvider::Tdx).is_ok() || Path::new(TDX_GUEST_IOCTL).exists())
+            .then_some(Tee::Tdx)
+    }
+
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
         if report_data.len() > TDX_REPORT_DATA_SIZE {
             bail!("TDX Attester: Report data must be no more than {TDX_REPORT_DATA_SIZE} bytes");

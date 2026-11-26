@@ -8,23 +8,13 @@ use crate::utils::{read_eventlog, truncate_digest};
 use anyhow::{Context, Result, bail};
 use az_snp_vtpm::{imds, is_snp_cvm, vtpm};
 use azure_tpm::{Tpm, TpmCommandExt};
-use kbs_types::HashAlgorithm;
+use kbs_types::{HashAlgorithm, Tee};
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, hex::Hex, serde_as};
 use tokio::task::spawn_blocking;
 use tracing::{debug, info};
 
 type UrlSafeBase64 = Base64<serde_with::base64::UrlSafe>;
-
-pub fn detect_platform() -> bool {
-    match is_snp_cvm() {
-        Ok(is_snp) => is_snp,
-        Err(err) => {
-            debug!("Failed to retrieve Azure HCL data from vTPM: {err}");
-            false
-        }
-    }
-}
 
 #[derive(Debug, Default)]
 pub struct AzSnpVtpmAttester;
@@ -117,8 +107,24 @@ fn get_evidence_sync(
     Ok(serde_json::to_value(&evidence)?)
 }
 
+impl std::fmt::Display for AzSnpVtpmAttester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("az-snp-vtpm-attester")
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for AzSnpVtpmAttester {
+    fn detect_tee(&self) -> Option<Tee> {
+        match is_snp_cvm() {
+            Ok(is_snp) => is_snp.then_some(Tee::AzSnpVtpm),
+            Err(err) => {
+                debug!("Failed to retrieve Azure HCL data from vTPM: {err}");
+                None
+            }
+        }
+    }
+
     async fn get_evidence(&self, report_data: Vec<u8>) -> anyhow::Result<TeeEvidence> {
         // Read the runtime eventlog (AAEL) before entering the blocking section:
         // `read_eventlog` is async, whereas the vTPM calls below are blocking.

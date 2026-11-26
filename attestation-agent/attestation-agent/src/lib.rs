@@ -16,6 +16,9 @@ pub mod config;
 mod eventlog;
 pub mod initdata;
 
+#[cfg(feature = "bin")]
+pub mod version;
+
 #[allow(unreachable_code)]
 pub mod token;
 

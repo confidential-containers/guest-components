@@ -6,16 +6,10 @@
 use super::tsm_report::*;
 use super::{Attester, TeeEvidence};
 use anyhow::*;
+use kbs_types::Tee;
 use serde::{Deserialize, Serialize};
 
 const CCA_CHALLENGE_SIZE: usize = 64;
-
-pub fn detect_platform() -> bool {
-    #[cfg(target_arch = "aarch64")]
-    return TsmReportPath::new(TsmReportProvider::Cca).is_ok();
-    #[cfg(not(target_arch = "aarch64"))]
-    return false;
-}
 
 #[derive(Debug, Default)]
 pub struct CcaAttester {}
@@ -26,8 +20,27 @@ struct CcaEvidence {
     token: Vec<u8>,
 }
 
+impl std::fmt::Display for CcaAttester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("cca-attester")
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for CcaAttester {
+    fn detect_tee(&self) -> Option<Tee> {
+        #[cfg(target_arch = "aarch64")]
+        {
+            TsmReportPath::new(TsmReportProvider::Cca)
+                .is_ok()
+                .then_some(Tee::Cca)
+        }
+        #[cfg(not(target_arch = "aarch64"))]
+        {
+            None
+        }
+    }
+
     async fn get_evidence(&self, mut challenge: Vec<u8>) -> Result<TeeEvidence> {
         if challenge.len() > CCA_CHALLENGE_SIZE {
             bail!("CCA Attester: Challenge size must be {CCA_CHALLENGE_SIZE} bytes or less.");

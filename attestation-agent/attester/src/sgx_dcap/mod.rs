@@ -6,6 +6,7 @@
 use super::{Attester, TeeEvidence};
 use anyhow::{Context, Result, bail};
 use base64::Engine;
+use kbs_types::Tee;
 use occlum_dcap::{DcapQuote, sgx_report_data_t};
 use serde::{Deserialize, Serialize};
 
@@ -28,14 +29,6 @@ fn get_libos_type() -> SgxLibOsType {
     }
 }
 
-pub fn detect_platform() -> bool {
-    match get_libos_type() {
-        SgxLibOsType::Invalid => false,
-        SgxLibOsType::Occlum => true,
-        SgxLibOsType::Gramine => true,
-    }
-}
-
 #[derive(Serialize, Deserialize)]
 struct SgxDcapAttesterEvidence {
     /// Base64 encoded SGX quote.
@@ -45,8 +38,21 @@ struct SgxDcapAttesterEvidence {
 #[derive(Debug, Default)]
 pub struct SgxDcapAttester {}
 
+impl std::fmt::Display for SgxDcapAttester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("sgx-attester")
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for SgxDcapAttester {
+    fn detect_tee(&self) -> Option<Tee> {
+        match get_libos_type() {
+            SgxLibOsType::Invalid => None,
+            SgxLibOsType::Occlum | SgxLibOsType::Gramine => Some(Tee::Sgx),
+        }
+    }
+
     async fn get_evidence(&self, mut report_data: Vec<u8>) -> Result<TeeEvidence> {
         if report_data.len() > 64 {
             bail!("SGX Attester: Report data should be SHA384 base64 String");

@@ -107,7 +107,7 @@ hygon-dcu-attester = ["hygon"]
 hygon = ["csv-rs"]
 cca-attester = ["tsm-report"]
 se-attester = ["pv"]
-tpm-attester = ["tss-esapi", "picky-asn1", "picky-asn1-x509", "picky-asn1-der"]
+tpm-attester = ["tss-esapi", "picky-asn1", "picky-asn1-x509", "picky-asn1-der", "tokio/sync"]
 
 
 # Fake attesters for other crates' tests.

@@ -6,6 +6,9 @@
 use anyhow::*;
 use kbs_types::{HashAlgorithm, Tee};
 
+mod attesters;
+pub use attesters::Attesters;
+
 pub mod sample;
 pub mod sample_device;
 #[cfg(any(test, feature = "test-utils"))]
@@ -210,7 +213,10 @@ pub enum InitDataResult {
 pub type TeeEvidence = serde_json::Value;
 
 #[async_trait::async_trait]
-pub trait Attester {
+pub trait Attester: std::fmt::Display {
+    /// Returns the TEE type if this attester detects its platform, otherwise `None`.
+    fn detect_tee(&self) -> Option<Tee>;
+
     /// Call the hardware driver to get the Hardware specific evidence.
     /// The parameter `report_data` will be used as the user input of the
     /// evidence to avoid reply attack.
@@ -265,102 +271,11 @@ pub trait Attester {
 
 // Detect which TEE platform the KBC running environment is.
 pub fn detect_tee_type() -> Tee {
-    #[cfg(feature = "tdx-attester")]
-    if tdx::detect_platform() {
-        return Tee::Tdx;
-    }
-
-    #[cfg(feature = "sgx-attester")]
-    if sgx_dcap::detect_platform() {
-        return Tee::Sgx;
-    }
-
-    #[cfg(feature = "az-tdx-vtpm-attester")]
-    if az_tdx_vtpm::detect_platform() {
-        return Tee::AzTdxVtpm;
-    }
-
-    #[cfg(feature = "az-snp-vtpm-attester")]
-    if az_snp_vtpm::detect_platform() {
-        return Tee::AzSnpVtpm;
-    }
-
-    #[cfg(feature = "snp-attester")]
-    if snp::detect_platform() {
-        return Tee::Snp;
-    }
-
-    #[cfg(feature = "csv-attester")]
-    if csv::detect_platform() {
-        return Tee::Csv;
-    }
-
-    #[cfg(feature = "cca-attester")]
-    if cca::detect_platform() {
-        return Tee::Cca;
-    }
-
-    #[cfg(feature = "se-attester")]
-    if se::detect_platform() {
-        return Tee::Se;
-    }
-
-    // Kept as the last entry after all vTPM TEE attesters (i.e., az-*-vtpm-attester).
-    #[cfg(feature = "tpm-attester")]
-    if tpm::detect_platform() {
-        tracing::warn!(
-            "The TPM device was detected, but please note that it is not bound to the TEE, so there may be security risks."
-        );
-        return Tee::Tpm;
-    }
-
-    tracing::warn!(
-        "No TEE platform detected. Sample Attester will be used.
-         If you are expecting to collect evidence from inside a confidential guest,
-         either your guest is not configured correctly, or your attestation client
-         was not built with support for the platform.
-
-         Verify that your guest is a confidential guest and that your client
-         (such as kbs-client or attestation-agent) was built with the feature
-         corresponding to your platform.
-
-         Attestation will continue using the fallback sample attester."
-    );
-    Tee::Sample
+    Attesters::get().get_primary_tee()
 }
 
 /// Get any additional TEEs that might be connected to the guest,
 /// such as a confidential device.
 pub fn detect_attestable_devices() -> Vec<Tee> {
-    let mut additional_devices = vec![];
-
-    #[cfg(feature = "nvidia-attester")]
-    if nvidia::detect_platform() {
-        additional_devices.push(Tee::Nvidia);
-    }
-
-    if sample_device::detect_platform() {
-        additional_devices.push(Tee::SampleDevice);
-    }
-
-    #[cfg(feature = "hygon-dcu-attester")]
-    if hygon_dcu::detect_platform() {
-        additional_devices.push(Tee::HygonDcu);
-    }
-
-    // a (v)TPM as an additional device is not applicable in Azure or when using TDX (RTMRs are used for runtime measurements).
-    #[cfg(all(
-        feature = "tpm-attester",
-        not(feature = "tdx-attester"),
-        not(feature = "az-snp-vtpm-attester"),
-        not(feature = "az-tdx-vtpm-attester")
-    ))]
-    if detect_tee_type() != Tee::Tpm && tpm::detect_platform() {
-        tracing::warn!(
-            "The TPM device was detected as an additional device, but please note that it is not bound to the TEE, so there may be security risks."
-        );
-        additional_devices.push(Tee::Tpm);
-    }
-
-    additional_devices
+    Attesters::get().get_additional_tees()
 }

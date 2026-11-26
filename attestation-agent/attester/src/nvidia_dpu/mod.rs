@@ -18,6 +18,7 @@
 
 use super::{Attester, TeeEvidence};
 use anyhow::{Context, Result, bail};
+use kbs_types::Tee;
 use p384::ecdsa::signature::Signer;
 use p384::ecdsa::{Signature, SigningKey};
 use serde::{Deserialize, Serialize};
@@ -89,39 +90,6 @@ pub struct DpuDeviceEvidence {
     pub report_data_signature: Vec<u8>,
 }
 
-/// Detect if NVIDIA BlueField-3 DPU hardware is available on the platform.
-///
-/// Scans PCI sysfs for devices matching the BF3 vendor:device IDs.
-/// This distinguishes BlueField-3 from regular ConnectX NICs which have
-/// different PCI device IDs.
-pub fn detect_platform() -> bool {
-    // Scan PCI devices for BF3-specific device IDs
-    let Ok(entries) = std::fs::read_dir(PCI_DEVICES_PATH) else {
-        return false;
-    };
-    for entry in entries.flatten() {
-        let vendor_path = entry.path().join("vendor");
-        let device_path = entry.path().join("device");
-
-        let vendor = std::fs::read_to_string(&vendor_path)
-            .unwrap_or_default()
-            .trim()
-            .trim_start_matches("0x")
-            .to_lowercase();
-        let device = std::fs::read_to_string(&device_path)
-            .unwrap_or_default()
-            .trim()
-            .trim_start_matches("0x")
-            .to_lowercase();
-
-        if vendor == NVIDIA_MLX_VENDOR_ID && BF3_DEVICE_IDS.iter().any(|id| device == *id) {
-            return true;
-        }
-    }
-
-    false
-}
-
 /// Sign report_data with DICE alias private key for freshness binding.
 /// Returns the raw signature bytes (DER-encoded ECDSA P-384).
 /// Returns error if the key is unavailable (unsigned evidence is not acceptable).
@@ -145,8 +113,44 @@ fn sign_report_data(report_data: &[u8]) -> Result<Vec<u8>> {
 #[derive(Debug, Default)]
 pub struct NvidiaDpuAttester {}
 
+impl std::fmt::Display for NvidiaDpuAttester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("nvidia-dpu-attester")
+    }
+}
+
 #[async_trait::async_trait]
 impl Attester for NvidiaDpuAttester {
+    /// Detect NVIDIA BlueField-3 DPU hardware by scanning PCI sysfs for BF3 IDs.
+    /// This distinguishes BlueField-3 from regular ConnectX NICs.
+    fn detect_tee(&self) -> Option<Tee> {
+        // Scan PCI devices for BF3-specific device IDs
+        let Ok(entries) = std::fs::read_dir(PCI_DEVICES_PATH) else {
+            return None;
+        };
+        for entry in entries.flatten() {
+            let vendor_path = entry.path().join("vendor");
+            let device_path = entry.path().join("device");
+
+            let vendor = std::fs::read_to_string(&vendor_path)
+                .unwrap_or_default()
+                .trim()
+                .trim_start_matches("0x")
+                .to_lowercase();
+            let device = std::fs::read_to_string(&device_path)
+                .unwrap_or_default()
+                .trim()
+                .trim_start_matches("0x")
+                .to_lowercase();
+
+            if vendor == NVIDIA_MLX_VENDOR_ID && BF3_DEVICE_IDS.iter().any(|id| device == *id) {
+                return Some(Tee::NvidiaDpu);
+            }
+        }
+
+        None
+    }
+
     /// Collect attestation evidence from the DPU device.
     ///
     /// The `report_data` parameter is used as a nonce to bind the evidence
@@ -232,10 +236,10 @@ mod tests {
     }
 
     #[test]
-    fn test_detect_platform_no_device() {
+    fn test_detect_tee_no_device() {
         // On CI/dev machines without actual NVIDIA DPU hardware, detection should
-        // return false gracefully without panicking.
-        let result = detect_platform();
+        // return None gracefully without panicking.
+        let result = NvidiaDpuAttester::default().detect_tee();
         // We just verify it doesn't panic
         let _ = result;
     }
