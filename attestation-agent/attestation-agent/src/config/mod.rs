@@ -6,10 +6,10 @@
 use anyhow::Result;
 use serde::Deserialize;
 
-/// Default PCR index used by AA. `17` is selected for its usage of dynamic root of trust for measurement.
-/// - [Linux TPM PCR Registry](https://uapi-group.org/specifications/specs/linux_tpm_pcr_registry/)
-/// - [TCG TRUSTED BOOT CHAIN IN EDK II](https://tianocore-docs.github.io/edk2-TrustedBootChain/release-1.00/3_TCG_Trusted_Boot_Chain_in_EDKII.html)
-const DEFAULT_PCR_INDEX: u64 = 17;
+/// Default PCR index used by AA for the eventlog is `23`, the designated "Application Support"
+/// register.
+/// TCG PC Client Platform Firmware Profile Specification, Level 00 Version 1.06 Revision 52, p27
+const DEFAULT_PCR_INDEX: u64 = 23;
 
 pub mod aa_kbc_params;
 
@@ -296,7 +296,7 @@ M9QaC1mzQ/OStg==
             kbs: None,
         },
         eventlog_config: EventlogConfig {
-            init_pcr: 17,
+            init_pcr: 23,
         },
         log: LogConfig { level: "warn".to_string() },
     })]
@@ -310,7 +310,7 @@ M9QaC1mzQ/OStg==
             kbs: None,
         },
         eventlog_config: EventlogConfig {
-            init_pcr: 17,
+            init_pcr: 23,
         },
         log: LogConfig::default(),
     })]
@@ -324,7 +324,7 @@ M9QaC1mzQ/OStg==
                 kbs: None,
             },
             eventlog_config: EventlogConfig {
-                init_pcr: 17,
+                init_pcr: 23,
             },
             log: LogConfig::default(),
         })]

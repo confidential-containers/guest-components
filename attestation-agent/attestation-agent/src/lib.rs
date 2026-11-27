@@ -364,7 +364,7 @@ mod tests {
 
     type Registers = Arc<StdMutex<HashMap<u64, Vec<u8>>>>;
 
-    const PCR: u64 = 17;
+    const PCR: u64 = 23;
 
     /// Open the eventlog in `dir` the way a fresh AA process would, sharing `registers`
     /// so they outlive the instance like real RTMRs across an AA restart.
