@@ -6,7 +6,9 @@
 mod server;
 
 use anyhow::*;
-use attestation_agent::{AttestationAPIs, AttestationAgent, config::Config, initdata::Initdata};
+use attestation_agent::{
+    AttestationAPIs, AttestationAgent, common, config::Config, initdata::Initdata,
+};
 use clap::Parser;
 use const_format::concatcp;
 use shadow_rs::shadow;
@@ -19,19 +21,11 @@ shadow!(build);
 
 const DEFAULT_ATTESTATION_AGENT_ADDR: &str = "127.0.0.1:50002";
 
-const FEATURE_INFO: &str = include_str!(concat!(env!("OUT_DIR"), "/version"));
 const DIRTY_SUFFIX: &str = if build::GIT_CLEAN { "" } else { " (dirty)" };
-const VERSION: &str = concatcp!(
-    build::LAST_TAG,
-    "-",
-    build::SHORT_COMMIT,
-    DIRTY_SUFFIX,
-    "\n",
-    FEATURE_INFO
-);
+const VERSION_HEADER: &str = concatcp!(build::LAST_TAG, "-", build::SHORT_COMMIT, DIRTY_SUFFIX);
 
 #[derive(Debug, Parser)]
-#[command(author, version = VERSION)]
+#[command(author, version = common::get_version_message(VERSION_HEADER))]
 struct Cli {
     /// Attestation gRPC Unix socket addr.
     ///
@@ -68,6 +62,7 @@ pub async fn main() -> Result<()> {
             .context(format!("Invalid log level: {}", config.log.level))?,
     };
 
+    let version_message = common::get_version_message(VERSION_HEADER);
     let version = format!(
         r"
   ___   _    _              _          _    _                     ___                       _   
@@ -78,7 +73,7 @@ pub async fn main() -> Result<()> {
 \_| |_/ \__| \__|\___||___/ \__|\__,_| \__||_| \___/ |_| |_|    \_| |_/ \__, | \___||_| |_| \__|
                                                                          __/ |                  
                                                                         |___/                                                                  
-version: {VERSION}
+version: {version_message}
 buildtime: {}
 loglevel: {env_filter}
 rpc: grpc

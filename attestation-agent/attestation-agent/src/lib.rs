@@ -12,6 +12,8 @@ use tokio::sync::{Mutex, RwLock};
 
 pub use attester::InitDataResult;
 
+#[cfg(feature = "bin")]
+pub mod common;
 pub mod config;
 mod eventlog;
 pub mod initdata;
